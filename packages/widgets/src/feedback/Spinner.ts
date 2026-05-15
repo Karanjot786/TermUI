@@ -100,6 +100,8 @@ export class Spinner extends Widget {
      * Call this with a delta (ms) from the render loop.
      */
     tick(deltaMs: number): void {
+        if (!caps.motion) return;
+
         this._elapsed += deltaMs;
         if (this._elapsed >= this._interval) {
             this._frameIndex = (this._frameIndex + 1) % this._frames.length;

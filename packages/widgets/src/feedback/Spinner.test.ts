@@ -2,10 +2,27 @@
 // @termuijs/widgets — Tests for Spinner widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { caps } from '@termuijs/core';
 import { Spinner, SPINNER_FRAMES } from './Spinner.js';
 
 describe('Spinner', () => {
+    const originalMotion = caps.motion;
+
+    afterEach(() => {
+        (caps as unknown as { motion: boolean }).motion = originalMotion;
+    });
+
+    it('does not advance frames on manual tick when motion is disabled', () => {
+        (caps as unknown as { motion: boolean }).motion = false;
+        const spinner = new Spinner({}, { spinner: 'line' });
+
+        spinner.tick(130);
+
+        const frameIndex = (spinner as unknown as { _frameIndex: number })._frameIndex;
+        expect(frameIndex).toBe(0);
+    });
+
     it('starts at first frame', () => {
         // Default spinner is 'dots' with frames ['⠋', '⠙', ...]
         const spinner = new Spinner();
