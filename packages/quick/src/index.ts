@@ -64,6 +64,9 @@ export type {
     ToolCallStatus,
 } from './widgets.js';
 
+// ── Store (re-exported for convenience) ───────────────
+export { batch } from '@termuijs/store';
+
 // ── Reactive ──────────────────────────────────────────
 export { resolve, isReactive } from './reactive.js';
 export type { Reactive } from './reactive.js';

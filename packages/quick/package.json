@@ -34,6 +34,7 @@
     "@termuijs/widgets": "workspace:*",
     "@termuijs/jsx": "workspace:*",
     "@termuijs/tss": "workspace:*",
+    "@termuijs/store": "workspace:*",
     "@termuijs/data": "workspace:*",
     "@termuijs/ui": "workspace:*"
   },

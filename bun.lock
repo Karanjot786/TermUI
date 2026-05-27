@@ -161,6 +161,7 @@
         "@termuijs/core": "workspace:*",
         "@termuijs/data": "workspace:*",
         "@termuijs/jsx": "workspace:*",
+        "@termuijs/store": "workspace:*",
         "@termuijs/tss": "workspace:*",
         "@termuijs/ui": "workspace:*",
         "@termuijs/widgets": "workspace:*",

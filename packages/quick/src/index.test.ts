@@ -17,3 +17,10 @@ describe('quick – index exports grid (not gridWidget)', () => {
         expect(typeof (mod as any).grid).toBe('function');
     });
 });
+
+describe('quick – index exports batch from @termuijs/store', () => {
+    it('re-exports batch from @termuijs/store', async () => {
+        const mod = await import('./index.js');
+        expect(typeof (mod as any).batch).toBe('function');
+    });
+});
