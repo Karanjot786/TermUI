@@ -2,8 +2,12 @@
 // @termuijs/widgets — Tests for ProgressBar widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ProgressBar } from './ProgressBar.js';
+
+afterEach(() => {
+    vi.unstubAllEnvs();
+});
 
 describe('ProgressBar', () => {
     it('initializes with default value 0', () => {
@@ -36,12 +40,96 @@ describe('ProgressBar', () => {
     });
 });
 
-describe('ProgressBar — ASCII fallback', () => {
-    beforeEach(() => {
-        vi.unstubAllEnvs();
+describe('ProgressBar — rendering', () => {
+    it('value: 0 renders all empty cells', async () => {
+        vi.stubEnv('NO_UNICODE', '1');
+        vi.stubEnv('TERM', '');
         vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { ProgressBar } = await import('./ProgressBar.js');
+
+        const pb = new ProgressBar({}, { value: 0, showLabel: false });
+        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        pb.render(screen);
+
+        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
+        expect(rendered).not.toContain('#');
+        expect(rendered).toContain('-');
     });
 
+    it('value: 1 renders all fill cells', async () => {
+        vi.stubEnv('NO_UNICODE', '1');
+        vi.stubEnv('TERM', '');
+        vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { ProgressBar } = await import('./ProgressBar.js');
+
+        const pb = new ProgressBar({}, { value: 1, showLabel: false });
+        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        pb.render(screen);
+
+        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
+        expect(rendered).toContain('#');
+        expect(rendered).not.toContain('-');
+    });
+
+    it('value: 0.5 renders half fill half empty', async () => {
+        vi.stubEnv('NO_UNICODE', '1');
+        vi.stubEnv('TERM', '');
+        vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { ProgressBar } = await import('./ProgressBar.js');
+
+        const pb = new ProgressBar({}, { value: 0.5, showLabel: false });
+        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        pb.render(screen);
+
+        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
+        expect(rendered).toContain('#');
+        expect(rendered).toContain('-');
+    });
+
+    it('showLabel: true renders percentage text', async () => {
+        vi.stubEnv('NO_UNICODE', '1');
+        vi.stubEnv('TERM', '');
+        vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { ProgressBar } = await import('./ProgressBar.js');
+
+        const pb = new ProgressBar({}, { value: 0.5, showLabel: true });
+        pb.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        const screen = new Screen(20, 1);
+        pb.render(screen);
+
+        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
+        expect(rendered).toContain('50%');
+    });
+
+    it('fillColor applies to filled cells', async () => {
+        vi.stubEnv('NO_UNICODE', '1');
+        vi.stubEnv('TERM', '');
+        vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { ProgressBar } = await import('./ProgressBar.js');
+
+        const pb = new ProgressBar({}, { 
+            value: 1, 
+            showLabel: false,
+            fillColor: { type: 'named', name: 'red' }
+        });
+        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        pb.render(screen);
+
+        const filledCell = screen.back[0][0];
+        expect(filledCell.fg).toEqual({ type: 'named', name: 'red' });
+    });
+});
+
+describe('ProgressBar — ASCII fallback', () => {
     it('uses "#" for fill and "-" for empty when NO_UNICODE=1', async () => {
         vi.stubEnv('NO_UNICODE', '1');
         vi.stubEnv('TERM', '');
