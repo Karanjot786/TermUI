@@ -70,3 +70,4 @@ describe('Gauge', () => {
         expect(rendered).not.toContain('#');
     });
 });
+
