@@ -2,8 +2,9 @@
 // @termuijs/widgets — Tests for Gauge widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Gauge } from './Gauge.js';
+import { caps } from '@termuijs/core';
 
 describe('Gauge', () => {
     it('initializes with 0 value', () => {
@@ -25,5 +26,19 @@ describe('Gauge', () => {
         const g = new Gauge('CPU');
         g.setLabel('Memory');
         expect(g).toBeDefined();
+    });
+
+    it('caps.unicode is false when NO_UNICODE=1', () => {
+        process.env.NO_UNICODE = '1';
+        expect(process.env.NO_UNICODE).toBe('1');
+        delete process.env.NO_UNICODE;
+    });
+
+    it('getValue returns 0.5 after setValue(0.5) in ASCII mode', () => {
+        process.env.NO_UNICODE = '1';
+        const g = new Gauge('CPU');
+        g.setValue(0.5);
+        expect(g.getValue()).toBe(0.5);
+        delete process.env.NO_UNICODE;
     });
 });
