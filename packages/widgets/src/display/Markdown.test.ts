@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Screen, caps } from '@termuijs/core';
 import { Markdown } from './Markdown.js';
 
@@ -135,7 +135,8 @@ describe('Markdown', () => {
 
         expect(screen.back[0][0].char).toBe('i');
         expect(screen.back[0][0].italic).toBe(true);
-    }); it('renders inline code', () => {
+    });
+    it('renders inline code', () => {
         const md = new Markdown({ content: '`code`' });
 
         const screen = new Screen(20, 5);
@@ -170,5 +171,26 @@ describe('Markdown', () => {
     expect(rendered).toContain('└');
     expect(rendered).toContain('│');
     expect(rendered).not.toContain('```');
-});
+    });
+
+    it('renders code block with ASCII chars when NO_UNICODE=1', async () => {
+        vi.stubEnv('NO_UNICODE', '1');
+        vi.stubEnv('TERM', '');
+        vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { Markdown } = await import('./Markdown.js');
+
+        const md = new Markdown({ content: '```ts\nconst x = 1\n```' });
+        const screen = new Screen(40, 10);
+        md.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        md.render(screen);
+
+        const rendered = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
+        expect(rendered).toContain('const x = 1');
+        expect(rendered).toContain('+');
+        expect(rendered).toContain('|');
+        expect(rendered).not.toContain('┌');
+
+        vi.unstubAllEnvs();
+    });
 });

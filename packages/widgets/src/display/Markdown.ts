@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// @termuijs/widgets — ChatMessage widget
+// @termuijs/widgets — Markdown widget
 // ─────────────────────────────────────────────────────
 
 import { Screen, Style, caps, wordWrap } from '@termuijs/core';
@@ -89,7 +89,13 @@ export class Markdown extends Widget {
         language: string,
         lines: string[]
     ): number {
-        const top = `┌─ ${language} ${'─'.repeat(Math.max(0, width - language.length - 5))}┐`;
+        const tl = caps.unicode ? '┌' : '+';
+        const tr = caps.unicode ? '┐' : '+';
+        const hl = caps.unicode ? '─' : '-';
+        const vl = caps.unicode ? '│' : '|';
+        const bl = caps.unicode ? '└' : '+';
+        const br = caps.unicode ? '┘' : '+';
+        const top = `${tl}${hl} ${language} ${hl.repeat(Math.max(0, width - language.length - 5))}${tr}`;
 
         this.writeText(screen, x, y, top);
 
@@ -98,11 +104,11 @@ export class Markdown extends Widget {
                 screen,
                 x,
                 y + i + 1,
-                `│ ${lines[i]}`
+                `${vl} ${lines[i]}`
             );
         }
 
-        const bottom = `└${'─'.repeat(Math.max(0, width - 2))}┘`;
+        const bottom = `${bl}${hl.repeat(Math.max(0, width - 2))}${br}`;
 
         this.writeText(
             screen,
