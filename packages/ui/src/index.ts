@@ -71,3 +71,6 @@ export type { PathInputOptions } from './PathInput.js';
 
 export { KeyboardShortcuts } from './KeyboardShortcuts.js';
 export type { ShortcutBinding, KeyboardShortcutsOptions } from './KeyboardShortcuts.js';
+
+export { FilePicker } from './FilePicker.js';
+export type { FilePickerOptions, FileEntry } from './FilePicker.js';
