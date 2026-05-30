@@ -95,3 +95,6 @@ export { BigText } from './display/BigText.js';
 export type { BigTextOptions } from './display/BigText.js';
 export { Gradient } from './display/Gradient.js';
 export type { GradientOptions } from './display/Gradient.js';
+
+export { Markdown } from './display/Markdown.js';
+export type { MarkdownOptions } from './display/Markdown.js';
