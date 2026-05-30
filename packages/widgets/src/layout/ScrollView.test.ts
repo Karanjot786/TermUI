@@ -4,7 +4,13 @@
 
 import { describe, it, expect } from 'vitest';
 import { ScrollView } from './ScrollView.js';
-import { Screen } from '@termuijs/core';
+import { Screen, type KeyEvent } from '@termuijs/core';
+
+const key = (k: string): KeyEvent => ({
+    key: k,
+    stopPropagation: () => {},
+    preventDefault: () => {},
+});
 
 describe('ScrollView', () => {
     it('renders without error when content is taller than viewport', () => {
@@ -100,7 +106,8 @@ describe('ScrollView', () => {
         const sv = new ScrollView({ width: 10, height: 5 }, { contentHeight: 20, showScrollbar: false });
         const screen = new Screen(10, 5);
         sv.updateRect({ x: 0, y: 0, width: 10, height: 5 });
-        expect(() => sv.render(screen)).not.toThrow();
+        sv.render(screen);
+        expect(screen.back[0][9].char).toBe(' ');
     });
 
     it('does not render scrollbar when content fits viewport', () => {
@@ -109,5 +116,35 @@ describe('ScrollView', () => {
         sv.updateRect({ x: 0, y: 0, width: 10, height: 5 });
         sv.render(screen);
         expect(screen.back[0][9].char).toBe(' ');
+    });
+
+    it('ArrowDown scrolls down by 1', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.onKey(key('ArrowDown'));
+        expect(sv.scrollOffset).toBe(1);
+    });
+
+    it('ArrowUp scrolls up by 1', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollBy(5);
+        sv.onKey(key('ArrowUp'));
+        expect(sv.scrollOffset).toBe(4);
+    });
+
+    it('PageDown scrolls down by viewport height - 1', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.onKey(key('PageDown'));
+        expect(sv.scrollOffset).toBe(4);
+    });
+
+    it('PageUp scrolls up by viewport height - 1', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollBy(10);
+        sv.onKey(key('PageUp'));
+        expect(sv.scrollOffset).toBe(6);
     });
 });
