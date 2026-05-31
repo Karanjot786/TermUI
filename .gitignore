@@ -8,3 +8,10 @@ coverage/
 website/
 scratch/
 .worktrees/
+
+# Bench artifacts
+bench-head.json
+bench-main.json
+bench-head.txt
+bench-main.txt
+bench-comment.md
