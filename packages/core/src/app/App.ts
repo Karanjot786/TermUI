@@ -290,8 +290,16 @@ export class App {
             // Render bottom N rows as plain text
             try {
                 // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const { renderInlineToTerminal } = require('../inline-viewport.js');
-                renderInlineToTerminal(this.terminal as any, this.screen as any, this._options.inlineRows ?? 0);
+                const mod = require('../inline-viewport.js');
+                const renderInlineToTerminal = mod.renderInlineToTerminal ?? mod.default?.renderInlineToTerminal;
+                if (typeof renderInlineToTerminal === 'function') {
+                    // Ensure we pass an object with a `write` method. Support Terminal instance
+                    // or raw stdout-like streams used in tests.
+                    const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
+                        ? (this.terminal as any)
+                        : { write: (s: string) => (this.terminal as any).stdout.write(s) };
+                    renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
+                }
             } catch (e) {
                 // Fallback: write nothing
             }

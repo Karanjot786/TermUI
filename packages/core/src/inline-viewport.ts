@@ -19,6 +19,9 @@ export function renderInlineToTerminal(terminal: Terminal, screen: Screen, rows:
         lines.push(row.map(c => c.char || ' ').join(''));
     }
     if (lines.length === 0) return;
+    // Debug: log lines to help investigate test failures
+    // eslint-disable-next-line no-console
+    console.debug('renderInlineToTerminal lines:', lines);
     // Ensure we end with newline to push content into scrollback
     terminal.write(lines.join('\n') + '\n');
 }
