@@ -1,13 +1,11 @@
 // ─────────────────────────────────────────────────────
 // @termuijs/widgets — Tooltip widget
-// ─────────────────────────────────────────────────────
 
 import { type Screen, type Style, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface TooltipOptions {
     text: string;
-    position: 'top' | 'bottom' | 'left' | 'right';
     visible: boolean;
 }
 
@@ -19,14 +17,12 @@ export interface TooltipOptions {
  */
 export class Tooltip extends Widget {
     private _text: string;
-    private _position: 'top' | 'bottom' | 'left' | 'right';
     private _visible: boolean;
 
     constructor(options: TooltipOptions, style: Partial<Style> = {}) {
         super(style);
 
         this._text = options.text;
-        this._position = options.position;
         this._visible = options.visible;
     }
 
@@ -102,14 +98,5 @@ export class Tooltip extends Widget {
 
     getVisible(): boolean {
         return this._visible;
-    }
-
-    setPosition(position: 'top' | 'bottom' | 'left' | 'right'): void {
-        this._position = position;
-        this.markDirty();
-    }
-
-    getPosition(): 'top' | 'bottom' | 'left' | 'right' {
-        return this._position;
     }
 }
