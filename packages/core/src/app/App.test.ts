@@ -6,6 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { App, type AppOptions, type RootWidget } from './App.js';
 import type { Screen } from '../terminal/Screen.js';
 import type { LayoutNode } from '../layout/LayoutEngine.js';
+import { renderInlineToTerminal } from '../inline-viewport.js';
 
 /**
  * Minimal mock root widget for testing App lifecycle
@@ -88,6 +89,89 @@ describe('App', () => {
             app.terminal.restore();
             expect(process.listenerCount('SIGINT')).toBe(sigintBefore);
             expect(process.listenerCount('SIGTERM')).toBe(sigtermBefore);
+        });
+
+        it('does not emit enterAltScreen in main mode when mounting', async () => {
+            const root = createMockRootWidget();
+
+            // Fake stdout to capture writes
+            const fakeStdout: any = {
+                writes: '',
+                columns: 80,
+                rows: 24,
+                isTTY: true,
+                write(s: string) { this.writes += s; },
+                on() {}, off() {},
+            };
+            const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {} };
+
+            const app = new App(root, { forceFallback: false, skipFallback: true, screenMode: 'main', stdout: fakeStdout, stdin: fakeStdin } as any);
+            // Mount runs synchronously until it registers exit promise
+            const mountPromise = app.mount();
+
+            // Check that alt-screen sequence was NOT written
+            expect(fakeStdout.writes).not.toContain('\x1b[?1049h');
+
+            app.exit(0);
+            await mountPromise.catch(() => {});
+        });
+
+        it('emits enterAltScreen in alternate mode when mounting', async () => {
+            const root = createMockRootWidget();
+            const fakeStdout: any = {
+                writes: '',
+                columns: 80,
+                rows: 24,
+                isTTY: true,
+                write(s: string) { this.writes += s; },
+                on() {}, off() {},
+            };
+            const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {} };
+
+            const app = new App(root, { forceFallback: false, skipFallback: true, screenMode: 'alternate', stdout: fakeStdout, stdin: fakeStdin } as any);
+            const mountPromise = app.mount();
+
+            expect(fakeStdout.writes).toContain('\x1b[?1049h');
+
+            app.exit(0);
+            await mountPromise.catch(() => {});
+        });
+
+        it('inline mode writes bottom rows and insertBefore lines', async () => {
+            const root = createMockRootWidget();
+            const fakeStdout: any = {
+                writes: '',
+                columns: 5,
+                rows: 4,
+                isTTY: true,
+                write(s: string) { this.writes += s; },
+                on() {}, off() {},
+            };
+            const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {} };
+
+            const app = new App(root, { forceFallback: false, skipFallback: true, screenMode: 'inline', inlineRows: 2, stdout: fakeStdout, stdin: fakeStdin } as any);
+            const mountPromise = app.mount();
+
+            // Render some content into the screen by marking root render to write
+            (root as any).render = (screen: any) => {
+                // write rows directly into back buffer
+                screen.back[0].forEach((c: any, i: number) => c.char = i === 0 ? 'A' : ' ');
+                screen.back[2].forEach((c: any, i: number) => c.char = i === 0 ? 'X' : ' ');
+                screen.back[3].forEach((c: any, i: number) => c.char = i === 0 ? 'Y' : ' ');
+            };
+
+            // register insertBefore
+            app.insertBefore('HEADER LINE');
+
+            app.requestRender();
+
+            // HEADER LINE plus rows should be present
+            expect(fakeStdout.writes).toContain('HEADER LINE');
+            expect(fakeStdout.writes).toContain('X');
+            expect(fakeStdout.writes).toContain('Y');
+
+            app.exit(0);
+            await mountPromise.catch(() => {});
         });
     });
 });
