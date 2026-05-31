@@ -13,6 +13,9 @@ export type { Layer } from './terminal/LayerManager.js';
 export { caps } from './terminal/env-caps.js';
 export { BOX, BRAILLE_SPIN, BLOCK } from './terminal/ascii-map.js';
 
+// ── Renderer ──────────────────────────────────────────
+export { RenderHook } from './renderer/render-hook.js';
+
 // ── Input ─────────────────────────────────────────────
 export { InputParser } from './input/InputParser.js';
 export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './input/KeyMap.js';

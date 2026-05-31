@@ -108,6 +108,9 @@ export class App {
 
         this._mounted = true;
 
+        // Start the stdout interceptor right before UI rendering begins
+        this.renderer.hook.start();
+
         // Set up terminal
         this.terminal.enterRawMode();
         if (this._options.fullscreen) {
@@ -207,6 +210,9 @@ export class App {
         this._unsubKey = null;
         this._unsubMouse?.();
         this._unsubMouse = null;
+
+        // Stop the stdout interceptor to restore native console.log behavior
+        this.renderer.hook.stop();
 
         this.renderer.stop();
         this.input.stop();
