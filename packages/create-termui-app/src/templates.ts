@@ -6,7 +6,7 @@ import { getBuiltinTheme } from '@termuijs/tss';
 
 export interface ProjectConfig {
     name: string;
-    template: 'empty' | 'dashboard' | 'interactive-tool' | 'cli-wrapper';
+    template: 'empty' | 'dashboard' | 'interactive-tool' | 'cli-wrapper' | 'cli-tool';
     theme: string;
     features: {
         router: boolean;
@@ -106,6 +106,9 @@ export default defineConfig({
             break;
         case 'cli-wrapper':
             files.push(...generateCliWrapperTemplate(config));
+            break;
+        case 'cli-tool':
+            files.push(...generateCliToolTemplate(config));
             break;
         default:
             files.push(...generateEmptyTemplate(config));
@@ -349,6 +352,26 @@ render(<App />, { title: '${config.name}' });
 `,
     }];
 }
+
+function generateCliToolTemplate(config: ProjectConfig): GeneratedFile[] {
+    return [{
+        path: 'src/index.tsx',
+        content: `/** @jsxImportSource @termuijs/jsx */
+import { render, useKeymap } from '@termuijs/jsx';
+function App() {
+    useKeymap([{ key: 'q', action: () => process.exit(0), description: 'Quit' }]);
+    return (
+        <box flexDirection="column">
+            <text bold>${config.name}</text>
+            <text dim>Press q to quit</text>
+        </box>
+    );
+}
+render(<App />, { title: '${config.name}' });
+`,
+    }];
+}
+
 
 function generateCliWrapperTemplate(config: ProjectConfig): GeneratedFile[] {
     return [{
