@@ -11,17 +11,16 @@ export interface InlineViewportOptions {
  * Preserves scrollback by writing lines to stdout rather than taking over the alternate screen.
  */
 export function renderInlineToTerminal(terminal: Terminal, screen: Screen, rows: number): void {
-    const start = Math.max(0, screen.rows - rows);
+    const totalRows = (screen as any).rows ?? (screen as any).height ?? 0;
+    const start = Math.max(0, totalRows - rows);
     const lines: string[] = [];
-    for (let r = start; r < screen.rows; r++) {
-        const row = screen.back[r];
+    const grid = (screen as any).back ?? (screen as any).cells;
+    for (let r = start; r < totalRows; r++) {
+        const row = grid?.[r];
         if (!row) continue;
         lines.push(row.map(c => c.char || ' ').join(''));
     }
     if (lines.length === 0) return;
-    // Debug: log lines to help investigate test failures
-    // eslint-disable-next-line no-console
-    console.debug('renderInlineToTerminal lines:', lines);
     // Ensure we end with newline to push content into scrollback
     terminal.write(lines.join('\n') + '\n');
 }

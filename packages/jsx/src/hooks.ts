@@ -61,6 +61,7 @@ interface EffectRecord {
 
 let _currentFiber: Fiber | null = null;
 let _requestRender: (() => void) | null = null;
+let _insertBefore: ((line: string) => (() => void) | void) | null = null;
 let _nextFiberId = 0;
 
 /** Get or throw the current fiber (hooks must be called inside a component) */
@@ -113,6 +114,11 @@ export function setRequestRender(fn: (() => void) | null): void {
 /** Get the current requestRender callback */
 export function getRequestRender(): (() => void) | null {
     return _requestRender;
+}
+
+/** Set the insertBefore callback for inline rendering */
+export function setInsertBefore(fn: ((line: string) => (() => void) | void) | null): void {
+    _insertBefore = fn;
 }
 
 // ── Batched State Updates ──
@@ -294,6 +300,17 @@ export function useKeymap(bindings: KeyBinding[]): void {
             }
         }
     };
+}
+
+/**
+ * useInsertBefore — register a persistent line above the inline viewport.
+ * The line is added when the component mounts and removed on unmount or when
+ * the value changes.
+ */
+export function useInsertBefore(line: string): void {
+    useEffect(() => {
+        return _insertBefore?.(line) as (() => void) | void;
+    }, [line]);
 }
 
 export interface MotionPreferences {
