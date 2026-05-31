@@ -1,6 +1,4 @@
-// ─────────────────────────────────────────────────────
-// @termuijs/widgets — Tests for LineChart widget
-// ─────────────────────────────────────────────────────
+// @termuijs/widgets - Tests for LineChart widget
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
@@ -9,7 +7,6 @@ afterEach(() => {
     vi.resetModules();
 });
 
-// ── Helpers ──────────────────────────────────────────
 
 /**
  * Render a LineChart into a Screen and return the back buffer as rows of
@@ -40,11 +37,9 @@ function countCharInGrid(lines: string[], ch: string): number {
     return lines.reduce((acc, row) => acc + countChar(row, ch), 0);
 }
 
-// ── Suite ────────────────────────────────────────────
 
 describe('LineChart', () => {
 
-    // ── Point rendering ──────────────────────────────
 
     describe('point rendering (unicode)', () => {
         it('renders a point character (●) for each data sample across the plot width', async () => {
@@ -120,7 +115,6 @@ describe('LineChart', () => {
         });
     });
 
-    // ── ASCII fallback ───────────────────────────────
 
     describe('ASCII fallback (caps.unicode = false)', () => {
         it('uses * instead of ● when NO_UNICODE=1', async () => {
@@ -146,7 +140,6 @@ describe('LineChart', () => {
         });
     });
 
-    // ── Y axis ───────────────────────────────────────
 
     describe('Y axis (showYAxis)', () => {
         it('renders the │ axis separator when showYAxis is true', async () => {
@@ -202,7 +195,6 @@ describe('LineChart', () => {
         });
     });
 
-    // ── X axis ───────────────────────────────────────
 
     describe('X axis (showXAxis)', () => {
         it('renders a ─ axis on the last row when showXAxis is true', async () => {
@@ -261,7 +253,6 @@ describe('LineChart', () => {
         });
     });
 
-    // ── Edge cases ───────────────────────────────────
 
     describe('empty / single-element data', () => {
         it('renders without throwing when data is empty', async () => {
@@ -304,7 +295,6 @@ describe('LineChart', () => {
         });
     });
 
-    // ── Custom min/max ───────────────────────────────
 
     describe('custom min / max options', () => {
         it('respects explicit max: data at max renders at top row', async () => {
@@ -328,7 +318,6 @@ describe('LineChart', () => {
         });
     });
 
-    // ── setData / pushValue ──────────────────────────
 
     describe('setData() and pushValue()', () => {
         it('setData() replaces data and marks widget dirty', async () => {
@@ -381,7 +370,6 @@ describe('LineChart', () => {
         });
     });
 
-    // ── Color option ─────────────────────────────────
 
     describe('color option', () => {
         it('applies custom color to point cells in the screen buffer', async () => {
