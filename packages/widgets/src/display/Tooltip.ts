@@ -1,4 +1,3 @@
-// ─────────────────────────────────────────────────────
 // @termuijs/widgets — Tooltip widget
 
 import { type Screen, type Style, caps } from '@termuijs/core';

@@ -36,7 +36,7 @@ describe("Tooltip", () => {
         expect(rendered).toContain("h");
     });
     it("does not render when hidden", () => {
-        const { screen } = renderTooltip("hidden", "bottom", false);
+        const { screen } = renderTooltip("hidden", false);
 
         const rendered = screen.back
             .flat()
