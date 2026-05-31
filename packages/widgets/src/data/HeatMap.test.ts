@@ -1,6 +1,4 @@
-// ─────────────────────────────────────────────────────
-// @termuijs/widgets — Tests for HeatMap widget
-// ─────────────────────────────────────────────────────
+// @termuijs/widgets - Tests for HeatMap widget
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
@@ -9,7 +7,6 @@ afterEach(() => {
     vi.resetModules();
 });
 
-// ── Helpers ──────────────────────────────────────────
 
 /**
  * Render a HeatMap into a Screen and return the back buffer as rows of
@@ -30,11 +27,9 @@ async function renderHeatMap(
     return screen.back.map(row => row.map(cell => cell.char).join(''));
 }
 
-// ── Suite ────────────────────────────────────────────
 
 describe('HeatMap', () => {
 
-    // ── Matrix dimensions ────────────────────────────
 
     describe('2D matrix dimensions', () => {
         it('renders the correct number of columns per row', async () => {
@@ -55,7 +50,7 @@ describe('HeatMap', () => {
             vi.stubEnv('TERM', '');
             vi.resetModules();
 
-            // 3 rows × 2 cols — expect 3 rows each containing shade characters
+            // 3 rows × 2 cols - expect 3 rows each containing shade characters
             const lines = await renderHeatMap(
                 [[0, 100], [50, 50], [100, 0]],
                 {},
@@ -70,7 +65,6 @@ describe('HeatMap', () => {
         });
     });
 
-    // ── Shading levels ───────────────────────────────
 
     describe('shading characters (unicode)', () => {
         it('high value (100) produces the densest shade char ▓ or █', async () => {
@@ -78,7 +72,7 @@ describe('HeatMap', () => {
             vi.stubEnv('TERM', '');
             vi.resetModules();
 
-            // Single-cell matrix with value 100 — globalMin=globalMax=100, range=1 guard,
+            // Single-cell matrix with value 100 - globalMin=globalMax=100, range=1 guard,
             // norm = (100-100)/1 = 0 → level 0 → '░'.
             // Use a spread so norm is meaningful: [0, 100]
             const lines = await renderHeatMap([[0, 100]], {}, 20, 5);
@@ -122,7 +116,6 @@ describe('HeatMap', () => {
         });
     });
 
-    // ── ASCII fallback ───────────────────────────────
 
     describe('ASCII fallback (caps.unicode = false)', () => {
         it('uses ASCII shade chars when NO_UNICODE=1', async () => {
@@ -150,7 +143,6 @@ describe('HeatMap', () => {
         });
     });
 
-    // ── Labels ───────────────────────────────────────
 
     describe('row and column labels', () => {
         it('column labels appear on row 0 when provided', async () => {
@@ -222,7 +214,6 @@ describe('HeatMap', () => {
         });
     });
 
-    // ── Empty matrix ─────────────────────────────────
 
     describe('empty matrix', () => {
         it('renders without throwing when matrix is empty', async () => {
@@ -255,7 +246,6 @@ describe('HeatMap', () => {
         });
     });
 
-    // ── setMatrix ────────────────────────────────────
 
     describe('setMatrix()', () => {
         it('replaces matrix data and marks widget dirty', async () => {
@@ -300,7 +290,6 @@ describe('HeatMap', () => {
         });
     });
 
-    // ── Color props ──────────────────────────────────
 
     describe('color options', () => {
         it('applies highColor to cells with norm >= 0.75', async () => {
