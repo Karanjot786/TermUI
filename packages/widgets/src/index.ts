@@ -104,3 +104,6 @@ export { Tag } from './display/Tag.js';
 export type { TagOptions, TagVariant } from './display/Tag.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
+
+export { Tooltip } from './display/Tooltip.js';
+export type { TooltipOptions } from './display/Tooltip.js';
