@@ -2,7 +2,7 @@
 // @termuijs/store — Public API
 // ─────────────────────────────────────────────────────
 
-export { createStore, batch } from './store.js';
+export { createStore, batch, logger } from './store.js';
 export type {
     Store,
     UseStore,
@@ -12,4 +12,6 @@ export type {
     StateCreator,
     Selector,
     Listener,
+    Middleware,
+    StoreOptions,
 } from './store.js';
