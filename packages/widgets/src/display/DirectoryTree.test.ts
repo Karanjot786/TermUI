@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { DirectoryTree } from './DirectoryTree.js';
 import { Screen, caps } from '@termuijs/core';
 
@@ -30,9 +30,8 @@ function render(tree: DirectoryTree) {
 
 describe('DirectoryTree', () => {
 
-    beforeEach(() => {
-        // reset unicode mode safely before every test
-        (caps as any).unicode = true;
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it('renders top-level nodes', () => {
@@ -87,14 +86,12 @@ describe('DirectoryTree', () => {
     });
 
     it('uses ASCII icons when unicode is disabled', () => {
-        // IMPORTANT: force ASCII mode BEFORE creating widget
-        (caps as any).unicode = false;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
 
         const tree = new DirectoryTree({ tree: sampleTree });
 
         const output = render(tree);
 
-        // stronger assertion: both icons must appear somewhere in full render
         const hasASCIIFile = output.includes('[F]');
         const hasASCIIDir = output.includes('[D]');
 
