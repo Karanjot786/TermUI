@@ -5,6 +5,7 @@
 import {
     type Screen,
     type Style,
+    type KeyEvent,
     styleToCellAttrs,
     wordWrap,
     caps,
@@ -51,8 +52,8 @@ export class ThinkingBlock extends Widget {
         this.markDirty();
     }
 
-    handleKey(key: string): void {
-        if (key === 'Enter' || key === 't') {
+    handleKey(event: KeyEvent): void {
+        if (event.key === 'enter' || event.key === 't') {
             this.toggle();
         }
     }

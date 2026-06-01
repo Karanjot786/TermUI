@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, type KeyEvent } from '@termuijs/core';
 import { ThinkingBlock } from './ThinkingBlock.js';
+
+const key = (k: string): KeyEvent => ({ key: k, ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0), stopPropagation: () => {}, preventDefault: () => {} });
 
 function render(widget: ThinkingBlock) {
     const screen = new Screen(60, 10);
@@ -21,7 +23,7 @@ describe('ThinkingBlock', () => {
     it('expands on Enter', () => {
         const block = new ThinkingBlock();
 
-        block.handleKey('Enter');
+        block.handleKey(key('enter'));
 
         const screen = render(block);
 
@@ -33,7 +35,7 @@ describe('ThinkingBlock', () => {
         const block = new ThinkingBlock();
 
         block.appendText('Hello');
-        block.handleKey('Enter');
+        block.handleKey(key('enter'));
 
         expect((block as any)._text).toContain('Hello');
     });
