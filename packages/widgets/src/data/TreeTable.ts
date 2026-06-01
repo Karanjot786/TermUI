@@ -327,7 +327,7 @@ export class TreeTable extends Widget {
 
             // Fill remaining width for stripe/selection
             if (isSelected || isStripe) {
-                const bg = isSelected ? { type: 'named', name: 'blue' } : this._stripeColor;
+                const bg: Color = isSelected ? { type: 'named', name: 'blue' as const } : this._stripeColor;
                 for (let fx = cx; fx < x + width; fx++) {
                     screen.setCell(fx, y + row, { char: ' ', bg });
                 }
