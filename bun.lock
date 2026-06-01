@@ -13,6 +13,19 @@
         "vitest": "^2.1.0",
       },
     },
+    "examples/cli-wrapper-live": {
+      "name": "@termuijs/example-cli-wrapper-live",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.4.0",
+      },
+    },
     "examples/dashboard": {
       "name": "@termuijs/example-dashboard",
       "version": "0.1.0",
@@ -378,6 +391,7 @@
 
     "@termuijs/dev-server": ["@termuijs/dev-server@workspace:packages/dev-server"],
 
+    "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
     "@termuijs/example-dashboard": ["@termuijs/example-dashboard@workspace:examples/dashboard"],
 
     "@termuijs/example-forms": ["@termuijs/example-forms@workspace:examples/forms-and-validation"],

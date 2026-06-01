@@ -131,3 +131,4 @@ export namespace JSX {
         };
     }
 }
+export { jsx as jsxDEV } from './createElement.js';

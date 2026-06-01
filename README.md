@@ -370,7 +370,7 @@ cd examples/dashboard
 bun run dev
 ```
 
-Six examples: `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
+Six examples: `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
 
 ## Project structure
 
@@ -390,6 +390,7 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
+  cli-wrapper-live/      Live subprocess log streaming
   dashboard/             Real-time system monitor
   forms-and-validation/  Multi-field form with validation
   jsx-dashboard/         JSX-based dashboard
