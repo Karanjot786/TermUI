@@ -10,5 +10,9 @@ export type { SpringConfig, SpringState } from './spring.js';
 export { transition, fadeIn, fadeOut, slideIn, typewriter, pulse, easings } from './transitions.js';
 export type { TransitionOptions, EasingFn } from './transitions.js';
 
+// Sequencing
+export { sequence, parallel } from './sequence.js';
+export type { AnimationRunner } from './sequence.js';
+
 // Shared interval timer pool
 export { subscribe as timerPoolSubscribe, unsubscribeAll as timerPoolUnsubscribeAll } from './timer-pool.js';
