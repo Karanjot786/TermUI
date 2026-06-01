@@ -18,6 +18,7 @@ export {
     useInterval,
     useMemo,
     useRef,
+    useImperativeHandle,
     useCallback,
     useAsync,
     useKeymap,

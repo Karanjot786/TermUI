@@ -428,6 +428,25 @@ export function useRef<T>(initialValue: T): { current: T } {
 }
 
 /**
+ * useImperativeHandle — expose an imperative handle through a ref.
+ *
+ * ```tsx
+ * useImperativeHandle(ref, () => ({ focus: () => input.focus() }), []);
+ * ```
+ */
+export function useImperativeHandle<T>(
+    ref: { current: T | null } | null | undefined,
+    createHandle: () => T,
+    deps: any[],
+): void {
+    const handle = useMemo(createHandle, deps);
+
+    if (ref) {
+        ref.current = handle;
+    }
+}
+
+/**
  * useCallback — memoize a callback function.
  */
 export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: any[]): T {
