@@ -16,6 +16,9 @@ bun run test
 
 You need **Bun 1.3 or newer**. The project is a Bun workspace monorepo with 13 packages under `packages/`. Node 18+ matters only if you consume published `@termuijs/*` packages from npm. Development is Bun-only.
 
+For local development setup and workspace commands, see [DEVELOPMENT.md](./DEVELOPMENT.md).
+
+
 ## Two-repo layout
 
 Framework code lives here. Docs site lives in a separate repo.
@@ -171,6 +174,8 @@ Claim one. Comment:
 > I would like to work on this
 
 The bot assigns you. You have **7 days** to open your PR. After that the issue frees up.
+
+**One contributor holds at most 2 open issues.** If you already have 2 assigned, the bot will not assign a third. Open and merge a PR from one of your current issues first. Then claim the next. This keeps work moving and gives every contributor a fair chance.
 
 ## Step 3: open your PR
 

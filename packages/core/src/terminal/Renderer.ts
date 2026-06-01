@@ -6,6 +6,7 @@ import type { Terminal } from './Terminal.js';
 import { type Cell, cellsEqual, type Screen } from './Screen.js';
 import { type ColorDepth, colorToAnsiFg, colorToAnsiBg } from '../style/Color.js';
 import { moveTo, beginSyncUpdate, endSyncUpdate, reset as ansiReset } from '../utils/ansi.js';
+import { RenderHook } from '../renderer/render-hook.js';
 
 /**
  * Differential renderer — compares front/back screen buffers and
@@ -20,12 +21,16 @@ export class Renderer {
     private _renderRequested = false;
     private _colorDepth: ColorDepth;
     private _onTick: (() => void) | null = null;
+    
+    /** The stdout interceptor hook for buffering external logs */
+    public readonly hook: RenderHook;
 
     constructor(terminal: Terminal, screen: Screen, fps = 30) {
         this._terminal = terminal;
         this._screen = screen;
         this._fps = fps;
         this._colorDepth = terminal.colorDepth;
+        this.hook = new RenderHook();
     }
 
     /** Change the rendering frame rate cap */
@@ -82,6 +87,14 @@ export class Renderer {
      * emit only changed cells.
      */
     private _flush(): void {
+        // 1. Grab any logs that console.log() caught while we were rendering
+        const bufferedLogs = this.hook.flush();
+        
+        if (bufferedLogs) {
+            // Force a full redraw of the UI underneath the new logs so it doesn't get corrupted
+            this._screen.invalidate();
+        }
+
         const { front, back, cols, rows } = this._screen;
         let output = beginSyncUpdate;
         let lastRow = -1;
@@ -111,7 +124,25 @@ export class Renderer {
         output += ansiReset;
         output += endSyncUpdate;
 
+        // 2. Pause the hook temporarily so our own UI rendering doesn't get buffered
+        const isHookActive = this.hook.isActive;
+        if (isHookActive) {
+            this.hook.stop();
+        }
+
+        // 3. Print the captured logs FIRST (above the UI)
+        if (bufferedLogs) {
+            this._terminal.write(bufferedLogs);
+        }
+
+        // 4. Print the actual UI diff natively
         this._terminal.write(output);
+
+        // 5. Resume catching external logs
+        if (isHookActive) {
+            this.hook.start();
+        }
+
         this._screen.swap();
     }
 

@@ -19,6 +19,10 @@ export interface AppOptions extends TerminalOptions {
     fps?: number;
     /** Use alternate screen (full-screen mode). Default: true */
     fullscreen?: boolean;
+    /** Screen mode: 'alternate' = alt screen (default), 'main' = render to main screen, 'inline' = render N rows at cursor */
+    screenMode?: 'alternate' | 'main' | 'inline';
+    /** Number of rows to render in inline mode (only used when screenMode='inline') */
+    inlineRows?: number;
     /** Enable mouse support. Default: false */
     mouse?: boolean;
     /** Force fallback (static) rendering */
@@ -73,6 +77,8 @@ export class App {
     private _unsubKey: (() => void) | null = null;
     private _unsubMouse: (() => void) | null = null;
     private _widgetById = new Map<string, any>();
+    // Lines to insert before inline viewport output. Each entry: { id: symbol, text: string }
+    private _insertBefore: Array<{ id: symbol; text: string }> = [];
 
     constructor(rootWidget: RootWidget, options: AppOptions = {}) {
         this._rootWidget = rootWidget;
@@ -80,6 +86,9 @@ export class App {
             fullscreen: true,
             mouse: false,
             fps: 30,
+            // Default screenMode: if fullscreen explicitly disabled, treat as 'main', otherwise 'alternate'
+            screenMode: options.fullscreen === false ? 'main' : 'alternate',
+            inlineRows: 0,
             ...options,
         };
 
@@ -108,9 +117,13 @@ export class App {
 
         this._mounted = true;
 
+        // Start the stdout interceptor right before UI rendering begins
+        this.renderer.hook.start();
+
         // Set up terminal
         this.terminal.enterRawMode();
-        if (this._options.fullscreen) {
+        // Enter alternate screen only when requested via screenMode === 'alternate'
+        if (this._options.screenMode === 'alternate') {
             this.terminal.enterAltScreen();
         }
         this.terminal.hideCursor();
@@ -208,6 +221,9 @@ export class App {
         this._unsubMouse?.();
         this._unsubMouse = null;
 
+        // Stop the stdout interceptor to restore native console.log behavior
+        this.renderer.hook.stop();
+
         this.renderer.stop();
         this.input.stop();
         this.terminal.restore();
@@ -267,6 +283,35 @@ export class App {
         // Composite overlay layers on top of the base rendering
         this.layers.composite(this.screen);
 
+        // Inline rendering bypasses the differential renderer and writes
+        // the bottom N rows directly into the main buffer so scrollback
+        // is preserved. It also emits any registered `insertBefore` lines
+        // above the live UI.
+        if (this._options.screenMode === 'inline') {
+            // Lazy import to avoid circular deps in tests
+            // Render any insertBefore lines first
+            for (const item of this._insertBefore) {
+                this.terminal.write(item.text + '\n');
+            }
+            // Render bottom N rows as plain text
+            try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const mod = require('../inline-viewport.js');
+                const renderInlineToTerminal = mod.renderInlineToTerminal ?? mod.default?.renderInlineToTerminal;
+                if (typeof renderInlineToTerminal === 'function') {
+                    // Ensure we pass an object with a `write` method. Support Terminal instance
+                    // or raw stdout-like streams used in tests.
+                    const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
+                        ? (this.terminal as any)
+                        : { write: (s: string) => (this.terminal as any).stdout.write(s) };
+                    renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
+                }
+            } catch (e) {
+                // Fallback: write nothing
+            }
+            return;
+        }
+
         this.renderer.requestFrame();
     }
 
@@ -279,6 +324,19 @@ export class App {
             this._exitResolve(code);
             this._exitResolve = null;
         }
+    }
+
+    /**
+     * Register a persistent line to be written above inline viewport output.
+     * Returns an unregister function.
+     */
+    insertBefore(line: string): () => void {
+        const id = Symbol();
+        this._insertBefore.push({ id, text: line });
+        return () => {
+            const idx = this._insertBefore.findIndex(x => x.id === id);
+            if (idx >= 0) this._insertBefore.splice(idx, 1);
+        };
     }
 
     /**

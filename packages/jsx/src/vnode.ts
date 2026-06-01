@@ -7,9 +7,10 @@
 // ─────────────────────────────────────────────────────
 
 import type { Style, Color } from '@termuijs/core';
+import type { Widget } from '@termuijs/widgets';
 
-/** A functional component — takes props, returns VNode tree */
-export type FC<P = {}> = (props: P & { children?: VNode | VNode[] }) => VNode;
+/** A functional component — takes props, returns a renderable node or widget */
+export type FC<P = {}> = (props: P & { children?: VNode | VNode[] }) => VNode | Widget;
 
 /** The basic building block of the component tree */
 export type VNode =
