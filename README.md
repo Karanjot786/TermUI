@@ -409,6 +409,9 @@ bun run test       # Run all 600 tests
 bun run typecheck  # Type-check all packages
 ```
 
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for local setup, build commands, testing, and contributor workflow.
+
+
 ## Requirements
 
 - [Bun](https://bun.sh) 1.3.0 or newer for development
