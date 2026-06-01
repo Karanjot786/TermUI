@@ -1,6 +1,6 @@
 // SnippetPrompt — parse template placeholders and manage prompt values
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle } from '@termuijs/core';
+import { type Screen, mergeStyles, defaultStyle } from '@termuijs/core';
 
 export interface SnippetPromptOptions {
     validate?: Record<string, (value: string) => string | null>;
