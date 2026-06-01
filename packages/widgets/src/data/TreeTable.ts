@@ -6,6 +6,7 @@ import {
     type Screen,
     type Style,
     type Color,
+    type KeyEvent,
     styleToCellAttrs,
     stringWidth,
     truncate,
@@ -197,32 +198,32 @@ export class TreeTable extends Widget {
      * Handle a key event. Call this from your app's key-routing logic
      * when this widget is focused.
      */
-    handleKey(key: string): void {
-        switch (key) {
-            case 'ArrowUp':
+    handleKey(event: KeyEvent): void {
+        switch (event.key) {
+            case 'up':
             case 'k':
                 this.movePrev();
                 break;
-            case 'ArrowDown':
+            case 'down':
             case 'j':
                 this.moveNext();
                 break;
-            case 'Enter':
-            case ' ':
+            case 'enter':
+            case 'space':
                 this.toggle();
                 break;
-            case 'ArrowLeft':
+            case 'left':
             case 'h':
                 this.collapse();
                 break;
-            case 'ArrowRight':
+            case 'right':
             case 'l':
                 this.expand();
                 break;
-            case 'Home':
+            case 'home':
                 this.moveFirst();
                 break;
-            case 'End':
+            case 'end':
                 this.moveLast();
                 break;
         }

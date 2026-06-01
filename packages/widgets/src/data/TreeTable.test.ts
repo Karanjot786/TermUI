@@ -4,7 +4,9 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { TreeTable, type TreeTableRow } from './TreeTable.js';
-import { Screen } from '@termuijs/core';
+import { Screen, type KeyEvent } from '@termuijs/core';
+
+const key = (k: string): KeyEvent => ({ key: k, ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0), stopPropagation: () => {}, preventDefault: () => {} });
 
 // ── Helpers ──────────────────────────────────────────
 
@@ -99,7 +101,7 @@ describe('TreeTable', () => {
     it('calls onSelect when selected row changes', () => {
         const handler = vi.fn();
         const table = makeTreeTable(COLUMNS, FILE_TREE, handler);
-        table.handleKey('ArrowDown');
+        table.handleKey(key('down'));
         expect(handler).toHaveBeenCalledOnce();
     });
 
