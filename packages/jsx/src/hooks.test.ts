@@ -7,7 +7,7 @@ import { timerPoolUnsubscribeAll } from '@termuijs/motion';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
     useState, useEffect, useRef, useCallback,
-    useAsync, useInterval, setRequestRender, runEffects, destroyFiber,
+    useAsync, useInterval, useInsertBefore, setRequestRender, setInsertBefore, runEffects, destroyFiber,
     type Fiber, type AsyncState,
 } from './hooks.js';
 
@@ -239,5 +239,21 @@ describe('useAsync', () => {
         const parent = createFiber();
         const child = createFiber(parent);
         expect(child.parent).toBe(parent);
+    });
+});
+
+describe('useInsertBefore', () => {
+    it('registers and cleans up inline header lines', () => {
+        const fiber = createFiber();
+        const insertBefore = vi.fn(() => vi.fn());
+
+        setInsertBefore(insertBefore);
+        setCurrentFiber(fiber);
+        useInsertBefore('HEADER LINE');
+        runEffects(fiber);
+        clearCurrentFiber();
+
+        expect(insertBefore).toHaveBeenCalledOnce();
+        expect(insertBefore).toHaveBeenCalledWith('HEADER LINE');
     });
 });

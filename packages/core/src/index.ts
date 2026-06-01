@@ -70,6 +70,7 @@ export type { TestScreen } from './terminal/TestBackend.js';
 export { App } from './app/App.js';
 export type { AppOptions, RootWidget } from './app/App.js';
 export { shouldUseFallback, renderFallback } from './app/Fallback.js';
+export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.js';
 
 // ── Utilities ─────────────────────────────────────────
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';

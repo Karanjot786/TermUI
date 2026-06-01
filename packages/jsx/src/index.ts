@@ -22,6 +22,7 @@ export {
     useAsync,
     useKeymap,
     useMotion,
+    useInsertBefore,
 } from './hooks.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 
@@ -55,7 +56,7 @@ export type { RenderOptions } from './render.js';
 export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
 
 // ── Internal — used by @termuijs/testing ──
-export { setRequestRender, getRequestRender, collectInputHandlers, destroyFiber } from './hooks.js';
+export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber } from './hooks.js';
 
 // ── Convenience alias ──
 /** h() — shorthand for createElement */
