@@ -7,16 +7,16 @@ import { caps } from '@termuijs/core';
 import { Spinner, SPINNER_FRAMES } from './Spinner.js';
 
 describe('Spinner', () => {
-    const originalMotion = caps.motion;
-    const originalUnicode = caps.unicode;
+    beforeEach(() => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
+    });
 
     afterEach(() => {
-        (caps as unknown as { motion: boolean }).motion = originalMotion;
-        (caps as unknown as { unicode: boolean }).unicode = originalUnicode;
+        vi.restoreAllMocks();
     });
 
     it('does not advance frames on manual tick when motion is disabled', () => {
-        (caps as unknown as { motion: boolean }).motion = false;
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
         const spinner = new Spinner({}, { spinner: 'line' });
 
         spinner.tick(130);
@@ -95,42 +95,42 @@ describe('Spinner — Presets and ASCII fallback', () => {
     });
 
     it('uses ASCII frames when NO_UNICODE=1 and preset is dots', async () => {
-        (caps as unknown as { unicode: boolean }).unicode = false;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const spinner = new Spinner({}, { preset: 'dots' });
         const frames = (spinner as unknown as { _frames: string[] })._frames;
         expect(frames).toEqual(['|', '/', '-', '\\']);
     });
 
     it('uses ASCII frames when NO_UNICODE=1 and preset is bar', async () => {
-        (caps as unknown as { unicode: boolean }).unicode = false;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const spinner = new Spinner({}, { preset: 'bar' });
         const frames = (spinner as unknown as { _frames: string[] })._frames;
         expect(frames).toEqual(['[ ]', '[= ]', '[== ]', '[===]']);
     });
 
     it('uses ASCII frames when NO_UNICODE=1 and preset is pulse', async () => {
-        (caps as unknown as { unicode: boolean }).unicode = false;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const spinner = new Spinner({}, { preset: 'pulse' });
         const frames = (spinner as unknown as { _frames: string[] })._frames;
         expect(frames).toEqual(['#', '+', '-', '.']);
     });
 
     it('uses ASCII frames when NO_UNICODE=1 and preset is bounce', async () => {
-        (caps as unknown as { unicode: boolean }).unicode = false;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const spinner = new Spinner({}, { preset: 'bounce' });
         const frames = (spinner as unknown as { _frames: string[] })._frames;
         expect(frames).toEqual(['.', 'o', 'O', 'o']);
     });
 
     it('uses unicode frames when unicode is available for bar', async () => {
-        (caps as unknown as { unicode: boolean }).unicode = true;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const spinner = new Spinner({}, { preset: 'bar' });
         const frames = (spinner as unknown as { _frames: string[] })._frames;
         expect(frames).toEqual(SPINNER_FRAMES.bar.frames);
     });
 
     it('uses unicode frames when unicode is available for pulse', async () => {
-        (caps as unknown as { unicode: boolean }).unicode = true;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const spinner = new Spinner({}, { preset: 'pulse' });
         const frames = (spinner as unknown as { _frames: string[] })._frames;
         expect(frames).toEqual(SPINNER_FRAMES.pulse.frames);
