@@ -27,7 +27,7 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@termuijs/core": "workspace:*",

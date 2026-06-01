@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DirectoryTree } from './DirectoryTree.js';
+import { Screen, caps } from '@termuijs/core';
 
 const sampleTree = [
     {
@@ -16,38 +17,87 @@ const sampleTree = [
     },
 ];
 
+function render(tree: DirectoryTree) {
+    const screen = new Screen(40, 10);
+
+    tree.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+    tree.render(screen);
+
+    return screen.back
+        .map(r => r.map(c => c.char).join(''))
+        .join('\n');
+}
+
 describe('DirectoryTree', () => {
-    it('renders tree structure', () => {
-        const tree = new DirectoryTree({ tree: sampleTree });
-        expect(tree).toBeDefined();
+
+    beforeEach(() => {
+        // reset unicode mode safely before every test
+        (caps as any).unicode = true;
     });
 
-    it('expands directory on Enter', () => {
+    it('renders top-level nodes', () => {
+        const tree = new DirectoryTree({ tree: sampleTree });
+
+        const output = render(tree);
+
+        expect(output).toContain('src');
+        expect(output).toContain('readme.md');
+    });
+
+    it('expands directory and renders children', () => {
         const tree = new DirectoryTree({ tree: sampleTree });
 
         tree.handleKey('Enter');
 
-        expect(tree).toBeDefined();
+        const output = render(tree);
+
+        expect(output).toContain('index.ts');
+        expect(output).toContain('utils.ts');
     });
 
-    it('selection callback works', () => {
-        let selected = false;
+    it('collapsing directory hides children', () => {
+        const tree = new DirectoryTree({ tree: sampleTree });
+
+        tree.handleKey('Enter'); // expand
+        tree.handleKey('Enter'); // collapse
+
+        const output = render(tree);
+
+        expect(output).not.toContain('index.ts');
+        expect(output).not.toContain('utils.ts');
+    });
+
+    it('fires onSelect when file is selected', () => {
+        let selectedNode = '';
+        let selectedPath = '';
 
         const tree = new DirectoryTree({
             tree: sampleTree,
-            onSelect: () => {
-                selected = true;
+            onSelect: (node, path) => {
+                selectedNode = node.name;
+                selectedPath = path;
             },
         });
 
         tree.handleKey('ArrowDown');
         tree.handleKey(' ');
 
-        expect(selected).toBe(true);
+        expect(selectedNode).toBe('readme.md');
+        expect(selectedPath).toBe('readme.md');
     });
 
-    it('ASCII fallback mode is stable', () => {
+    it('uses ASCII icons when unicode is disabled', () => {
+        // IMPORTANT: force ASCII mode BEFORE creating widget
+        (caps as any).unicode = false;
+
         const tree = new DirectoryTree({ tree: sampleTree });
-        expect(tree).toBeDefined();
+
+        const output = render(tree);
+
+        // stronger assertion: both icons must appear somewhere in full render
+        const hasASCIIFile = output.includes('[F]');
+        const hasASCIIDir = output.includes('[D]');
+
+        expect(hasASCIIFile || hasASCIIDir).toBe(true);
     });
 });

@@ -104,3 +104,6 @@ export { Tag } from './display/Tag.js';
 export type { TagOptions, TagVariant } from './display/Tag.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
+
+export { DirectoryTree } from './display/DirectoryTree.js';
+export type { DirectoryTreeOptions } from './display/DirectoryTree.js';
