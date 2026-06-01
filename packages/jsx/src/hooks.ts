@@ -61,7 +61,21 @@ interface EffectRecord {
 
 let _currentFiber: Fiber | null = null;
 let _requestRender: (() => void) | null = null;
+let _insertBefore: ((line: string) => (() => void) | void) | null = null;
 let _nextFiberId = 0;
+let _nextHookId = 0;
+export function useId(): string {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    if (idx >= fiber.hooks.length) {
+        fiber.hooks.push({
+            value: `id-${++_nextHookId}`,
+        });
+    }
+
+    return fiber.hooks[idx].value;
+}
 
 /** Get or throw the current fiber (hooks must be called inside a component) */
 export function currentFiber(): Fiber {
@@ -113,6 +127,11 @@ export function setRequestRender(fn: (() => void) | null): void {
 /** Get the current requestRender callback */
 export function getRequestRender(): (() => void) | null {
     return _requestRender;
+}
+
+/** Set the insertBefore callback for inline rendering */
+export function setInsertBefore(fn: ((line: string) => (() => void) | void) | null): void {
+    _insertBefore = fn;
 }
 
 // ── Batched State Updates ──
@@ -296,6 +315,17 @@ export function useKeymap(bindings: KeyBinding[]): void {
     };
 }
 
+/**
+ * useInsertBefore — register a persistent line above the inline viewport.
+ * The line is added when the component mounts and removed on unmount or when
+ * the value changes.
+ */
+export function useInsertBefore(line: string): void {
+    useEffect(() => {
+        return _insertBefore?.(line) as (() => void) | void;
+    }, [line]);
+}
+
 export interface MotionPreferences {
     /** True when the user prefers reduced motion (NO_MOTION=1 or CI=true) */
     reduced: boolean;
@@ -411,10 +441,66 @@ export function useRef<T>(initialValue: T): { current: T } {
 }
 
 /**
+ * useImperativeHandle — expose an imperative handle through a ref.
+ *
+ * ```tsx
+ * useImperativeHandle(ref, () => ({ focus: () => input.focus() }), []);
+ * ```
+ */
+export function useImperativeHandle<T>(
+    ref: { current: T | null } | null | undefined,
+    createHandle: () => T,
+    deps: any[],
+): void {
+    const handle = useMemo(createHandle, deps);
+
+    if (ref) {
+        ref.current = handle;
+    }
+}
+
+/**
  * useCallback — memoize a callback function.
  */
 export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: any[]): T {
     return useMemo(() => callback, deps);
+}
+
+/**
+ * useReducer — manage state with a reducer function.
+ *
+ * ```tsx
+ * const [state, dispatch] = useReducer((state, action) => {
+ *     if (action === 'inc') return state + 1;
+ *     if (action === 'dec') return state - 1;
+ *     return state;
+ * }, 0);
+ * dispatch('inc');
+ * ```
+ */
+export function useReducer<S, A>(
+    reducer: (state: S, action: A) => S,
+    initialState: S,
+): [S, (action: A) => void] {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    if (idx >= fiber.hooks.length) {
+        fiber.hooks.push({ value: initialState });
+    }
+
+    const hookState = fiber.hooks[idx];
+
+    const dispatch = (action: A): void => {
+        const next = reducer(hookState.value, action);
+        if (!Object.is(hookState.value, next)) {
+            hookState.value = next;
+            fiber.isDirty = true;
+            scheduleRender(fiber);
+        }
+    };
+
+    return [hookState.value, dispatch];
 }
 
 /** Run all pending effects for a fiber */

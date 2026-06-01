@@ -13,6 +13,7 @@
     "test:watch": "bun vitest",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
+    "bench": "bun packages/core/src/benchmark/render-loop.ts",
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {

@@ -29,7 +29,7 @@ interface ComponentInstance {
     children: VNode[];
     widget: Widget;
     childInstances: ComponentInstance[];
-    lastVNode: VNode;
+    lastVNode: VNode | Widget;
 }
 
 const _instanceMap = new Map<Widget, ComponentInstance>();
@@ -368,7 +368,7 @@ function renderComponent(
     setCurrentFiber(fiber);
 
     // Call the component function — catch any render-time errors
-    let vnode: VNode;
+    let vnode: VNode | Widget;
     try {
         vnode = component({ ...props, children: children.length === 1 ? children[0] : children });
     } catch (err) {
@@ -386,6 +386,25 @@ function renderComponent(
     }
 
     clearCurrentFiber();
+
+    if (vnode instanceof Widget) {
+        _parentFiber = prevParent;
+
+        cleanupStaleChildFibers(fiber);
+        runEffects(fiber);
+
+        _instanceMap.set(vnode, {
+            fiber,
+            component,
+            props,
+            children,
+            widget: vnode,
+            childInstances: [],
+            lastVNode: vnode,
+        });
+
+        return vnode;
+    }
 
     // Reconcile the returned VNode into a real widget
     const widget = reconcile(vnode);
@@ -440,7 +459,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     setCurrentFiber(fiber);
 
     // Call the component function — catch any render-time errors (same as renderComponent)
-    let vnode: VNode;
+    let vnode: VNode | Widget;
     try {
         vnode = component({ ...props, children: children.length === 1 ? children[0] : children });
     } catch (rawErr) {
@@ -456,6 +475,22 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     }
 
     clearCurrentFiber();
+
+    if (vnode instanceof Widget) {
+        _parentFiber = prevParent;
+
+        cleanupStaleChildFibers(fiber);
+        runEffects(fiber);
+        fiber.isDirty = false;
+
+        _pruneInstancesForWidget(instance.widget);
+
+        instance.widget = vnode;
+        instance.lastVNode = vnode;
+        _instanceMap.set(vnode, instance);
+
+        return vnode;
+    }
 
     // memo() optimization: if component returned same VNode reference, skip widget rebuild
     if (vnode === instance.lastVNode) {
