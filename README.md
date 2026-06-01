@@ -373,7 +373,7 @@ cd examples/dashboard
 bun run dev
 ```
 
-Six examples: `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`.
+Six examples: `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
 
 ## Project structure
 
@@ -393,12 +393,13 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
-  dashboard/         Real-time system monitor
-  jsx-dashboard/     JSX-based dashboard
-  showcase/          Widget gallery
-  system-monitor/    Advanced monitor
-  todo-app/          Interactive todo list
-  widget-gallery/    All widgets in one place
+  dashboard/             Real-time system monitor
+  forms-and-validation/  Multi-field form with validation
+  jsx-dashboard/         JSX-based dashboard
+  showcase/              Widget gallery
+  system-monitor/        Advanced monitor
+  todo-app/              Interactive todo list
+  widget-gallery/        All widgets in one place
 ```
 
 ## Development
@@ -409,6 +410,9 @@ bun run build      # Build all 13 packages
 bun run test       # Run all 600 tests
 bun run typecheck  # Type-check all packages
 ```
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for local setup, build commands, testing, and contributor workflow.
+
 
 ## Requirements
 
