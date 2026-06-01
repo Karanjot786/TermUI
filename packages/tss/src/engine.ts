@@ -6,6 +6,48 @@ import { tokenize } from './tokenizer.js';
 import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValue } from './parser.js';
 import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
 
+export function compile(source: string): string {
+    const tokens = tokenize(source);
+    const ast = parse(tokens);
+    let output: string[] = [];
+
+    function serializeSelector(sel: TSSSelector): string {
+        let s = sel.widget === '*' ? '' : sel.widget;
+        if (sel.className) s += '.' + sel.className;
+        if (sel.pseudo) s += ':' + sel.pseudo;
+        return s || '*';
+    }
+
+    function processRule(rule: TSSRule, parentSelStr: string) {
+        const selStr = serializeSelector(rule.selector);
+        const fullSelStr = parentSelStr ? `${parentSelStr} ${selStr}` : selStr;
+        
+        if (rule.properties.length > 0) {
+            let block = `${fullSelStr} {`;
+            for (const prop of rule.properties) {
+                let valStr = '';
+                if (prop.value.kind === 'var') valStr = `var(${prop.value.name})`;
+                else valStr = String(prop.value.value);
+                block += ` ${prop.name}: ${valStr};`;
+            }
+            block += ` }`;
+            output.push(block);
+        }
+
+        if (rule.nested) {
+            for (const child of rule.nested) {
+                processRule(child, fullSelStr);
+            }
+        }
+    }
+
+    for (const rule of ast.rules) {
+        processRule(rule, '');
+    }
+
+    return output.join('\n');
+}
+
 export interface ThemeVariables {
     [key: string]: string;
 }
@@ -92,11 +134,16 @@ export class ThemeEngine {
             const active = this._stylesheet.themes.find(t => t.name === this._activeTheme);
             if (active) Object.assign(this._variables, active.variables);
         }
-        // Resolve rules
+        // Resolve top-level rules only.
+        // Nested rules (rule.nested) are supported by the parser and compile()
+        // but ThemeEngine's selector matching is flat and does not support
+        // descendant combinators. Nested rules are intentionally skipped here
+        // to avoid silently applying child selectors at the wrong scope.
         this._resolvedRules = this._stylesheet.rules.map(rule => ({
             selector: rule.selector,
             properties: this._resolveProperties(rule),
         }));
+
         // Notify listeners
         for (const fn of this._listeners) fn();
     }
