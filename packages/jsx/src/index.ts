@@ -13,6 +13,7 @@ export { isVElement, isVFragment, flattenChildren } from './vnode.js';
 // ── Hooks ──
 export {
     useState,
+    useId,
     useEffect,
     useInput,
     useInterval,

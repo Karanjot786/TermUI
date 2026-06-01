@@ -63,6 +63,19 @@ let _currentFiber: Fiber | null = null;
 let _requestRender: (() => void) | null = null;
 let _insertBefore: ((line: string) => (() => void) | void) | null = null;
 let _nextFiberId = 0;
+let _nextHookId = 0;
+export function useId(): string {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    if (idx >= fiber.hooks.length) {
+        fiber.hooks.push({
+            value: `id-${++_nextHookId}`,
+        });
+    }
+
+    return fiber.hooks[idx].value;
+}
 
 /** Get or throw the current fiber (hooks must be called inside a component) */
 export function currentFiber(): Fiber {
