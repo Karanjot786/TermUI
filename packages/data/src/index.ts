@@ -25,6 +25,7 @@ export {
     useTopProcesses,
     useSystemInfo,
     useHttpHealth,
+    useWebSocket,
 } from './hooks.js';
 export type {
     CpuMetrics,
@@ -32,4 +33,6 @@ export type {
     DiskMetrics,
     NetworkMetrics,
     SystemInfo,
+    UseWebSocketReturn,
+    WebSocketState,
 } from './hooks.js';

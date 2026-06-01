@@ -30,7 +30,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@termuijs/jsx": "workspace:*"
+    "@termuijs/jsx": "workspace:*",
+    "@termuijs/testing": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

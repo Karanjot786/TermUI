@@ -108,6 +108,7 @@
       "version": "0.1.5",
       "dependencies": {
         "@termuijs/jsx": "workspace:*",
+        "@termuijs/testing": "workspace:*",
       },
       "devDependencies": {
         "@types/node": "^22.0.0",

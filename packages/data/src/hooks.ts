@@ -2,7 +2,7 @@
 // @termuijs/data — Reactive hooks for system metrics
 // ─────────────────────────────────────────────────────
 
-import { useState, useEffect, useInterval } from '@termuijs/jsx';
+import { useState, useEffect, useInterval, useRef, useCallback } from '@termuijs/jsx';
 import { cpu } from './cpu.js';
 import { memory } from './memory.js';
 import { disk } from './disk.js';
@@ -14,6 +14,7 @@ import type { ProcessInfo } from './processes.js';
 import { system } from './system.js';
 import { http } from './http.js';
 import type { HealthResult, Endpoint } from './http.js';
+import { ArrayBufferView } from 'bun';
 
 // ── CPU ──────────────────────────────────────────────
 
@@ -225,4 +226,96 @@ export function useHttpHealth(
     }, [endpointKey, intervalMs]);
 
     return results;
+}
+
+// WebSocket
+
+export type WebSocketState = 'connecting' | 'open' | 'closed' | 'error'
+
+export interface UseWebSocketReturn {
+    message: string | null;
+    state: WebSocketState;
+    send: (data: string | ArrayBuffer | ArrayBufferView)=> void;
+}
+
+/**
+ * useWebSocket — reactive WebSocket connection hook.
+ *
+ * Connects to the provided `url` and returns the latest text message,
+ * the connection `state`, and a `send` function to transmit data.
+ *
+ * The hook automatically attempts to reconnect on close using
+ * exponential backoff (capped at ~10s) and resets retries on open.
+ * It cleans up the socket and any pending reconnect timers on unmount.
+ *
+ * @param url - WebSocket URL to connect to (e.g. `wss://example.com/socket`).
+ */
+export function useWebSocket(url: string): UseWebSocketReturn {
+    const [message, setMessage] = useState<string | null>(null)
+    const [state, setState]= useState<WebSocketState>('connecting')
+
+    const socketRef = useRef<WebSocket | null>(null)
+    const reconnectTimeoutRef = useRef<Timer | null>(null)
+    const retryCountRef = useRef(0)
+
+    useEffect(()=>{
+        let isMounted = true;
+        
+        function connect(){
+            const socket = new WebSocket(url);
+            socketRef.current=socket;
+            setState('connecting')
+
+            socket.onopen=()=>{
+                if(!isMounted) return;
+                setState('open');
+                retryCountRef.current=0;
+            }
+
+            socket.onmessage=(e)=>{
+                if(!isMounted) return;
+                setMessage(e.data)
+            }
+
+            socket.onclose=()=>{
+                if(!isMounted) return;
+                setState('closed')
+                
+                const timeout = Math.min(1000*Math.pow(2, retryCountRef.current), 10000);
+                retryCountRef.current+=1;
+
+                reconnectTimeoutRef.current = setTimeout(()=>{
+                    connect();
+                }, timeout)
+            }
+
+            socket.onerror=()=>{
+                if(!isMounted) return;
+                setState('error')
+
+            }
+        }
+
+        connect();
+
+        return ()=>{
+            isMounted = false;
+            if(reconnectTimeoutRef.current){
+                clearTimeout(reconnectTimeoutRef.current)
+            }
+            if(socketRef.current){
+                socketRef.current.close();
+            }
+        }
+    }, [url])
+
+    const send = useCallback((data: string | ArrayBuffer | ArrayBufferView)=>{
+        if(socketRef.current && socketRef.current.readyState === WebSocket.OPEN){
+            socketRef.current.send(data)
+        } else{
+            console.warn("Websocket is not connected.")
+        }
+    }, [])
+
+    return {message, state, send}
 }
