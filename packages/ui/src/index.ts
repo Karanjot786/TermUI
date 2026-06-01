@@ -89,7 +89,14 @@ export type { FilePickerOptions, FileEntry } from './FilePicker.js';
 export { DatePicker } from './DatePicker.js';
 export type { DatePickerOptions } from './DatePicker.js';
 
+export { ColorPicker } from './ColorPicker.js';
+export type { ColorPickerOptions } from './ColorPicker.js';
+
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
+export { Toggle } from './Toggle.js';
+export type { ToggleOptions } from './Toggle.js';
+export { Wizard } from './Wizard.js';
+export type { WizardStep, WizardOptions } from './Wizard.js';

@@ -13,11 +13,13 @@ export { isVElement, isVFragment, flattenChildren } from './vnode.js';
 // ── Hooks ──
 export {
     useState,
+    useId,
     useEffect,
     useInput,
     useInterval,
     useMemo,
     useRef,
+    useImperativeHandle,
     useCallback,
     useAsync,
     useKeymap,
@@ -48,6 +50,8 @@ export type { UseFocusOptions, UseFocusResult } from './hooks/useFocus.js';
 export { useFocusTrap } from './hooks/useFocusTrap.js';
 export { useKeyboardNavigation } from './hooks/useKeyboardNavigation.js';
 export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hooks/useKeyboardNavigation.js';
+export { useModal } from './hooks/useModal.js';
+export type { UseModalResult } from './hooks/useModal.js';
 
 // ── Subprocess ──
 export { useSubprocess } from './hooks/useSubprocess.js';

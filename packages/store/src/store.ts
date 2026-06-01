@@ -93,6 +93,13 @@ export type Selector<T, U> = (state: T) => U;
 
 export type Listener<T> = (state: T, prevState: T) => void;
 
+export interface Computed<U> {
+    /** Get the current memoized derived value */
+    get(): U;
+    /** Subscribe to changes — listener fires only when the derived value changes */
+    subscribe(listener: (value: U) => void): () => void;
+}
+
 export interface Store<T> {
     /** Get the current state */
     getState(): T;
@@ -102,6 +109,8 @@ export interface Store<T> {
     subscribe(listener: Listener<T>): () => void;
     /** Destroy the store and remove all listeners */
     destroy(): void;
+    /** Create a memoized selector — subscribers are notified only when the derived value changes */
+    computed<U>(selector: Selector<T, U>): Computed<U>;
 }
 
 // ── Store Implementation ──
@@ -182,7 +191,33 @@ export function createStore<T extends object>(
     // Initialize state
     state = creator(setState, getState);
 
-    const store: Store<T> = { getState, setState, subscribe, destroy };
+    const computed = <U>(selector: Selector<T, U>): Computed<U> => {
+        // Seed cachedValue from current state — state is guaranteed initialized here
+        let cachedValue = selector(state);
+        const computedListeners = new Set<(value: U) => void>();
+
+        // Piggyback on the store's own subscribe — recompute on every state change
+        // but only notify computed subscribers when the derived value actually changes
+        subscribe((newState) => {
+            const newValue = selector(newState);
+            if (!Object.is(cachedValue, newValue)) {
+                cachedValue = newValue;
+                for (const listener of computedListeners) {
+                    listener(newValue);
+                }
+            }
+        });
+
+        return {
+            get: () => cachedValue,
+            subscribe: (listener) => {
+                computedListeners.add(listener);
+                return () => { computedListeners.delete(listener); };
+            },
+        };
+    };
+
+    const store: Store<T> = { getState, setState, subscribe, destroy, computed };
 
     // Create the hook function
     function useStore(): T;
@@ -211,6 +246,7 @@ export function createStore<T extends object>(
     (useStore as any).setState = setState;
     (useStore as any).subscribe = subscribe;
     (useStore as any).destroy = destroy;
+    (useStore as any).computed = computed;
 
     return useStore as UseStore<T>;
 }
@@ -224,4 +260,5 @@ export interface UseStore<T> {
     setState: SetState<T>;
     subscribe(listener: Listener<T>): () => void;
     destroy(): void;
+    computed<U>(selector: Selector<T, U>): Computed<U>;
 }
