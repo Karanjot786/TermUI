@@ -16,6 +16,9 @@ bun run test
 
 You need **Bun 1.3 or newer**. The project is a Bun workspace monorepo with 13 packages under `packages/`. Node 18+ matters only if you consume published `@termuijs/*` packages from npm. Development is Bun-only.
 
+For local development setup and workspace commands, see [DEVELOPMENT.md](./DEVELOPMENT.md).
+
+
 ## Two-repo layout
 
 Framework code lives here. Docs site lives in a separate repo.

@@ -434,6 +434,43 @@ export function useCallback<T extends (...args: any[]) => any>(callback: T, deps
     return useMemo(() => callback, deps);
 }
 
+/**
+ * useReducer — manage state with a reducer function.
+ *
+ * ```tsx
+ * const [state, dispatch] = useReducer((state, action) => {
+ *     if (action === 'inc') return state + 1;
+ *     if (action === 'dec') return state - 1;
+ *     return state;
+ * }, 0);
+ * dispatch('inc');
+ * ```
+ */
+export function useReducer<S, A>(
+    reducer: (state: S, action: A) => S,
+    initialState: S,
+): [S, (action: A) => void] {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    if (idx >= fiber.hooks.length) {
+        fiber.hooks.push({ value: initialState });
+    }
+
+    const hookState = fiber.hooks[idx];
+
+    const dispatch = (action: A): void => {
+        const next = reducer(hookState.value, action);
+        if (!Object.is(hookState.value, next)) {
+            hookState.value = next;
+            fiber.isDirty = true;
+            scheduleRender(fiber);
+        }
+    };
+
+    return [hookState.value, dispatch];
+}
+
 /** Run all pending effects for a fiber */
 export function runEffects(fiber: Fiber): void {
     for (const record of fiber.effects) {
