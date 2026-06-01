@@ -370,7 +370,7 @@ cd examples/dashboard
 bun run dev
 ```
 
-Six examples: `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
+Examples: `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`, `multi-screen-router`.
 
 ## Project structure
 
@@ -394,6 +394,7 @@ examples/
   dashboard/             Real-time system monitor
   forms-and-validation/  Multi-field form with validation
   jsx-dashboard/         JSX-based dashboard
+    multi-screen-router/   Multi-screen router example
   showcase/              Widget gallery
   system-monitor/        Advanced monitor
   todo-app/              Interactive todo list
