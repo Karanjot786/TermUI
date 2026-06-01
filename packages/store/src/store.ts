@@ -93,6 +93,22 @@ export type Selector<T, U> = (state: T) => U;
 
 export type Listener<T> = (state: T, prevState: T) => void;
 
+export type Middleware<T> = (
+    prevState: T,
+    update: Partial<T>,
+    next: (transformedUpdate: Partial<T>) => T,
+) => void;
+
+export interface StoreOptions<T> {
+    middleware?: Middleware<T>[];
+}
+
+export const logger: Middleware<any> = (prevState, update, next) => {
+    console.log('Previous State:', prevState);
+    const nextState = next(update);
+    console.log('Next State:', nextState);
+};
+
 export interface Computed<U> {
     /** Get the current memoized derived value */
     get(): U;
@@ -139,6 +155,7 @@ export interface Store<T> {
  */
 export function createStore<T extends object>(
     creator: StateCreator<T>,
+    options?: StoreOptions<T>
 ): UseStore<T> {
     const listeners = new Set<Listener<T>>();
 
@@ -149,29 +166,54 @@ export function createStore<T extends object>(
         const nextPartial = typeof partial === 'function'
             ? (partial as (state: T) => Partial<T>)(state)
             : partial;
-        const nextState = { ...state, ...nextPartial };
 
-        // Only notify if at least one key's value actually changed
-        const hasChanged = Object.keys(nextPartial).some(
-            key => !Object.is((state as any)[key], (nextState as any)[key])
-        );
-        if (hasChanged) {
-            state = nextState;
-            if (_batchDepth > 0) {
-                // We're in a batch: defer listener notifications and track the final state
-                const existing = _batchStores.get(listeners);
-                if (!existing) {
-                    _batchStores.set(listeners, { prevState, nextState });
+        const applyUpdate = (finalPartial: Partial<T>): T => {
+            const nextState = { ...state, ...finalPartial };
+
+            // Only notify if at least one key's value actually changed
+            const hasChanged = Object.keys(finalPartial).some(
+                key => !Object.is((state as any)[key], (nextState as any)[key])
+            );
+            if (hasChanged) {
+                state = nextState;
+                if (_batchDepth > 0) {
+                    // We're in a batch: defer listener notifications and track the final state
+                    const existing = _batchStores.get(listeners);
+                    if (!existing) {
+                        _batchStores.set(listeners, { prevState, nextState });
+                    } else {
+                        // Update to the new nextState, but keep the original prevState
+                        existing.nextState = nextState;
+                    }
                 } else {
-                    // Update to the new nextState, but keep the original prevState
-                    existing.nextState = nextState;
-                }
-            } else {
-                // Not in a batch: notify immediately
-                for (const listener of listeners) {
-                    listener(state, prevState);
+                    // Not in a batch: notify immediately
+                    for (const listener of listeners) {
+                        listener(state, prevState);
+                    }
                 }
             }
+            return state;
+        };
+
+        if (options?.middleware && options.middleware.length > 0) {
+            let index = -1;
+            const dispatch = (i: number, currentPartial: Partial<T>): T => {
+                if (i <= index) throw new Error('next() called multiple times');
+                index = i;
+                if (i === options.middleware!.length) {
+                    return applyUpdate(currentPartial);
+                }
+                let res: T | undefined;
+                const mw = options.middleware![i];
+                mw(prevState, currentPartial, (transformed) => {
+                    res = dispatch(i + 1, transformed);
+                    return res;
+                });
+                return res !== undefined ? res : state;
+            };
+            dispatch(0, nextPartial);
+        } else {
+            applyUpdate(nextPartial);
         }
     };
 

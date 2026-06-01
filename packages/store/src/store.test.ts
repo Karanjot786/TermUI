@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createStore, batch } from './store.js'
+import { createStore, batch, logger } from './store.js'
 
 describe('createStore', () => {
     it('initializes state from creator function', () => {
@@ -256,5 +256,63 @@ describe('batch', () => {
         // Should still fire because b changed
         expect(spy).toHaveBeenCalledOnce()
         expect(spy.mock.calls[0][0]).toEqual({ a: 1, b: 2 })
+    })
+})
+
+describe('middleware', () => {
+    it('middleware is called during setState', () => {
+        const spy = vi.fn((prev, update, next) => next(update))
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [spy] })
+        
+        useStore.setState({ count: 1 })
+        expect(spy).toHaveBeenCalledOnce()
+        expect(spy.mock.calls[0][0]).toEqual({ count: 0 })
+        expect(spy.mock.calls[0][1]).toEqual({ count: 1 })
+    })
+
+    it('multiple middleware execute in correct order', () => {
+        const order: string[] = []
+        const mw1 = (prev: any, update: any, next: any) => {
+            order.push('mw1 start')
+            next(update)
+            order.push('mw1 end')
+        }
+        const mw2 = (prev: any, update: any, next: any) => {
+            order.push('mw2 start')
+            next(update)
+            order.push('mw2 end')
+        }
+
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [mw1, mw2] })
+        useStore.setState({ count: 1 })
+        
+        expect(order).toEqual(['mw1 start', 'mw2 start', 'mw2 end', 'mw1 end'])
+    })
+
+    it('middleware can modify updates before they apply', () => {
+        const doubleCount = (prev: any, update: any, next: any) => {
+            if ('count' in update) {
+                next({ ...update, count: update.count * 2 })
+            } else {
+                next(update)
+            }
+        }
+        
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [doubleCount] })
+        useStore.setState({ count: 5 })
+        expect(useStore.getState().count).toBe(10)
+    })
+
+    it('logger middleware receives previous and next state', () => {
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [logger] })
+        
+        useStore.setState({ count: 1 })
+        
+        expect(logSpy).toHaveBeenCalledTimes(2)
+        expect(logSpy.mock.calls[0]).toEqual(['Previous State:', { count: 0 }])
+        expect(logSpy.mock.calls[1]).toEqual(['Next State:', { count: 1 }])
+        
+        logSpy.mockRestore()
     })
 })
