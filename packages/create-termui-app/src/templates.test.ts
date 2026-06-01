@@ -67,6 +67,24 @@ describe('generateProject', () => {
         })
         expect(files.length).toBeGreaterThan(0)
     })
+    
+    it('file-manager template generates a focused package.json', () => {
+        const files = generateProject({
+            ...baseConfig,
+            template: 'file-manager',
+        })
+
+        const paths = files.map((f) => f.path)
+        expect(paths).toContain('package.json')
+        expect(paths).toContain('src/index.tsx')
+
+        const pkg = files.find((f) => f.path === 'package.json')!
+        const parsed = JSON.parse(pkg.content)
+        expect(parsed.dependencies['@termuijs/quick']).toBeUndefined()
+        expect(parsed.dependencies['@termuijs/motion']).toBeUndefined()
+        expect(parsed.dependencies['@termuijs/ui']).toBe('latest')
+        expect(parsed.dependencies['@termuijs/widgets']).toBe('latest')
+    })
 
     it('cli-tool template generates a minimal entry under 15 source lines', () => {
         const files = generateProject({

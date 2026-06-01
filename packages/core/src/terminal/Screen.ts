@@ -3,6 +3,8 @@
 // ─────────────────────────────────────────────────────
 
 import type { Color } from '../style/Color.js';
+import { stringWidth } from '../utils/unicode.js';
+import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
 
@@ -206,29 +208,41 @@ export class Screen {
         let x = col;
         for (const char of str) {
             if (x >= this._cols) break;
-            if (x < 0) { x++; continue; }
 
-            const cp = char.codePointAt(0)!;
-            const isWide = this._isWideCodePoint(cp);
-            const width = isWide ? 2 : 1;
+            let finalChar = char;
+            // Measure the visual width with the shared unicode utility
+            let width = stringWidth(char);
+
+            // Advance past off-screen-left cells by the real width
+            if (x < 0) { x += width; continue; }
+
+            // Fallback for terminals without wide-character support
+            if (width > 1 && !caps.unicode) {
+                finalChar = '*'; // safe single-cell substitute
+                width = 1;
+            }
+
+            // Skip zero-width characters (combining marks) so they do not overwrite
+            if (width === 0) continue;
 
             this.setCell(x, row, {
-                char,
+                char: finalChar,
                 width,
                 ...style,
             });
 
-            // If wide char, mark the next cell as a continuation
-            if (isWide && x + 1 < this._cols) {
-                this.setCell(x + 1, row, {
-                    char: '',
-                    width: 0,
-                    ...style,
-                });
-                x += 2;
-            } else {
-                x += 1;
+            // Mark continuation cells for wide characters
+            for (let i = 1; i < width; i++) {
+                if (x + i < this._cols) {
+                    this.setCell(x + i, row, {
+                        char: '',
+                        width: 0,
+                        ...style,
+                    });
+                }
             }
+
+            x += width;
         }
     }
 
@@ -284,24 +298,5 @@ export class Screen {
             grid.push(row);
         }
         return grid;
-    }
-
-    private _isWideCodePoint(cp: number): boolean {
-        return (
-            (cp >= 0x4E00 && cp <= 0x9FFF) ||
-            (cp >= 0x3400 && cp <= 0x4DBF) ||
-            (cp >= 0xF900 && cp <= 0xFAFF) ||
-            (cp >= 0xAC00 && cp <= 0xD7AF) ||
-            (cp >= 0x30A0 && cp <= 0x30FF) ||
-            (cp >= 0x3000 && cp <= 0x303F) ||
-            (cp >= 0x3040 && cp <= 0x309F) ||
-            (cp >= 0xFF01 && cp <= 0xFF60) ||
-            (cp >= 0xFFE0 && cp <= 0xFFE6) ||
-            (cp >= 0x1F600 && cp <= 0x1F64F) ||
-            (cp >= 0x1F300 && cp <= 0x1F5FF) ||
-            (cp >= 0x1F680 && cp <= 0x1F6FF) ||
-            (cp >= 0x1F900 && cp <= 0x1F9FF) ||
-            (cp >= 0x20000 && cp <= 0x2A6DF)
-        );
     }
 }

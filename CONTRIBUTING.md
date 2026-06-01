@@ -172,6 +172,8 @@ Claim one. Comment:
 
 The bot assigns you. You have **7 days** to open your PR. After that the issue frees up.
 
+**One contributor holds at most 2 open issues.** If you already have 2 assigned, the bot will not assign a third. Open and merge a PR from one of your current issues first. Then claim the next. This keeps work moving and gives every contributor a fair chance.
+
 ## Step 3: open your PR
 
 1. Branch name: `type/short-description`.

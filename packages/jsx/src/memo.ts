@@ -13,6 +13,7 @@
 // ─────────────────────────────────────────────────────
 
 import type { FC, VNode } from './vnode.js';
+import type { Widget } from '@termuijs/widgets';
 
 /**
  * Shallow comparison of two objects.
@@ -58,7 +59,7 @@ export function memo<P extends Record<string, any>>(
 
     // Cache the previous props and VNode output
     let prevProps: P | null = null;
-    let prevResult: VNode | null = null;
+    let prevResult: VNode | Widget | null = null;
 
     const memoized: FC<P> = (props: P & { children?: VNode | VNode[] }) => {
         // On first render, or when props change — call the component

@@ -56,6 +56,7 @@ jobs:
         run: node scripts/compare-bench.mjs bench-head.json bench-main.json --threshold 0.20
 
       - name: Post or update PR comment
+        continue-on-error: true
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
