@@ -370,7 +370,20 @@ cd examples/dashboard
 bun run dev
 ```
 
-Examples: `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`, `multi-screen-router`.
+### Available Examples
+
+| Example | Purpose | Features demonstrated | Path |
+|---------|---------|-----------------------|------|
+| Auth Flow | Demonstrates authentication | Store, Text inputs, conditional rendering | [`examples/auth-flow`](./examples/auth-flow) |
+| Todo App | Interactive todo list | Store batching, Lists, Inputs | [`examples/todo-app`](./examples/todo-app) |
+| Forms and Validation | Form validation | Form widget, inputs, modals | [`examples/forms-and-validation`](./examples/forms-and-validation) |
+| Multi-screen Router | Screen routing | Router, nested screens, navigation | [`examples/multi-screen-router`](./examples/multi-screen-router) |
+| Dashboard | Real-time system monitor | Quick API, layout, data hooks | [`examples/dashboard`](./examples/dashboard) |
+| System Monitor | Advanced monitor | Complex layouts, live charts | [`examples/system-monitor`](./examples/system-monitor) |
+| JSX Dashboard | JSX-based dashboard | JSX runtime | [`examples/jsx-dashboard`](./examples/jsx-dashboard) |
+| Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
+| Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
+| CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
 
 ## Project structure
 
@@ -390,6 +403,7 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
+  auth-flow/             Authentication flow example
   cli-wrapper-live/      Live subprocess log streaming
   dashboard/             Real-time system monitor
   forms-and-validation/  Multi-field form with validation

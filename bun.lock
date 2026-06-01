@@ -13,6 +13,20 @@
         "vitest": "^2.1.0",
       },
     },
+    "examples/auth-flow": {
+      "name": "@termuijs/example-auth-flow",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/store": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/cli-wrapper-live": {
       "name": "@termuijs/example-cli-wrapper-live",
       "version": "0.1.0",
@@ -414,6 +428,7 @@
 
     "@termuijs/dev-server": ["@termuijs/dev-server@workspace:packages/dev-server"],
 
+    "@termuijs/example-auth-flow": ["@termuijs/example-auth-flow@workspace:examples/auth-flow"],
     "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
     "@termuijs/example-dashboard": ["@termuijs/example-dashboard@workspace:examples/dashboard"],
     "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
