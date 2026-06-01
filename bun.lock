@@ -293,6 +293,7 @@
         "@termuijs/widgets": "workspace:*",
       },
       "devDependencies": {
+        "@termuijs/testing": "workspace:*",
         "tsup": "^8.0.0",
         "typescript": "^5.4.0",
       },
@@ -422,6 +423,7 @@
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.60.4", "", { "os": "win32", "cpu": "x64" }, "sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw=="],
 
     "@termuijs/adapters": ["@termuijs/adapters@workspace:packages/adapters"],
+
     "@termuijs/core": ["@termuijs/core@workspace:packages/core"],
 
     "@termuijs/data": ["@termuijs/data@workspace:packages/data"],
@@ -429,13 +431,16 @@
     "@termuijs/dev-server": ["@termuijs/dev-server@workspace:packages/dev-server"],
 
     "@termuijs/example-auth-flow": ["@termuijs/example-auth-flow@workspace:examples/auth-flow"],
+
     "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
+
     "@termuijs/example-dashboard": ["@termuijs/example-dashboard@workspace:examples/dashboard"],
-    "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
 
     "@termuijs/example-forms": ["@termuijs/example-forms@workspace:examples/forms-and-validation"],
 
     "@termuijs/example-jsx-dashboard": ["@termuijs/example-jsx-dashboard@workspace:examples/jsx-dashboard"],
+
+    "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
 
     "@termuijs/example-showcase": ["@termuijs/example-showcase@workspace:examples/showcase"],
 

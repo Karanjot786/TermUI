@@ -36,6 +36,9 @@ export type { CarouselOptions } from './Carousel.js';
 export { Modal } from './Modal.js';
 export type { ModalOptions } from './Modal.js';
 
+export { Drawer } from './Drawer.js';
+export type { DrawerOptions, DrawerPosition } from './Drawer.js';
+
 export { Select } from './Select.js';
 export type { SelectOption, SelectOptions } from './Select.js';
 
