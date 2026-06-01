@@ -1,6 +1,4 @@
-// ─────────────────────────────────────────────────────
-// @termuijs/ui — Tests for ContentSwitcher component
-// ─────────────────────────────────────────────────────
+// @termuijs/ui - Tests for ContentSwitcher component
 
 import { describe, it, expect } from 'vitest';
 import { ContentSwitcher } from './ContentSwitcher.js';

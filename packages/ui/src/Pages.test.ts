@@ -1,6 +1,4 @@
-// ─────────────────────────────────────────────────────
-// @termuijs/ui — Tests for Pages component
-// ─────────────────────────────────────────────────────
+// @termuijs/ui - Tests for Pages component
 
 import { describe, it, expect } from 'vitest';
 import { Pages } from './Pages.js';
