@@ -135,12 +135,14 @@ export class Screen {
      */
     pushClip(region: { x: number; y: number; width: number; height: number }): void {
         if (this._clipStack.length > 0) {
+            // Intersect with the current clip
             const parent = this._clipStack[this._clipStack.length - 1];
             const x = Math.max(region.x, parent.x);
             const y = Math.max(region.y, parent.y);
             const right = Math.min(region.x + region.width, parent.x + parent.width);
             const bottom = Math.min(region.y + region.height, parent.y + parent.height);
             if (right <= x || bottom <= y) {
+                // Fully clipped — push a zero-size region
                 this._clipStack.push({ x: 0, y: 0, width: 0, height: 0 });
             } else {
                 this._clipStack.push({ x, y, width: right - x, height: bottom - y });
@@ -170,15 +172,18 @@ export class Screen {
      * Write a cell to the back buffer at position (col, row).
      */
     setCell(col: number, row: number, cell: Partial<Cell>): void {
+        // Floor to integers — layout engine may produce fractional values
         col = Math.floor(col);
         row = Math.floor(row);
+        // Use positive range check (NaN fails >= 0, preventing NaN indices)
         if (!(col >= 0 && col < this._cols && row >= 0 && row < this._rows)) return;
 
+        // Enforce clip region
         if (this._clipStack.length > 0) {
             const clip = this._clipStack[this._clipStack.length - 1];
             if (col < clip.x || col >= clip.x + clip.width ||
                 row < clip.y || row >= clip.y + clip.height) {
-                return;
+                return; // Outside active clip — silently discard
             }
         }
 
@@ -201,30 +206,24 @@ export class Screen {
         if (!(row >= 0 && row < this._rows)) return;
 
         let x = col;
-        
         for (const char of str) {
             if (x >= this._cols) break;
-            
+
             let finalChar = char;
-            // Measure actual width dynamically
+            // Measure the visual width with the shared unicode utility
             let width = stringWidth(char);
 
-            // Handle off-screen left items so we advance x correctly
-            if (x < 0) { 
-                x += width; 
-                continue; 
-            }
+            // Advance past off-screen-left cells by the real width
+            if (x < 0) { x += width; continue; }
 
-            // Fallback for terminals that lack wide-character support
+            // Fallback for terminals without wide-character support
             if (width > 1 && !caps.unicode) {
-                finalChar = '*'; // Safe substitute
+                finalChar = '*'; // safe single-cell substitute
                 width = 1;
             }
 
-            // Ignore zero-width characters (like combining marks) so they don't overwrite
-            if (width === 0) {
-                continue;
-            }
+            // Skip zero-width characters (combining marks) so they do not overwrite
+            if (width === 0) continue;
 
             this.setCell(x, row, {
                 char: finalChar,
@@ -232,7 +231,7 @@ export class Screen {
                 ...style,
             });
 
-            // Mark continuation cells (e.g., the second cell of a wide character)
+            // Mark continuation cells for wide characters
             for (let i = 1; i < width; i++) {
                 if (x + i < this._cols) {
                     this.setCell(x + i, row, {
@@ -284,7 +283,7 @@ export class Screen {
     invalidate(): void {
         for (let r = 0; r < this._rows; r++) {
             for (let c = 0; c < this._cols; c++) {
-                this.front[r][c] = { ...emptyCell(), char: '\0' };
+                this.front[r][c] = { ...emptyCell(), char: '\0' }; // force diff
             }
         }
     }
