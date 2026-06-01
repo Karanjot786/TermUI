@@ -50,6 +50,8 @@ export type { UseFocusOptions, UseFocusResult } from './hooks/useFocus.js';
 export { useFocusTrap } from './hooks/useFocusTrap.js';
 export { useKeyboardNavigation } from './hooks/useKeyboardNavigation.js';
 export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hooks/useKeyboardNavigation.js';
+export { useModal } from './hooks/useModal.js';
+export type { UseModalResult } from './hooks/useModal.js';
 
 // ── Subprocess ──
 export { useSubprocess } from './hooks/useSubprocess.js';
