@@ -89,6 +89,9 @@ export type { FilePickerOptions, FileEntry } from './FilePicker.js';
 export { DatePicker } from './DatePicker.js';
 export type { DatePickerOptions } from './DatePicker.js';
 
+export { ColorPicker } from './ColorPicker.js';
+export type { ColorPickerOptions } from './ColorPicker.js';
+
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
