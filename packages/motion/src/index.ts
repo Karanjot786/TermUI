@@ -16,3 +16,7 @@ export type { AnimationRunner } from './sequence.js';
 
 // Shared interval timer pool
 export { subscribe as timerPoolSubscribe, unsubscribeAll as timerPoolUnsubscribeAll } from './timer-pool.js';
+export * from './keyframes.js';
+
+
+
