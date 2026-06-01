@@ -48,6 +48,10 @@ export { useFocusTrap } from './hooks/useFocusTrap.js';
 export { useKeyboardNavigation } from './hooks/useKeyboardNavigation.js';
 export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hooks/useKeyboardNavigation.js';
 
+// ── View Metadata ──
+export { useViewMeta } from './hooks/useViewMeta.js';
+export type { ViewMeta } from './hooks/useViewMeta.js';
+
 // ── Render ──
 export { render, renderApp } from './render.js';
 export type { RenderOptions } from './render.js';
