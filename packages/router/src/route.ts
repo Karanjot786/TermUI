@@ -21,9 +21,9 @@ export interface Route {
 }
 
 export interface RouteMatch {
-     route: Route;
-     chain: Route[];
-     params: RouteParams;
+    route: Route;
+    chain: Route[];
+    params: RouteParams;
 }
 
 /**

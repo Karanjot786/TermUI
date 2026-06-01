@@ -50,69 +50,69 @@ export class Router {
     }
 
     /** Register a route */
-     addRoute(
-    path: string,
-    component: () => any,
-    layout?: () => any,
-    children: Route[] = []
-): void {
-    const { pattern, paramNames } = compilePattern(path);
+    addRoute(
+        path: string,
+        component: () => any,
+        layout?: () => any,
+        children: Route[] = []
+    ): void {
+        const { pattern, paramNames } = compilePattern(path);
 
-    this._routes.push({
-        path,
-        pattern,
-        paramNames,
-        component,
-        layout,
-        children,
-    });
-}
+        this._routes.push({
+            path,
+            pattern,
+            paramNames,
+            component,
+            layout,
+            children,
+        });
+    }
 
     /** Register multiple routes */
-     addRoutes(
-    routes: Array<{
-        path: string;
-        component: () => any;
-        layout?: () => any;
-        children?: Route[];
-    }>
-): void {
-    for (const r of routes) {
-        this.addRoute(
-            r.path,
-            r.component,
-            r.layout,
-            r.children ?? []
-        );
-    }
-}
-
-   private _wrapScreen(match: RouteMatch): VNode {
-    let screen = createElement(
-        match.route.component,
-        match.params
-    );
-
-    for (let i = match.chain.length - 2; i >= 0; i--) {
-        const parent = match.chain[i];
-
-        const Wrapper = parent.layout ?? parent.component;
-
-        screen = createElement(
-            Wrapper,
-            {
-                ...match.params,
-                outlet: screen,
-            }
-        );
+    addRoutes(
+        routes: Array<{
+            path: string;
+            component: () => any;
+            layout?: () => any;
+            children?: Route[];
+        }>
+    ): void {
+        for (const r of routes) {
+            this.addRoute(
+                r.path,
+                r.component,
+                r.layout,
+                r.children ?? []
+            );
+        }
     }
 
-    return createElement(
-        ErrorBoundary,
-        { fallback: defaultErrorScreen },
-        screen,
-    );
-}
+    private _wrapScreen(match: RouteMatch): VNode {
+        let screen = createElement(
+            match.route.component,
+            match.params
+        );
+
+        for (let i = match.chain.length - 2; i >= 0; i--) {
+            const parent = match.chain[i];
+
+            const Wrapper = parent.layout ?? parent.component;
+
+            screen = createElement(
+                Wrapper,
+                {
+                    ...match.params,
+                    outlet: screen,
+                }
+            );
+        }
+
+        return createElement(
+            ErrorBoundary,
+            { fallback: defaultErrorScreen },
+            screen,
+        );
+    }
 
     /** Navigate to a path */
     push(path: string): void {
