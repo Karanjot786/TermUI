@@ -41,6 +41,9 @@ export type { Page, PagesOptions } from './Pages.js';
 
 export { ContentSwitcher } from './ContentSwitcher.js';
 
+export { SnippetPrompt } from './SnippetPrompt.js';
+export type { SnippetPromptOptions } from './SnippetPrompt.js';
+
 export { MultiSelect } from './MultiSelect.js';
 export type { MultiSelectOption, MultiSelectOptions } from './MultiSelect.js';
 
