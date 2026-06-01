@@ -372,7 +372,7 @@ cd examples/dashboard
 bun run dev
 ```
 
-Six examples: `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`.
+Six examples: `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
 
 ## Project structure
 
@@ -392,12 +392,13 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
-  dashboard/         Real-time system monitor
-  jsx-dashboard/     JSX-based dashboard
-  showcase/          Widget gallery
-  system-monitor/    Advanced monitor
-  todo-app/          Interactive todo list
-  widget-gallery/    All widgets in one place
+  dashboard/             Real-time system monitor
+  forms-and-validation/  Multi-field form with validation
+  jsx-dashboard/         JSX-based dashboard
+  showcase/              Widget gallery
+  system-monitor/        Advanced monitor
+  todo-app/              Interactive todo list
+  widget-gallery/        All widgets in one place
 ```
 
 ## Development
@@ -409,11 +410,26 @@ bun run test       # Run all 600 tests
 bun run typecheck  # Type-check all packages
 ```
 
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for local setup, build commands, testing, and contributor workflow.
+
+
 ## Requirements
 
 - [Bun](https://bun.sh) 1.3.0 or newer for development
 - Node.js 18+ to run published `@termuijs/*` packages from npm
 - A terminal with TTY support (256-color or truecolor recommended)
+
+## Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and future plans. Pick work that fits your skill level.
+
+## Community
+
+- [Discussions](https://github.com/Karanjot786/TermUI/discussions): ask questions, propose ideas, share what you built
+- [Wiki](https://github.com/Karanjot786/TermUI/wiki): roadmap, architecture, contribution workflow, FAQ
+- [Project board](https://github.com/users/Karanjot786/projects/2): track issues and PRs in progress
+- [Issues](https://github.com/Karanjot786/TermUI/issues): report bugs, claim tasks
+- [Docs](https://www.termui.io): API reference, guides, examples
 
 ## License
 
