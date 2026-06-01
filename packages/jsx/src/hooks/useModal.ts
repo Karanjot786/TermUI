@@ -4,6 +4,10 @@
 // Lightweight typed modal dialog controller with FIFO queueing.
 // Each modal is shown in order, and show() resolves when the
 // active modal is dismissed or hidden.
+//
+// Usage:
+//   const confirm = useModal<{ message: string }, boolean>();
+//   const ok = await confirm.show({ message: 'Delete this file?' });
 // ─────────────────────────────────────────────────────
 
 import { useState, useEffect, useRef, useCallback } from '../hooks.js';
@@ -17,7 +21,7 @@ type ModalShow<Props, Result> = [Props] extends [undefined]
     ? () => Promise<Result | undefined>
     : (props: Props) => Promise<Result | undefined>;
 
-export interface UseModalResult<Props = undefined, Result = undefined> {
+export interface UseModalResult<Props = unknown, Result = unknown> {
     /** True when a modal is currently active */
     visible: boolean;
     /** Props passed to the active modal, or undefined when no modal is active */
@@ -33,16 +37,22 @@ export interface UseModalResult<Props = undefined, Result = undefined> {
 /**
  * useModal — typed modal manager with queueing and cleanup.
  *
+ * Manages a queue of modals and shows them one at a time. Each modal
+ * can be dismissed with a typed result value or hidden (resolving undefined).
+ * Modals are processed in FIFO order.
+ *
  * ```tsx
  * const confirm = useModal<{ message: string }, boolean>();
- * const result = await confirm.show({ message: 'Delete?' });
+ * const ok = await confirm.show({ message: 'Delete this file?' });
+ * if (ok === true) deleteFile();
  * ```
  */
-export function useModal<Props = undefined, Result = undefined>(): UseModalResult<Props, Result> {
+export function useModal<Props = unknown, Result = unknown>(): UseModalResult<Props, Result> {
     const [visible, setVisible] = useState(false);
     const [props, setProps] = useState<Props | undefined>(undefined);
     const queueRef = useRef<ModalEntry<Props, Result>[]>([]);
 
+    // Cleanup on unmount: resolve all pending modals with undefined
     useEffect(() => {
         return () => {
             const queue = queueRef.current.splice(0);

@@ -77,4 +77,15 @@ describe('useModal', () => {
         expect(finalRender.visible).toBe(false);
         expect(finalRender.props).toBeUndefined();
     });
+
+    it('supports the default useModal() call pattern with props', async () => {
+        setCurrentFiber(fiber);
+        const modal = useModal();
+        clearCurrentFiber();
+
+        const promise = modal.show({ message: 'Delete this file?' });
+        modal.dismiss(true);
+
+        await expect(promise).resolves.toBe(true);
+    });
 });
