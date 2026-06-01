@@ -103,3 +103,5 @@ export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
 export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
+export { MultilineTextInput } from './MultilineTextInput.js';
+export type { MultilineTextInputOptions } from './MultilineTextInput.js';
