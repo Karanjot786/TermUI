@@ -1,4 +1,4 @@
-import { createTestScreen, testScreenSetString, testScreenToString } from './terminal/TestBackend.js';
+import { Screen } from './terminal/Screen.js';
 import { createInlineViewport, renderInlineToTerminal } from './inline-viewport.js';
 
 // Fake terminal to capture writes
@@ -13,15 +13,14 @@ test('createInlineViewport returns rows', () => {
 });
 
 test('renderInlineToTerminal writes last N rows', () => {
-    const screen = createTestScreen(5, 4);
-    testScreenSetString(screen, 0, 0, 'row0');
-    testScreenSetString(screen, 0, 1, 'row1');
-    testScreenSetString(screen, 0, 2, 'row2');
-    testScreenSetString(screen, 0, 3, 'row3');
+    const screen = new Screen(5, 4);
+    screen.writeString(0, 0, 'row0');
+    screen.writeString(0, 1, 'row1');
+    screen.writeString(0, 2, 'row2');
+    screen.writeString(0, 3, 'row3');
 
     const term = new FakeTerminal();
-    // @ts-ignore: adapt to TestScreen shape
-    renderInlineToTerminal(term as any, screen as any, 2);
+    renderInlineToTerminal(term as unknown as import('./terminal/Terminal.js').Terminal, screen, 2);
     expect(term.out).toContain('row2');
     expect(term.out).toContain('row3');
     expect(term.out).not.toContain('row1');

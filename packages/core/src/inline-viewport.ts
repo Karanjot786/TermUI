@@ -11,12 +11,11 @@ export interface InlineViewportOptions {
  * Preserves scrollback by writing lines to stdout rather than taking over the alternate screen.
  */
 export function renderInlineToTerminal(terminal: Terminal, screen: Screen, rows: number): void {
-    const totalRows = (screen as any).rows ?? (screen as any).height ?? 0;
+    const totalRows = screen.rows;
     const start = Math.max(0, totalRows - rows);
     const lines: string[] = [];
-    const grid = (screen as any).back ?? (screen as any).cells;
     for (let r = start; r < totalRows; r++) {
-        const row = grid?.[r];
+        const row = screen.back[r];
         if (!row) continue;
         lines.push(row.map(c => c.char || ' ').join(''));
     }
@@ -28,5 +27,3 @@ export function renderInlineToTerminal(terminal: Terminal, screen: Screen, rows:
 export function createInlineViewport(opts: InlineViewportOptions) {
     return { rows: opts.rows };
 }
-
-export default { renderInlineToTerminal, createInlineViewport };

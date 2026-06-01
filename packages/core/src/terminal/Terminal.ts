@@ -200,8 +200,8 @@ export class Terminal {
         };
 
         this._exitHandler = runCleanupHandlers;
-        this._sigintHandler = () => { runCleanupHandlers(); if (!process.env.VITEST) process.exit(130); };
-        this._sigtermHandler = () => { runCleanupHandlers(); if (!process.env.VITEST) process.exit(143); };
+        this._sigintHandler = () => { runCleanupHandlers(); process.exit(130); };
+        this._sigtermHandler = () => { runCleanupHandlers(); process.exit(143); };
 
         process.on('exit', this._exitHandler);
         process.on('SIGINT', this._sigintHandler);
@@ -209,25 +209,11 @@ export class Terminal {
 
         this._uncaughtExceptionHandler = (err: Error) => {
             this.restore();
-            if (!process.env.VITEST) {
-                process.exit(1);
-            } else {
-                // In test environments, avoid exiting the process so the test runner can report errors.
-                // Log the error for visibility and rethrow to let the test framework handle it.
-                // eslint-disable-next-line no-console
-                console.error('Uncaught exception in Terminal (test mode):', err);
-                throw err;
-            }
+            process.exit(1);
         };
-        this._unhandledRejectionHandler = (reason: any) => {
+        this._unhandledRejectionHandler = () => {
             this.restore();
-            if (!process.env.VITEST) {
-                process.exit(1);
-            } else {
-                // eslint-disable-next-line no-console
-                console.error('Unhandled rejection in Terminal (test mode):', reason);
-                throw reason instanceof Error ? reason : new Error(String(reason));
-            }
+            process.exit(1);
         };
         // Use .on() (not .once()) so restore() can explicitly remove these handlers
         // via process.off(). With .once(), the reference is removed after first fire,
