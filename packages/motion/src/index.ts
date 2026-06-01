@@ -12,3 +12,7 @@ export type { TransitionOptions, EasingFn } from './transitions.js';
 
 // Shared interval timer pool
 export { subscribe as timerPoolSubscribe, unsubscribeAll as timerPoolUnsubscribeAll } from './timer-pool.js';
+export * from './keyframes.js';
+
+
+
