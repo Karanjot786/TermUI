@@ -10,9 +10,10 @@ export interface Route {
     /** URL-like path, e.g. "/settings/theme" */
     path: string;
     /** Pattern for matching (compiled from path) */
-    pattern: RegExp;
+    pattern?: RegExp;
+
     /** Parameter names from dynamic segments */
-    paramNames: string[];
+    paramNames?: string[];
     /** Screen component loader */
     component: () => any;
     /** Optional layout component */

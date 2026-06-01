@@ -97,8 +97,6 @@ describe('Router', () => {
                     {
                         path: 'profile',
                         component: () => 'Profile',
-                        pattern: /^$/,
-                        paramNames: [],
                     },
                 ],
             },
@@ -108,7 +106,6 @@ describe('Router', () => {
 
         expect(r.current).not.toBeNull();
     });
-
 
     it('resolves full parent-to-leaf chain', () => {
         const r = new Router();
@@ -121,8 +118,6 @@ describe('Router', () => {
                     {
                         path: 'profile',
                         component: () => 'Profile',
-                        pattern: /^$/,
-                        paramNames: [],
                     },
                 ],
             },
@@ -132,8 +127,6 @@ describe('Router', () => {
 
         expect(r.current?.chain.length).toBe(2);
     });
-
-
 
     it('preserves params in nested routes', () => {
         const r = new Router();
@@ -146,8 +139,6 @@ describe('Router', () => {
                     {
                         path: '[id]',
                         component: () => 'User',
-                        pattern: /^$/,
-                        paramNames: [],
                     },
                 ],
             },
@@ -157,10 +148,4 @@ describe('Router', () => {
 
         expect(r.params.id).toBe('42');
     });
-
-
-
-
 });
-
-
