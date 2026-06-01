@@ -15,3 +15,6 @@ bench-main.json
 bench-head.txt
 bench-main.txt
 bench-comment.md
+
+# Ignore bun local cache
+.bun-cache/
