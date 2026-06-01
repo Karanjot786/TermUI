@@ -36,6 +36,11 @@ export type { ModalOptions } from './Modal.js';
 export { Select } from './Select.js';
 export type { SelectOption, SelectOptions } from './Select.js';
 
+export { Pages } from './Pages.js';
+export type { Page, PagesOptions } from './Pages.js';
+
+export { ContentSwitcher } from './ContentSwitcher.js';
+
 export { MultiSelect } from './MultiSelect.js';
 export type { MultiSelectOption, MultiSelectOptions } from './MultiSelect.js';
 
