@@ -3,6 +3,8 @@
 // ─────────────────────────────────────────────────────
 
 import type { Color } from '../style/Color.js';
+import { stringWidth } from '../utils/unicode.js';
+import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
 
@@ -133,14 +135,12 @@ export class Screen {
      */
     pushClip(region: { x: number; y: number; width: number; height: number }): void {
         if (this._clipStack.length > 0) {
-            // Intersect with the current clip
             const parent = this._clipStack[this._clipStack.length - 1];
             const x = Math.max(region.x, parent.x);
             const y = Math.max(region.y, parent.y);
             const right = Math.min(region.x + region.width, parent.x + parent.width);
             const bottom = Math.min(region.y + region.height, parent.y + parent.height);
             if (right <= x || bottom <= y) {
-                // Fully clipped — push a zero-size region
                 this._clipStack.push({ x: 0, y: 0, width: 0, height: 0 });
             } else {
                 this._clipStack.push({ x, y, width: right - x, height: bottom - y });
@@ -170,18 +170,15 @@ export class Screen {
      * Write a cell to the back buffer at position (col, row).
      */
     setCell(col: number, row: number, cell: Partial<Cell>): void {
-        // Floor to integers — layout engine may produce fractional values
         col = Math.floor(col);
         row = Math.floor(row);
-        // Use positive range check (NaN fails >= 0, preventing NaN indices)
         if (!(col >= 0 && col < this._cols && row >= 0 && row < this._rows)) return;
 
-        // Enforce clip region
         if (this._clipStack.length > 0) {
             const clip = this._clipStack[this._clipStack.length - 1];
             if (col < clip.x || col >= clip.x + clip.width ||
                 row < clip.y || row >= clip.y + clip.height) {
-                return; // Outside active clip — silently discard
+                return;
             }
         }
 
@@ -204,31 +201,49 @@ export class Screen {
         if (!(row >= 0 && row < this._rows)) return;
 
         let x = col;
+        
         for (const char of str) {
             if (x >= this._cols) break;
-            if (x < 0) { x++; continue; }
+            
+            let finalChar = char;
+            // Measure actual width dynamically
+            let width = stringWidth(char);
 
-            const cp = char.codePointAt(0)!;
-            const isWide = this._isWideCodePoint(cp);
-            const width = isWide ? 2 : 1;
+            // Handle off-screen left items so we advance x correctly
+            if (x < 0) { 
+                x += width; 
+                continue; 
+            }
+
+            // Fallback for terminals that lack wide-character support
+            if (width > 1 && !caps.unicode) {
+                finalChar = '*'; // Safe substitute
+                width = 1;
+            }
+
+            // Ignore zero-width characters (like combining marks) so they don't overwrite
+            if (width === 0) {
+                continue;
+            }
 
             this.setCell(x, row, {
-                char,
+                char: finalChar,
                 width,
                 ...style,
             });
 
-            // If wide char, mark the next cell as a continuation
-            if (isWide && x + 1 < this._cols) {
-                this.setCell(x + 1, row, {
-                    char: '',
-                    width: 0,
-                    ...style,
-                });
-                x += 2;
-            } else {
-                x += 1;
+            // Mark continuation cells (e.g., the second cell of a wide character)
+            for (let i = 1; i < width; i++) {
+                if (x + i < this._cols) {
+                    this.setCell(x + i, row, {
+                        char: '',
+                        width: 0,
+                        ...style,
+                    });
+                }
             }
+
+            x += width;
         }
     }
 
@@ -269,7 +284,7 @@ export class Screen {
     invalidate(): void {
         for (let r = 0; r < this._rows; r++) {
             for (let c = 0; c < this._cols; c++) {
-                this.front[r][c] = { ...emptyCell(), char: '\0' }; // force diff
+                this.front[r][c] = { ...emptyCell(), char: '\0' };
             }
         }
     }
@@ -284,24 +299,5 @@ export class Screen {
             grid.push(row);
         }
         return grid;
-    }
-
-    private _isWideCodePoint(cp: number): boolean {
-        return (
-            (cp >= 0x4E00 && cp <= 0x9FFF) ||
-            (cp >= 0x3400 && cp <= 0x4DBF) ||
-            (cp >= 0xF900 && cp <= 0xFAFF) ||
-            (cp >= 0xAC00 && cp <= 0xD7AF) ||
-            (cp >= 0x30A0 && cp <= 0x30FF) ||
-            (cp >= 0x3000 && cp <= 0x303F) ||
-            (cp >= 0x3040 && cp <= 0x309F) ||
-            (cp >= 0xFF01 && cp <= 0xFF60) ||
-            (cp >= 0xFFE0 && cp <= 0xFFE6) ||
-            (cp >= 0x1F600 && cp <= 0x1F64F) ||
-            (cp >= 0x1F300 && cp <= 0x1F5FF) ||
-            (cp >= 0x1F680 && cp <= 0x1F6FF) ||
-            (cp >= 0x1F900 && cp <= 0x1F9FF) ||
-            (cp >= 0x20000 && cp <= 0x2A6DF)
-        );
     }
 }
