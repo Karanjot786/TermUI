@@ -106,6 +106,7 @@ function colorsEqual(a: Color, b: Color): boolean {
 export class Screen {
     private _cols: number;
     private _rows: number;
+    private _previousLines: string[] = [];
     front: Cell[][];
     back: Cell[][];
     previousLines: string[] = [];
@@ -118,7 +119,18 @@ export class Screen {
         .filter(cell => cell.width !== 0)
         .map(cell => cell.char || ' ')
         .join('');
-}
+    }   
+     getPreviousLine(row: number): string {
+        return this._previousLines[row] ?? '';
+    }
+
+     saveLines(): void {
+        this._previousLines = [];
+
+         for (let r = 0; r < this.rows; r++) {
+              this._previousLines.push(this.getLine(r));
+       }
+    }
 
     /**
      * Stack of clipping regions. When non-empty, setCell/writeString

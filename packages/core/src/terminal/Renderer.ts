@@ -19,13 +19,15 @@ export class Renderer {
     private _frameTimer: ReturnType<typeof setInterval> | null = null;
     private _renderRequested = false;
     private _colorDepth: ColorDepth;
+    private _diffRenderer: boolean;
     private _onTick: (() => void) | null = null;
 
-    constructor(terminal: Terminal, screen: Screen, fps = 30) {
+    constructor(terminal: Terminal, screen: Screen, fps = 30, diffRenderer = true   ) {
         this._terminal = terminal;
         this._screen = screen;
         this._fps = fps;
         this._colorDepth = terminal.colorDepth;
+        this._diffRenderer = diffRenderer;
     }
 
     /** Change the rendering frame rate cap */
@@ -86,6 +88,33 @@ export class Renderer {
         let output = beginSyncUpdate;
         let lastRow = -1;
         let lastCol = -1;
+        
+        if (this._diffRenderer) {
+           let output = beginSyncUpdate;
+
+          for (let r = 0; r < rows; r++) {
+              const currentLine = this._screen.getLine(r);
+              const previousLine = this._screen.getPreviousLine(r);
+
+             if (currentLine === previousLine) {
+                   continue;
+            }
+
+             output += moveTo(0, r);
+             output += this._renderLine(r);
+         }
+
+         output += ansiReset;
+         output += endSyncUpdate;
+
+         this._terminal.write(output);
+
+         this._screen.saveLines();
+         this._screen.swap();
+
+         return;
+        }
+
 
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
@@ -107,6 +136,7 @@ export class Renderer {
                 lastCol = c + (backCell.width === 2 ? 2 : 1);
             }
         }
+    
 
         output += ansiReset;
         output += endSyncUpdate;
@@ -141,4 +171,18 @@ export class Renderer {
 
         return seq;
     }
+
+    private _renderLine(row: number): string {
+         let output = '';
+
+         for (let c = 0; c < this._screen.cols; c++) {
+            const cell = this._screen.back[row][c];
+
+             if (cell.width === 0) continue;
+
+              output += this._renderCell(cell);
+         }
+ 
+    return output;
+     }
 }
