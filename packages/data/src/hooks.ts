@@ -14,6 +14,7 @@ import type { ProcessInfo } from './processes.js';
 import { system } from './system.js';
 import { http } from './http.js';
 import type { HealthResult, Endpoint } from './http.js';
+import { getCache, setCache, isFresh, fetchShared } from './cache.js';
 
 // ── CPU ──────────────────────────────────────────────
 
@@ -226,3 +227,76 @@ export function useHttpHealth(
 
     return results;
 }
+
+// ── Fetch ────────────────────────────────────────────
+
+export interface UseFetchOptions {
+    staleTime?: number;
+}
+
+export interface UseFetchResult<T> {
+    data: T | null;
+    error: Error | null;
+    loading: boolean;
+}
+
+/**
+ * useFetch — reactive fetch hook with caching.
+ *
+ * @param url - The URL to fetch.
+ * @param options - Options including `staleTime` in milliseconds.
+ */
+export function useFetch<T = any>(url: string, options?: UseFetchOptions): UseFetchResult<T> {
+    const staleTime = options?.staleTime ?? 0;
+
+    const [data, setData] = useState<T | null>(() => {
+        if (isFresh(url)) {
+            return getCache<T>(url)?.data ?? null;
+        }
+        return null;
+    });
+
+    const [error, setError] = useState<Error | null>(null);
+    const [loading, setLoading] = useState<boolean>(() => !isFresh(url));
+
+    useEffect(() => {
+        if (isFresh(url)) {
+            const entry = getCache<T>(url);
+            if (entry) {
+                setData(entry.data);
+                setError(null);
+                setLoading(false);
+                return;
+            }
+        }
+
+        let mounted = true;
+        setLoading(true);
+
+        fetchShared<T>(url, () => fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                return res.json() as Promise<T>;
+            })
+        )
+        .then(json => {
+            if (!mounted) return;
+            setCache(url, json, staleTime);
+            setData(json);
+            setError(null);
+            setLoading(false);
+        })
+        .catch(err => {
+            if (!mounted) return;
+            setError(err instanceof Error ? err : new Error(String(err)));
+            setLoading(false);
+        });
+
+        return () => {
+            mounted = false;
+        };
+    }, [url, staleTime]);
+
+    return { data, error, loading };
+}
+
