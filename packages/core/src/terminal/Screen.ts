@@ -108,6 +108,17 @@ export class Screen {
     private _rows: number;
     front: Cell[][];
     back: Cell[][];
+    previousLines: string[] = [];
+    getLine(row: number): string {
+    if (row < 0 || row >= this._rows) {
+        return '';
+    }
+
+    return this.back[row]
+        .filter(cell => cell.width !== 0)
+        .map(cell => cell.char || ' ')
+        .join('');
+}
 
     /**
      * Stack of clipping regions. When non-empty, setCell/writeString
@@ -120,6 +131,7 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+        this.previousLines = new Array(rows).fill('');
     }
 
     get cols(): number { return this._cols; }
@@ -261,6 +273,7 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+        this.previousLines = new Array(rows).fill('');
     }
 
     /**
