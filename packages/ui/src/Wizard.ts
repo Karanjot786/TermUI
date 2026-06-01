@@ -11,6 +11,7 @@ import {
     type KeyEvent,
     mergeStyles,
     defaultStyle,
+    normalizeEdges,
     styleToCellAttrs,
     truncate,
 } from '@termuijs/core';
@@ -36,15 +37,16 @@ export class Wizard extends Widget {
 
     constructor(steps: WizardStep[], options: WizardOptions = {}) {
         const topPadding = 2;
+        const userPadding = normalizeEdges(options.style?.padding);
         const style = mergeStyles(defaultStyle(), {
             flexDirection: 'column',
             flexGrow: 1,
             ...options.style,
             padding: {
                 top: topPadding,
-                right: (options.style?.padding as any)?.right ?? 0,
-                bottom: (options.style?.padding as any)?.bottom ?? 0,
-                left: (options.style?.padding as any)?.left ?? 0,
+                right: userPadding.right,
+                bottom: userPadding.bottom,
+                left: userPadding.left,
             },
         });
         super(style);
@@ -124,19 +126,19 @@ export class Wizard extends Widget {
     private _getStepData(): unknown[] {
         return this._stepWidgets.map((widget) => {
             if ('value' in widget) {
-                return (widget as any).value;
+                return (widget as { value: unknown }).value;
             }
             if ('values' in widget) {
-                return (widget as any).values;
+                return (widget as { values: unknown }).values;
             }
             if ('numericValue' in widget) {
-                return (widget as any).numericValue;
+                return (widget as { numericValue: unknown }).numericValue;
             }
             if ('selectedOption' in widget) {
-                return (widget as any).selectedOption;
+                return (widget as { selectedOption: unknown }).selectedOption;
             }
             if ('selectedOptions' in widget) {
-                return (widget as any).selectedOptions;
+                return (widget as { selectedOptions: unknown }).selectedOptions;
             }
             return undefined;
         });
