@@ -40,29 +40,35 @@ export class FormField extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        const { x, y, width } = this._rect;
-        const attrs = styleToCellAttrs(this.style);
+    const { x, y, width } = this._rect;
+    const attrs = styleToCellAttrs(this.style);
 
-        const labelText = this._label.slice(0, width);
-        const errorText = this._error?.slice(0, width);
+    const labelText = this._label.slice(0, width);
+    const errorText = this._error?.slice(0, width);
 
-        // 1. Label
-        screen.writeString(x, y, labelText, attrs);
+    // 1. Label
+    screen.writeString(x, y, labelText, attrs);
 
-        // 2. Child
-        this._child.render(screen as any);
+    // 2. Child (POSITION FIX)
+    this._child.updateRect({
+        x,
+        y: y + 1,
+        width,
+        height: 1
+    });
 
-        // 3. Error
-        if (errorText) {
-            screen.writeString(
-                x,
-                y + 2,
-                errorText,
-                {
-                    ...attrs,
-                    fg: { type: "named", name: "red" },
-                }
-            );
-        }
+    this._child.render(screen as any);
+
+    // 3. Error
+    if (errorText) {
+        screen.writeString(
+            x,
+            y + 2,
+            errorText,
+            {
+                ...attrs,
+                fg: { type: "named", name: "red" },
+            }
+        );
     }
-}
+}}
