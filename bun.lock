@@ -106,6 +106,15 @@
         "@termuijs/widgets": "workspace:*",
       },
     },
+    "packages/adapters": {
+      "name": "@termuijs/adapters",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^22.0.0",
+        "tsup": "^8.3.0",
+        "typescript": "^5.7.0",
+      },
+    },
     "packages/core": {
       "name": "@termuijs/core",
       "version": "0.1.5",
@@ -385,6 +394,7 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.60.4", "", { "os": "win32", "cpu": "x64" }, "sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw=="],
 
+    "@termuijs/adapters": ["@termuijs/adapters@workspace:packages/adapters"],
     "@termuijs/core": ["@termuijs/core@workspace:packages/core"],
 
     "@termuijs/data": ["@termuijs/data@workspace:packages/data"],
