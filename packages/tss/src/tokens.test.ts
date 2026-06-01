@@ -15,9 +15,8 @@ describe('ThemeTokens', () => {
     'highlight',
   ];
 
-  it('defaultDark has all 10 required keys with non-empty string values', () => {
-    const { defaultDark } = require('./tokens.ts');
-    for (const key of requiredKeys) {
+  it('defaultDark has all 10 required keys with non-empty string values', async () => {
+  const { defaultDark } = await import('./tokens.ts');    for (const key of requiredKeys) {
       expect(defaultDark).toHaveProperty(key);
       expect(typeof defaultDark[key]).toBe('string');
       expect(defaultDark[key]).toBeTruthy();
@@ -25,9 +24,8 @@ describe('ThemeTokens', () => {
     expect(Object.keys(defaultDark)).toHaveLength(10);
   });
 
-  it('defaultLight has all 10 required keys with non-empty string values', () => {
-    const { defaultLight } = require('./tokens.ts');
-    for (const key of requiredKeys) {
+  it('defaultLight has all 10 required keys with non-empty string values', async () => {
+  const { defaultLight } = await import('./tokens.ts');    for (const key of requiredKeys) {
       expect(defaultLight).toHaveProperty(key);
       expect(typeof defaultLight[key]).toBe('string');
       expect(defaultLight[key]).toBeTruthy();

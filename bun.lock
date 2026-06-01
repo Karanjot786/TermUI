@@ -13,6 +13,33 @@
         "vitest": "^2.1.0",
       },
     },
+    "examples/auth-flow": {
+      "name": "@termuijs/example-auth-flow",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/store": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
+    "examples/cli-wrapper-live": {
+      "name": "@termuijs/example-cli-wrapper-live",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.4.0",
+      },
+    },
     "examples/dashboard": {
       "name": "@termuijs/example-dashboard",
       "version": "0.1.0",
@@ -20,6 +47,19 @@
         "@termuijs/core": "workspace:*",
         "@termuijs/data": "workspace:*",
         "@termuijs/widgets": "workspace:*",
+      },
+    },
+    "examples/forms-and-validation": {
+      "name": "@termuijs/example-forms",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
       },
     },
     "examples/jsx-dashboard": {
@@ -31,6 +71,19 @@
         "@termuijs/jsx": "workspace:*",
         "@termuijs/quick": "workspace:*",
         "@termuijs/widgets": "workspace:*",
+      },
+    },
+    "examples/multi-screen-router": {
+      "name": "@termuijs/example-multi-screen-router",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/router": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.4.0",
       },
     },
     "examples/showcase": {
@@ -78,6 +131,15 @@
         "@termuijs/tss": "workspace:*",
         "@termuijs/ui": "workspace:*",
         "@termuijs/widgets": "workspace:*",
+      },
+    },
+    "packages/adapters": {
+      "name": "@termuijs/adapters",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/node": "^22.0.0",
+        "tsup": "^8.3.0",
+        "typescript": "^5.7.0",
       },
     },
     "packages/core": {
@@ -360,13 +422,19 @@
 
     "@rollup/rollup-win32-x64-msvc": ["@rollup/rollup-win32-x64-msvc@4.60.4", "", { "os": "win32", "cpu": "x64" }, "sha512-QVTUovf40zgTqlFVrKA1uXMVvU2QWEFWfAH8Wdc48IxLvrJMQVMBRjuQyUpzZCDkakImib9eVazbWlC6ksWtJw=="],
 
+    "@termuijs/adapters": ["@termuijs/adapters@workspace:packages/adapters"],
     "@termuijs/core": ["@termuijs/core@workspace:packages/core"],
 
     "@termuijs/data": ["@termuijs/data@workspace:packages/data"],
 
     "@termuijs/dev-server": ["@termuijs/dev-server@workspace:packages/dev-server"],
 
+    "@termuijs/example-auth-flow": ["@termuijs/example-auth-flow@workspace:examples/auth-flow"],
+    "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
     "@termuijs/example-dashboard": ["@termuijs/example-dashboard@workspace:examples/dashboard"],
+    "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
+
+    "@termuijs/example-forms": ["@termuijs/example-forms@workspace:examples/forms-and-validation"],
 
     "@termuijs/example-jsx-dashboard": ["@termuijs/example-jsx-dashboard@workspace:examples/jsx-dashboard"],
 

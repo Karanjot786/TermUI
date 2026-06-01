@@ -11,7 +11,7 @@ export { parse } from './parser.js';
 export type { TSSStylesheet, TSSTheme, TSSSelector, TSSProperty, TSSValue, TSSRule } from './parser.js';
 
 // Theme Engine
-export { ThemeEngine } from './engine.js';
+export { ThemeEngine, compile } from './engine.js';
 export type { ThemeVariables, ResolvedRule } from './engine.js';
 
 // Built-in Themes
