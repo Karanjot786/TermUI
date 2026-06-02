@@ -1,0 +1,96 @@
+import { useState, useEffect } from '@termuijs/jsx';
+import { exec } from 'node:child_process';
+import * as os from 'node:os';
+
+const execAsync = (cmd: string, opts?: any): Promise<{ stdout: string; stderr: string }> => {
+    return new Promise((resolve, reject) => {
+        exec(cmd, opts, (err, stdout, stderr) => {
+            if (err) reject(err);
+            else resolve({ stdout: String(stdout), stderr: String(stderr) });
+        });
+    });
+};
+
+export interface TemperatureData {
+    celsius: number;
+    platform: string;
+}
+
+export interface UseTemperatureResult {
+    data: TemperatureData | null;
+    error: Error | null;
+    loading: boolean;
+}
+
+export function useTemperature(intervalMs = 5000): UseTemperatureResult {
+    const [data, setData] = useState<TemperatureData | null>(null);
+    const [error, setError] = useState<Error | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    useEffect(() => {
+        let isMounted = true;
+        let timer: ReturnType<typeof setInterval> | null = null;
+
+        const update = async () => {
+            try {
+                const platform = os.platform();
+                let celsius = 0;
+
+                if (platform === 'linux') {
+                    const { stdout } = await execAsync('cat /sys/class/thermal/thermal_zone0/temp', { timeout: 2000 });
+                    celsius = parseInt(stdout.trim(), 10) / 1000;
+                } else if (platform === 'darwin') {
+                    const { stdout } = await execAsync('pmset -g therm', { timeout: 2000 });
+                    const match = stdout.match(/CPU_Scheduler_Limit\s*=\s*(\d+)/);
+                    if (match) {
+                        const pressure = parseInt(match[1], 10);
+                        celsius = 100 - pressure;
+                    } else {
+                        throw new Error('Could not parse thermal data');
+                    }
+                } else if (platform === 'win32') {
+                    const { stdout } = await execAsync(
+                        'wmic /namespace:\\\\root\\wmi PATH MSAcpi_ThermalZoneTemperature get CurrentTemperature',
+                        { timeout: 2000 },
+                    );
+                    const lines = stdout.trim().split('\n').map(l => l.trim()).filter(l => l && !l.includes('CurrentTemperature'));
+                    if (lines.length > 0) {
+                        const tempTenthsKelvin = parseInt(lines[lines.length - 1], 10);
+                        if (!isNaN(tempTenthsKelvin)) {
+                            celsius = (tempTenthsKelvin / 10) - 273.15;
+                        } else {
+                            throw new Error('Could not parse Windows temperature');
+                        }
+                    } else {
+                        throw new Error('No temperature data available');
+                    }
+                } else {
+                    throw new Error(`Temperature not supported on platform: ${platform}`);
+                }
+
+                if (isMounted) {
+                    setData({ celsius, platform });
+                    setError(null);
+                    setLoading(false);
+                }
+            } catch (err) {
+                if (isMounted) {
+                    setError(err instanceof Error ? err : new Error(String(err)));
+                    setLoading(false);
+                }
+            }
+        };
+
+        update();
+        timer = setInterval(update, intervalMs);
+
+        return () => {
+            isMounted = false;
+            if (timer !== null) {
+                clearInterval(timer);
+            }
+        };
+    }, [intervalMs]);
+
+    return { data, error, loading };
+}

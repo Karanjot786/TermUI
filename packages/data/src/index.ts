@@ -56,3 +56,5 @@ export type { UseSSEResult } from './hooks/useSSE.js';
 export { useGpu } from './hooks/useGpu.js';
 export type { GpuData, UseGpuResult } from './hooks/useGpu.js';
 
+export { useTemperature } from './hooks/useTemperature.js';
+export type { TemperatureData, UseTemperatureResult } from './hooks/useTemperature.js';
