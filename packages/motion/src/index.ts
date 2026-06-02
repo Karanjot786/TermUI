@@ -18,5 +18,6 @@ export type { AnimationRunner } from './sequence.js';
 export { subscribe as timerPoolSubscribe, unsubscribeAll as timerPoolUnsubscribeAll } from './timer-pool.js';
 export * from './keyframes.js';
 
-
+// Virtual clock (for tests)
+export type { VirtualClock } from './virtual-clock.js';
 

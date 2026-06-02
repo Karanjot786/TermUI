@@ -129,6 +129,19 @@ export namespace JSX {
             border?: string;
             borderColor?: string;
         };
+        spinner: {
+            key?: string | number;
+            preset?: 'dots' | 'arc' | 'bounce' | 'bar' | 'pulse' | string;
+            spinner?: string | { frames: string[]; interval: number };
+            label?: string;
+            color?: string;
+            active?: boolean;
+            doneText?: string;
+            interval?: number;
+            flexGrow?: number;
+            width?: number | string;
+            height?: number | string;
+        };
     }
 }
 export { jsx as jsxDEV } from './createElement.js';
