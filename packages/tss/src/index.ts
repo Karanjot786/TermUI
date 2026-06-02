@@ -14,6 +14,10 @@ export type { TSSStylesheet, TSSTheme, TSSSelector, TSSProperty, TSSValue, TSSRu
 export { ThemeEngine, compile } from './engine.js';
 export type { ThemeVariables, ResolvedRule } from './engine.js';
 
+// Size Media Queries
+export { loadMediaStyles, mediaConditionMatches, parseMediaCondition, resolveMediaSource } from './media.js';
+export type { MediaCondition, MediaFeature, MediaStyleEngine, TerminalDimensions } from './media.js';
+
 // Built-in Themes
 export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThemes } from './themes.js';
 
