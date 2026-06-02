@@ -121,9 +121,10 @@ function renderToScreen(container: Box, screen: Screen): void {
     // Simple vertical stacking layout for testing
     assignRects(container, 0, 0, screen.cols, screen.rows);
 
-    // Clear and render using the widget tree's own render path
+    // Clear and render
     screen.clear();
-    container.render(screen);
+    (container as any)._renderSelf?.(screen);
+    renderChildren(container, screen);
 }
 
 /** Simple recursive layout: stack children vertically */
