@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { EventEmitter } from 'node:events';
 import { DevServer } from './server.js';
+import { ThemeWatcher } from './theme-watcher.js';
 
 function createMockSubprocess() {
     return {
@@ -13,6 +15,7 @@ function createMockSubprocess() {
 }
 
 vi.mock('node:fs', () => ({
+    watch: vi.fn(() => new EventEmitter()),
     existsSync: vi.fn(() => true)
 }));
 
@@ -40,6 +43,17 @@ describe('DevServer', () => {
 
         server.start();
         expect((globalThis as any).Bun.spawn).toHaveBeenCalled();
+    });
+
+    it('attaches the spawned child to the theme watcher', () => {
+        const attachSpy = vi.spyOn(ThemeWatcher.prototype, 'attachChild');
+        const server = new DevServer({
+            rootDir: './project',
+            entry: 'index.ts'
+        });
+
+        server.start();
+        expect(attachSpy).toHaveBeenCalledWith(expect.any(Object));
     });
 
     it('handles server shutdown cleanly', () => {
