@@ -36,3 +36,4 @@ export type { WatcherOptions } from './watcher.js';
 export { AutoThemeProvider, ThemeContext, useTheme } from './AutoThemeProvider.js';
 export type { AutoThemeProviderProps } from './AutoThemeProvider.js';
 export * from './media.js';
+export * from './importer.js';

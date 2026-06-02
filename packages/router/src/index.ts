@@ -10,3 +10,5 @@ export type { Route, RouteMatch, RouteParams } from './route.js';
 
 export { scanRoutes } from './scanner.js';
 export type { ScannedRoute } from './scanner.js';
+
+export { useParams, useNavigate } from './hooks.js';

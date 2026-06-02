@@ -5,6 +5,7 @@
 import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
 import { type Route, type RouteMatch, type RouteParams, matchRoute, compilePattern } from './route.js';
+import { RouterContext } from './hooks.js';
 
 function defaultErrorScreen(err: Error): VNode {
     return {
@@ -107,10 +108,16 @@ export class Router {
             );
         }
 
+        const withProvider = createElement(
+            RouterContext.Provider,
+            { value: this },
+            screen
+        );
+
         return createElement(
             ErrorBoundary,
             { fallback: defaultErrorScreen },
-            screen,
+            withProvider,
         );
     }
 
