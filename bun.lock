@@ -163,6 +163,20 @@
         "typescript": "^5.4.0",
       },
     },
+    "examples/process-monitor": {
+      "name": "@termuijs/example-process-monitor",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/data": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/showcase": {
       "name": "@termuijs/example-showcase",
       "version": "0.1.0",
@@ -554,6 +568,8 @@
     "@termuijs/example-log-viewer": ["@termuijs/example-log-viewer@workspace:examples/log-viewer"],
 
     "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
+
+    "@termuijs/example-process-monitor": ["@termuijs/example-process-monitor@workspace:examples/process-monitor"],
 
     "@termuijs/example-showcase": ["@termuijs/example-showcase@workspace:examples/showcase"],
 
