@@ -6,6 +6,8 @@
 // ─────────────────────────────────────────────────────
 
 // ── Re-exports from @termuijs/widgets (base components) ──
+declare module '@termuijs/widgets';
+
 export {
     Box,
     Text,
@@ -104,6 +106,8 @@ export type { SegmentedControlOptions } from './SegmentedControl.js';
 
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
+export { ButtonGroup } from './ButtonGroup.js';
+export type { ButtonGroupOptions, ButtonGroupItem } from './ButtonGroup.js';
 export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';
