@@ -56,6 +56,9 @@ export type { MultiSelectOption, MultiSelectOptions } from './MultiSelect.js';
 export { Tree } from './Tree.js';
 export type { TreeNode, TreeOptions } from './Tree.js';
 
+export { SortPrompt } from './SortPrompt.js';
+export type { SortPromptOptions } from './SortPrompt.js';
+
 export { Toast } from './Toast.js';
 export type { ToastType, ToastMessage, ToastOptions } from './Toast.js';
 
