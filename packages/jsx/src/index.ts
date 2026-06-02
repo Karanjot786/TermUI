@@ -13,16 +13,19 @@ export { isVElement, isVFragment, flattenChildren } from './vnode.js';
 // ── Hooks ──
 export {
     useState,
+    useId,
     useEffect,
     useInput,
     useInterval,
     useMemo,
     useRef,
+    useImperativeHandle,
     useCallback,
     useAsync,
     useKeymap,
     useMotion,
     useInsertBefore,
+    useReducer,
 } from './hooks.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 
@@ -47,7 +50,12 @@ export type { UseFocusOptions, UseFocusResult } from './hooks/useFocus.js';
 export { useFocusTrap } from './hooks/useFocusTrap.js';
 export { useKeyboardNavigation } from './hooks/useKeyboardNavigation.js';
 export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hooks/useKeyboardNavigation.js';
+export { useModal } from './hooks/useModal.js';
+export type { UseModalResult } from './hooks/useModal.js';
 
+// ── Subprocess ──
+export { useSubprocess } from './hooks/useSubprocess.js';
+export type { UseSubprocessResult } from './hooks/useSubprocess.js';
 // ── Render ──
 export { render, renderApp } from './render.js';
 export type { RenderOptions } from './render.js';
@@ -61,3 +69,4 @@ export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandle
 // ── Convenience alias ──
 /** h() — shorthand for createElement */
 export { createElement as h } from './createElement.js';
+export { usePrevious } from './hooks/usePrevious';
