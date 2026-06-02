@@ -11,6 +11,8 @@ vi.mock('@termuijs/jsx', () => {
     const ctxId = Symbol('ctx');
 
     return {
+        createElement: (component: any, props: any, ...children: any[]) =>
+            typeof component === 'function' ? component({ ...props, children }) : null,
         createContext: (defaultValue: any) => ({
             _id: ctxId,
             Provider: ({ value, children }: any) => {
@@ -28,6 +30,8 @@ vi.mock('@termuijs/jsx', () => {
             const cleanup = fn();
             if (typeof cleanup === 'function') mockCtx.cleanups.push(cleanup);
         },
+        unmountAll: () => {},
+        ErrorBoundary: ({ children }: any) => children,
     };
 });
 
