@@ -13,7 +13,14 @@
 
 import { useEffect, useRef, useState } from '../hooks.js';
 
-type Widget = any;
+// Minimal structural shape this hook needs. Avoids importing the Widget
+// base from @termuijs/widgets, which would create a jsx -> widgets cycle.
+interface SizedWidget {
+    rect?: { width: number; height: number };
+    on?(event: string, cb: () => void): void;
+    off?(event: string, cb: () => void): void;
+}
+type Widget = SizedWidget;
 
 export interface ElementSize {
     width: number;
