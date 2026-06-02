@@ -71,6 +71,7 @@ export { Center } from './layout/Center.js';
 export type { CenterOptions } from './layout/Center.js';
 export { Card } from './layout/Card.js';
 export type { CardOptions } from './layout/Card.js';
+// Masonry removed: module not present in this package
 export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
 
