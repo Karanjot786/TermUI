@@ -8,6 +8,7 @@
 
 export { jsx, jsxs } from './createElement.js';
 export { Fragment } from './vnode.js';
+import type { Color } from '@termuijs/core';
 
 // ── JSX Intrinsic Element Types ───────────────────────
 // Consumed by TypeScript's automatic JSX transform to
@@ -128,6 +129,26 @@ export namespace JSX {
             height?: number | string;
             border?: string;
             borderColor?: string;
+        };
+        table: {
+            key?: string | number;
+            columns: any[];
+            rows?: any[];
+            showHeader?: boolean;
+            headerColor?: string | Color;
+            stripe?: boolean;
+            stripeColor?: string | Color;
+            separator?: string;
+            virtualRows?: any;
+            totalRows?: number;
+            onSelect?: (rowIndex: number) => void;
+            flexGrow?: number;
+            width?: number | string;
+            height?: number | string;
+            border?: string;
+            borderColor?: string;
+            padding?: number;
+            margin?: number;
         };
     }
 }

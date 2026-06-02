@@ -8,7 +8,7 @@
 
 import {
     Box, Text, Widget, ProgressBar, Grid, Skeleton,
-    StatusMessage, Banner, Card, KeyValue, Center, ScrollView, Sidebar,
+    StatusMessage, Banner, Card, KeyValue, Center, ScrollView, Sidebar, Table,
 } from '@termuijs/widgets';
 import type { Style, Color } from '@termuijs/core';
 import { parseColor } from '@termuijs/core';
@@ -187,6 +187,23 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
             });
         }
 
+        case 'table': {
+            const columns = props.columns ?? [];
+            const rows = props.rows ?? [];
+            const style = extractStyle(props);
+            const options = {
+                showHeader: props.showHeader,
+                headerColor: props.headerColor ? parseColorProp(props.headerColor) : undefined,
+                stripe: props.stripe,
+                stripeColor: props.stripeColor ? parseColorProp(props.stripeColor) : undefined,
+                separator: props.separator,
+                virtualRows: props.virtualRows,
+                totalRows: props.totalRows,
+                onSelect: props.onSelect,
+            };
+            return new Table(columns, rows, style, options);
+        }
+
         default: {
             // Unknown tag — create a Box wrapper
             return new Box({ ...style });
@@ -251,6 +268,31 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
 
         // Functional component
         if (typeof type === 'function') {
+            const isWidgetClass = type.prototype && typeof type.prototype.render === 'function';
+            if (isWidgetClass) {
+                const nameLower = type.name ? type.name.toLowerCase() : '';
+                const BUILT_IN_WIDGETS = new Set([
+                    'box', 'text', 'row', 'col', 'column', 'spacer', 'divider',
+                    'progressbar', 'grid', 'skeleton', 'statusmessage', 'banner',
+                    'card', 'keyvalue', 'center', 'scrollview', 'sidebar', 'table'
+                ]);
+                let widget: Widget;
+                if (BUILT_IN_WIDGETS.has(nameLower)) {
+                    widget = createIntrinsicWidget(nameLower, props, children);
+                } else {
+                    const style = extractStyle(props);
+                    widget = new (type as any)(style);
+                }
+
+                // Add children (except for self-contained widgets)
+                const SELF_CONTAINED = new Set(['text', 'statusmessage', 'banner', 'keyvalue', 'sidebar', 'divider', 'table']);
+                if (!SELF_CONTAINED.has(nameLower)) {
+                    for (const child of children) {
+                        widget.addChild(reconcile(child, widget));
+                    }
+                }
+                return widget;
+            }
             return renderComponent(type, props, children);
         }
 
@@ -258,7 +300,7 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
         const widget = createIntrinsicWidget(type, props, children);
 
         // Add children (except for self-contained widgets that handle content via props/internal render)
-        const SELF_CONTAINED = new Set(['text', 'statusmessage', 'banner', 'keyvalue', 'sidebar', 'divider']);
+        const SELF_CONTAINED = new Set(['text', 'statusmessage', 'banner', 'keyvalue', 'sidebar', 'divider', 'table']);
         if (!SELF_CONTAINED.has(type.toLowerCase())) {
             for (const child of children) {
                 widget.addChild(reconcile(child, widget));

@@ -10,7 +10,7 @@ import { Screen, type KeyEvent } from '@termuijs/core';
 import { Box, Text, Widget } from '@termuijs/widgets';
 import {
     reconcile, reRenderComponent, unmountAll, setRequestRender, getRequestRender,
-    collectInputHandlers, destroyFiber, type VNode,
+    collectInputHandlers, destroyFiber, type VNode, isVElement, flushPendingUpdates
 } from '@termuijs/jsx';
 
 /**
@@ -107,7 +107,7 @@ function walkWidgets(root: Widget, predicate: (w: Widget) => boolean): Widget[] 
 
 /** Extract text content from a Text widget */
 function getTextContent(widget: Widget): string {
-    if (widget instanceof Text) {
+    if (widget instanceof Text || widget.constructor.name === 'Text') {
         return (widget as any)._content ?? '';
     }
     return '';
@@ -241,7 +241,7 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
         getByText(text: string): Widget | null {
             // Check widget tree for Text widgets
             const matches = walkWidgets(container, (w) => {
-                if (w instanceof Text) {
+                if (w instanceof Text || w.constructor.name === 'Text') {
                     return getTextContent(w).includes(text);
                 }
                 return false;
@@ -258,7 +258,7 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
 
         getAllByText(text: string): Widget[] {
             return walkWidgets(container, (w) => {
-                if (w instanceof Text) {
+                if (w instanceof Text || w.constructor.name === 'Text') {
                     return getTextContent(w).includes(text);
                 }
                 return false;
@@ -266,7 +266,7 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
         },
 
         getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
-            return walkWidgets(container, (w) => w instanceof type) as T[];
+            return walkWidgets(container, (w) => w instanceof type || w.constructor.name === type.name) as T[];
         },
 
         fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
@@ -287,6 +287,7 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
                     handler(event);
                 }
             }
+            flushPendingUpdates();
         },
 
         typeText(text: string): void {
@@ -300,6 +301,10 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
             const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
             const rootInstance = instances?.get(rootWidget);
             if (rootInstance) {
+                if (el && isVElement(el) && el.type === rootInstance.component) {
+                    rootInstance.props = el.props;
+                    rootInstance.children = el.children;
+                }
                 const newRoot = reRenderComponent(rootInstance);
                 container.clearChildren();
                 container.addChild(newRoot);
