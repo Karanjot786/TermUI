@@ -1,22 +1,22 @@
 {
-    "name": "@termuijs/example-jsx-dashboard",
-    "version": "0.1.0",
-    "private": true,
-    "description": "JSX-based system dashboard — React-like components for the terminal",
-    "type": "module",
-    "scripts": {
-        "start": "bun src/index.tsx",
-        "dev": "bun --watch src/index.tsx",
-        "build": "echo 'no build needed'"
-    },
-    "dependencies": {
-        "@termuijs/core": "workspace:*",
-        "@termuijs/jsx": "workspace:*",
-        "@termuijs/widgets": "workspace:*",
-        "@termuijs/data": "workspace:*",
-        "@termuijs/quick": "workspace:*"
-    },
-    "engines": {
-        "bun": ">=1.3.0"
-    }
+    "name":  "@termuijs/example-jsx-dashboard",
+    "version":  "0.1.0",
+    "private":  true,
+    "description":  "JSX-based system dashboard — React-like components for the terminal",
+    "type":  "module",
+    "scripts":  {
+                    "start":  "bun src/index.tsx",
+                    "dev":  "bun --watch src/index.tsx",
+                    "build":  "node -e \"const fs = require(\u0027fs\u0027); fs.mkdirSync(\u0027dist\u0027, {recursive: true}); fs.writeFileSync(\u0027dist/.placeholder\u0027, \u0027no build needed\u0027);\""
+                },
+    "dependencies":  {
+                         "@termuijs/core":  "workspace:*",
+                         "@termuijs/jsx":  "workspace:*",
+                         "@termuijs/widgets":  "workspace:*",
+                         "@termuijs/data":  "workspace:*",
+                         "@termuijs/quick":  "workspace:*"
+                     },
+    "engines":  {
+                    "bun":  "\u003e=1.3.0"
+                }
 }
