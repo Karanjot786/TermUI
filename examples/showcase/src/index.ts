@@ -192,12 +192,13 @@ class ShowcaseApp extends Widget {
 // ── Main ─────────────────────────────────────────────
 
 async function main() {
+    process.stdout.write('\x1b[?25l');
     const showcase = new ShowcaseApp();
 
     const app = new App(showcase, {
         fullscreen: true,
         title: 'TermUI Showcase',
-        fps: 30,
+        fps: 60,
     });
 
     // Keyboard handler
@@ -214,12 +215,13 @@ async function main() {
         showcase.tick(now - lastTick);
         lastTick = now;
         app.requestRender();
-    }, 33); // ~30fps
+    }, 16); // ~60fps
 
     app.terminal.onCleanup(() => clearInterval(tickInterval));
 
     const exitCode = await app.mount();
     clearInterval(tickInterval);
+    process.stdout.write('\x1b[?25h');
     process.exit(exitCode);
 }
 
