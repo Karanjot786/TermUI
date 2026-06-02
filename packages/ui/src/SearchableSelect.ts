@@ -1,6 +1,5 @@
 import { type KeyEvent, Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '@termuijs/widgets';
-
 import { Select } from './Select.js'; 
 
 export class SearchableSelect extends Widget {
@@ -34,14 +33,17 @@ export class SearchableSelect extends Widget {
       this._filterOptions();
       return;
     }
+
     if (event.key === 'down') {
       this.selectNext();
       return;
     }
+
     if (event.key === 'up') {
       this.selectPrev();
       return;
     }
+
     if (event.key === 'enter') {
       this.confirm();
       return;
@@ -49,11 +51,15 @@ export class SearchableSelect extends Widget {
   }
 
   public selectNext(): void {
-    if (this._selectedIndex < this._options.length - 1) this._selectedIndex++;
+    if (this._selectedIndex < this._options.length - 1) {
+      this._selectedIndex++;
+    }
   }
 
   public selectPrev(): void {
-    if (this._selectedIndex > 0) this._selectedIndex--;
+    if (this._selectedIndex > 0) {
+      this._selectedIndex--;
+    }
   }
 
   public confirm(): void {

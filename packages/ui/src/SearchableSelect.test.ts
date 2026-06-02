@@ -1,5 +1,5 @@
-import { expect, test } from 'vitest';
-import { SearchableSelect } from './SearchableSelect.js';
+import { expect, test } from 'bun:test';
+import { SearchableSelect } from '../SearchableSelect.js';
 
 test('should process backspace workflow and verify via public getter', () => {
   const widget = new SearchableSelect();
@@ -10,8 +10,7 @@ test('should process backspace workflow and verify via public getter', () => {
     shift: false, 
     alt: false, 
     raw: Buffer.from(''), 
-    stopPropagation: () => {},
-    preventDefault: () => {},
+    stopPropagation: () => {} 
   });
 
   expect(widget.searchQuery).toBe('');
@@ -20,15 +19,13 @@ test('should process backspace workflow and verify via public getter', () => {
 test('should accurately change options index on down arrow key trigger', () => {
   const widget = new SearchableSelect();
 
-  // GUIDELINE 1 & 4: Correct object notation with strict lowercase control string
   widget.handleKey({ 
     key: 'down', 
     ctrl: false, 
     shift: false, 
     alt: false, 
     raw: Buffer.from(''), 
-    stopPropagation: () => {},
-    preventDefault: () => {},
+    stopPropagation: () => {} 
   });
 
   expect(widget.selectedOption).toBeDefined();
