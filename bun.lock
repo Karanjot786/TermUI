@@ -13,6 +13,18 @@
         "vitest": "^2.1.0",
       },
     },
+    "examples/ai-streaming": {
+      "name": "@termuijs/example-ai-streaming",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/dev-server": "workspace:*",
+        "@termuijs/motion": "workspace:*",
+        "@termuijs/tss": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+    },
     "examples/auth-flow": {
       "name": "@termuijs/example-auth-flow",
       "version": "0.1.0",
@@ -488,6 +500,8 @@
     "@termuijs/data": ["@termuijs/data@workspace:packages/data"],
 
     "@termuijs/dev-server": ["@termuijs/dev-server@workspace:packages/dev-server"],
+
+    "@termuijs/example-ai-streaming": ["@termuijs/example-ai-streaming@workspace:examples/ai-streaming"],
 
     "@termuijs/example-auth-flow": ["@termuijs/example-auth-flow@workspace:examples/auth-flow"],
 
