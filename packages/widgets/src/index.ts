@@ -132,3 +132,5 @@ export type { ClockOptions } from './display/Clock.js';
 
 export { Stack } from './layout/Stack.js';
 export type { StackOptions } from './layout/Stack.js';
+export { RadarChart } from './data/RadarChart.js';
+export type { RadarChartOptions, RadarSeries } from './data/RadarChart.js';
