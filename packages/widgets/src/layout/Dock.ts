@@ -1,162 +1,76 @@
+import type { Screen, Style, Rect } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
-import { type Rect, type Style } from '@termuijs/core';
 
 export type DockEdge = 'top' | 'right' | 'bottom' | 'left' | 'fill';
 
 export interface DockItem {
-    widget: Widget;
-    edge: DockEdge;
-    /** Required for all edges except 'fill' */
-    size?: number;
+  widget: Widget;
+  edge: DockEdge;
+  size?: number;
+}
+
+export interface DockOptions {
+  style?: Partial<Style>;
 }
 
 export class Dock extends Widget {
-    private items: DockItem[];
+  private _items: DockItem[];
 
-    protected _renderSelf(): void {
-        // no-op — Dock is a layout-only container
+  constructor(items: DockItem[], style: Partial<Style> = {}) {
+    super(style);
+    this._items = items;
+    for (const { widget } of items) {
+      widget.parent = this;
     }
+  }
 
-    constructor(items: DockItem[], style?: Partial<Style>) {
-        super(style);
-        this.items = [];
-        this.setItems(items); // reuse setItems to avoid duplicating child-registration logic
+  setItems(items: DockItem[]): void {
+    this._items = items;
+    for (const { widget } of items) {
+      widget.parent = this;
     }
+    this.markDirty();
+  }
 
-    setItems(items: DockItem[]): void {
-        this.validateItems(items);
+  override updateRect(rect: Rect): void {
+    super.updateRect(rect);
 
-        for (const item of this.items) {
-            this.removeChild(item.widget);
-        }
+    let top = rect.y;
+    let bottom = rect.y + rect.height;
+    let left = rect.x;
+    let right = rect.x + rect.width;
 
-        this.items = items;
-
-        for (const item of items) {
-            this.addChild(item.widget);
-        }
-
-        this.markDirty();
+    for (const { widget, edge, size } of this._items) {
+      if (edge === 'top') {
+        const h = size ?? 1;
+        widget.updateRect({ x: left, y: top, width: right - left, height: h });
+        top += h;
+      } else if (edge === 'bottom') {
+        const h = size ?? 1;
+        bottom -= h;
+        widget.updateRect({ x: left, y: bottom, width: right - left, height: h });
+      } else if (edge === 'left') {
+        const w = size ?? 1;
+        widget.updateRect({ x: left, y: top, width: w, height: bottom - top });
+        left += w;
+      } else if (edge === 'right') {
+        const w = size ?? 1;
+        right -= w;
+        widget.updateRect({ x: right, y: top, width: w, height: bottom - top });
+      } else if (edge === 'fill') {
+        widget.updateRect({ x: left, y: top, width: right - left, height: bottom - top });
+      }
     }
+  }
 
-    protected onLayout(rect: Rect): void {
-        if (this.items.length === 0) return;
+  protected _renderSelf(_screen: Screen): void {
+    // Pure layout container — no self-rendering needed.
+  }
 
-        let remainingRect = { ...rect };
-
-        for (const item of this.items) {
-            if (item.edge === 'fill') {
-                // fill always consumes whatever is left; no need to update remainingRect
-                (item.widget as any).updateRect(remainingRect);
-                continue;
-            }
-
-            const childRect = this.computeChildRect(remainingRect, item);
-            if (childRect) {
-                (item.widget as any).updateRect(childRect);
-                remainingRect = this.updateRemainingRect(remainingRect, item, childRect);
-            }
-        }
+  override render(screen: Screen): void {
+    super.render(screen);
+    for (const { widget } of this._items) {
+      widget.render(screen);
     }
-
-    /**
-     * Validates item list:
-     * - At most one 'fill' item
-     * - Non-fill items must have a size > 0
-     * - 'fill' item should come last (warn if not)
-     */
-    private validateItems(items: DockItem[]): void {
-        const fillItems = items.filter(i => i.edge === 'fill');
-
-        if (fillItems.length > 1) {
-            throw new Error(`Dock: only one 'fill' item is allowed, got ${fillItems.length}`);
-        }
-
-        for (const item of items) {
-            if (item.edge !== 'fill') {
-                const size = item.size ?? 0;
-                if (size <= 0) {
-                    throw new Error(
-                        `Dock: item with edge '${item.edge}' must have a size > 0`
-                    );
-                }
-            }
-        }
-
-        const fillIndex = items.findIndex(i => i.edge === 'fill');
-        if (fillIndex !== -1 && fillIndex !== items.length - 1) {
-            this.warn(
-                `Dock: 'fill' item is at index ${fillIndex} but should be last. ` +
-                `Items after 'fill' will overlap it.`
-            );
-        }
-    }
-
-    private warn(message: string): void {
-        const root = Function('return this')();
-        if (root && root.console && typeof root.console.warn === 'function') {
-            root.console.warn(message);
-        }
-    }
-
-    private computeChildRect(rect: Rect, item: DockItem): Rect | null {
-        // size is guaranteed > 0 for non-fill items after validateItems()
-        const size = item.size!;
-
-        switch (item.edge) {
-            case 'top':
-                return {
-                    x: rect.x,
-                    y: rect.y,
-                    width: rect.width,
-                    height: Math.min(size, rect.height)
-                };
-            case 'bottom':
-                return {
-                    x: rect.x,
-                    y: rect.y + rect.height - Math.min(size, rect.height),
-                    width: rect.width,
-                    height: Math.min(size, rect.height)
-                };
-            case 'left':
-                return {
-                    x: rect.x,
-                    y: rect.y,
-                    width: Math.min(size, rect.width),
-                    height: rect.height
-                };
-            case 'right':
-                return {
-                    x: rect.x + rect.width - Math.min(size, rect.width),
-                    y: rect.y,
-                    width: Math.min(size, rect.width),
-                    height: rect.height
-                };
-            default:
-                return null;
-        }
-    }
-
-    private updateRemainingRect(rect: Rect, item: DockItem, childRect: Rect): Rect {
-        const newRect = { ...rect };
-
-        switch (item.edge) {
-            case 'top':
-                newRect.y = childRect.y + childRect.height;
-                newRect.height = rect.height - childRect.height;
-                break;
-            case 'bottom':
-                newRect.height = rect.height - childRect.height;
-                break;
-            case 'left':
-                newRect.x = childRect.x + childRect.width;
-                newRect.width = rect.width - childRect.width;
-                break;
-            case 'right':
-                newRect.width = rect.width - childRect.width;
-                break;
-        }
-
-        return newRect;
-    }
+  }
 }

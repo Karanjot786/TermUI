@@ -76,7 +76,7 @@ export type { MasonryOptions } from './layout/Masonry.js';
 export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
 export { Dock } from './layout/Dock.js';
-export type { DockItem, DockEdge } from './layout/Dock.js';
+export type { DockOptions, DockItem, DockEdge } from './layout/Dock.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
