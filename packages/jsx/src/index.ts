@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────
 // @termuijs/jsx — Public API
 // ─────────────────────────────────────────────────────
 
@@ -27,11 +27,19 @@ export {
     useInsertBefore,
     useReducer,
 } from './hooks.js';
+export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
+export { useCounter } from './hooks/useCounter.js';
+export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
 
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
 export type { ErrorBoundaryProps } from './error-boundary.js';
+
+// ── Suspense / Lazy ──
+export { Suspense } from './Suspense.js';
+export type { SuspenseProps } from './Suspense.js';
+export { lazy } from './lazy.js';
 
 // ── Context ──
 export { createContext, useContext } from './context.js';

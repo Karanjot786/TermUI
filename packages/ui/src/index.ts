@@ -42,6 +42,9 @@ export type { DrawerOptions, DrawerPosition } from './Drawer.js';
 export { Select } from './Select.js';
 export type { SelectOption, SelectOptions } from './Select.js';
 
+export { LinearPrompt } from './LinearPrompt.js';
+export type { LinearPromptOption, LinearPromptOptions } from './LinearPrompt.js';
+
 export { Pages } from './Pages.js';
 export type { Page, PagesOptions } from './Pages.js';
 
@@ -55,6 +58,9 @@ export type { MultiSelectOption, MultiSelectOptions } from './MultiSelect.js';
 
 export { Tree } from './Tree.js';
 export type { TreeNode, TreeOptions } from './Tree.js';
+
+export { SortPrompt } from './SortPrompt.js';
+export type { SortPromptOptions } from './SortPrompt.js';
 
 export { Toast } from './Toast.js';
 export type { ToastType, ToastMessage, ToastOptions } from './Toast.js';
@@ -80,6 +86,9 @@ export type { PasswordInputOptions } from './PasswordInput.js';
 export { NumberInput } from './NumberInput.js';
 export type { NumberInputOptions } from './NumberInput.js';
 
+export { MaskedInput } from './MaskedInput.js';
+export type { MaskedInputOptions } from './MaskedInput.js';
+
 export { PathInput } from './PathInput.js';
 export type { PathInputOptions } from './PathInput.js';
 
@@ -95,17 +104,31 @@ export type { DatePickerOptions } from './DatePicker.js';
 export { ColorPicker } from './ColorPicker.js';
 export type { ColorPickerOptions } from './ColorPicker.js';
 
+export { Accordion } from './Accordion.js';
+export type { AccordionOptions, AccordionItem } from './Accordion.js';
+
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
+export { Toggle } from './Toggle.js';
+export type { ToggleOptions } from './Toggle.js';
+export { Checkbox } from './Checkbox.js';
+export type { CheckboxOptions } from './Checkbox.js';
+
+export { CheckboxGroup } from './CheckboxGroup.js';
+export type {
+    CheckboxGroupOption,
+    CheckboxGroupOptions,
+} from './CheckboxGroup.js';
 export { SegmentedControl } from './SegmentedControl.js';
 export type { SegmentedControlOptions } from './SegmentedControl.js';
 
-export { Toggle } from './Toggle.js';
-export type { ToggleOptions } from './Toggle.js';
 export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';
 export type { MultilineTextInputOptions } from './MultilineTextInput.js';
 
+
+export { Stepper } from './Stepper.js';
+export type { StepperOptions } from './Stepper.js';

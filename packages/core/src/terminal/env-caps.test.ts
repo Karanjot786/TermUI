@@ -45,6 +45,22 @@ describe('env-caps', () => {
         expect(caps.ci).toBe(true);
     });
 
+    it('caps.background is dark when COLORFGBG indicates a dark background', async () => {
+        vi.stubEnv('COLORFGBG', '15;0');
+        vi.stubEnv('TERM', 'xterm-256color');
+        vi.resetModules();
+        const { caps } = await import('./env-caps.js');
+        expect(caps.background).toBe('dark');
+    });
+
+    it('caps.background is light when TERM_BACKGROUND=light', async () => {
+        vi.stubEnv('TERM_BACKGROUND', 'light');
+        vi.stubEnv('TERM', 'xterm-256color');
+        vi.resetModules();
+        const { caps } = await import('./env-caps.js');
+        expect(caps.background).toBe('light');
+    });
+
     it('caps.motion is false when NO_MOTION=1 and CI is unset', async () => {
         vi.stubEnv('CI', '');
         vi.stubEnv('NO_MOTION', '1');
