@@ -14,6 +14,9 @@ export { LogView } from './display/LogView.js';
 export type { LogViewOptions } from './display/LogView.js';
 export { Tree } from './display/Tree.js';
 export type { TreeNode, TreeOptions } from './display/Tree.js';
+export { Collapsible } from './display/Collapsible.js';
+export type { CollapsibleOptions } from './display/Collapsible.js';
+
 export { UnorderedList } from './display/UnorderedList.js';
 export type { UnorderedListOptions } from './display/UnorderedList.js';
 export { JSONView, jsonToTree } from './display/JSONView.js';
