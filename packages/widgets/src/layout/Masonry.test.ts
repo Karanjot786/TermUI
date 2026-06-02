@@ -1,13 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Masonry } from './Masonry';
-import { Widget } from '../base/Widget';
+import { Masonry } from './Masonry.js';
+import { Widget } from '../base/Widget.js';
 
-// Helper: create a mock widget with a fixed preferredHeight
+// Helper: create a real widget with a fixed preferredHeight
 function makeWidget(height: number): Widget {
-  const w = {
-    preferredHeight: height,
-    rect: null,
-  } as unknown as Widget;
+  const w = new Widget({});
+  w.preferredHeight = height;
   return w;
 }
 
@@ -21,7 +19,7 @@ describe('Masonry', () => {
     ];
 
     const masonry = new Masonry(children, {}, { columns: 2 });
-    (masonry as any).rect = { x: 0, y: 0, width: 80, height: 24 };
+    masonry.updateRect({ x: 0, y: 0, width: 80, height: 24 });
 
     // children 0 and 2 should be in column 0 (x=0)
     expect(children[0].rect?.x).toBe(0);
@@ -40,7 +38,7 @@ describe('Masonry', () => {
     ];
 
     const masonry = new Masonry(children, {}, { columns: 2 });
-    (masonry as any).rect = { x: 0, y: 0, width: 80, height: 24 };
+    masonry.updateRect({ x: 0, y: 0, width: 80, height: 24 });
 
     // child 2 should go to column 1 (x=40) because col 1 is shorter
     expect(children[2].rect?.x).toBe(40);
