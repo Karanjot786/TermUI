@@ -86,4 +86,3 @@ export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
 
 export { SearchableSelect } from './SearchableSelect.js';
-export type { SearchableSelectOptions } from './SearchableSelect.js';

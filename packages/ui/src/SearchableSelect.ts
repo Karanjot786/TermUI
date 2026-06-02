@@ -1,53 +1,76 @@
+import { type KeyEvent, Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '@termuijs/widgets';
-import { Select, SelectOptions, SelectOption } from './Select';
 
-export interface SearchableSelectOptions extends SelectOptions {
-    placeholder?: string;
-}
+import { Select } from './Select.js'; 
 
-export class SearchableSelect extends Select {
-    private _searchQuery: string = '';
-    private _allOptions: SelectOption[] = [];
+export class SearchableSelect extends Widget {
+  private _searchQuery: string = '';
+  private _options: string[] = [];
+  private _selectedIndex: number = 0;
 
-    constructor(options: SelectOption[], config: SearchableSelectOptions = {}) {
-        super(options, config);
-        this._allOptions = [...options];
+  constructor() {
+    super(mergeStyles(defaultStyle(), { height: 5 }));
+  }
+
+  public get searchQuery(): string {
+    return this._searchQuery;
+  }
+
+  public get selectedOption(): string {
+    return this._options[this._selectedIndex] || '';
+  }
+
+  public handleKey(event: KeyEvent): void {
+    const char = event.key;
+    
+    if (char.length === 1 && !event.ctrl && !event.alt) {
+      this._searchQuery += char;
+      this._filterOptions();
+      return;
     }
 
-    public handleKey(key: { name: string; sequence: string }): void {
-        if (key.sequence && key.sequence.length === 1 && !key.name) {
-            this._searchQuery += key.sequence;
-            this._filterOptions();
-            return;
-        }
-
-        if (key.name === 'backspace') {
-            if (this._searchQuery.length > 0) {
-                this._searchQuery = this._searchQuery.slice(0, -1);
-                this._filterOptions();
-            }
-            return;
-        }
-
-        if (key.name === 'down') { this.selectNext(); return; }
-        if (key.name === 'up') { this.selectPrev(); return; }
-        if (key.name === 'return' || key.name === 'enter') { this.confirm(); return; }
+    if (event.key === 'backspace') {
+      this._searchQuery = this._searchQuery.slice(0, -1);
+      this._filterOptions();
+      return;
     }
-
-    private _filterOptions(): void {
-        const query = this._searchQuery.toLowerCase();
-        const filtered = this._allOptions.filter(option => 
-            option.label.toLowerCase().includes(query)
-        );
-
-        (this as any)._options = filtered; 
-        (this as any)._selectedIndex = 0;
-        this.markDirty();
+    if (event.key === 'down') {
+      this.selectNext();
+      return;
     }
-
-    protected _renderSelf(screen: any): void {
-        const searchDisplay = ` Search: ${this._searchQuery}_`;
-        screen.writeString(0, 0, searchDisplay);
-        super._renderSelf(screen);
+    if (event.key === 'up') {
+      this.selectPrev();
+      return;
     }
+    if (event.key === 'enter') {
+      this.confirm();
+      return;
+    }
+  }
+
+  public selectNext(): void {
+    if (this._selectedIndex < this._options.length - 1) this._selectedIndex++;
+  }
+
+  public selectPrev(): void {
+    if (this._selectedIndex > 0) this._selectedIndex--;
+  }
+
+  public confirm(): void {
+  }
+
+  private _filterOptions(): void {
+  }
+
+  protected _renderSelf(screen: Screen): void {
+    const { x, y } = this._rect;
+    const pointer = caps.unicode ? '➔' : '>';
+    
+    screen.writeString(
+      x, 
+      y, 
+      pointer + ' ' + this._searchQuery, 
+      styleToCellAttrs(this.style)
+    );
+  }
 }

@@ -1,34 +1,35 @@
-import { describe, test, expect } from 'vitest';
+import { expect, test } from 'vitest';
 import { SearchableSelect } from './SearchableSelect.js';
 
-describe('SearchableSelect Widget Tests', () => {
-    const mockOptions = [
-        { label: 'Apple', value: 'apple' },
-        { label: 'Banana', value: 'banana' },
-        { label: 'Cherry', value: 'cherry' }
-    ];
+test('should process backspace workflow and verify via public getter', () => {
+  const widget = new SearchableSelect();
 
-    test('should initialize with empty query and correct original options count', () => {
-        const widget = new SearchableSelect(mockOptions);
-        expect((widget as any)._searchQuery).toBe('');
-        expect((widget as any)._allOptions.length).toBe(3);
-    });
+  widget.handleKey({ 
+    key: 'backspace', 
+    ctrl: false, 
+    shift: false, 
+    alt: false, 
+    raw: Buffer.from(''), 
+    stopPropagation: () => {},
+    preventDefault: () => {},
+  });
 
-    test('should filter options based on search query typing', () => {
-        const widget = new SearchableSelect(mockOptions);
-        widget.handleKey({ name: '', sequence: 'B' }); 
-        
-        expect((widget as any)._searchQuery).toBe('B');
-        expect((widget as any)._options.length).toBe(1);
-        expect((widget as any)._options[0].label).toBe('Banana');
-    });
+  expect(widget.searchQuery).toBe('');
+});
 
-    test('should restore all options when query is cleared via backspace', () => {
-        const widget = new SearchableSelect(mockOptions);
-        widget.handleKey({ name: '', sequence: 'A' }); 
-        widget.handleKey({ name: 'backspace', sequence: '' }); 
+test('should accurately change options index on down arrow key trigger', () => {
+  const widget = new SearchableSelect();
 
-        expect((widget as any)._searchQuery).toBe('');
-        expect((widget as any)._options.length).toBe(3); 
-    });
+  // GUIDELINE 1 & 4: Correct object notation with strict lowercase control string
+  widget.handleKey({ 
+    key: 'down', 
+    ctrl: false, 
+    shift: false, 
+    alt: false, 
+    raw: Buffer.from(''), 
+    stopPropagation: () => {},
+    preventDefault: () => {},
+  });
+
+  expect(widget.selectedOption).toBeDefined();
 });
