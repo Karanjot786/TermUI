@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// Built-in Themes — 7 curated terminal color palettes
+// Built-in Themes — 8 curated terminal color palettes
 // ─────────────────────────────────────────────────────
 
 export const BUILTIN_THEMES: Record<string, string> = {
@@ -109,6 +109,33 @@ Text:focused {
 }
 `,
 
+    gruvbox: `
+@theme gruvbox {
+    --primary: #458588;
+    --secondary: #b16286;
+    --bg: #282828;
+    --surface: #3c3836;
+    --text: #ebdbb2;
+    --text-muted: #928374;
+    --accent: #98971a;
+    --error: #cc241d;
+    --warning: #d79921;
+    --success: #98971a;
+    --border: round;
+    --border-color: #504945;
+    --border-focus: #458588;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
+}
+`,
+
     catppuccin: `
 @theme catppuccin {
     --primary: #cba6f7;
@@ -151,6 +178,33 @@ Table {
     --border: single;
     --border-color: #586e75;
     --border-focus: #268bd2;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
+}
+`,
+
+    "tokyo-night": `
+@theme tokyo-night {
+    --primary: #7aa2f7;
+    --secondary: #bb9af7;
+    --bg: #1a1b26;
+    --surface: #1f2335;
+    --text: #a9b1d6;
+    --text-muted: #565f89;
+    --accent: #9ece6a;
+    --error: #f7768e;
+    --warning: #e0af68;
+    --success: #9ece6a;
+    --border: round;
+    --border-color: #3b3d57;
+    --border-focus: #7aa2f7;
 }
 
 Gauge {
