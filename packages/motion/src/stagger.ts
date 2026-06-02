@@ -2,7 +2,6 @@
 // Animation Staggering — delayed parallel starts
 // ─────────────────────────────────────────────────────
 
-import { subscribe } from './timer-pool.js';
 import type { AnimationRunner } from './sequence.js';
 import * as sequencing from './sequence.js';
 
@@ -23,21 +22,16 @@ function withDelay(runner: AnimationRunner, delayMs: number): AnimationRunner {
             return runner(done);
         }
 
-        const startTime = Date.now();
         let cancelStarted: (() => void) | null = null;
         let isStarted = false;
 
-        const unsubDelay = subscribe(16, () => {
-            const elapsed = Date.now() - startTime;
-            if (elapsed < delayMs) return;
-
-            unsubDelay();
+        const timeoutId = setTimeout(() => {
             isStarted = true;
             cancelStarted = runner(done);
-        });
+        }, delayMs);
 
         return () => {
-            unsubDelay();
+            clearTimeout(timeoutId);
             if (isStarted) {
                 cancelStarted?.();
             }
