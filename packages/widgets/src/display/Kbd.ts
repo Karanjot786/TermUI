@@ -3,16 +3,16 @@
 // ─────────────────────────────────────────────────────
 
 import { type Screen, type Style, type Color, stringWidth, caps } from '@termuijs/core';
-import { Widget } from './base/Widget.js';
+import { Widget } from '../base/Widget.js';
 
 export interface KbdOptions {
     // Standard options for future expansion
 }
 
-/** Background color — gray to simulate a physical key. */
+/** Background color — white to simulate a physical key. */
 const BG_COLOR: Color = { type: 'named', name: 'white' };
 
-/** Foreground color — white or black for readability. */
+/** Foreground color — black for readability. */
 const FG_COLOR: Color = { type: 'named', name: 'black' };
 
 /**
@@ -22,22 +22,22 @@ const FG_COLOR: Color = { type: 'named', name: 'black' };
  * Renders an inline block with a distinct background to simulate a key press.
  */
 export class Kbd extends Widget {
-    private _text: string;
+    private _keys: string;
 
-    constructor(text: string, opts: KbdOptions = {}, style: Partial<Style> = {}) {
-        super(style);
-        this._text = text;
+    constructor(keys: string, style?: Partial<Style>, opts?: KbdOptions) {
+        super(style || {});
+        this._keys = keys;
     }
 
-    /** Update the kbd text. */
-    setText(text: string): void {
-        this._text = text;
+    /** Update the kbd keys. */
+    setKeys(keys: string): void {
+        this._keys = keys;
         this.markDirty();
     }
 
-    /** Get the current kbd text. */
-    getText(): string {
-        return this._text;
+    /** Get the current kbd keys. */
+    getKeys(): string {
+        return this._keys;
     }
 
     protected _renderSelf(screen: Screen): void {
@@ -49,8 +49,8 @@ export class Kbd extends Widget {
         
         const contentAttrs = { fg, bg, bold: false };
 
-        // Padded text to look like a physical button: " text "
-        const padded = ` ${this._text} `;
+        // Padded text to look like a physical button: " keys "
+        const padded = ` ${this._keys} `;
         
         // Ensure we don't render outside the assigned widget width
         const innerWidth = Math.min(stringWidth(padded), width);
