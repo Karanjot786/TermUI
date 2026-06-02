@@ -419,7 +419,7 @@ examples/
 
 ```bash
 bun install
-bun run build      # Build all 13 packages
+bun run build      # Build all 14 packages
 bun run test       # Run all 600 tests
 bun run typecheck  # Type-check all packages
 ```
