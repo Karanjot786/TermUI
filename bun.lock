@@ -4,9 +4,6 @@
   "workspaces": {
     "": {
       "name": "termui",
-      "dependencies": {
-        "commander": "^15.0.0",
-      },
       "devDependencies": {
         "@types/bun": "latest",
         "@types/node": "^25.2.3",
@@ -407,8 +404,6 @@
         "@termuijs/motion": "workspace:*",
       },
       "devDependencies": {
-        "@termuijs/jsx": "workspace:*",
-        "@termuijs/testing": "workspace:*",
         "tsup": "^8.3.0",
         "typescript": "^5.7.0",
       },

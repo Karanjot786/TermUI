@@ -2,9 +2,9 @@
 // @termuijs/widgets — Table widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
-import { type VirtualRowsState } from './hooks/useVirtualRows.js';
+import { type TableState } from './TableState.js';
 
 export interface TableColumn {
     /** Column header label */
@@ -30,12 +30,17 @@ export interface TableOptions {
     stripeColor?: Color;
     /** Column separator character */
     separator?: string;
-    /** Virtual rows state object from useVirtualRows */
-    virtualRows?: VirtualRowsState;
-    /** Total number of rows in the table (used in virtualization) */
-    totalRows?: number;
-    /** Callback when a row is selected or confirmed */
-    onSelect?: (rowIndex: number) => void;
+}
+
+export interface TableProps {
+    columns: TableColumn[];
+    rows?: TableRow[];
+    style?: Partial<Style>;
+    options?: TableOptions;
+    /** External state object – if provided, Table syncs rows through it */
+    state?: TableState;
+    /** Called whenever rows change via setRows */
+    onStateChange?: (state: TableState) => void;
 }
 
 /**
@@ -48,9 +53,7 @@ export interface TableOptions {
  * - Zebra striping
  * - Text alignment per column
  * - Truncation for overflow
- * - Row virtualization (via useVirtualRows hook)
- * - Keyboard navigation (Up/Down/Home/End/PageUp/PageDown/Enter)
- * - Scrollbar indicator
+ * - External state via `state` prop and `useTableState` hook
  */
 export class Table extends Widget {
     private _columns: TableColumn[];
@@ -60,169 +63,73 @@ export class Table extends Widget {
     private _stripe: boolean;
     private _stripeColor: Color;
     private _separator: string;
-    private _virtualRows?: VirtualRowsState;
-    private _onSelect?: (rowIndex: number) => void;
-    private _selectedIndex = 0;
-    private _scrollOffset = 0;
+    private _state?: TableState;
+    private _onStateChange?: (state: TableState) => void;
 
     constructor(
-        columns: (TableColumn | string)[],
-        rows: TableRow[],
+        columnsOrProps: TableColumn[] | TableProps,
+        rows: TableRow[] = [],
         style: Partial<Style> = {},
         options: TableOptions = {},
     ) {
+        let columns: TableColumn[];
+        let state: TableState | undefined;
+        let onStateChange: ((s: TableState) => void) | undefined;
+
+        if (Array.isArray(columnsOrProps)) {
+            columns = columnsOrProps;
+        } else {
+            const props = columnsOrProps as TableProps;
+            columns = props.columns;
+            rows = props.rows ?? [];
+            style = props.style ?? style;
+            options = props.options ?? options;
+            state = props.state;
+            onStateChange = props.onStateChange;
+        }
+
         super(style);
-        this._columns = (columns ?? []).map(col =>
-            typeof col === 'string' ? { header: col, key: col } : col
-        );
-        this._rows = rows ?? [];
+        this._columns = columns;
+        this._rows = rows;
         this._showHeader = options.showHeader ?? true;
         this._headerColor = options.headerColor ?? { type: 'named', name: 'cyan' };
         this._stripe = options.stripe ?? true;
         this._stripeColor = options.stripeColor ?? { type: 'named', name: 'brightBlack' };
         this._separator = options.separator ?? ' │ ';
-        this._virtualRows = options.virtualRows;
-        this._onSelect = options.onSelect;
-        this.focusable = true;
-
-        this.events.on('key', (event) => {
-            this.handleKey(event);
-        });
+        this._state = state;
+        this._onStateChange = onStateChange;
     }
 
-    // ── Selection & Scroll Getters/Setters ──
-
-    get totalRows(): number {
-        if (this._virtualRows) {
-            return this._virtualRows.totalRows;
-        }
-        return this._rows.length;
-    }
-
-    get selectedIndex(): number {
-        if (this._virtualRows) {
-            return this._virtualRows.selectedIndex;
-        }
-        return this._selectedIndex;
-    }
-
-    setSelectedIndex(index: number): void {
-        const total = this.totalRows;
-        const clamped = total <= 0 ? 0 : Math.max(0, Math.min(index, total - 1));
-        if (this._virtualRows) {
-            this._virtualRows.setSelectedIndex(clamped);
-        } else {
-            this._selectedIndex = clamped;
-        }
-        this._clampScrollForIndex(clamped);
-        this.markDirty();
-        this._onSelect?.(clamped);
-    }
-
-    get scrollOffset(): number {
-        if (this._virtualRows) {
-            return this._virtualRows.scrollOffset;
-        }
-        return this._scrollOffset;
-    }
-
-    setScrollOffset(offset: number): void {
-        const maxScroll = Math.max(0, this.totalRows - this._getDataHeight());
-        const clamped = Math.max(0, Math.min(offset, maxScroll));
-        if (this._virtualRows) {
-            this._virtualRows.setScrollOffset(clamped);
-        } else {
-            this._scrollOffset = clamped;
-        }
-        this.markDirty();
-    }
-
-    // ── Public Navigation API ──
-
-    selectPrev(): void {
-        this.setSelectedIndex(this.selectedIndex - 1);
-    }
-
-    selectNext(): void {
-        this.setSelectedIndex(this.selectedIndex + 1);
-    }
-
-    selectFirst(): void {
-        this.setSelectedIndex(0);
-    }
-
-    selectLast(): void {
-        this.setSelectedIndex(this.totalRows - 1);
-    }
-
-    pageUp(): void {
-        const pageSize = this._getDataHeight();
-        this.setSelectedIndex(this.selectedIndex - pageSize);
-    }
-
-    pageDown(): void {
-        const pageSize = this._getDataHeight();
-        this.setSelectedIndex(this.selectedIndex + pageSize);
-    }
-
-    confirm(): void {
-        if (this.totalRows > 0) {
-            this._onSelect?.(this.selectedIndex);
-        }
-    }
-
-    handleKey(event: KeyEvent): void {
-        switch (event.key) {
-            case 'up':
-            case 'k':
-                this.selectPrev();
-                break;
-            case 'down':
-            case 'j':
-                this.selectNext();
-                break;
-            case 'home':
-                this.selectFirst();
-                break;
-            case 'end':
-                this.selectLast();
-                break;
-            case 'pageup':
-                this.pageUp();
-                break;
-            case 'pagedown':
-                this.pageDown();
-                break;
-            case 'enter':
-            case 'space':
-                this.confirm();
-                break;
-        }
-    }
+    // ── Mutations ─────────────────────────────────────
 
     setRows(rows: TableRow[]): void {
         this._rows = rows;
-        this.setSelectedIndex(Math.min(this.selectedIndex, Math.max(0, this.totalRows - 1)));
         this.markDirty();
+        this._pushState();
     }
+
+    // ── External state sync ───────────────────────────
+
+    private _pushState(): void {
+        if (this._state) {
+            this._state.rows = this._rows;
+            this._onStateChange?.(this._state);
+        }
+    }
+
+    // ── Rendering ─────────────────────────────────────
 
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
         if (width <= 0 || height <= 0) return;
 
-        this._clampScrollForIndex(this.selectedIndex);
-
         const attrs = styleToCellAttrs(this._style);
         const sepWidth = stringWidth(this._separator);
-        const dataHeight = this._getDataHeight();
-
-        const showScrollbar = this.totalRows > dataHeight;
-        const contentWidth = showScrollbar ? width - 1 : width;
 
         // Calculate column widths
         const colWidths = this._computeColumnWidths(
-            contentWidth - (this._columns.length - 1) * sepWidth,
+            width - (this._columns.length - 1) * sepWidth,
         );
 
         let row = 0;
@@ -248,122 +155,54 @@ export class Table extends Widget {
 
             // Header separator line
             if (row < height) {
-                const sepLine = '─'.repeat(contentWidth);
+                const sepLine = '─'.repeat(width);
                 screen.writeString(x, y + row, sepLine, { ...attrs, dim: true });
                 row++;
             }
         }
 
         // Render data rows
-        const startRow = this.scrollOffset;
-        const endRow = Math.min(this.totalRows, startRow + dataHeight);
-
-        for (let r = startRow; r < endRow && row < height; r++) {
-            const isSelected = r === this.selectedIndex && this.isFocused;
+        for (let r = 0; r < this._rows.length && row < height; r++) {
+            const dataRow = this._rows[r];
             const isStripe = this._stripe && r % 2 === 1;
             let cx = x;
 
-            const cellStyle = isSelected
-                ? {
-                    ...attrs,
-                    bg: { type: 'named' as const, name: 'blue' as const },
-                    bold: true,
-                  }
-                : isStripe
-                ? { ...attrs, bg: this._stripeColor }
-                : attrs;
-
             for (let c = 0; c < this._columns.length; c++) {
                 const col = this._columns[c];
-                
-                let rawValue = '';
-                if (this._virtualRows) {
-                    try {
-                        rawValue = this._virtualRows.getCell(r, c);
-                    } catch {
-                        rawValue = `[Error]`;
-                    }
-                } else {
-                    const dataRow = this._rows[r];
-                    rawValue = dataRow ? String(dataRow[col.key] ?? '') : '';
-                }
-
+                const rawValue = String(dataRow[col.key] ?? '');
                 const cellText = this._alignText(rawValue, colWidths[c], col.align ?? 'left');
 
-                screen.writeString(cx, y + row, cellText, cellStyle);
+                screen.writeString(cx, y + row, cellText, {
+                    ...attrs,
+                    bg: isStripe ? this._stripeColor : attrs.bg,
+                });
                 cx += colWidths[c];
                 if (c < this._columns.length - 1) {
                     screen.writeString(cx, y + row, this._separator, {
-                        ...cellStyle,
-                        dim: !isSelected,
+                        ...attrs,
+                        dim: true,
+                        bg: isStripe ? this._stripeColor : attrs.bg,
                     });
                     cx += sepWidth;
                 }
             }
 
-            // Fill remaining width for stripe/selection highlight
-            if (isSelected || isStripe) {
-                const bg = isSelected ? ({ type: 'named', name: 'blue' as const } as Color) : this._stripeColor;
-                for (let fx = cx; fx < x + contentWidth; fx++) {
-                    screen.setCell(fx, y + row, { char: ' ', bg });
+            // Fill remaining width for stripe
+            if (isStripe) {
+                for (let fx = cx; fx < x + width; fx++) {
+                    screen.setCell(fx, y + row, { char: ' ', bg: this._stripeColor });
                 }
             }
 
             row++;
         }
-
-        // Render scrollbar
-        if (showScrollbar && dataHeight > 0) {
-            const scrollbarX = x + width - 1;
-            const totalPages = this.totalRows - dataHeight;
-            const scrollRatio = totalPages > 0 ? this.scrollOffset / totalPages : 0;
-            const thumbPos = Math.floor(scrollRatio * (dataHeight - 1));
-            
-            const headerLines = this._showHeader ? 2 : 0;
-            
-            const thumbChar = '█';
-            const trackChar = '░';
-
-            for (let r = 0; r < dataHeight; r++) {
-                const scrollChar = r === thumbPos ? thumbChar : trackChar;
-                screen.setCell(scrollbarX, y + headerLines + r, {
-                    char: scrollChar,
-                    ...attrs,
-                    dim: r !== thumbPos,
-                });
-            }
-        }
-    }
-
-    private _getDataHeight(): number {
-        const rect = this._getContentRect();
-        const headerLines = this._showHeader ? 2 : 0;
-        return Math.max(0, rect.height - headerLines);
-    }
-
-    private _clampScrollForIndex(selected: number): void {
-        const dataHeight = this._getDataHeight();
-        if (dataHeight <= 0) {
-            this.setScrollOffset(0);
-            return;
-        }
-
-        let offset = this.scrollOffset;
-
-        if (selected < offset) {
-            offset = selected;
-        } else if (selected >= offset + dataHeight) {
-            offset = selected - dataHeight + 1;
-        }
-
-        this.setScrollOffset(offset);
     }
 
     private _computeColumnWidths(totalWidth: number): number[] {
         const fixedCols = this._columns.filter(c => c.width !== undefined);
         const flexCols = this._columns.filter(c => c.width === undefined);
 
-        let usedWidth = fixedCols.reduce((sum, c) => sum + (c.width ?? 0), 0);
+        const usedWidth = fixedCols.reduce((sum, c) => sum + (c.width ?? 0), 0);
         const remainingWidth = Math.max(0, totalWidth - usedWidth);
         const flexWidth = flexCols.length > 0 ? Math.floor(remainingWidth / flexCols.length) : 0;
 
@@ -389,4 +228,3 @@ export class Table extends Widget {
         }
     }
 }
-
