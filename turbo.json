@@ -1,6 +1,6 @@
 {
     "$schema": "https://v2-9-12.turborepo.dev/schema.json",
-"tasks": {
+    "tasks": {
         "build": {
             "dependsOn": [
                 "^build"
@@ -8,6 +8,9 @@
             "outputs": [
                 "dist/**"
             ]
+        },
+        "@termuijs/example-*#build": {
+            "outputs": []
         },
         "typecheck": {
             "dependsOn": [
