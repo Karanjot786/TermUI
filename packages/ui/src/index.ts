@@ -98,6 +98,9 @@ export type { DatePickerOptions } from './DatePicker.js';
 export { ColorPicker } from './ColorPicker.js';
 export type { ColorPickerOptions } from './ColorPicker.js';
 
+export { Accordion } from './Accordion.js';
+export type { AccordionOptions, AccordionItem } from './Accordion.js';
+
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
