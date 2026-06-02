@@ -12,9 +12,17 @@ function createMockSubprocess() {
     };
 }
 
-vi.mock('node:fs', () => ({
-    existsSync: vi.fn(() => true)
-}));
+vi.mock('node:fs', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('node:fs')>();
+    return {
+        ...actual,
+        existsSync: vi.fn(() => true),
+        watch: vi.fn(() => ({
+            on: vi.fn(),
+            close: vi.fn()
+        }))
+    };
+});
 
 describe('DevServer', () => {
     let mockChild: any;
