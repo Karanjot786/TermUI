@@ -33,7 +33,9 @@ export type { ScrollRange } from './input/virtual-scroll.js';
 
 // ── Input Widgets ─────────────────────────────────────
 export { List } from './input/List.js';
-export type { ListItem } from './input/List.js';
+export type { ListItem, ListProps } from './input/List.js';
+export { useListState } from './data/ListState.js';
+export type { ListState } from './data/ListState.js';
 export { TextInput } from './input/TextInput.js';
 export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
@@ -44,7 +46,9 @@ export type { ContextMenuItem } from './input/ContextMenu.js';
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
-export type { TableColumn, TableRow, TableOptions } from './data/Table.js';
+export type { TableColumn, TableRow, TableOptions, TableProps } from './data/Table.js';
+export { useTableState } from './data/TableState.js';
+export type { TableState } from './data/TableState.js';
 export { TreeTable } from './data/TreeTable.js';
 export type { TreeTableColumn, TreeTableRow, TreeTableOptions } from './data/TreeTable.js';
 export { Gauge } from './data/Gauge.js';
