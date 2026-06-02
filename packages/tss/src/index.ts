@@ -24,7 +24,7 @@ export type { ThemeTokens } from './tokens.js';
 // Named ThemeTokens
 export {
   draculaTheme, nordTheme, catppuccinTheme, monokaiTheme,
-  solarizedTheme, tokyoNightTheme, oneDarkTheme,
+  solarizedTheme, tokyoNightTheme, oneDarkTheme, highContrastTheme,
   NAMED_THEMES, getNamedTheme,
 } from './named-themes.js';
 
