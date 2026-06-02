@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createStore, batch, logger } from './store.js'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 
 describe('createStore', () => {
     it('initializes state from creator function', () => {
@@ -316,3 +318,92 @@ describe('middleware', () => {
         logSpy.mockRestore()
     })
 })
+
+describe('persistence', () => {
+    const testDir = path.join(__dirname, 'temp-test-store-dir')
+    const testFile = path.join(testDir, 'test-store.json')
+
+    afterEach(() => {
+        vi.useRealTimers()
+        if (fs.existsSync(testFile)) {
+            try {
+                fs.unlinkSync(testFile)
+            } catch (err) {}
+        }
+        if (fs.existsSync(testDir)) {
+            try {
+                fs.rmdirSync(testDir)
+            } catch (err) {}
+        }
+    })
+
+    it('initializes store with plain object creator', () => {
+        const useStore = createStore({ count: 5, name: 'plain-object' })
+        expect(useStore.getState().count).toBe(5)
+        expect(useStore.getState().name).toBe('plain-object')
+    })
+
+    it('rehydrates saved state from file on init', () => {
+        if (!fs.existsSync(testDir)) {
+            fs.mkdirSync(testDir, { recursive: true })
+        }
+        fs.writeFileSync(testFile, JSON.stringify({ count: 42, extra: 'loaded' }), 'utf8')
+
+        const useStore = createStore({ count: 0, extra: '', other: true }, {
+            persist: {
+                file: testFile,
+            }
+        })
+
+        expect(useStore.getState().count).toBe(42)
+        expect(useStore.getState().extra).toBe('loaded')
+        expect(useStore.getState().other).toBe(true) // default value untouched
+    })
+
+    it('debounces disk writes and collapses rapid updates', () => {
+        vi.useFakeTimers()
+        const useStore = createStore({ count: 0, text: '' }, {
+            persist: {
+                file: testFile,
+                debounceMs: 50,
+            }
+        })
+
+        useStore.setState({ count: 1 })
+        useStore.setState({ count: 2 })
+        useStore.setState({ text: 'hello' })
+
+        // File should not exist immediately due to debounce
+        expect(fs.existsSync(testFile)).toBe(false)
+
+        // Advance timers by less than debounceMs
+        vi.advanceTimersByTime(40)
+        expect(fs.existsSync(testFile)).toBe(false)
+
+        // Advance timers past debounceMs
+        vi.advanceTimersByTime(15)
+        expect(fs.existsSync(testFile)).toBe(true)
+
+        const data = JSON.parse(fs.readFileSync(testFile, 'utf8'))
+        expect(data).toEqual({ count: 2, text: 'hello' })
+    })
+
+    it('cancels pending writes on destroy', () => {
+        vi.useFakeTimers()
+        const useStore = createStore({ count: 0 }, {
+            persist: {
+                file: testFile,
+                debounceMs: 50,
+            }
+        })
+
+        useStore.setState({ count: 10 })
+        expect(fs.existsSync(testFile)).toBe(false)
+
+        useStore.destroy()
+
+        vi.advanceTimersByTime(100)
+        expect(fs.existsSync(testFile)).toBe(false)
+    })
+})
+

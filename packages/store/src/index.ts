@@ -14,4 +14,5 @@ export type {
     Listener,
     Middleware,
     StoreOptions,
+    PersistOptions,
 } from './store.js';

@@ -30,10 +30,21 @@
     "clean": "rm -rf dist",
     "test": "vitest run --config ../../vitest.config.ts"
   },
+  "dependencies": {
+    "commander": "^15.0.0"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0",
     "tsup": "^8.3.0"
+  },
+  "peerDependencies": {
+    "commander": "^15.0.0"
+  },
+  "peerDependenciesMeta": {
+    "commander": {
+      "optional": true
+    }
   },
   "keywords": [
     "terminal",
