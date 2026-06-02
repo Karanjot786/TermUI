@@ -13,6 +13,9 @@ export type { Layer } from './terminal/LayerManager.js';
 export { caps } from './terminal/env-caps.js';
 export { BOX, BRAILLE_SPIN, BLOCK } from './terminal/ascii-map.js';
 
+// ── Renderer ──────────────────────────────────────────
+export { RenderHook } from './renderer/render-hook.js';
+
 // ── Input ─────────────────────────────────────────────
 export { InputParser } from './input/InputParser.js';
 export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './input/KeyMap.js';
@@ -67,6 +70,7 @@ export type { TestScreen } from './terminal/TestBackend.js';
 export { App } from './app/App.js';
 export type { AppOptions, RootWidget } from './app/App.js';
 export { shouldUseFallback, renderFallback } from './app/Fallback.js';
+export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.js';
 
 // ── Utilities ─────────────────────────────────────────
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';

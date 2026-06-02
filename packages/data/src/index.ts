@@ -15,6 +15,8 @@ export { tail } from './tail.js';
 export type { TailOptions, TailStream } from './tail.js';
 export { http } from './http.js';
 export type { HealthResult, Endpoint } from './http.js';
+export { invalidate } from './cache.js';
+
 
 // ── Reactive hooks ────────────────────────────────────
 export {
@@ -25,6 +27,8 @@ export {
     useTopProcesses,
     useSystemInfo,
     useHttpHealth,
+    useWebSocket,
+    useFetch,
 } from './hooks.js';
 export type {
     CpuMetrics,
@@ -32,4 +36,13 @@ export type {
     DiskMetrics,
     NetworkMetrics,
     SystemInfo,
+    UseWebSocketReturn,
+    WebSocketState,
+    UseFetchOptions,
+    UseFetchResult,
 } from './hooks.js';
+export { useBattery } from './hooks/useBattery.js';
+export type { BatteryData, UseBatteryResult } from './hooks/useBattery.js';
+
+export { usePolling } from './hooks/usePolling.js';
+export type { UsePollingResult } from './hooks/usePolling.js';

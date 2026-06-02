@@ -1,0 +1,12 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`terminal snapshot rendering > captures a simple ASCII frame 1`] = `
+"Hello, TermUI!
+
+Line 2 content"
+`;
+
+exports[`terminal snapshot rendering > captures wide/unicode characters consistently 1`] = `
+"你好，世界 🌍
+🏳🌈 multi-codepoint"
+`;

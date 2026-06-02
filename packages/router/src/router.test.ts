@@ -85,4 +85,67 @@ describe('Router', () => {
         ]);
         expect(r.routes).toHaveLength(2);
     });
+
+    it('supports nested routes', () => {
+        const r = new Router();
+
+        r.addRoutes([
+            {
+                path: '/settings',
+                component: () => 'Settings',
+                children: [
+                    {
+                        path: 'profile',
+                        component: () => 'Profile',
+                    },
+                ],
+            },
+        ]);
+
+        r.push('/settings/profile');
+
+        expect(r.current).not.toBeNull();
+    });
+
+    it('resolves full parent-to-leaf chain', () => {
+        const r = new Router();
+
+        r.addRoutes([
+            {
+                path: '/settings',
+                component: () => 'Settings',
+                children: [
+                    {
+                        path: 'profile',
+                        component: () => 'Profile',
+                    },
+                ],
+            },
+        ]);
+
+        r.push('/settings/profile');
+
+        expect(r.current?.chain.length).toBe(2);
+    });
+
+    it('preserves params in nested routes', () => {
+        const r = new Router();
+
+        r.addRoutes([
+            {
+                path: '/users',
+                component: () => 'Users',
+                children: [
+                    {
+                        path: '[id]',
+                        component: () => 'User',
+                    },
+                ],
+            },
+        ]);
+
+        r.push('/users/42');
+
+        expect(r.params.id).toBe('42');
+    });
 });

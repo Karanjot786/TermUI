@@ -3,6 +3,7 @@
   <p align="center">Build terminal applications in TypeScript.</p>
 </p>
 
+
 <p align="center">
   <a href="https://www.termui.io/docs/getting-started/installation"><img src="https://img.shields.io/badge/docs-termui.io-00ff88?style=flat" alt="Documentation"></a>
   <a href="https://www.npmjs.com/package/@termuijs/core"><img src="https://img.shields.io/npm/v/@termuijs/core.svg" alt="npm version"></a>
@@ -11,14 +12,12 @@
   <img src="https://img.shields.io/badge/tests-600%20passing-brightgreen" alt="600 tests passing">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript 5.9">
 </p>
-
 <p align="center">
   <a href="https://gssoc.girlscript.org/"><img src="https://img.shields.io/badge/GSSoC-2026-ff7b00?style=flat&logo=git" alt="GSSoC 2026"></a>
   <a href="https://github.com/Karanjot786/TermUI/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"><img src="https://img.shields.io/github/issues/Karanjot786/TermUI/good%20first%20issue?label=good%20first%20issues&color=7057ff" alt="Good first issues"></a>
   <a href="https://github.com/Karanjot786/TermUI/graphs/contributors"><img src="https://img.shields.io/github/contributors/Karanjot786/TermUI?color=00ff88" alt="Contributors"></a>
   <a href="https://github.com/Karanjot786/TermUI/stargazers"><img src="https://img.shields.io/github/stars/Karanjot786/TermUI?style=flat&color=ffd700" alt="Stars"></a>
 </p>
-
 > ⭐ **GSSoC 2026 contributors:** star this repo before opening a PR. The `star-check` workflow blocks unstarred merges. Read [CONTRIBUTING.md](./CONTRIBUTING.md#gssoc-2026) for the full point system.
 
 > 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
@@ -372,7 +371,20 @@ cd examples/dashboard
 bun run dev
 ```
 
-Six examples: `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`.
+### Available Examples
+
+| Example | Purpose | Features demonstrated | Path |
+|---------|---------|-----------------------|------|
+| Auth Flow | Demonstrates authentication | Store, Text inputs, conditional rendering | [`examples/auth-flow`](./examples/auth-flow) |
+| Todo App | Interactive todo list | Store batching, Lists, Inputs | [`examples/todo-app`](./examples/todo-app) |
+| Forms and Validation | Form validation | Form widget, inputs, modals | [`examples/forms-and-validation`](./examples/forms-and-validation) |
+| Multi-screen Router | Screen routing | Router, nested screens, navigation | [`examples/multi-screen-router`](./examples/multi-screen-router) |
+| Dashboard | Real-time system monitor | Quick API, layout, data hooks | [`examples/dashboard`](./examples/dashboard) |
+| System Monitor | Advanced monitor | Complex layouts, live charts | [`examples/system-monitor`](./examples/system-monitor) |
+| JSX Dashboard | JSX-based dashboard | JSX runtime | [`examples/jsx-dashboard`](./examples/jsx-dashboard) |
+| Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
+| Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
+| CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
 
 ## Project structure
 
@@ -392,28 +404,47 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
-  dashboard/         Real-time system monitor
-  jsx-dashboard/     JSX-based dashboard
-  showcase/          Widget gallery
-  system-monitor/    Advanced monitor
-  todo-app/          Interactive todo list
-  widget-gallery/    All widgets in one place
+  auth-flow/             Authentication flow example
+  cli-wrapper-live/      Live subprocess log streaming
+  dashboard/             Real-time system monitor
+  forms-and-validation/  Multi-field form with validation
+  jsx-dashboard/         JSX-based dashboard
+    multi-screen-router/   Multi-screen router example
+  showcase/              Widget gallery
+  system-monitor/        Advanced monitor
+  todo-app/              Interactive todo list
+  widget-gallery/        All widgets in one place
 ```
 
 ## Development
 
 ```bash
 bun install
-bun run build      # Build all 13 packages
+bun run build      # Build all 14 packages
 bun run test       # Run all 600 tests
 bun run typecheck  # Type-check all packages
 ```
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for local setup, build commands, testing, and contributor workflow.
+
 
 ## Requirements
 
 - [Bun](https://bun.sh) 1.3.0 or newer for development
 - Node.js 18+ to run published `@termuijs/*` packages from npm
 - A terminal with TTY support (256-color or truecolor recommended)
+
+## Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and future plans. Pick work that fits your skill level.
+
+## Community
+
+- [Discussions](https://github.com/Karanjot786/TermUI/discussions): ask questions, propose ideas, share what you built
+- [Wiki](https://github.com/Karanjot786/TermUI/wiki): roadmap, architecture, contribution workflow, FAQ
+- [Project board](https://github.com/users/Karanjot786/projects/2): track issues and PRs in progress
+- [Issues](https://github.com/Karanjot786/TermUI/issues): report bugs, claim tasks
+- [Docs](https://www.termui.io): API reference, guides, examples
 
 ## License
 
