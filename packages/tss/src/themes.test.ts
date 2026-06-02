@@ -15,7 +15,8 @@ describe('Built-in Themes', () => {
         expect(names).toContain('catppuccin');
         expect(names).toContain('solarized');
         expect(names).toContain('highContrast');
-        expect(names).toHaveLength(7);
+        expect(names).toContain('gruvbox');
+        expect(names).toHaveLength(8);
     });
 
     it('getBuiltinTheme returns source for valid name', () => {
@@ -42,5 +43,16 @@ describe('Built-in Themes', () => {
         expect(src).toContain('--text: #ffffff');
         expect(src).toContain('--border-color: #ffffff');
         expect(src).toContain('--border-focus: #00ffff');
+    });
+
+    it('loads the gruvbox theme with correct palette values', () => {
+        const src = getBuiltinTheme('gruvbox');
+
+        expect(src).toBeDefined();
+
+        expect(src).toContain('@theme gruvbox');
+        expect(src).toContain('--bg: #282828');
+        expect(src).toContain('--text: #ebdbb2');
+        expect(src).toContain('--primary: #458588');
     });
 });
