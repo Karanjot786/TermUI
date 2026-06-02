@@ -2,6 +2,7 @@
 import { type Router, type NavigateEvent } from './router.js';
 import { type VNode } from '@termuijs/jsx';
 import { EventEmitter } from '@termuijs/core';
+import { transition } from '@termuijs/motion';
 
 export interface RouteTransitionEvents {
     frame: { screen: VNode; alpha: number };
@@ -38,37 +39,27 @@ export class RouteTransitionManager {
     }
 
     /**
-     * Drives enter/leave screen layouts safely across monorepo packages
+     * Drives enter/leave screen layouts utilizing @termuijs/motion transitions
      */
     triggerTransition(screen: VNode, direction: 'enter' | 'leave'): void {
         if (!screen) return;
         this._currentScreen = screen;
 
-        // Bypasses static bundler unresolved errors by checking global and runtime contexts safely
-        const globalContext = globalThis as any;
-        const motion = globalContext.__termuijs_motion__ || (typeof require !== 'undefined' ? require('@termuijs/motion') : null);
+        transition({
+            durationMs: this._duration,
+            onFrame: (progress: number) => {
+                if (this._currentScreen !== screen) return;
 
-        if (motion && typeof motion.transition === 'function') {
-            motion.transition({
-                durationMs: this._duration,
-                onFrame: (progress: number) => {
-                    if (this._currentScreen !== screen) return;
-
-                    this.events.emit('frame', {
-                        screen,
-                        alpha: progress
-                    });
-                },
-                onComplete: () => {
-                    if (this._currentScreen !== screen) return;
-                    this.events.emit('complete', { screen });
-                }
-            });
-        } else {
-            // Fallback framework execution if running in an isolated test environment
-            this.events.emit('frame', { screen, alpha: 1 });
-            this.events.emit('complete', { screen });
-        }
+                this.events.emit('frame', {
+                    screen,
+                    alpha: progress
+                });
+            },
+            onComplete: () => {
+                if (this._currentScreen !== screen) return;
+                this.events.emit('complete', { screen });
+            }
+        });
     }
 
     get activeScreen(): VNode | null {
