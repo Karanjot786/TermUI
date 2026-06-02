@@ -33,17 +33,26 @@ let activeSources: MockEventSource[] = [];
 
 class MockEventSource {
     url: string;
-    onmessage: ((event: { data: string }) => void) | null = null;
-    onerror: (() => void) | null = null;
-    closed = false;
+    private messageHandler: ((e: { data: string }) => void) | null = null;
+
+    addEventListener = vi.fn();
+    removeEventListener = vi.fn();
+    close = vi.fn();
+    onmessage: ((e: any) => void) | null = null;
+    onerror: ((e: any) => void) | null = null;
 
     constructor(url: string) {
         this.url = url;
         activeSources.push(this);
+        this.addEventListener.mockImplementation((type: string, handler: (e: { data: string }) => void) => {
+            if (type === 'message') {
+                this.messageHandler = handler;
+            }
+        });
     }
 
-    close() {
-        this.closed = true;
+    triggerMessage(data: string) {
+        this.messageHandler?.({ data });
     }
 }
 
@@ -79,7 +88,8 @@ describe('useSSE', () => {
         }
 
         const source = activeSources[0];
-        source.onmessage?.({ data: 'live-update' });
+        expect(source.addEventListener).toHaveBeenCalledWith('message', expect.any(Function));
+        source.triggerMessage('live-update');
 
         await flushPromises();
 
@@ -95,13 +105,13 @@ describe('useSSE', () => {
             const cleanup = effectCb();
             const source = activeSources[0];
 
-            expect(source.closed).toBe(false);
+            expect(source.close).not.toHaveBeenCalled();
 
             if (typeof cleanup === 'function') {
                 cleanup();
             }
 
-            expect(source.closed).toBe(true);
+            expect(source.close).toHaveBeenCalledTimes(1);
         }
     });
 
@@ -113,7 +123,7 @@ describe('useSSE', () => {
         }
 
         const source = activeSources[0];
-        source.onerror?.();
+        source.onerror?.({});
 
         await flushPromises();
 

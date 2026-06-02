@@ -28,6 +28,13 @@ export function useSSE<T = string>(
 
     useEffect(() => {
         let isMounted = true;
+
+        if (typeof EventSource === 'undefined') {
+            setError(new Error('EventSource is not supported in this environment'));
+            setLoading(false);
+            return;
+        }
+
         const EventSourceCtor = EventSource as unknown as { new(url: string): EventSource };
         const source = new EventSourceCtor(url);
 
