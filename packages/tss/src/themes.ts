@@ -190,6 +190,33 @@ Table {
 }
 `,
 
+    "tokyo-night": `
+@theme tokyo-night {
+    --primary: #7aa2f7;
+    --secondary: #bb9af7;
+    --bg: #1a1b26;
+    --surface: #1f2335;
+    --text: #a9b1d6;
+    --text-muted: #565f89;
+    --accent: #9ece6a;
+    --error: #f7768e;
+    --warning: #e0af68;
+    --success: #9ece6a;
+    --border: round;
+    --border-color: #3b3d57;
+    --border-focus: #7aa2f7;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
+}
+`,
+
     highContrast: `
 @theme highContrast {
     --primary: #00ffff;

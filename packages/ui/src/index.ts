@@ -42,6 +42,9 @@ export type { DrawerOptions, DrawerPosition } from './Drawer.js';
 export { Select } from './Select.js';
 export type { SelectOption, SelectOptions } from './Select.js';
 
+export { LinearPrompt } from './LinearPrompt.js';
+export type { LinearPromptOption, LinearPromptOptions } from './LinearPrompt.js';
+
 export { Pages } from './Pages.js';
 export type { Page, PagesOptions } from './Pages.js';
 
@@ -97,6 +100,9 @@ export type { DatePickerOptions } from './DatePicker.js';
 
 export { ColorPicker } from './ColorPicker.js';
 export type { ColorPickerOptions } from './ColorPicker.js';
+
+export { Accordion } from './Accordion.js';
+export type { AccordionOptions, AccordionItem } from './Accordion.js';
 
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
