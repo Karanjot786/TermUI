@@ -4,8 +4,7 @@
         "outDir": "dist",
         "rootDir": "src",
         "declaration": true,
-        "declarationDir": "dist",
-        "types": ["node", "vitest"]
+        "declarationDir": "dist"
     },
     "include": [
         "src"

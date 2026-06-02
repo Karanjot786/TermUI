@@ -11,22 +11,17 @@ import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import type { Subprocess } from 'bun';
 import { FileWatcher, type FileChange } from './watcher.js';
-import { ThemeWatcher, type ThemeChange } from './theme-watcher.js';
 import { DevTools } from './devtools.js';
-
-export type DevServerReloadChange = FileChange | ThemeChange;
 
 export interface DevServerOptions {
     /** Project root directory */
     rootDir: string;
     /** Directories to watch (relative to rootDir) */
     watchDirs?: string[];
-    /** Directories to watch for theme changes */
-    themeWatchDirs?: string[];
     /** Entry file (relative to rootDir or absolute) */
     entry?: string;
     /** Callback on reload */
-    onReload?: (change: DevServerReloadChange) => void;
+    onReload?: (change: FileChange) => void;
     /** Whether to show DevTools */
     devTools?: boolean;
     /** Extra Bun runtime flags to pass to the child process */
@@ -39,12 +34,11 @@ type ChildSubprocess = Subprocess<'pipe', 'inherit', 'inherit'>;
 
 export class DevServer {
     private _watcher: FileWatcher;
-    private _themeWatcher: ThemeWatcher;
     private _devtools: DevTools;
     private _rootDir: string;
     private _running = false;
     private _reloadCount = 0;
-    private _onReload?: (change: DevServerReloadChange) => void;
+    private _onReload?: (change: FileChange) => void;
 
     // ── Child process management ──
     private _child: ChildSubprocess | null = null;
@@ -74,29 +68,16 @@ export class DevServer {
         }
 
         const watchDirs = (options.watchDirs ?? ['src', 'screens', 'themes']).map(d => resolve(this._rootDir, d));
-        const themeWatchDirs = (options.themeWatchDirs ?? ['themes']).map(d => resolve(this._rootDir, d));
-
         this._watcher = new FileWatcher(watchDirs);
-        this._themeWatcher = new ThemeWatcher({ watchDirs: themeWatchDirs });
         this._devtools = new DevTools();
 
         this._watcher.onChange(change => {
-            if (change.type === 'tss') return;
             this._reloadCount++;
             this._handleChange(change);
         });
 
-        this._themeWatcher.onChange(change => {
-            this._reloadCount++;
-            this._handleThemeChange(change);
-        });
-
         this._watcher.onError(err => {
             console.error(`[termui] Watch error: ${err.message}`);
-        });
-
-        this._themeWatcher.onError(err => {
-            console.error(`[termui] Theme watch error: ${err.message}`);
         });
     }
 
@@ -121,7 +102,6 @@ export class DevServer {
         console.log();
 
         this._watcher.start();
-        this._themeWatcher.start();
 
         // Spawn the initial child process
         if (this._entryFile) {
@@ -134,7 +114,6 @@ export class DevServer {
         this._running = false;
         this._killChild();
         this._watcher.stop();
-        this._themeWatcher.stop();
         if (this._reloadTimer) {
             clearTimeout(this._reloadTimer);
             this._reloadTimer = null;
@@ -174,7 +153,6 @@ export class DevServer {
             }) as ChildSubprocess;
 
             this._child = child;
-            this._themeWatcher.attachChild(child);
 
             // Track exit asynchronously via the exited promise.
             // child.exited resolves with the exit code; it does not reject.
@@ -233,7 +211,7 @@ export class DevServer {
      */
     private _handleChange(change: FileChange): void {
         const time = new Date().toLocaleTimeString();
-        const icon = change.type === 'config' ? '⚙️' : '📝';
+        const icon = change.type === 'tss' ? '🎨' : change.type === 'config' ? '⚙️' : '📝';
         console.log(`  ${icon} [${time}] ${change.filename} changed — reloading...`);
 
         this._devtools.logEvent('reload', `${change.type}: ${change.filename}`);
@@ -270,14 +248,6 @@ export class DevServer {
                 }
             }, 100);
         }, this._debounce);
-    }
-
-    private _handleThemeChange(change: ThemeChange): void {
-        const time = new Date().toLocaleTimeString();
-        console.log(`  🎨 [${time}] ${change.filename} changed — theme reload...`);
-
-        this._devtools.logEvent('theme-reload', change.filename);
-        this._onReload?.(change);
     }
 }
 
