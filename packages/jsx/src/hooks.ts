@@ -160,6 +160,13 @@ function flushUpdates(): void {
     _requestRender?.();
 }
 
+/** Flush pending updates synchronously (primarily for synchronous testing environments) */
+export function flushPendingUpdates(): void {
+    if (_flushScheduled) {
+        flushUpdates();
+    }
+}
+
 // ── Hooks ──
 
 /**
