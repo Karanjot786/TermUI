@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────
 // @termuijs/jsx — Public API
 // ─────────────────────────────────────────────────────
 
@@ -28,6 +28,8 @@ export {
     useReducer,
 } from './hooks.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
+export { useCounter } from './hooks/useCounter.js';
+export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
 
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';

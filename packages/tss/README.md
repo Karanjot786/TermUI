@@ -12,13 +12,13 @@ Requires `@termuijs/core` and `@termuijs/widgets`.
 
 ## Built-in themes
 
-Seven themes ship ready to use: Default, Cyberpunk, Nord, Dracula, Catppuccin, Solarized, and High Contrast.
+Eight themes ship ready to use: Default, Cyberpunk, Nord, Dracula, Gruvbox, Catppuccin, Solarized, and High Contrast.
 
 ```typescript
 import { getBuiltinThemeNames, getBuiltinTheme, TSSEngine } from '@termuijs/tss'
 
 getBuiltinThemeNames()
-// ['default', 'cyberpunk', 'nord', 'dracula', 'catppuccin', 'solarized', 'highContrast']
+// ['default', 'cyberpunk', 'nord', 'dracula', 'gruvbox', 'catppuccin', 'solarized', 'highContrast']
 
 const engine = new TSSEngine()
 engine.load(getBuiltinTheme('nord'))
@@ -102,7 +102,7 @@ const primaryColor = nordTheme['--primary']
 const bgColor = draculaTheme['--bg']
 ```
 
-Available token exports: `draculaTheme`, `nordTheme`, `catppuccinTheme`, `monokaiTheme`, `solarizedTheme`, `tokyoNightTheme`, `oneDarkTheme`, `highContrastTheme`.
+Available token exports: `draculaTheme`, `nordTheme`, `catppuccinTheme`, `monokaiTheme`, `solarizedTheme`, `tokyoNightTheme`, `oneDarkTheme`, `gruvboxTheme`, `highContrastTheme`.
 
 ## tokensToTSS
 

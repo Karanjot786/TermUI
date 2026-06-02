@@ -34,6 +34,7 @@
     "@termuijs/widgets": "workspace:*"
   },
   "devDependencies": {
+    "@termuijs/testing": "workspace:*",
     "tsup": "^8.0.0",
     "typescript": "^5.3.0"
   },
