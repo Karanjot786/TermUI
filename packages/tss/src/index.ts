@@ -20,6 +20,7 @@ export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThe
 // Design Tokens
 export { systemTheme, defaultDark, defaultLight, detectDark, tokensToTSS } from './tokens.js';
 export type { ThemeTokens } from './tokens.js';
+export { adaptive, type AdaptiveColor } from './adaptive.js';
 
 // Named ThemeTokens
 export {
