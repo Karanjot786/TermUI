@@ -47,12 +47,8 @@ export class Masonry extends Widget {
       const y = colHeights[col];
       const height = child.rect?.height ?? 1;
 
-      // Use child's setRect if available; otherwise fall back to any-assignment
-      if (typeof (child as any).setRect === 'function') {
-        (child as any).setRect({ x, y, width: colWidth, height });
-      } else {
-        (child as any).rect = { x, y, width: colWidth, height };
-      }
+      // FIX: Use updateRect() instead of direct assignment
+    child.updateRect({ x, y, width: colWidth, height });
 
       // Advance that column's height
       colHeights[col] += height + this._gap;
