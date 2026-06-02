@@ -49,3 +49,10 @@ export type { UsePollingResult } from './hooks/usePolling.js';
 
 export { useMutation } from './hooks/useMutation.js'
 export type { HttpMethod, UseMutationReturn } from './hooks/useMutation.js'
+
+export { useSSE } from './hooks/useSSE.js';
+export type { UseSSEResult } from './hooks/useSSE.js';
+
+export { useGpu } from './hooks/useGpu.js';
+export type { GpuData, UseGpuResult } from './hooks/useGpu.js';
+

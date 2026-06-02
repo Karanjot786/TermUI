@@ -1,0 +1,92 @@
+{
+    "termui-widget": {
+        "prefix": "termui-widget",
+        "body": [
+            "export class ${1:MyWidget} extends Widget {",
+            "    constructor() {",
+            "        super({});",
+            "        $0",
+            "    }",
+            "}"
+        ],
+        "description": "Scaffold a new Widget class extending Widget"
+    },
+    "termui-test": {
+        "prefix": "termui-test",
+        "body": [
+            "it('${1:renders correctly}', () => {",
+            "    const widget = new ${2:Widget}();",
+            "    const screen = new Screen(20, 3);",
+            "",
+            "    widget.updateRect({ x: 0, y: 0, width: 20, height: 3 });",
+            "    widget.render(screen);",
+            "",
+            "    const row0 = screen.back[0].map(c => c.char).join('');",
+            "    ${3}",
+            "});"
+        ],
+        "description": "Scaffold a widget test using the real Screen"
+    },
+    "termui-hook": {
+        "prefix": "termui-hook",
+        "body": [
+            "const [${1:value}, set${2:Value}] = useState(${3:0});",
+            "",
+            "useEffect(() => {",
+            "    ${4}",
+            "}, []);"
+        ],
+        "description": "Scaffold a JSX hook using useState/useEffect"
+    },
+    "termui-gauge": {
+        "prefix": "termui-gauge",
+        "body": [
+            "gauge('${1:CPU}', () => {",
+            "    ${2:return value / 100;}",
+            "})"
+        ],
+        "description": "Gauge data binding snippet"
+    },
+    "termui-screen": {
+        "prefix": "termui-screen",
+        "body": [
+            "const screen = new Screen(40, 10);"
+        ],
+        "description": "Screen instantiation for tests"
+    },
+    "termui-spyon": {
+        "prefix": "termui-spyon",
+        "body": [
+            "const spy = vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);",
+            "",
+            "try {",
+            "    $0",
+            "} finally {",
+            "    spy.mockRestore();",
+            "}"
+        ],
+        "description": "vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false) + restore"
+    },
+    "termui-export": {
+        "prefix": "termui-export",
+        "body": [
+            "export { ${1:name} } from './${2:file}.js';"
+        ],
+        "description": "Named export from index.ts"
+    },
+    "termui-handlekey": {
+        "prefix": "termui-handlekey",
+        "body": [
+            "handleKey(event: KeyEvent): boolean {",
+            "    switch (event.key) {",
+            "        case 'left':",
+            "        case 'right':",
+            "            return true;",
+            "        default:",
+            "            return false;",
+            "    }",
+            "}"
+        ],
+        "description": "handleKey method stub with lowercase key names"
+    }
+}
