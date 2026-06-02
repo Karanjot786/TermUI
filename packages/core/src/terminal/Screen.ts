@@ -111,28 +111,6 @@ export class Screen {
     private _previousLines: string[] = [];
     front: Cell[][];
     back: Cell[][];
-    previousLines: string[] = [];
-    getLine(row: number): string {
-    if (row < 0 || row >= this._rows) {
-        return '';
-    }
-
-    return this.back[row]
-        .filter(cell => cell.width !== 0)
-        .map(cell => cell.char || ' ')
-        .join('');
-    }   
-     getPreviousLine(row: number): string {
-        return this._previousLines[row] ?? '';
-    }
-
-     saveLines(): void {
-        this._previousLines = [];
-
-         for (let r = 0; r < this.rows; r++) {
-              this._previousLines.push(this.getLine(r));
-       }
-    }
 
     /**
      * Stack of clipping regions. When non-empty, setCell/writeString
@@ -145,7 +123,28 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
-        this.previousLines = new Array(rows).fill('');
+    }
+
+    /** Serialize a back-buffer row to a plain string (skips continuation cells). */
+    getLine(row: number): string {
+        if (row < 0 || row >= this._rows) return '';
+        return this.back[row]
+            .filter(cell => cell.width !== 0)
+            .map(cell => cell.char || ' ')
+            .join('');
+    }
+
+    /** Return the saved line string for the given row (empty before first saveLines call). */
+    getPreviousLine(row: number): string {
+        return this._previousLines[row] ?? '';
+    }
+
+    /** Snapshot the current back-buffer line strings for use by diffRenderer. */
+    saveLines(): void {
+        this._previousLines = [];
+        for (let r = 0; r < this._rows; r++) {
+            this._previousLines.push(this.getLine(r));
+        }
     }
 
     get cols(): number { return this._cols; }
@@ -299,7 +298,6 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
-        this.previousLines = new Array(rows).fill('');
     }
 
     /**
