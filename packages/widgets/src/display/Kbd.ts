@@ -6,27 +6,26 @@ import { type Screen, type Style, type Color, stringWidth, caps } from '@termuij
 import { Widget } from '../base/Widget.js';
 
 export interface KbdOptions {
-    // Standard options for future expansion
+    color?: Color;
 }
 
-/** Background color — white to simulate a physical key. */
 const BG_COLOR: Color = { type: 'named', name: 'white' };
-
-/** Foreground color — black for readability. */
 const FG_COLOR: Color = { type: 'named', name: 'black' };
 
 /**
  * Kbd — an inline label representing a keyboard input.
  *
- * Used for displaying hotkeys or shortcuts (e.g., "Ctrl + C").
+ * Used for displaying hotkeys or shortcuts (e.g., "Ctrl+C").
  * Renders an inline block with a distinct background to simulate a key press.
  */
 export class Kbd extends Widget {
     private _keys: string;
+    private _opts: KbdOptions;
 
     constructor(keys: string, style?: Partial<Style>, opts?: KbdOptions) {
         super(style || {});
         this._keys = keys;
+        this._opts = opts || {};
     }
 
     /** Update the kbd keys. */
@@ -47,35 +46,55 @@ export class Kbd extends Widget {
         const bg = BG_COLOR;
         const fg = FG_COLOR;
         
-        const contentAttrs = { fg, bg, bold: false };
+        // Use opts.color for border if provided, otherwise default to background color
+        const borderColor = this._opts.color || bg;
 
-        // Padded text to look like a physical button: " keys "
-        const padded = ` ${this._keys} `;
+        const textAttrs = { fg, bg, bold: false };
+        const borderAttrs = { fg: borderColor, bg, bold: false };
         
-        // Ensure we don't render outside the assigned widget width
-        const innerWidth = Math.min(stringWidth(padded), width);
+        // Separator style uses standard widget style fallback
+        const sepAttrs = { 
+            fg: this._style.fg || { type: 'named', name: 'white' }, 
+            bg: this._style.bg || { type: 'named', name: 'black' }, 
+            bold: false 
+        };
 
-        // ── Row 0: content row (Inline Key) ──
+        const leftBracket = caps.unicode ? '⟨' : '[';
+        const rightBracket = caps.unicode ? '⟩' : ']';
+
+        // Split the keys by '+' and trim any accidental whitespace
+        const parts = this._keys.split('+').map(p => p.trim());
+        let currentX = x;
+
         if (height >= 1) {
-            // Choose border brackets based on unicode support for extra styling
-            const leftBracket = caps.unicode ? '⟨' : '[';
-            const rightBracket = caps.unicode ? '⟩' : ']';
-            
-            // Draw left bracket
-            screen.setCell(x, y, { char: leftBracket, ...contentAttrs });
+            for (let i = 0; i < parts.length; i++) {
+                const part = parts[i];
+                const padded = ` ${part} `;
+                const partWidth = stringWidth(padded) + 2; // +2 for brackets
 
-            // Write the actual padded key text
-            const visibleText = padded.slice(0, innerWidth - 2); 
-            screen.writeString(x + 1, y, visibleText, contentAttrs);
+                // Stop rendering if we exceed the widget's allocated width
+                if (currentX - x + partWidth > width) break;
 
-            // Draw right bracket if space allows
-            if (innerWidth >= 2) {
-                 screen.setCell(x + innerWidth - 1, y, { char: rightBracket, ...contentAttrs });
-            }
+                // Draw left bracket
+                screen.setCell(currentX, y, { char: leftBracket, ...borderAttrs });
 
-            // Fill any remaining widget space with background
-            for (let c = innerWidth; c < width; c++) {
-                screen.setCell(x + c, y, { char: ' ', ...contentAttrs });
+                // Draw the padded text
+                const visibleText = padded.slice(0, partWidth - 2);
+                screen.writeString(currentX + 1, y, visibleText, textAttrs);
+
+                // Draw right bracket
+                screen.setCell(currentX + partWidth - 1, y, { char: rightBracket, ...borderAttrs });
+
+                currentX += partWidth;
+
+                // Draw separator ' + ' if not the last keycap
+                if (i < parts.length - 1) {
+                    const sep = ' + ';
+                    if (currentX - x + stringWidth(sep) <= width) {
+                        screen.writeString(currentX, y, sep, sepAttrs);
+                        currentX += stringWidth(sep);
+                    }
+                }
             }
         }
     }
