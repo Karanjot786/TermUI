@@ -1,6 +1,6 @@
-﻿// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Project Templates â€” generates files for new apps
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
+// Project Templates — generates files for new apps
+// ─────────────────────────────────────────────────────
 
 import { getBuiltinTheme } from '@termuijs/tss';
 
@@ -30,13 +30,13 @@ export interface GeneratedFile {
 export function generateProject(config: ProjectConfig): GeneratedFile[] {
     const files: GeneratedFile[] = [];
 
-    // â”€â”€ package.json â”€â”€
+    // ── package.json ──
     files.push({
         path: 'package.json',
         content: createPackageJson(config),
     });
 
-    // â”€â”€ tsconfig.json â”€â”€
+    // ── tsconfig.json ──
     files.push({
         path: 'tsconfig.json',
         content: JSON.stringify({
@@ -55,7 +55,7 @@ export function generateProject(config: ProjectConfig): GeneratedFile[] {
         }, null, 2) + '\n',
     });
 
-    // â”€â”€ termui.config.ts â”€â”€
+    // ── termui.config.ts ──
     files.push({
         path: 'termui.config.ts',
         content: `import { defineConfig } from '@termuijs/core';
@@ -68,13 +68,13 @@ export default defineConfig({
 `,
     });
 
-    // â”€â”€ Theme file â”€â”€
+    // ── Theme file ──
     const themeSrc = getBuiltinTheme(config.theme);
     if (themeSrc) {
         files.push({ path: `themes/${config.theme}.tss`, content: themeSrc.trim() + '\n' });
     }
 
-    // â”€â”€ Template-specific files â”€â”€
+    // ── Template-specific files ──
     switch (config.template) {
         case 'dashboard':
             files.push(...generateDashboardTemplate(config));
@@ -198,7 +198,7 @@ import { render, useState, useEffect, useKeymap, ErrorBoundary } from '@termuijs
 import { AutoThemeProvider, useTheme } from '@termuijs/tss';
 ${config.features.dataProviders ? "import { useCpu, useMemory, useDisk } from '@termuijs/data';" : ''}
 
-// â”€â”€ Sample static data (replace with live hooks when dataProviders = true) â”€â”€
+// ── Sample static data (replace with live hooks when dataProviders = true) ──
 ${config.features.dataProviders ? '' : `const SAMPLE_PROCS = [
     { Name: 'node',   PID: 1234, 'CPU%': '5.0',  'MEM%': '2.1' },
     { Name: 'chrome', PID: 5678, 'CPU%': '12.3', 'MEM%': '8.4' },
@@ -257,7 +257,7 @@ ${config.features.dataProviders
             <divider />
 
             <grid columns={12} gap={1}>
-                {/* Gauges â€” top row */}
+                {/* Gauges — top row */}
                 <box width="100%" flexDirection="column" border="single" padding={1} flexGrow={4}>
                     <text bold>System Resources</text>
                     <GaugeRow label="CPU"  value={cpuVal} />
@@ -309,9 +309,9 @@ import { AutoThemeProvider, useTheme } from '@termuijs/tss';
 import { caps } from '@termuijs/core';
 
 // ASCII-safe symbols
-const CHECK  = caps.unicode ? 'âœ“' : 'v';
-const BULLET = caps.unicode ? 'â€º' : '>';
-const SEP    = caps.unicode ? 'â”€'.repeat(40) : '-'.repeat(40);
+const CHECK  = caps.unicode ? '✓' : 'v';
+const BULLET = caps.unicode ? '›' : '>';
+const SEP    = caps.unicode ? '─'.repeat(40) : '-'.repeat(40);
 
 const INITIAL_ITEMS = ['Option A', 'Option B', 'Option C'];
 
@@ -455,7 +455,7 @@ function CliWrapper() {
     const addLog = (level: LogLevel, text: string) =>
         setLogs(prev => [...prev.slice(-200), { level, text, ts: Date.now() }]);
 
-    // Example: run 'echo hello' â€” replace with your real command
+    // Example: run 'echo hello' — replace with your real command
     const runCommand = () => {
         if (running) return;
         setRunning(true);

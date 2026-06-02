@@ -1,6 +1,6 @@
-﻿// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// create-termui-app â€” Interactive CLI scaffolding tool
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
+// create-termui-app — Interactive CLI scaffolding tool
+// ─────────────────────────────────────────────────────
 
 import { resolve, join } from 'node:path';
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
@@ -31,28 +31,28 @@ const FEATURES = ['Screen Router', 'Data Providers', 'Hot Reload'];
 
 async function main() {
     console.log();
-    console.log('  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”');
-    console.log('  â”‚       create-termui-app           â”‚');
-    console.log('  â”‚   The React/Next.js for CLI apps  â”‚');
-    console.log('  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜');
+    console.log('  ┌──────────────────────────────────┐');
+    console.log('  │       create-termui-app           │');
+    console.log('  │   The React/Next.js for CLI apps  │');
+    console.log('  └──────────────────────────────────┘');
     console.log();
 
-    // â”€â”€ Get project name from args or prompt â”€â”€
+    // ── Get project name from args or prompt ──
     let projectName = process.argv[2];
     if (!projectName) {
         projectName = await textPrompt('Project name', 'my-termui-app');
     }
 
-    // â”€â”€ Template selection â”€â”€
+    // ── Template selection ──
     const templateIdx = await selectPrompt('What kind of app?', TEMPLATES);
     const template = TEMPLATE_KEYS[templateIdx];
 
-    // â”€â”€ Theme selection â”€â”€
+    // ── Theme selection ──
     const themes = getBuiltinThemeNames();
     const themeIdx = await selectPrompt('Choose a theme', themes.map(t => t.charAt(0).toUpperCase() + t.slice(1)));
     const theme = themes[themeIdx];
 
-    // â”€â”€ Feature selection â”€â”€
+    // ── Feature selection ──
     const featureDefaults = [false, template === 'dashboard', true]; // Router off, Data on for dashboard, HotReload on
     const featureFlags = await multiSelectPrompt('Features to include', FEATURES, featureDefaults);
 
@@ -67,10 +67,10 @@ async function main() {
         },
     };
 
-    // â”€â”€ Generate project â”€â”€
+    // ── Generate project ──
     const projectDir = resolve(process.cwd(), projectName);
     if (existsSync(projectDir)) {
-        console.log(`\n  âš   Directory "${projectName}" already exists. Files may be overwritten.\n`);
+        console.log(`\n  ⚠  Directory "${projectName}" already exists. Files may be overwritten.\n`);
     }
 
     console.log(`\n  Creating ${projectName}...`);
@@ -82,13 +82,13 @@ async function main() {
         const dir = fullPath.substring(0, Math.max(fullPath.lastIndexOf('/'), fullPath.lastIndexOf('\\')));
         mkdirSync(dir, { recursive: true });
         writeFileSync(fullPath, file.content, 'utf-8');
-        console.log(`    âœ“ ${file.path}`);
+        console.log(`    ✓ ${file.path}`);
     }
 
     console.log();
-    console.log('  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”');
-    console.log('  â”‚  âœ… Project created successfully!  â”‚');
-    console.log('  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜');
+    console.log('  ┌──────────────────────────────────┐');
+    console.log('  │  ✅ Project created successfully!  │');
+    console.log('  └──────────────────────────────────┘');
     console.log();
     console.log(`  Next steps:`);
     console.log(`    cd ${projectName}`);
