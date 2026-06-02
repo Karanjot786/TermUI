@@ -19,11 +19,17 @@ const [headPath, mainPath] = args;
 const thresholdIdx = args.indexOf('--threshold');
 const threshold = thresholdIdx >= 0 ? parseFloat(args[thresholdIdx + 1]) : 0.20;
 
+if (Number.isNaN(threshold) || !Number.isFinite(threshold) || threshold < 0) {
+    console.error('Threshold must be a non-negative number');
+    process.exit(2);
+}
+
 const head = JSON.parse(readFileSync(headPath, 'utf8'));
 const main = JSON.parse(readFileSync(mainPath, 'utf8'));
 
 const byKey = (r) => `${r.cols}x${r.rows}`;
 const mainBySize = new Map(main.results.map((r) => [byKey(r), r]));
+const headSizes = new Set(head.results.map(byKey));
 
 let regressed = false;
 const rows = [];
@@ -43,7 +49,17 @@ for (const r of head.results) {
     if (delta <= -threshold) regressed = true;
     rows.push(`| ${k} | ${(m.cellsPerSec / 1e6).toFixed(2)}M | ${(r.cellsPerSec / 1e6).toFixed(2)}M | ${deltaStr}${flag} |`);
 }
+for (const r of main.results) {
+    const k = byKey(r);
 
+    if (!headSizes.has(k)) {
+        rows.push(
+            `| ${k} | ${(r.cellsPerSec / 1e6).toFixed(2)}M | _missing_ | ❌ Removed |`
+        );
+
+        regressed = true;
+    }
+}
 const markdown = [
     '<!-- termui-bench-comment -->',
     '## Render-loop benchmark',

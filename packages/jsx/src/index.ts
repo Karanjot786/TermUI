@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────
 // @termuijs/jsx — Public API
 // ─────────────────────────────────────────────────────
 
@@ -13,21 +13,33 @@ export { isVElement, isVFragment, flattenChildren } from './vnode.js';
 // ── Hooks ──
 export {
     useState,
+    useId,
     useEffect,
     useInput,
     useInterval,
     useMemo,
     useRef,
+    useImperativeHandle,
     useCallback,
     useAsync,
     useKeymap,
     useMotion,
+    useInsertBefore,
+    useReducer,
 } from './hooks.js';
+export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
+export { useCounter } from './hooks/useCounter.js';
+export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
 
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
 export type { ErrorBoundaryProps } from './error-boundary.js';
+
+// ── Suspense / Lazy ──
+export { Suspense } from './Suspense.js';
+export type { SuspenseProps } from './Suspense.js';
+export { lazy } from './lazy.js';
 
 // ── Context ──
 export { createContext, useContext } from './context.js';
@@ -46,7 +58,12 @@ export type { UseFocusOptions, UseFocusResult } from './hooks/useFocus.js';
 export { useFocusTrap } from './hooks/useFocusTrap.js';
 export { useKeyboardNavigation } from './hooks/useKeyboardNavigation.js';
 export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hooks/useKeyboardNavigation.js';
+export { useModal } from './hooks/useModal.js';
+export type { UseModalResult } from './hooks/useModal.js';
 
+// ── Subprocess ──
+export { useSubprocess } from './hooks/useSubprocess.js';
+export type { UseSubprocessResult } from './hooks/useSubprocess.js';
 // ── Render ──
 export { render, renderApp } from './render.js';
 export type { RenderOptions } from './render.js';
@@ -55,8 +72,13 @@ export type { RenderOptions } from './render.js';
 export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
 
 // ── Internal — used by @termuijs/testing ──
-export { setRequestRender, getRequestRender, collectInputHandlers, destroyFiber } from './hooks.js';
+export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber } from './hooks.js';
 
 // ── Convenience alias ──
 /** h() — shorthand for createElement */
 export { createElement as h } from './createElement.js';
+export { usePrevious } from './hooks/usePrevious.js';
+export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
+export { useHover } from './hooks/useHover.js';
+export { useElementSize } from './hooks/useElementSize.js';
+export type { ElementSize } from './hooks/useElementSize.js';

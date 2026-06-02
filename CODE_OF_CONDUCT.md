@@ -11,7 +11,7 @@ This project is open to anyone regardless of experience level, background, or id
 ### Expected behavior
 
 - **Be constructive in code reviews.** "This approach has an issue because X, here's an alternative" is useful. "This is wrong" without explanation is not.
-- **Ask questions.** If something in the codebase doesn't make sense, open an issue. The architecture has 13 packages — nobody expects you to understand all of it immediately.
+- **Ask questions.** If something in the codebase doesn't make sense, open an issue. The architecture has 14 packages — nobody expects you to understand all of it immediately.
 - **Give credit.** If your PR builds on someone's idea from an issue or discussion, mention it.
 - **Be patient with response times.** This is an open-source project maintained by humans with other commitments.
 

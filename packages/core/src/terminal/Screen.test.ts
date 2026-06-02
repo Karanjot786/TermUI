@@ -2,8 +2,9 @@
 // @termuijs/core — Tests for Screen buffer
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Screen, emptyCell, cellsEqual } from '../terminal/Screen.js';
+import { caps } from '../terminal/env-caps.js';
 
 describe('Screen', () => {
     it('initializes with correct dimensions', () => {
@@ -88,13 +89,28 @@ describe('Screen', () => {
         expect(screen.back[0][0].char).toBe(' ');
     });
 
-    it('writeString handles wide CJK characters', () => {
+    it('writeString handles wide CJK characters with unicode support enabled', () => {
         const screen = new Screen(10, 3);
         screen.writeString(0, 0, '你好');
         expect(screen.back[0][0].char).toBe('你');
         expect(screen.back[0][0].width).toBe(2);
         expect(screen.back[0][1].width).toBe(0); // continuation cell
         expect(screen.back[0][2].char).toBe('好');
+    });
+
+    it('writeString degrades wide characters to * when unicode support is missing', () => {
+        const spy = vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        
+        const screen = new Screen(10, 3);
+        screen.writeString(0, 0, '你好'); // 2 wide characters
+        
+        // They should degrade into 2 individual * characters taking up only 1 space each
+        expect(screen.back[0][0].char).toBe('*');
+        expect(screen.back[0][0].width).toBe(1);
+        expect(screen.back[0][1].char).toBe('*');
+        expect(screen.back[0][1].width).toBe(1);
+
+        spy.mockRestore();
     });
 
     it('setCell floors fractional coordinates', () => {

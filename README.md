@@ -3,6 +3,7 @@
   <p align="center">Build terminal applications in TypeScript.</p>
 </p>
 
+
 <p align="center">
   <a href="https://www.termui.io/docs/getting-started/installation"><img src="https://img.shields.io/badge/docs-termui.io-00ff88?style=flat" alt="Documentation"></a>
   <a href="https://www.npmjs.com/package/@termuijs/core"><img src="https://img.shields.io/npm/v/@termuijs/core.svg" alt="npm version"></a>
@@ -11,7 +12,6 @@
   <img src="https://img.shields.io/badge/tests-600%20passing-brightgreen" alt="600 tests passing">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript 5.9">
 </p>
-
 <p align="center">
   <a href="https://gssoc.girlscript.org/"><img src="https://img.shields.io/badge/GSSoC-2026-ff7b00?style=flat&logo=git" alt="GSSoC 2026"></a>
   <a href="https://github.com/Karanjot786/TermUI/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22"><img src="https://img.shields.io/github/issues/Karanjot786/TermUI/good%20first%20issue?label=good%20first%20issues&color=7057ff" alt="Good first issues"></a>
@@ -368,11 +368,31 @@ cd TermUI
 bun install
 bun run build
 
-cd examples/dashboard
+To run the AI streaming example:
+
+```bash
+cd examples/ai-streaming
 bun run dev
 ```
 
-Six examples: `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`.
+<<<<<<< HEAD
+Examples: `ai-streaming`, `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
+=======
+### Available Examples
+
+| Example | Purpose | Features demonstrated | Path |
+|---------|---------|-----------------------|------|
+| Auth Flow | Demonstrates authentication | Store, Text inputs, conditional rendering | [`examples/auth-flow`](./examples/auth-flow) |
+| Todo App | Interactive todo list | Store batching, Lists, Inputs | [`examples/todo-app`](./examples/todo-app) |
+| Forms and Validation | Form validation | Form widget, inputs, modals | [`examples/forms-and-validation`](./examples/forms-and-validation) |
+| Multi-screen Router | Screen routing | Router, nested screens, navigation | [`examples/multi-screen-router`](./examples/multi-screen-router) |
+| Dashboard | Real-time system monitor | Quick API, layout, data hooks | [`examples/dashboard`](./examples/dashboard) |
+| System Monitor | Advanced monitor | Complex layouts, live charts | [`examples/system-monitor`](./examples/system-monitor) |
+| JSX Dashboard | JSX-based dashboard | JSX runtime | [`examples/jsx-dashboard`](./examples/jsx-dashboard) |
+| Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
+| Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
+| CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
+>>>>>>> upstream/main
 
 ## Project structure
 
@@ -392,22 +412,30 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
-  dashboard/         Real-time system monitor
-  jsx-dashboard/     JSX-based dashboard
-  showcase/          Widget gallery
-  system-monitor/    Advanced monitor
-  todo-app/          Interactive todo list
-  widget-gallery/    All widgets in one place
+  ai-streaming/          Mock AI chat with StreamingText, ChatMessage, ToolCall
+  auth-flow/            Authentication flow example
+  cli-wrapper-live/     Live subprocess log streaming
+  dashboard/            Real-time system monitor
+  forms-and-validation/ Multi-field form with validation
+  jsx-dashboard/        JSX-based dashboard
+  multi-screen-router/  Multi-screen router example
+  showcase/             Widget gallery
+  system-monitor/       Advanced monitor
+  todo-app/             Interactive todo list
+  widget-gallery/       All widgets in one place
 ```
 
 ## Development
 
 ```bash
 bun install
-bun run build      # Build all 13 packages
+bun run build      # Build all 14 packages
 bun run test       # Run all 600 tests
 bun run typecheck  # Type-check all packages
 ```
+
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for local setup, build commands, testing, and contributor workflow.
+
 
 ## Requirements
 
@@ -430,3 +458,32 @@ See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and futu
 ## License
 
 MIT
+
+/**
+## ✨ README Improvement Notes
+
+### 📌 Formatting Enhancements Needed
+- Improve heading hierarchy for better readability
+- Ensure consistent spacing between sections
+- Use proper Markdown formatting for code blocks and lists
+- Align all installation and usage steps properly
+
+### 🚀 Suggested Structure Upgrade
+- Introduction
+- Features
+- Tech Stack
+- Installation
+- Usage
+- Project Structure
+- Contribution Guidelines
+- License
+
+### 🛠️ Documentation Improvements
+- Add badges (optional): build, license, contributors
+- Add screenshots for better UI understanding
+- Standardize code blocks for commands
+
+### 🎯 Goal
+Improve onboarding experience for new contributors and users by making README more structured, readable, and professional.
+*/
+
