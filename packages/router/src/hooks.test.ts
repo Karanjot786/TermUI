@@ -1,48 +1,39 @@
-// ─────────────────────────────────────────────────────
-// Tests — useParams and useNavigate hooks
-// ─────────────────────────────────────────────────────
-
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, vi } from 'vitest';
 import { Router } from './router.js';
 import { useParams, useNavigate } from './hooks.js';
 
-// Track state across hook calls
-const state: { params: Record<string, string>; cleanups: (() => void)[]; setter: ((v: any) => void) | null } = {
-    params: {},
-    cleanups: [],
-    setter: null,
-};
+const mockCtx = vi.hoisted(() => ({
+    router: null as any,
+    cleanups: [] as (() => void)[],
+}));
 
 vi.mock('@termuijs/jsx', () => {
-    let stored = {};
-    let setter: ((v: any) => void) | null = null;
-    const cleanups: (() => void)[] = [];
-    let router: any = null;
     const ctxId = Symbol('ctx');
 
     return {
         createContext: (defaultValue: any) => ({
             _id: ctxId,
             Provider: ({ value, children }: any) => {
-                router = value;
+                mockCtx.router = value;
                 return children;
             },
             defaultValue,
         }),
-        useContext: () => router,
+        useContext: () => mockCtx.router,
         useState: (initial: any) => {
-            stored = initial;
-            setter = (val: any) => {
-                stored = typeof val === 'function' ? val(stored) : val;
-            };
-            return [stored, setter];
+            const val = typeof initial === 'function' ? initial() : initial;
+            return [val, () => {}];
         },
         useEffect: (fn: () => void | (() => void)) => {
             const cleanup = fn();
-            if (typeof cleanup === 'function') cleanups.push(cleanup);
+            if (typeof cleanup === 'function') mockCtx.cleanups.push(cleanup);
         },
-        type: { Fiber: {} as any },
     };
+});
+
+afterEach(() => {
+    mockCtx.router = null;
+    mockCtx.cleanups.splice(0).forEach(fn => fn());
 });
 
 describe('useParams', () => {
@@ -61,6 +52,7 @@ describe('useParams', () => {
     });
 
     it('reads params from router when available', () => {
+        mockCtx.router = router;
         router.push('/user/42');
         const params = useParams();
         expect(params).toEqual({ id: '42' });
@@ -69,6 +61,7 @@ describe('useParams', () => {
     it('returns empty object for root route with no params', () => {
         const r = new Router();
         r.addRoute('/', () => 'Home');
+        mockCtx.router = r;
         r.push('/');
         const params = useParams();
         expect(params).toEqual({});
@@ -77,6 +70,7 @@ describe('useParams', () => {
     it('handles catch-all segments', () => {
         const r = new Router();
         r.addRoute('/docs/[...slug]', () => 'Docs');
+        mockCtx.router = r;
         r.push('/docs/getting-started/install');
         const params = useParams();
         expect(params.slug).toBe('getting-started/install');
@@ -94,6 +88,7 @@ describe('useNavigate', () => {
     });
 
     it('returns an object with push, replace, back, canGoBack', () => {
+        mockCtx.router = router;
         const nav = useNavigate();
         expect(nav).toHaveProperty('push');
         expect(nav).toHaveProperty('replace');
@@ -102,12 +97,14 @@ describe('useNavigate', () => {
     });
 
     it('push navigates to a registered route', () => {
+        mockCtx.router = router;
         const nav = useNavigate();
         nav.push('/a');
         expect(router.currentPath).toBe('/a');
     });
 
     it('replace changes current path without increasing history length', () => {
+        mockCtx.router = router;
         const r = new Router();
         r.addRoute('/a', () => 'A');
         r.addRoute('/b', () => 'B');
@@ -121,6 +118,7 @@ describe('useNavigate', () => {
     });
 
     it('back returns to previous route', () => {
+        mockCtx.router = router;
         const r = new Router();
         r.addRoute('/a', () => 'A');
         r.addRoute('/b', () => 'B');
@@ -131,6 +129,7 @@ describe('useNavigate', () => {
     });
 
     it('canGoBack reflects history depth', () => {
+        mockCtx.router = router;
         const r = new Router();
         r.addRoute('/a', () => 'A');
         r.addRoute('/b', () => 'B');

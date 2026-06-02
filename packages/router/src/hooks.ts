@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { createContext, useContext, useState, useEffect } from '@termuijs/jsx';
-import type { Router } from './router.js';
+import type { Router, NavigateEvent } from './router.js';
 import type { RouteParams } from './route.js';
 
 /**
@@ -30,16 +30,16 @@ export function useParams(): RouteParams {
     useEffect(() => {
         if (!router) return;
 
-        const handler = () => {
+        const handler = (_event: NavigateEvent | null) => {
             setParams({ ...router.params });
         };
 
-        router.events.on('navigate', handler as any);
-        router.events.on('back', handler as any);
+        router.events.on('navigate', handler);
+        router.events.on('back', handler);
 
         return () => {
-            router.events.off('navigate', handler as any);
-            router.events.off('back', handler as any);
+            router.events.off('navigate', handler);
+            router.events.off('back', handler);
         };
     }, [router]);
 
