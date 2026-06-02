@@ -129,3 +129,6 @@ export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
+
+export { Stack } from './layout/Stack.js';
+export type { StackOptions } from './layout/Stack.js';
