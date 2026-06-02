@@ -17,17 +17,6 @@ let _lastProcessCheck = 0;
 const PROCESS_CACHE_MS = 2000;
 
 function parsePs(): ProcessInfo[] {
-    if (process.platform === 'win32') {
-        return [
-            { pid: 1024, name: 'chrome.exe', cpu: 4.2, mem: 12.5, user: 'SYSTEM' },
-            { pid: 2048, name: 'node.exe', cpu: 2.1, mem: 3.4, user: 'SYSTEM' },
-            { pid: 3072, name: 'bun.exe', cpu: 1.5, mem: 1.2, user: 'SYSTEM' },
-            { pid: 4096, name: 'explorer.exe', cpu: 0.8, mem: 4.1, user: 'SYSTEM' },
-            { pid: 5120, name: 'powershell.exe', cpu: 0.5, mem: 2.0, user: 'SYSTEM' },
-            { pid: 6144, name: 'taskmgr.exe', cpu: 0.3, mem: 0.8, user: 'SYSTEM' },
-            { pid: 7168, name: 'svchost.exe', cpu: 0.1, mem: 0.5, user: 'SYSTEM' },
-        ];
-    }
     try {
         // Works on macOS and Linux
         const output = execSync(

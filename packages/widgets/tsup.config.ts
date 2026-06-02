@@ -9,5 +9,5 @@ export default defineConfig({
     clean: true,
     target: 'node18',
     outDir: 'dist',
-    external: ['@termuijs/core', '@termuijs/jsx', '@termuijs/motion'],
+    external: ['@termuijs/core'],
 });

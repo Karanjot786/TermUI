@@ -1,18 +1,14 @@
 {
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
-        "outDir": "./dist-tsc",
-        "rootDir": "./src",
-        "noEmit": true,
-        "declaration": false,
-        "declarationMap": false
+        "outDir": "./dist",
+        "rootDir": "./src"
     },
     "include": [
         "src/**/*.ts"
     ],
     "exclude": [
         "src/**/*.test.ts",
-        "dist",
-        "node_modules"
+        "dist"
     ]
 }

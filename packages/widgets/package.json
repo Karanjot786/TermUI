@@ -34,7 +34,6 @@
     "@termuijs/core": "workspace:*",
     "@termuijs/motion": "workspace:*"
   },
-
   "devDependencies": {
     "typescript": "^5.7.0",
     "tsup": "^8.3.0"
