@@ -286,6 +286,13 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
                 for (const handler of collectInputHandlers(rootInstance.fiber)) {
                     handler(event);
                 }
+                // setState updates hookState.value synchronously but schedules the
+                // re-render via queueMicrotask. Flush now so renderToString() is current.
+                const newRoot = reRenderComponent(rootInstance);
+                container.clearChildren();
+                container.addChild(newRoot);
+                rootWidget = newRoot;
+                renderToScreen(container, screen);
             }
         },
 
@@ -296,23 +303,28 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
         },
 
         rerender(el?: VNode): void {
-            if (el) currentElement = el;
-            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
-            const rootInstance = instances?.get(rootWidget);
-            if (rootInstance) {
-                const newRoot = reRenderComponent(rootInstance);
-                container.clearChildren();
-                container.addChild(newRoot);
-                rootWidget = newRoot;
-                renderToScreen(container, screen);
-            } else if (el) {
+            if (el) {
+                // New element provided: reconcile fresh so new props take effect.
+                // reRenderComponent re-uses stored props and would ignore the new element.
+                currentElement = el;
                 const newRoot = reconcile(currentElement);
                 container.clearChildren();
                 container.addChild(newRoot);
                 rootWidget = newRoot;
                 renderToScreen(container, screen);
             } else {
-                console.warn('[testing] rerender() called but no fiber instance or element available');
+                // No new element: re-render existing fiber, preserving state.
+                const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+                const rootInstance = instances?.get(rootWidget);
+                if (rootInstance) {
+                    const newRoot = reRenderComponent(rootInstance);
+                    container.clearChildren();
+                    container.addChild(newRoot);
+                    rootWidget = newRoot;
+                    renderToScreen(container, screen);
+                } else {
+                    console.warn('[testing] rerender() called but no fiber instance or element available');
+                }
             }
         },
 

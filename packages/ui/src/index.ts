@@ -36,6 +36,9 @@ export type { CarouselOptions } from './Carousel.js';
 export { Modal } from './Modal.js';
 export type { ModalOptions } from './Modal.js';
 
+export { Drawer } from './Drawer.js';
+export type { DrawerOptions, DrawerPosition } from './Drawer.js';
+
 export { Select } from './Select.js';
 export type { SelectOption, SelectOptions } from './Select.js';
 
@@ -89,7 +92,16 @@ export type { FilePickerOptions, FileEntry } from './FilePicker.js';
 export { DatePicker } from './DatePicker.js';
 export type { DatePickerOptions } from './DatePicker.js';
 
+export { ColorPicker } from './ColorPicker.js';
+export type { ColorPickerOptions } from './ColorPicker.js';
+
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
+export { Toggle } from './Toggle.js';
+export type { ToggleOptions } from './Toggle.js';
+export { Wizard } from './Wizard.js';
+export type { WizardStep, WizardOptions } from './Wizard.js';
+export { MultilineTextInput } from './MultilineTextInput.js';
+export type { MultilineTextInputOptions } from './MultilineTextInput.js';

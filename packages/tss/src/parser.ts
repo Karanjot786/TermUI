@@ -36,6 +36,7 @@ export type TSSValue =
 export interface TSSRule {
     selector: TSSSelector;
     properties: TSSProperty[];
+    nested?: TSSRule[];
 }
 
 // ── Parser ──
@@ -55,7 +56,7 @@ export function parse(tokens: Token[]): TSSStylesheet {
     while (peek().type !== TokenType.EOF) {
         if (peek().type === TokenType.AtTheme) {
             stylesheet.themes.push(parseTheme());
-        } else if (peek().type === TokenType.Ident) {
+        } else if (peek().type === TokenType.Ident || peek().type === TokenType.Dot || peek().type === TokenType.PseudoClass) {
             stylesheet.rules.push(parseRule());
         } else {
             advance(); // skip unknown
@@ -88,25 +89,33 @@ export function parse(tokens: Token[]): TSSStylesheet {
         const selector = parseSelector();
         expect(TokenType.LBrace);
         const properties: TSSProperty[] = [];
+        const nested: TSSRule[] = [];
         while (peek().type !== TokenType.RBrace && peek().type !== TokenType.EOF) {
-            if (peek().type === TokenType.Ident) {
+            if (peek().type === TokenType.Ident && tokens[pos + 1]?.type === TokenType.Colon) {
                 const propName = advance().value;
-                expect(TokenType.Colon);
+                advance(); // skip Colon
                 const value = parseValue();
                 properties.push({ name: propName, value });
                 if (peek().type === TokenType.Semicolon) advance();
+            } else if (peek().type === TokenType.Ident || peek().type === TokenType.Dot || peek().type === TokenType.PseudoClass) {
+                nested.push(parseRule());
             } else {
-                advance();
+                advance(); // skip unknown
             }
         }
         expect(TokenType.RBrace);
-        return { selector, properties };
+        return { selector, properties, nested: nested.length > 0 ? nested : undefined };
     }
 
     function parseSelector(): TSSSelector {
-        const widget = expect(TokenType.Ident).value;
+        let widget = '*';
         let className: string | undefined;
         let pseudo: string | undefined;
+
+        if (peek().type === TokenType.Ident) {
+            widget = advance().value;
+        }
+
         if (peek().type === TokenType.Dot) {
             advance();
             className = expect(TokenType.Ident).value;
