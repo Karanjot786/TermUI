@@ -16,16 +16,18 @@ export interface StackOptions {
  *
  * All children share the same rect (the Stack's bounds).
  * Children render in array order: index 0 is bottom, last index is top.
- * The active child's non-space characters overwrite lower layers.
  */
 export class Stack extends Widget {
-    private _children: Widget[] = [];
     private _activeIndex: number;
 
     constructor(children: Widget[], style?: Partial<Style>, opts?: StackOptions) {
-        super({ flexGrow: 1, ...style });
+        super(style);
         this._activeIndex = opts?.activeIndex ?? (children.length > 0 ? children.length - 1 : 0);
-        this.setChildren(children);
+        
+        // Add all children
+        for (const child of children) {
+            this.addChild(child);
+        }
     }
 
     /**
@@ -33,18 +35,14 @@ export class Stack extends Widget {
      */
     setChildren(children: Widget[]): void {
         // Remove existing children
-        for (const child of this._children) {
-            child.unmount();
-            child.parent = null;
+        while (this._children.length > 0) {
+            const child = this._children[0];
+            this.removeChild(child);
         }
         
-        this._children = [];
-        this._children = children;
-        
-        // Register children with this widget
-        for (const child of this._children) {
-            child.parent = this;
-            child.setStyle({ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 });
+        // Add new children
+        for (const child of children) {
+            this.addChild(child);
         }
         
         // Ensure activeIndex is valid
@@ -72,46 +70,11 @@ export class Stack extends Widget {
         return this._activeIndex;
     }
 
-    protected _renderSelf(screen: Screen): void {
-        // No self-rendering needed; children handle rendering
-    }
-
     /**
-     * Override render to layer children properly.
-     * Children render in order, with later children overwriting earlier ones.
+     * Required abstract method implementation.
+     * Stack is a pure layout container — no self-rendering needed.
      */
-    render(): string {
-        if (this._children.length === 0) return '';
-        
-        // Render all children in order (bottom to top)
-        // The screen handles overwriting at the cell level
-        const mockScreen = this._screen;
-        if (mockScreen) {
-            for (let i = 0; i < this._children.length; i++) {
-                const child = this._children[i];
-                child.setScreen(mockScreen);
-                child.setRect(this._rect);
-                child.render();
-            }
-        }
-        
-        return '';
-    }
-
-    /**
-     * Sync layout to all children (they all share the same rect).
-     */
-    syncLayout(): void {
-        for (const child of this._children) {
-            child.setRect(this._rect);
-            child.syncLayout();
-        }
-    }
-
-    /**
-     * Get children for iteration.
-     */
-    get children(): Widget[] {
-        return this._children;
+    protected _renderSelf(_screen: Screen): void {
+        // Stack is a pure layout container - no self-rendering needed
     }
 }

@@ -1,37 +1,33 @@
-// ─────────────────────────────────────────────────────
-// @termuijs/widgets — Tests for Stack layout
-// ─────────────────────────────────────────────────────
-
 import { describe, it, expect, vi } from 'vitest';
 import { Stack } from './Stack.js';
-import { Box } from '../display/Box.js';
-import { Text } from '../display/Text.js';
-import { Screen, computeLayout } from '@termuijs/core';
+import { Widget } from '../base/Widget.js';
 
-describe('Stack layout', () => {
-    it('renders all children layered', () => {
-        const child0 = new Text('Hello');
-        const child1 = new Text('World');
+class TestWidget extends Widget {
+    render(): string { return ''; }
+}
+
+describe('Stack', () => {
+    it('creates stack with children', () => {
+        const child1 = new TestWidget();
+        const child2 = new TestWidget();
+        const stack = new Stack([child1, child2]);
         
-        const stack = new Stack([child0, child1]);
-        
-        expect(stack.children.length).toBe(2);
-        expect(stack.getActiveIndex()).toBe(1); // Last child active by default
+        expect(stack['_children'].length).toBe(2);
     });
 
     it('setChildren updates children and marks dirty', () => {
         const stack = new Stack([]);
         const markDirtySpy = vi.spyOn(stack, 'markDirty');
-        const newChildren = [new Text('A'), new Text('B')];
+        const newChildren = [new TestWidget(), new TestWidget()];
         
         stack.setChildren(newChildren);
         
-        expect(stack.children.length).toBe(2);
+        expect(stack['_children'].length).toBe(2);
         expect(markDirtySpy).toHaveBeenCalled();
     });
 
     it('setActiveIndex changes active child and marks dirty', () => {
-        const stack = new Stack([new Text('One'), new Text('Two'), new Text('Three')]);
+        const stack = new Stack([new TestWidget(), new TestWidget(), new TestWidget()]);
         const markDirtySpy = vi.spyOn(stack, 'markDirty');
         
         stack.setActiveIndex(0);
@@ -41,17 +37,17 @@ describe('Stack layout', () => {
     });
 
     it('setActiveIndex does nothing for invalid index', () => {
-        const stack = new Stack([new Text('One'), new Text('Two')]);
+        const stack = new Stack([new TestWidget(), new TestWidget()]);
         
         stack.setActiveIndex(5);
-        expect(stack.getActiveIndex()).toBe(1); // Unchanged
+        expect(stack.getActiveIndex()).toBe(1);
         
         stack.setActiveIndex(-1);
-        expect(stack.getActiveIndex()).toBe(1); // Unchanged
+        expect(stack.getActiveIndex()).toBe(1);
     });
 
     it('uses custom activeIndex from options', () => {
-        const stack = new Stack([new Text('A'), new Text('B'), new Text('C')], undefined, {
+        const stack = new Stack([new TestWidget(), new TestWidget(), new TestWidget()], undefined, {
             activeIndex: 0
         });
         
@@ -61,7 +57,7 @@ describe('Stack layout', () => {
     it('handles empty children gracefully', () => {
         const stack = new Stack([]);
         
-        expect(stack.children.length).toBe(0);
+        expect(stack['_children'].length).toBe(0);
         expect(stack.getActiveIndex()).toBe(0);
     });
 });
