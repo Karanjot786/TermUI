@@ -1,12 +1,14 @@
 import { useState, useEffect } from '@termuijs/jsx';
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import * as os from 'node:os';
+import type { ExecOptions } from 'node:child_process';
 
-const execAsync = (cmd: string, opts?: any): Promise<{ stdout: string; stderr: string }> => {
+const execFileAsync = (file: string, args: string[], opts?: ExecOptions): Promise<string> => {
     return new Promise((resolve, reject) => {
-        exec(cmd, opts, (err, stdout, stderr) => {
+        execFile(file, args, opts, (err, stdout) => {
             if (err) reject(err);
-            else resolve({ stdout: String(stdout), stderr: String(stderr) });
+            else resolve(String(stdout));
         });
     });
 };
@@ -37,20 +39,14 @@ export function useTemperature(intervalMs = 5000): UseTemperatureResult {
                 let celsius = 0;
 
                 if (platform === 'linux') {
-                    const { stdout } = await execAsync('cat /sys/class/thermal/thermal_zone0/temp', { timeout: 2000 });
-                    celsius = parseInt(stdout.trim(), 10) / 1000;
+                    const content = await readFile('/sys/class/thermal/thermal_zone0/temp', 'utf8');
+                    celsius = parseInt(content.trim(), 10) / 1000;
                 } else if (platform === 'darwin') {
-                    const { stdout } = await execAsync('pmset -g therm', { timeout: 2000 });
-                    const match = stdout.match(/CPU_Scheduler_Limit\s*=\s*(\d+)/);
-                    if (match) {
-                        const pressure = parseInt(match[1], 10);
-                        celsius = 100 - pressure;
-                    } else {
-                        throw new Error('Could not parse thermal data');
-                    }
+                    throw new Error('Temperature reading is not supported on macOS');
                 } else if (platform === 'win32') {
-                    const { stdout } = await execAsync(
-                        'wmic /namespace:\\\\root\\wmi PATH MSAcpi_ThermalZoneTemperature get CurrentTemperature',
+                    const stdout = await execFileAsync(
+                        'wmic',
+                        ['/namespace:\\\\root\\wmi', 'PATH', 'MSAcpi_ThermalZoneTemperature', 'get', 'CurrentTemperature'],
                         { timeout: 2000 },
                     );
                     const lines = stdout.trim().split('\n').map(l => l.trim()).filter(l => l && !l.includes('CurrentTemperature'));

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import * as os from 'node:os';
 import * as cp from 'node:child_process';
+import * as fs from 'node:fs/promises';
 
 let stateValues: any[] = [];
 let stateSetters: any[] = [];
@@ -33,7 +34,11 @@ vi.mock('node:os', () => ({
 }));
 
 vi.mock('node:child_process', () => ({
-    exec: vi.fn(),
+    execFile: vi.fn(),
+}));
+
+vi.mock('node:fs/promises', () => ({
+    readFile: vi.fn(),
 }));
 
 const { useTemperature } = await import('./useTemperature.js');
@@ -48,14 +53,7 @@ describe('useTemperature', () => {
         vi.useFakeTimers();
         (os.platform as any).mockReturnValue('linux');
 
-        (cp.exec as any).mockImplementation((cmd: string, opts: any, cb: any) => {
-            const callback = typeof opts === 'function' ? opts : cb;
-            if (cmd.includes('thermal_zone')) {
-                callback(null, '45000\n', '');
-            } else {
-                callback(new Error('Unknown command'), '', '');
-            }
-        });
+        (fs.readFile as any).mockResolvedValue('45000\n');
     });
 
     afterEach(() => {
@@ -85,11 +83,8 @@ describe('useTemperature', () => {
         expect(stateValues[2]).toBe(false);
     });
 
-    it('sets error when the temperature provider fails', async () => {
-        (cp as any).exec = vi.fn((cmd: string, opts: any, cb: any) => {
-            const callback = typeof opts === 'function' ? opts : cb;
-            callback(new Error('Command failed'), '', '');
-        });
+    it('sets error when the platform is not supported', async () => {
+        (os.platform as any).mockReturnValue('darwin');
 
         useTemperature(1000);
 
@@ -100,7 +95,23 @@ describe('useTemperature', () => {
         await flushPromises();
 
         expect(stateValues[1]).toBeInstanceOf(Error);
-        expect(stateValues[1].message).toContain('Command failed');
+        expect(stateValues[1].message).toContain('not supported on macOS');
+        expect(stateValues[2]).toBe(false);
+    });
+
+    it('sets error when readFile fails on linux', async () => {
+        (fs.readFile as any).mockRejectedValue(new Error('Permission denied'));
+
+        useTemperature(1000);
+
+        if (effectCb) {
+            effectCb();
+        }
+
+        await flushPromises();
+
+        expect(stateValues[1]).toBeInstanceOf(Error);
+        expect(stateValues[1].message).toContain('Permission denied');
         expect(stateValues[2]).toBe(false);
     });
 
