@@ -12,3 +12,9 @@ export type { TransitionOptions, EasingFn } from './transitions.js';
 
 // Shared interval timer pool
 export { subscribe as timerPoolSubscribe, unsubscribeAll as timerPoolUnsubscribeAll } from './timer-pool.js';
+
+// Path animation
+export { pathAnimation } from './path.js'
+// Sequence
+export { sequence } from './sequence.js'
+export type { SequenceStep } from './sequence.js'
