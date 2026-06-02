@@ -71,6 +71,8 @@ export { ScrollView } from './layout/ScrollView.js';
 export type { ScrollViewOptions } from './layout/ScrollView.js';
 export { Center } from './layout/Center.js';
 export type { CenterOptions } from './layout/Center.js';
+export { Fill } from './layout/Fill.js';
+export type { FillOptions } from './layout/Fill.js';
 export { Card } from './layout/Card.js';
 export type { CardOptions } from './layout/Card.js';
 export { Columns } from './layout/Columns.js';
