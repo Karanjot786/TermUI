@@ -1,4 +1,5 @@
-import type { AnimatableValue } from './sequence.js'
+import type { AnimatableValue, SequenceStep } from './sequence.js'
+import { sequence } from './sequence.js'
 
 export interface PathAnimationConfig {
   duration?: number
@@ -7,7 +8,7 @@ export interface PathAnimationConfig {
 export function pathAnimation(
   waypoints: AnimatableValue[],
   config?: PathAnimationConfig
-): PathAnimationResult | null {
+): SequenceStep[] | null {
   if (!waypoints || waypoints.length === 0) {
     return null
   }
