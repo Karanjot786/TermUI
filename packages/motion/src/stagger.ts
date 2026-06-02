@@ -23,13 +23,13 @@ function withDelay(runner: AnimationRunner, delayMs: number): AnimationRunner {
             return runner(done);
         }
 
-        let elapsedMs = 0;
+        const startTime = Date.now();
         let cancelStarted: (() => void) | null = null;
         let isStarted = false;
 
         const unsubDelay = subscribe(16, () => {
-            elapsedMs += 16;
-            if (elapsedMs < delayMs) return;
+            const elapsed = Date.now() - startTime;
+            if (elapsed < delayMs) return;
 
             unsubDelay();
             isStarted = true;
