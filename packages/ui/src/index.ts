@@ -102,12 +102,19 @@ export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
+export { Toggle } from './Toggle.js';
+export type { ToggleOptions } from './Toggle.js';
+export { Checkbox } from './Checkbox.js';
+export type { CheckboxOptions } from './Checkbox.js';
+
+export { CheckboxGroup } from './CheckboxGroup.js';
+export type {
+    CheckboxGroupOption,
+    CheckboxGroupOptions,
+} from './CheckboxGroup.js';
 export { SegmentedControl } from './SegmentedControl.js';
 export type { SegmentedControlOptions } from './SegmentedControl.js';
 
-
-export { Toggle } from './Toggle.js';
-export type { ToggleOptions } from './Toggle.js';
 export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';
