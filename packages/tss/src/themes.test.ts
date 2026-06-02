@@ -42,5 +42,13 @@ describe('Built-in Themes', () => {
         expect(src).toContain('--text: #ffffff');
         expect(src).toContain('--border-color: #ffffff');
         expect(src).toContain('--border-focus: #00ffff');
+
+         });
+
+    it('nord theme uses official Nord palette hex values', () => {
+        const src = getBuiltinTheme('nord');
+        expect(src).toContain('--bg: #2e3440');
+        expect(src).toContain('--primary: #88c0d0');
+        expect(src).toContain('--error: #bf616a');
     });
 });
