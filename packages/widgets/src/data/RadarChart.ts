@@ -100,15 +100,14 @@ export class RadarChart extends Widget {
             const lx = Math.floor(cx + maxR * Math.cos(theta) * 2.2); 
             const ly = Math.floor(cy + maxR * Math.sin(theta) * 1.2);
             
-            // Clamp the X coordinate so the label never gets clipped off the left or right edges
+            // Clamp the X coordinate to prevent horizontal clipping
             const rawX = lx - Math.floor(label.length / 2);
             const startX = Math.max(x, Math.min(x + width - label.length, rawX));
             
-            // Safely write the string as long as it's within the vertical bounds
-            if (ly >= y && ly < y + height) {
-                screen.writeString(startX, ly, label);
-            }
+            // Clamp the Y coordinate to prevent vertical clipping (fixes "Speed" disappearing)
+            const startY = Math.max(y, Math.min(y + height - 1, ly));
+            
+            screen.writeString(startX, startY, label);
         }
-    
     }
 }
