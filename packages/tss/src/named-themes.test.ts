@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { defaultDark } from './tokens.js';
-import { getNamedTheme, highContrastTheme, NAMED_THEMES } from './named-themes.js';
+import {
+  getNamedTheme,
+  highContrastTheme,
+  catppuccinTheme,
+  NAMED_THEMES,
+} from './named-themes.js';
 
 describe('Named ThemeTokens', () => {
   it('registers highContrast in the named theme map', () => {
@@ -20,6 +25,26 @@ describe('Named ThemeTokens', () => {
       muted: '#b3b3b3',
       border: '#ffffff',
       highlight: '#1a1a1a',
+    });
+  });
+
+  it('registers catppuccin in the named theme map', () => {
+    expect(NAMED_THEMES.catppuccin).toBe(catppuccinTheme);
+    expect(getNamedTheme('catppuccin')).toBe(catppuccinTheme);
+  });
+
+  it('catppuccin exposes the official Catppuccin palette', () => {
+    expect(catppuccinTheme).toEqual({
+      bg: '#1e1e2e',
+      fg: '#cdd6f4',
+      primary: '#cba6f7',
+      secondary: '#f5c2e7',
+      success: '#a6e3a1',
+      warning: '#f9e2af',
+      error: '#f38ba8',
+      muted: '#585b70',
+      border: '#585b70',
+      highlight: '#313244',
     });
   });
 
