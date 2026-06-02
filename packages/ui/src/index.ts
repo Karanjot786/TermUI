@@ -113,3 +113,6 @@ export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';
 export type { MultilineTextInputOptions } from './MultilineTextInput.js';
 
+
+export { Stepper } from './Stepper.js';
+export type { StepperOptions } from './Stepper.js';
