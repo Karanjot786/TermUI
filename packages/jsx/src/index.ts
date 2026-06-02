@@ -80,3 +80,5 @@ export { createElement as h } from './createElement.js';
 export { usePrevious } from './hooks/usePrevious.js';
 export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
 export { useHover } from './hooks/useHover.js';
+export { useElementSize } from './hooks/useElementSize.js';
+export type { ElementSize } from './hooks/useElementSize.js';
