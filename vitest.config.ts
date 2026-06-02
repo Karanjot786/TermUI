@@ -2,7 +2,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
     esbuild: {
-        jsxDev: false,
+        jsx: 'automatic',
+        jsxImportSource: '@termuijs/jsx',
     },
     test: {
         globals: true,

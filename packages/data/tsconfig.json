@@ -2,13 +2,10 @@
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
         "outDir": "./dist",
-        "rootDir": "./src",
-        "jsx": "react-jsx",
-        "jsxImportSource": "@termuijs/jsx"
+        "rootDir": "./src"
     },
     "include": [
-        "src/**/*.ts",
-        "src/useWebSocket.test.tsx"    
+        "src/**/*.ts"
     ],
     "exclude": [
         "src/**/*.test.ts",

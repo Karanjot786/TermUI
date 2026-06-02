@@ -1,3 +1,4 @@
+/** @jsxImportSource @termuijs/jsx */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@termuijs/testing'
 import { useWebSocket } from './hooks.js'
