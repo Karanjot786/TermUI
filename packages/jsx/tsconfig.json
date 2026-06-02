@@ -12,7 +12,7 @@
         "jsx": "react",
         "jsxFactory": "createElement",
         "jsxFragmentFactory": "Fragment",
-        "types": [],
+        "types": ["node"],
         "forceConsistentCasingInFileNames": true
     },
     "include": [
