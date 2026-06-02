@@ -42,6 +42,9 @@ export type { DrawerOptions, DrawerPosition } from './Drawer.js';
 export { Select } from './Select.js';
 export type { SelectOption, SelectOptions } from './Select.js';
 
+export { LinearPrompt } from './LinearPrompt.js';
+export type { LinearPromptOption, LinearPromptOptions } from './LinearPrompt.js';
+
 export { Pages } from './Pages.js';
 export type { Page, PagesOptions } from './Pages.js';
 
