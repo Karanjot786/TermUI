@@ -99,7 +99,6 @@ export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
- feat/segmented-control
 export { SegmentedControl } from './SegmentedControl.js';
 export type { SegmentedControlOptions } from './SegmentedControl.js';
 
@@ -109,4 +108,4 @@ export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';
 export type { MultilineTextInputOptions } from './MultilineTextInput.js';
-main
+
