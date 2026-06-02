@@ -49,6 +49,19 @@
         "@termuijs/widgets": "workspace:*",
       },
     },
+    "examples/file-manager": {
+      "name": "@termuijs/example-file-manager",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.4.0",
+      },
+    },
     "examples/forms-and-validation": {
       "name": "@termuijs/example-forms",
       "version": "0.1.0",
@@ -449,6 +462,8 @@
     "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
 
     "@termuijs/example-dashboard": ["@termuijs/example-dashboard@workspace:examples/dashboard"],
+
+    "@termuijs/example-file-manager": ["@termuijs/example-file-manager@workspace:examples/file-manager"],
 
     "@termuijs/example-forms": ["@termuijs/example-forms@workspace:examples/forms-and-validation"],
 
