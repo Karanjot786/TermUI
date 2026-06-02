@@ -15,7 +15,6 @@ import { system } from './system.js';
 import { http } from './http.js';
 import type { HealthResult, Endpoint } from './http.js';
 
-import { ArrayBufferView } from 'bun';
 import { getCache, setCache, isFresh, fetchShared } from './cache.js';
 
 // ── CPU ──────────────────────────────────────────────
@@ -224,7 +223,7 @@ export function useHttpHealth(
             controller.abort();
             clearInterval(id);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [endpointKey, intervalMs]);
 
     return results;
@@ -238,7 +237,7 @@ export type WebSocketState = 'connecting' | 'open' | 'closed' | 'error'
 export interface UseWebSocketReturn {
     message: string | null;
     state: WebSocketState;
-    send: (data: string | ArrayBuffer | ArrayBufferView)=> void;
+    send: (data: Parameters<WebSocket['send']>[0]) => void;
 }
 
 /**
@@ -255,45 +254,45 @@ export interface UseWebSocketReturn {
  */
 export function useWebSocket(url: string): UseWebSocketReturn {
     const [message, setMessage] = useState<string | null>(null)
-    const [state, setState]= useState<WebSocketState>('connecting')
+    const [state, setState] = useState<WebSocketState>('connecting')
 
     const socketRef = useRef<WebSocket | null>(null)
-    const reconnectTimeoutRef = useRef<Timer | null>(null)
+    const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const retryCountRef = useRef(0)
 
-    useEffect(()=>{
+    useEffect(() => {
         let isMounted = true;
-        
-        function connect(){
+
+        function connect() {
             const socket = new WebSocket(url);
-            socketRef.current=socket;
+            socketRef.current = socket;
             setState('connecting')
 
-            socket.onopen=()=>{
-                if(!isMounted) return;
+            socket.onopen = () => {
+                if (!isMounted) return;
                 setState('open');
-                retryCountRef.current=0;
+                retryCountRef.current = 0;
             }
 
-            socket.onmessage=(e)=>{
-                if(!isMounted) return;
+            socket.onmessage = (e) => {
+                if (!isMounted) return;
                 setMessage(e.data)
             }
 
-            socket.onclose=()=>{
-                if(!isMounted) return;
+            socket.onclose = () => {
+                if (!isMounted) return;
                 setState('closed')
-                
-                const timeout = Math.min(1000*Math.pow(2, retryCountRef.current), 10000);
-                retryCountRef.current+=1;
 
-                reconnectTimeoutRef.current = setTimeout(()=>{
+                const timeout = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
+                retryCountRef.current += 1;
+
+                reconnectTimeoutRef.current = setTimeout(() => {
                     connect();
                 }, timeout)
             }
 
-            socket.onerror=()=>{
-                if(!isMounted) return;
+            socket.onerror = () => {
+                if (!isMounted) return;
                 setState('error')
 
             }
@@ -301,26 +300,26 @@ export function useWebSocket(url: string): UseWebSocketReturn {
 
         connect();
 
-        return ()=>{
+        return () => {
             isMounted = false;
-            if(reconnectTimeoutRef.current){
+            if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current)
             }
-            if(socketRef.current){
+            if (socketRef.current) {
                 socketRef.current.close();
             }
         }
     }, [url])
 
-    const send = useCallback((data: string | ArrayBuffer | ArrayBufferView)=>{
-        if(socketRef.current && socketRef.current.readyState === WebSocket.OPEN){
+    const send = useCallback((data: Parameters<WebSocket['send']>[0]) => {
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(data)
-        } else{
+        } else {
             console.warn("Websocket is not connected.")
         }
     }, [])
 
-    return {message, state, send}
+    return { message, state, send }
 }
 
 // ── Fetch ────────────────────────────────────────────
