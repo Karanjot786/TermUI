@@ -4,11 +4,22 @@
 
 import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { type ListState } from '../data/ListState.js';
 
 export interface ListItem {
     label: string;
     value: string;
     disabled?: boolean;
+}
+
+export interface ListProps {
+    items?: ListItem[];
+    style?: Partial<Style>;
+    onSelect?: (item: ListItem, index: number) => void;
+    /** External state object – if provided, List reads/writes selection through it */
+    state?: ListState;
+    /** Called whenever selection or scroll changes */
+    onStateChange?: (state: ListState) => void;
 }
 
 /**
@@ -19,53 +30,81 @@ export interface ListItem {
  * - Scrolling when items exceed visible height
  * - Custom item styling
  * - Disabled items
+ * - External state via `state` prop and `useListState` hook
  */
 export class List extends Widget {
     private _items: ListItem[];
     private _selectedIndex = 0;
     private _scrollOffset = 0;
     private _onSelect?: (item: ListItem, index: number) => void;
+    private _state?: ListState;
+    private _onStateChange?: (state: ListState) => void;
 
     constructor(
-        items: ListItem[],
+        itemsOrProps: ListItem[] | ListProps,
         style: Partial<Style> = {},
         onSelect?: (item: ListItem, index: number) => void,
     ) {
         super({ border: 'single', ...style });
-        this._items = items;
-        this._onSelect = onSelect;
+
+        if (Array.isArray(itemsOrProps)) {
+            this._items = itemsOrProps;
+            this._onSelect = onSelect;
+        } else {
+            const props = itemsOrProps as ListProps;
+            this._items = props.items ?? [];
+            this._state = props.state;
+            this._onStateChange = props.onStateChange;
+            this._onSelect = props.onSelect ?? onSelect;
+
+            // Initialise from external state if provided
+            if (props.state) {
+                this._selectedIndex = props.state.selectedIndex;
+                this._scrollOffset = props.state.scrollOffset;
+            }
+        }
+
         this.focusable = true;
     }
+
+    // ── Getters ───────────────────────────────────────
 
     get selectedIndex(): number { return this._selectedIndex; }
     get selectedItem(): ListItem | undefined { return this._items[this._selectedIndex]; }
 
+    // ── Mutations ─────────────────────────────────────
+
     setItems(items: ListItem[]): void {
         this._items = items;
-        this._selectedIndex = Math.min(this._selectedIndex, items.length - 1);
+        if (this._selectedIndex >= items.length) {
+            this._selectedIndex = Math.max(0, items.length - 1);
+        }
         this._clampScroll();
         this.markDirty();
+        this._pushState();
     }
 
     /** Move selection up */
     selectPrev(): void {
         let next = this._selectedIndex - 1;
-        while (next >= 0 && this._items[next].disabled) next--;
+        while (next >= 0 && this._items[next]?.disabled) next--;
         if (next >= 0) {
             this._selectedIndex = next;
             this._clampScroll();
             this.markDirty();
+            this._pushState();
         }
     }
 
     /** Move selection down */
     selectNext(): void {
         let next = this._selectedIndex + 1;
-        while (next < this._items.length && this._items[next].disabled) next++;
+        while (next < this._items.length && this._items[next]?.disabled) next++;
         if (next < this._items.length) {
             this._selectedIndex = next;
             this._clampScroll();
             this.markDirty();
+            this._pushState();
         }
     }
 
@@ -76,6 +115,19 @@ export class List extends Widget {
             this._onSelect?.(item, this._selectedIndex);
         }
     }
+
+    // ── External state sync ───────────────────────────
+
+    private _pushState(): void {
+        if (this._state) {
+            this._state.items = this._items;
+            this._state.selectedIndex = this._selectedIndex;
+            this._state.scrollOffset = this._scrollOffset;
+            this._onStateChange?.(this._state);
+        }
+    }
+
+    // ── Rendering ─────────────────────────────────────
 
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();

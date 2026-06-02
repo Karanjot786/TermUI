@@ -2,7 +2,7 @@
 // @termuijs/data — Reactive hooks for system metrics
 // ─────────────────────────────────────────────────────
 
-import { useState, useEffect, useInterval } from '@termuijs/jsx';
+import { useState, useEffect, useInterval, useRef, useCallback } from '@termuijs/jsx';
 import { cpu } from './cpu.js';
 import { memory } from './memory.js';
 import { disk } from './disk.js';
@@ -14,6 +14,8 @@ import type { ProcessInfo } from './processes.js';
 import { system } from './system.js';
 import { http } from './http.js';
 import type { HealthResult, Endpoint } from './http.js';
+
+import { getCache, setCache, isFresh, fetchShared } from './cache.js';
 
 // ── CPU ──────────────────────────────────────────────
 
@@ -221,8 +223,174 @@ export function useHttpHealth(
             controller.abort();
             clearInterval(id);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [endpointKey, intervalMs]);
 
     return results;
 }
+
+
+// WebSocket
+
+export type WebSocketState = 'connecting' | 'open' | 'closed' | 'error'
+
+export interface UseWebSocketReturn {
+    message: string | null;
+    state: WebSocketState;
+    send: (data: Parameters<WebSocket['send']>[0]) => void;
+}
+
+/**
+ * useWebSocket — reactive WebSocket connection hook.
+ *
+ * Connects to the provided `url` and returns the latest text message,
+ * the connection `state`, and a `send` function to transmit data.
+ *
+ * The hook automatically attempts to reconnect on close using
+ * exponential backoff (capped at ~10s) and resets retries on open.
+ * It cleans up the socket and any pending reconnect timers on unmount.
+ *
+ * @param url - WebSocket URL to connect to (e.g. `wss://example.com/socket`).
+ */
+export function useWebSocket(url: string): UseWebSocketReturn {
+    const [message, setMessage] = useState<string | null>(null)
+    const [state, setState] = useState<WebSocketState>('connecting')
+
+    const socketRef = useRef<WebSocket | null>(null)
+    const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const retryCountRef = useRef(0)
+
+    useEffect(() => {
+        let isMounted = true;
+
+        function connect() {
+            const socket = new WebSocket(url);
+            socketRef.current = socket;
+            setState('connecting')
+
+            socket.onopen = () => {
+                if (!isMounted) return;
+                setState('open');
+                retryCountRef.current = 0;
+            }
+
+            socket.onmessage = (e) => {
+                if (!isMounted) return;
+                setMessage(e.data)
+            }
+
+            socket.onclose = () => {
+                if (!isMounted) return;
+                setState('closed')
+
+                const timeout = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
+                retryCountRef.current += 1;
+
+                reconnectTimeoutRef.current = setTimeout(() => {
+                    connect();
+                }, timeout)
+            }
+
+            socket.onerror = () => {
+                if (!isMounted) return;
+                setState('error')
+
+            }
+        }
+
+        connect();
+
+        return () => {
+            isMounted = false;
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current)
+            }
+            if (socketRef.current) {
+                socketRef.current.close();
+            }
+        }
+    }, [url])
+
+    const send = useCallback((data: Parameters<WebSocket['send']>[0]) => {
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send(data)
+        } else {
+            console.warn("Websocket is not connected.")
+        }
+    }, [])
+
+    return { message, state, send }
+}
+
+// ── Fetch ────────────────────────────────────────────
+
+export interface UseFetchOptions {
+    staleTime?: number;
+}
+
+export interface UseFetchResult<T> {
+    data: T | null;
+    error: Error | null;
+    loading: boolean;
+}
+
+/**
+ * useFetch — reactive fetch hook with caching.
+ *
+ * @param url - The URL to fetch.
+ * @param options - Options including `staleTime` in milliseconds.
+ */
+export function useFetch<T = any>(url: string, options?: UseFetchOptions): UseFetchResult<T> {
+    const staleTime = options?.staleTime ?? 0;
+
+    const [data, setData] = useState<T | null>(() => {
+        if (isFresh(url)) {
+            return getCache<T>(url)?.data ?? null;
+        }
+        return null;
+    });
+
+    const [error, setError] = useState<Error | null>(null);
+    const [loading, setLoading] = useState<boolean>(() => !isFresh(url));
+
+    useEffect(() => {
+        if (isFresh(url)) {
+            const entry = getCache<T>(url);
+            if (entry) {
+                setData(entry.data);
+                setError(null);
+                setLoading(false);
+                return;
+            }
+        }
+
+        let mounted = true;
+        setLoading(true);
+
+        fetchShared<T>(url, () => fetch(url)
+            .then(res => {
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                return res.json() as Promise<T>;
+            })
+        )
+        .then(json => {
+            if (!mounted) return;
+            setCache(url, json, staleTime);
+            setData(json);
+            setError(null);
+            setLoading(false);
+        })
+        .catch(err => {
+            if (!mounted) return;
+            setError(err instanceof Error ? err : new Error(String(err)));
+            setLoading(false);
+        });
+
+        return () => {
+            mounted = false;
+        };
+    }, [url, staleTime]);
+
+    return { data, error, loading };
+}
+
