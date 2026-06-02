@@ -86,6 +86,18 @@
         "@termuijs/widgets": "workspace:*",
       },
     },
+    "examples/log-viewer": {
+      "name": "@termuijs/example-log-viewer",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/multi-screen-router": {
       "name": "@termuijs/example-multi-screen-router",
       "version": "0.1.0",
@@ -468,6 +480,8 @@
     "@termuijs/example-forms": ["@termuijs/example-forms@workspace:examples/forms-and-validation"],
 
     "@termuijs/example-jsx-dashboard": ["@termuijs/example-jsx-dashboard@workspace:examples/jsx-dashboard"],
+
+    "@termuijs/example-log-viewer": ["@termuijs/example-log-viewer@workspace:examples/log-viewer"],
 
     "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
 
