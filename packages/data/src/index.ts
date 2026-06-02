@@ -27,6 +27,7 @@ export {
     useTopProcesses,
     useSystemInfo,
     useHttpHealth,
+    useWebSocket,
     useFetch,
 } from './hooks.js';
 export type {
@@ -35,6 +36,20 @@ export type {
     DiskMetrics,
     NetworkMetrics,
     SystemInfo,
+    UseWebSocketReturn,
+    WebSocketState,
     UseFetchOptions,
     UseFetchResult,
 } from './hooks.js';
+export { useBattery } from './hooks/useBattery.js';
+export type { BatteryData, UseBatteryResult } from './hooks/useBattery.js';
+
+export { usePolling } from './hooks/usePolling.js';
+export type { UsePollingResult } from './hooks/usePolling.js';
+
+export { useSSE } from './hooks/useSSE.js';
+export type { UseSSEResult } from './hooks/useSSE.js';
+
+export { useGpu } from './hooks/useGpu.js';
+export type { GpuData, UseGpuResult } from './hooks/useGpu.js';
+
