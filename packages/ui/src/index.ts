@@ -86,6 +86,9 @@ export type { PasswordInputOptions } from './PasswordInput.js';
 export { NumberInput } from './NumberInput.js';
 export type { NumberInputOptions } from './NumberInput.js';
 
+export { MaskedInput } from './MaskedInput.js';
+export type { MaskedInputOptions } from './MaskedInput.js';
+
 export { PathInput } from './PathInput.js';
 export type { PathInputOptions } from './PathInput.js';
 
