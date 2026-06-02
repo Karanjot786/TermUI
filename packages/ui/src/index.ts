@@ -5,8 +5,10 @@
 // components for building beautiful CLI apps.
 // ─────────────────────────────────────────────────────
 
-// ── Re-exports from @termuijs/widgets (base components) ──
 declare module '@termuijs/widgets';
+
+// ── Re-exports from @termuijs/widgets (base components) ──
+// Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
 
 export {
     Box,
