@@ -27,6 +27,7 @@ export {
     useInsertBefore,
     useReducer,
 } from './hooks.js';
+export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 
 // ── Error Boundary ──
