@@ -4,9 +4,6 @@
   "workspaces": {
     "": {
       "name": "termui",
-      "dependencies": {
-        "commander": "^15.0.0",
-      },
       "devDependencies": {
         "@types/bun": "latest",
         "@types/node": "^25.2.3",
@@ -23,6 +20,19 @@
         "@termuijs/core": "workspace:*",
         "@termuijs/jsx": "workspace:*",
         "@termuijs/store": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
+    "examples/chat-app": {
+      "name": "@termuijs/example-chat-app",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
         "@termuijs/ui": "workspace:*",
         "@termuijs/widgets": "workspace:*",
       },
@@ -277,6 +287,7 @@
       "dependencies": {
         "@termuijs/core": "workspace:*",
         "@termuijs/jsx": "workspace:*",
+        "@termuijs/motion": "workspace:*",
         "@termuijs/widgets": "workspace:*",
       },
       "devDependencies": {
@@ -444,6 +455,8 @@
     "@termuijs/dev-server": ["@termuijs/dev-server@workspace:packages/dev-server"],
 
     "@termuijs/example-auth-flow": ["@termuijs/example-auth-flow@workspace:examples/auth-flow"],
+
+    "@termuijs/example-chat-app": ["@termuijs/example-chat-app@workspace:examples/chat-app"],
 
     "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
 
