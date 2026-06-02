@@ -9,7 +9,13 @@ export { transition, fadeIn, fadeOut, slideIn, typewriter, pulse, easings } from
 export type { TransitionOptions, EasingFn } from './transitions.js';
 // Sequencing
 export { sequence, parallel } from './sequence.js';
+<<<<<<< HEAD
 export type { AnimationRunner, SequenceStep, AnimatableValue } from './sequence.js';
+=======
+export type { AnimationRunner } from './sequence.js';
+export { stagger } from './stagger.js';
+
+>>>>>>> a7cc189 (feat(motion): add stagger helper)
 // Shared interval timer pool
 export { subscribe as timerPoolSubscribe, unsubscribeAll as timerPoolUnsubscribeAll } from './timer-pool.js';
 // Path animation
