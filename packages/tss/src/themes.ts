@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// Built-in Themes — 6 curated terminal color palettes
+// Built-in Themes — 7 curated terminal color palettes
 // ─────────────────────────────────────────────────────
 
 export const BUILTIN_THEMES: Record<string, string> = {
@@ -160,6 +160,38 @@ Gauge {
 Table {
     border: var(--border);
     header-color: var(--secondary);
+}
+`,
+
+    highContrast: `
+@theme highContrast {
+    --primary: #00ffff;
+    --secondary: #ff00ff;
+    --bg: #000000;
+    --surface: #1a1a1a;
+    --text: #ffffff;
+    --text-muted: #b3b3b3;
+    --accent: #00ffff;
+    --error: #ff5555;
+    --warning: #ffff00;
+    --success: #00ff00;
+    --border: double;
+    --border-color: #ffffff;
+    --border-focus: #00ffff;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    border-color: var(--border-color);
+    header-color: var(--primary);
+}
+
+Box:focused {
+    border-color: var(--border-focus);
 }
 `,
 };

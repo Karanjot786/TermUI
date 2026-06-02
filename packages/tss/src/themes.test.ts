@@ -14,7 +14,8 @@ describe('Built-in Themes', () => {
         expect(names).toContain('dracula');
         expect(names).toContain('catppuccin');
         expect(names).toContain('solarized');
-        expect(names.length).toBeGreaterThanOrEqual(6);
+        expect(names).toContain('highContrast');
+        expect(names).toHaveLength(7);
     });
 
     it('getBuiltinTheme returns source for valid name', () => {
@@ -32,5 +33,14 @@ describe('Built-in Themes', () => {
         expect(combined).toContain('@theme default');
         expect(combined).toContain('@theme nord');
         expect(combined).toContain('@theme cyberpunk');
+        expect(combined).toContain('@theme highContrast');
+    });
+
+    it('highContrast theme uses strong foreground and focus contrast tokens', () => {
+        const src = getBuiltinTheme('highContrast');
+        expect(src).toContain('--bg: #000000');
+        expect(src).toContain('--text: #ffffff');
+        expect(src).toContain('--border-color: #ffffff');
+        expect(src).toContain('--border-focus: #00ffff');
     });
 });
