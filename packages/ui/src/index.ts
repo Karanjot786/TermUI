@@ -56,6 +56,9 @@ export type { MultiSelectOption, MultiSelectOptions } from './MultiSelect.js';
 export { Tree } from './Tree.js';
 export type { TreeNode, TreeOptions } from './Tree.js';
 
+export { SortPrompt } from './SortPrompt.js';
+export type { SortPromptOptions } from './SortPrompt.js';
+
 export { Toast } from './Toast.js';
 export type { ToastType, ToastMessage, ToastOptions } from './Toast.js';
 
@@ -102,6 +105,7 @@ export type { PaginationOptions } from './Pagination.js';
 export { SegmentedControl } from './SegmentedControl.js';
 export type { SegmentedControlOptions } from './SegmentedControl.js';
 
+
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
 export { Wizard } from './Wizard.js';
@@ -109,3 +113,6 @@ export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';
 export type { MultilineTextInputOptions } from './MultilineTextInput.js';
 
+
+export { Stepper } from './Stepper.js';
+export type { StepperOptions } from './Stepper.js';
