@@ -335,6 +335,7 @@
       "dependencies": {
         "@termuijs/core": "workspace:*",
         "@termuijs/jsx": "workspace:*",
+        "@termuijs/motion": "workspace:*",
         "@termuijs/widgets": "workspace:*",
       },
       "devDependencies": {
