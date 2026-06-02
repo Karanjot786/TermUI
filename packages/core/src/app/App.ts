@@ -31,6 +31,7 @@ export interface AppOptions extends TerminalOptions {
     skipFallback?: boolean;
     /** Title to set on the terminal window */
     title?: string;
+    diffRenderer?: boolean;
 }
 
 /**
@@ -86,6 +87,7 @@ export class App {
             fullscreen: true,
             mouse: false,
             fps: 30,
+            diffRenderer: true,
             // Default screenMode: if fullscreen explicitly disabled, treat as 'main', otherwise 'alternate'
             screenMode: options.fullscreen === false ? 'main' : 'alternate',
             inlineRows: 0,
@@ -94,7 +96,7 @@ export class App {
 
         this.terminal = new Terminal(options);
         this.screen = new Screen(this.terminal.cols, this.terminal.rows);
-        this.renderer = new Renderer(this.terminal, this.screen, this._options.fps);
+        this.renderer = new Renderer(this.terminal, this.screen, this._options.fps, this._options.diffRenderer);
         this.input = new InputParser(this.terminal.stdin);
         this.focus = new FocusManager();
         this.events = new EventEmitter();
