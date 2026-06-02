@@ -77,4 +77,5 @@ export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandle
 /** h() — shorthand for createElement */
 export { createElement as h } from './createElement.js';
 export { usePrevious } from './hooks/usePrevious.js';
+export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
 export { useHover } from './hooks/useHover.js';
