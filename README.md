@@ -366,11 +366,14 @@ cd TermUI
 bun install
 bun run build
 
-cd examples/dashboard
+To run the AI streaming example:
+
+```bash
+cd examples/ai-streaming
 bun run dev
 ```
 
-Six examples: `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
+Examples: `ai-streaming`, `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
 
 ## Project structure
 
@@ -390,14 +393,15 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
-  cli-wrapper-live/      Live subprocess log streaming
-  dashboard/             Real-time system monitor
-  forms-and-validation/  Multi-field form with validation
-  jsx-dashboard/         JSX-based dashboard
-  showcase/              Widget gallery
-  system-monitor/        Advanced monitor
-  todo-app/              Interactive todo list
-  widget-gallery/        All widgets in one place
+  ai-streaming/         Mock AI chat with StreamingText, ChatMessage, ToolCall
+  cli-wrapper-live/
+  dashboard/
+  forms-and-validation/
+  jsx-dashboard/
+  showcase/
+  system-monitor/
+  todo-app/
+  widget-gallery/
 ```
 
 ## Development
