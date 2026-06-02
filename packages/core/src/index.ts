@@ -75,4 +75,4 @@ export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.
 // ── Utilities ─────────────────────────────────────────
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';
 export * as ansi from './utils/ansi.js';
-export { writeClipboard } from './utils/ansi.js';
+export { writeClipboard, readClipboard } from './utils/ansi.js';

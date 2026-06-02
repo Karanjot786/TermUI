@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// Built-in Themes — 7 curated terminal color palettes
+// Built-in Themes — 8 curated terminal color palettes
 // ─────────────────────────────────────────────────────
 
 export const BUILTIN_THEMES: Record<string, string> = {
@@ -106,6 +106,33 @@ Gauge {
 Text:focused {
     color: var(--secondary);
     bold: true;
+}
+`,
+
+    gruvbox: `
+@theme gruvbox {
+    --primary: #458588;
+    --secondary: #b16286;
+    --bg: #282828;
+    --surface: #3c3836;
+    --text: #ebdbb2;
+    --text-muted: #928374;
+    --accent: #98971a;
+    --error: #cc241d;
+    --warning: #d79921;
+    --success: #98971a;
+    --border: round;
+    --border-color: #504945;
+    --border-focus: #458588;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
 }
 `,
 
