@@ -14,7 +14,9 @@ describe('Built-in Themes', () => {
         expect(names).toContain('dracula');
         expect(names).toContain('catppuccin');
         expect(names).toContain('solarized');
-        expect(names.length).toBeGreaterThanOrEqual(6);
+        expect(names).toContain('highContrast');
+        expect(names).toContain('gruvbox');
+        expect(names).toHaveLength(8);
     });
 
     it('getBuiltinTheme returns source for valid name', () => {
@@ -32,5 +34,33 @@ describe('Built-in Themes', () => {
         expect(combined).toContain('@theme default');
         expect(combined).toContain('@theme nord');
         expect(combined).toContain('@theme cyberpunk');
+        expect(combined).toContain('@theme highContrast');
+    });
+
+    it('highContrast theme uses strong foreground and focus contrast tokens', () => {
+        const src = getBuiltinTheme('highContrast');
+        expect(src).toContain('--bg: #000000');
+        expect(src).toContain('--text: #ffffff');
+        expect(src).toContain('--border-color: #ffffff');
+        expect(src).toContain('--border-focus: #00ffff');
+
+         });
+
+    it('nord theme uses official Nord palette hex values', () => {
+        const src = getBuiltinTheme('nord');
+        expect(src).toContain('--bg: #2e3440');
+        expect(src).toContain('--primary: #88c0d0');
+        expect(src).toContain('--error: #bf616a');
+    });
+
+    it('loads the gruvbox theme with correct palette values', () => {
+        const src = getBuiltinTheme('gruvbox');
+
+        expect(src).toBeDefined();
+
+        expect(src).toContain('@theme gruvbox');
+        expect(src).toContain('--bg: #282828');
+        expect(src).toContain('--text: #ebdbb2');
+        expect(src).toContain('--primary: #458588');
     });
 });

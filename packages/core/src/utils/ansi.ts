@@ -102,3 +102,31 @@ export function writeClipboard(text: string, stdout: NodeJS.WriteStream = proces
     const encoded = Buffer.from(text, 'utf8').toString('base64');
     stdout.write(`${OSC}52;c;${encoded}\x07`);
 }
+export function readClipboard(
+    stdin: NodeJS.ReadStream = process.stdin,
+    stdout: NodeJS.WriteStream = process.stdout
+): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const handler = (data: Buffer) => {
+            const str = data.toString('utf8');
+
+            const match = str.match(/\x1b\]52;c;([^\x07]+)\x07/);
+
+            if (!match) return;
+
+            stdin.off('data', handler);
+
+            try {
+                resolve(
+                    Buffer.from(match[1], 'base64').toString('utf8')
+                );
+            } catch (err) {
+                reject(err);
+            }
+        };
+
+        stdin.on('data', handler);
+
+        stdout.write(`${OSC}52;c;?\x07`);
+    });
+}

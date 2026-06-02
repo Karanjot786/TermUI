@@ -14,3 +14,9 @@ export type { ScannedRoute } from './scanner.js';
 // Animated Route Transitions Interface Exports
 export { RouteTransitionManager } from './transitions.js';
 export type { RouteTransitionEvents, TransitionManagerOptions } from './transitions.js';
+
+// Validation Engine Support
+export * from './validation.js';
+
+// Upstream Hooks
+export { useParams, useNavigate } from './hooks.js';
