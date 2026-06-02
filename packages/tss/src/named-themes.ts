@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// Named ThemeTokens — 7 curated color schemes
+// Named ThemeTokens — 8 curated color schemes
 // ─────────────────────────────────────────────────────
 
 import type { ThemeTokens } from './tokens.js';
@@ -96,6 +96,19 @@ export const oneDarkTheme: ThemeTokens = {
   highlight: '#2c313a',
 };
 
+export const highContrastTheme: ThemeTokens = {
+  bg: '#000000',
+  fg: '#ffffff',
+  primary: '#00ffff',
+  secondary: '#ff00ff',
+  success: '#00ff00',
+  warning: '#ffff00',
+  error: '#ff5555',
+  muted: '#b3b3b3',
+  border: '#ffffff',
+  highlight: '#1a1a1a',
+};
+
 export const NAMED_THEMES: Record<string, ThemeTokens> = {
   dracula: draculaTheme,
   nord: nordTheme,
@@ -104,6 +117,7 @@ export const NAMED_THEMES: Record<string, ThemeTokens> = {
   solarized: solarizedTheme,
   tokyoNight: tokyoNightTheme,
   oneDark: oneDarkTheme,
+  highContrast: highContrastTheme,
 };
 
 /** Get a named theme by string key, falling back to defaultDark if not found. */
