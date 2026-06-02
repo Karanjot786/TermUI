@@ -27,6 +27,7 @@ export {
     useInsertBefore,
     useReducer,
 } from './hooks.js';
+export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 export { useCounter } from './hooks/useCounter.js';
 export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
