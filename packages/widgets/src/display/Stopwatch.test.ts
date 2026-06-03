@@ -62,8 +62,7 @@ describe('Stopwatch – increments', () => {
 
         vi.advanceTimersByTime(500);
         const elapsed = sw.getElapsed();
-        // elapsed should be around 500 ms (fake timers advance Date.now too)
-        expect(elapsed).toBeGreaterThanOrEqual(0);
+        expect(elapsed).toBeGreaterThanOrEqual(500);
         sw.destroy();
     });
 

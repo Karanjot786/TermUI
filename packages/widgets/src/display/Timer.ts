@@ -140,17 +140,21 @@ export class Timer extends Widget {
     private _format(ms: number): string {
         const totalSeconds = Math.ceil(ms / 1000);
         const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
 
-        const mm = String(minutes).padStart(2, '0');
         const ss = String(seconds).padStart(2, '0');
 
         if (this._duration >= 3_600_000) {
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
             const hh = String(hours).padStart(2, '0');
+            const mm = String(minutes).padStart(2, '0');
             return `${hh}:${mm}:${ss}`;
         }
 
+        // MM:SS branch: use total minutes (not modulo 3600) to avoid wrapping
+        // when Math.ceil rounds up to exactly 3600 s on a sub-hour timer.
+        const minutes = Math.floor(totalSeconds / 60);
+        const mm = String(minutes).padStart(2, '0');
         return `${mm}:${ss}`;
     }
 
