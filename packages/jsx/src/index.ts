@@ -33,10 +33,14 @@ export { useCounter } from './hooks/useCounter.js';
 export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
 export { useClipboard } from './hooks/useClipboard.js';
 export type { UseClipboardOptions, UseClipboardResult } from './hooks/useClipboard.js';
+<<<<<<< HEAD
 export { useList } from './hooks/useList.js';
 export type { UseListActions } from './hooks/useList.js';
 export { useMap } from './hooks/useMap.js';
 export type { UseMapActions } from './hooks/useMap.js';
+=======
+export { useUnmount } from './hooks/useUnmount.js';
+>>>>>>> d67f96e (feat(jsx): add useUnmount hook)
 
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
