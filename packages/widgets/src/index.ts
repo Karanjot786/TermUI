@@ -137,3 +137,7 @@ export { Stopwatch } from './display/Stopwatch.js';
 export type { StopwatchOptions } from './display/Stopwatch.js';
 export { OrderedList } from './display/OrderedList.js';
 export type { OrderedListItem, OrderedListOptions } from './display/OrderedList.js';
+
+
+export { Typewriter } from './display/Typewriter.js';
+export type { TypewriterOptions } from './display/Typewriter.js';
