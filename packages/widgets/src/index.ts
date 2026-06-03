@@ -151,3 +151,6 @@ export { ScatterPlot } from './data/ScatterPlot.js';
 export type { ScatterPlotOptions, ScatterPoint } from './data/ScatterPlot.js';
 export { RadarChart } from './data/RadarChart.js';
 export type { RadarChartOptions, RadarSeries } from './data/RadarChart.js';
+
+export { CandlestickChart } from './data/CandlestickChart.js';
+export type { CandlestickChartOptions, Candle } from './data/CandlestickChart.js';

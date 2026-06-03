@@ -4,7 +4,7 @@
 
 import { createContext, useContext } from '@termuijs/jsx';
 import type { Router } from './router.js';
-import type { RouteParams } from './route.js';
+import type { RouteParams, RouteMeta } from './route.js';
 
 export const RouterContext = createContext<Router | null>(null);
 
@@ -35,4 +35,12 @@ export function useNavigate(): (path: string, options?: { replace?: boolean }) =
             router.push(path);
         }
     };
+}
+
+/**
+ * Returns the current route's metadata.
+ */
+export function useRouteMeta(): RouteMeta {
+    const router = useContext(RouterContext);
+    return router?.current?.meta ?? {};
 }

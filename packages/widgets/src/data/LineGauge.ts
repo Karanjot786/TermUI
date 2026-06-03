@@ -2,10 +2,10 @@ import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, cap
 import { Widget } from '../base/Widget.js';
 
 export interface LineGaugeOptions {
-    /** Filled portion character. Default: '━' with ASCII fallback '='. Must be a single-width glyph. */
+    /** Filled portion character. Default: '━' with ASCII fallback '=' */
     filledChar?: string;
 
-    /** Empty portion character. Default: '─' with ASCII fallback '-'. Must be a single-width glyph. */
+    /** Empty portion character. Default: '─' with ASCII fallback '-' */
     emptyChar?: string;
 
     /** Show percentage label at right. Default: true */
@@ -33,8 +33,7 @@ export class LineGauge extends Widget {
     }
 
     setValue(value: number): void {
-        const safe = Number.isNaN(value) ? 0 : value;
-        const clamped = Math.max(0, Math.min(1, safe));
+        const clamped = Math.max(0, Math.min(1, value));
         if (clamped === this._value) return;
         this._value = clamped;
         this.markDirty();

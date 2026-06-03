@@ -60,6 +60,8 @@ export interface ResolvedRule {
 export class ThemeEngine {
     private _stylesheet: TSSStylesheet | null = null;
     private _activeTheme: string = 'default';
+    private _themeVariables: ThemeVariables = {};
+    private _overrides: ThemeVariables = {};
     private _variables: ThemeVariables = {};
     private _resolvedRules: ResolvedRule[] = [];
     private _listeners: Set<() => void> = new Set();
@@ -120,29 +122,53 @@ export class ThemeEngine {
         return this._variables[name];
     }
 
+    /** Override a theme variable at runtime and re-resolve rules */
+    setVariable(name: string, value: string): void {
+        this._overrides[name] = value;
+        this._rebuildVariablesAndRules();
+    }
+
+    /** Remove a runtime override, falling back to the theme value */
+    clearVariable(name: string): void {
+        delete this._overrides[name];
+        this._rebuildVariablesAndRules();
+    }
+
     // ── Internal ──
 
     private _applyTheme(): void {
         if (!this._stylesheet) return;
         // Find active theme and merge variables
-        this._variables = {};
+        this._themeVariables = {};
         // Default theme first
         const defaultTheme = this._stylesheet.themes.find(t => t.name === 'default');
-        if (defaultTheme) Object.assign(this._variables, defaultTheme.variables);
+        if (defaultTheme) Object.assign(this._themeVariables, defaultTheme.variables);
         // Then active theme on top
         if (this._activeTheme !== 'default') {
             const active = this._stylesheet.themes.find(t => t.name === this._activeTheme);
-            if (active) Object.assign(this._variables, active.variables);
+            if (active) Object.assign(this._themeVariables, active.variables);
         }
+
+        // Runtime overrides are cleared when a new theme is applied or re-applied.
+        // Precedence: Theme application overwrites any existing runtime overrides.
+        // Overrides must be applied after the theme is set/applied to take effect.
+        this._overrides = {};
+
+        this._rebuildVariablesAndRules();
+    }
+
+    private _rebuildVariablesAndRules(): void {
+        this._variables = { ...this._themeVariables, ...this._overrides };
+
         // Resolve top-level rules only.
         // Nested rules (rule.nested) are supported by the parser and compile()
         // but ThemeEngine's selector matching is flat and does not support
         // descendant combinators. Nested rules are intentionally skipped here
         // to avoid silently applying child selectors at the wrong scope.
-        this._resolvedRules = this._stylesheet.rules.map(rule => ({
+        this._resolvedRules = this._stylesheet?.rules.map(rule => ({
             selector: rule.selector,
             properties: this._resolveProperties(rule),
-        }));
+        })) ?? [];
 
         // Notify listeners
         for (const fn of this._listeners) fn();
