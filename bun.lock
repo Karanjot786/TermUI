@@ -193,6 +193,19 @@
         "typescript": "^5.9.3",
       },
     },
+    "examples/rest-client": {
+      "name": "@termuijs/example-rest-client",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/rss-reader": {
       "name": "@termuijs/example-rss-reader",
       "version": "0.0.1",
@@ -272,13 +285,17 @@
         "zod": "^3.0.0",
       },
       "peerDependencies": {
+        "@anthropic-ai/sdk": "^0.39.0",
         "commander": "^15.0.0",
         "conf": "^10.2.0",
+        "openai": "^4.0.0",
         "zod": "^3.0.0",
       },
       "optionalPeers": [
+        "@anthropic-ai/sdk",
         "commander",
         "conf",
+        "openai",
         "zod",
       ],
     },
@@ -601,6 +618,8 @@
     "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
 
     "@termuijs/example-process-monitor": ["@termuijs/example-process-monitor@workspace:examples/process-monitor"],
+
+    "@termuijs/example-rest-client": ["@termuijs/example-rest-client@workspace:examples/rest-client"],
 
     "@termuijs/example-rss-reader": ["@termuijs/example-rss-reader@workspace:examples/rss-reader"],
 
