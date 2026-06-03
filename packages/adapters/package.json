@@ -37,17 +37,22 @@
     "@types/node": "^22.0.0",
     "conf": "^10.2.0",
     "typescript": "^5.7.0",
-    "tsup": "^8.3.0"
+    "tsup": "^8.3.0",
+    "zod": "^3.0.0"
   },
   "peerDependencies": {
     "conf": "^10.2.0",
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "zod": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "conf": {
       "optional": true
     },
     "commander": {
+      "optional": true
+    },
+    "zod": {
       "optional": true
     }
   },
