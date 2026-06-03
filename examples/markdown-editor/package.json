@@ -1,0 +1,15 @@
+{
+  "name": "@termuijs/example-markdown-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts"
+  },
+  "dependencies": {
+    "@termuijs/core": "workspace:*",
+    "@termuijs/widgets": "workspace:*",
+    "@termuijs/ui": "workspace:*"
+  }
+}
