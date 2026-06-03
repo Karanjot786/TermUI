@@ -81,7 +81,8 @@
     "terminal",
     "tui",
     "cli",
-    "adapters"
+    "adapters",
+    "dotenv"
   ],
   "license": "MIT",
   "engines": {

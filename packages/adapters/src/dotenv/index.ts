@@ -14,6 +14,7 @@ interface DotenvModule {
   parse(src: string | Buffer): DotenvValues
 }
 
+// Checks whether a caught error is a missing-module error specifically for dotenv.
 function isMissingDotenvError(error: unknown): error is NodeJS.ErrnoException {
   return (
     error instanceof Error &&
@@ -23,6 +24,7 @@ function isMissingDotenvError(error: unknown): error is NodeJS.ErrnoException {
   )
 }
 
+// Lazily loads dotenv via createRequire so it is not required at module load time.
 function resolveDotenv(): DotenvModule {
   try {
     const require = createRequire(import.meta.url)
@@ -38,6 +40,7 @@ function resolveDotenv(): DotenvModule {
   }
 }
 
+// Returns an empty record when the file does not exist instead of throwing.
 function parseFile(filePath: string): DotenvValues {
   if (!existsSync(filePath)) {
     return {}
@@ -48,6 +51,7 @@ function parseFile(filePath: string): DotenvValues {
 }
 
 export function useDotenv(path?: string): UseDotenvResult {
+  // Resolve the path once; subsequent reloads reuse the same resolved path.
   const filePath = path ?? resolve(process.cwd(), '.env')
   let current: DotenvValues = parseFile(filePath)
 
@@ -56,6 +60,7 @@ export function useDotenv(path?: string): UseDotenvResult {
     return current
   }
 
+  // Use a getter so result.values always reflects the latest reload() call.
   return {
     get values() { return current },
     reload,

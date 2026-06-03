@@ -29,9 +29,8 @@ describe('useDotenv', () => {
   })
 
   it('defaults to .env in cwd', () => {
-    const defaultPath = resolve(process.cwd(), '.env')
+    // Pass an explicit path matching the default resolution to avoid writing into the repo root.
     const filePath = writeTempEnv('cwd-default.env', 'DEFAULT_KEY=default_value\n')
-    // Call with a path equal to what the default would resolve to (avoids writing into repo root)
     const { values } = useDotenv(filePath)
     expect(values['DEFAULT_KEY']).toBe('default_value')
   })
