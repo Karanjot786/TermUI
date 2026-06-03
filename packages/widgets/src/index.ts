@@ -91,6 +91,8 @@ export { Sidebar } from './data/Sidebar.js';
 export type { SidebarItem, SidebarOptions } from './data/Sidebar.js';
 export { LineChart } from './data/LineChart.js';
 export type { LineChartOptions } from './data/LineChart.js';
+export { AreaChart } from './data/AreaChart.js';
+export type { AreaChartOptions } from './data/AreaChart.js';
 export { HeatMap } from './data/HeatMap.js';
 export type { HeatMapOptions } from './data/HeatMap.js';
 export { Definition } from './data/Definition.js';
