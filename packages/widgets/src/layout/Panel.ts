@@ -7,7 +7,6 @@ import {
   type Style,
   type Color,
   styleToCellAttrs,
-  caps,
   stringWidth,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
@@ -63,6 +62,6 @@ export class Panel extends Widget {
 
     // Place title at x+1 (after corner char)
     const titleX = x + 1;
-    screen.writeString(titleX, y, titleText, { fg, bold: true });
+    screen.writeString(titleX, y, titleText, { ...attrs, fg, bold: true });
   }
 }

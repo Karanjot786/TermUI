@@ -133,8 +133,6 @@ export type { DirectoryTreeOptions } from './display/DirectoryTree.js';
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 
-
-
 export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
