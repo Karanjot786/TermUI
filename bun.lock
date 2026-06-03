@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "termui",
+      "dependencies": {
+        "commander": "^15.0.0",
+      },
       "devDependencies": {
         "@types/bun": "latest",
         "@types/node": "^25.2.3",
@@ -271,12 +274,16 @@
         "typescript": "^5.7.0",
       },
       "peerDependencies": {
+        "@anthropic-ai/sdk": "^0.39.0",
         "commander": "^15.0.0",
         "conf": "^10.2.0",
+        "openai": "^4.0.0",
       },
       "optionalPeers": [
+        "@anthropic-ai/sdk",
         "commander",
         "conf",
+        "openai",
       ],
     },
     "packages/core": {
