@@ -1,6 +1,5 @@
-import { type KeyEvent, Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type KeyEvent, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '@termuijs/widgets';
-import { Select } from './Select.js'; 
 
 export class SearchableSelect extends Widget {
   private _searchQuery: string = '';
