@@ -73,8 +73,29 @@ async function main() {
     if (isNonInteractive(args)) {
         projectName ??= "my-termui-app";
 
+        // validate template
+        if (args.template && !TEMPLATE_KEYS.includes(args.template as any)) {
+            throw new Error(
+                `Invalid template "${args.template}". Valid: ${TEMPLATE_KEYS.join(", ")}`
+            );
+        }
+
+        // validate theme
+        if (args.theme && !themes.includes(args.theme)) {
+            throw new Error(
+                `Invalid theme "${args.theme}". Valid themes: ${themes.join(", ")}`
+            );
+        }
+
         template = args.template ?? "empty";
         theme = args.theme ?? themes[0];
+
+        // IMPORTANT: correct feature behavior for CI
+        featureFlags = [
+            false,
+            template === "dashboard",
+            true,
+        ];
 
         const config: ProjectConfig = {
             name: projectName,
@@ -106,7 +127,6 @@ async function main() {
 
         return;
     }
-
     // ───────── INTERACTIVE MODE ─────────
 
     if (!projectName) {
