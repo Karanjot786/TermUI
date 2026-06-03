@@ -77,13 +77,23 @@ async function main() {
 
     const files = generateProject(config);
 
-    for (const file of files) {
-        const fullPath = join(projectDir, file.path);
-        const dir = fullPath.substring(0, Math.max(fullPath.lastIndexOf('/'), fullPath.lastIndexOf('\\')));
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(fullPath, file.content, 'utf-8');
-        console.log(`    ✓ ${file.path}`);
-    }
+   for (const file of files) {
+
+
+    const fullPath = join(projectDir, file.path);
+    
+
+    const dir = fullPath.substring(
+        0,
+        Math.max(fullPath.lastIndexOf('/'), fullPath.lastIndexOf('\\'))
+    );
+
+
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(fullPath, file.content, 'utf-8');
+
+    console.log(`    ✓ ${file.path}`);
+}
 
     console.log();
     console.log('  ┌──────────────────────────────────┐');
