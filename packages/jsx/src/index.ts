@@ -1,4 +1,4 @@
-﻿// ─────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────
 // @termuijs/jsx — Public API
 // ─────────────────────────────────────────────────────
 
@@ -55,6 +55,8 @@ export { useFocusManager } from './hooks/useFocusManager.js';
 export type { UseFocusManagerResult } from './hooks/useFocusManager.js';
 export { useFocus } from './hooks/useFocus.js';
 export type { UseFocusOptions, UseFocusResult } from './hooks/useFocus.js';
+export { useFocusWithin } from './hooks/useFocusWithin.js';
+export type { UseFocusWithinOptions } from './hooks/useFocusWithin.js';
 export { useFocusTrap } from './hooks/useFocusTrap.js';
 export { useKeyboardNavigation } from './hooks/useKeyboardNavigation.js';
 export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hooks/useKeyboardNavigation.js';
