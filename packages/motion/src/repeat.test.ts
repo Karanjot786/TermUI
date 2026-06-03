@@ -111,4 +111,20 @@ describe('repeat()', () => {
     expect(directions).toEqual(['forward', 'reverse', 'forward', 'reverse']);
     expect(doneSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('yoyo falls back to original runner when reverse is missing', () => {
+    const directions: string[] = [];
+    const forwardRunner = vi.fn((done) => {
+      directions.push('forward');
+      done();
+      return () => {};
+    }) as AnimationRunner;
+
+    const doneSpy = vi.fn();
+    const repeated = repeat(forwardRunner, { count: 4, yoyo: true });
+    repeated(doneSpy);
+
+    expect(directions).toEqual(['forward', 'forward', 'forward', 'forward']);
+    expect(doneSpy).toHaveBeenCalledTimes(1);
+  });
 });

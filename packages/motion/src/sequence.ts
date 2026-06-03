@@ -89,7 +89,11 @@ export function repeat(
   runner: AnimationRunner,
   options?: RepeatOptions,
 ): AnimationRunner {
-  const count = options?.count ?? 1
+  const rawCount = options?.count ?? 1;
+  if (rawCount !== Infinity && !(typeof rawCount === 'number' && Number.isInteger(rawCount) && rawCount >= 0)) {
+    throw new TypeError(`repeat count must be a non-negative integer or Infinity, got ${rawCount}`);
+  }
+  const count = rawCount
   const yoyo = options?.yoyo ?? false
 
   return (done: () => void) => {
