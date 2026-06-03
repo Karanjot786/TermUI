@@ -80,6 +80,8 @@ export { Card } from './layout/Card.js';
 export type { CardOptions } from './layout/Card.js';
 export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
+export { SplitPane } from './layout/SplitPane.js';
+export type { SplitPaneOptions } from './layout/SplitPane.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
