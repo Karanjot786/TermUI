@@ -147,3 +147,5 @@ export type { StepperOptions } from './Stepper.js';
 
 export { RadioGroup } from './RadioGroup.js';
 export type { RadioGroupOption, RadioGroupOptions } from './RadioGroup.js';
+export { ThemeSwitcher } from './ThemeSwitcher.js';
+export type { ThemeSwitcherOptions } from './ThemeSwitcher.js';
