@@ -394,3 +394,124 @@ export function useFetch<T = any>(url: string, options?: UseFetchOptions): UseFe
     return { data, error, loading };
 }
 
+// ── Infinite Query ────────────────────────────────────
+
+export interface InfiniteQueryOptions<T, P> {
+    /** Called with a page param; resolves to one page of data. */
+    queryFn: (pageParam: P) => Promise<T>;
+    /** Param used for the very first page fetch. */
+    initialPageParam: P;
+    /**
+     * Given the last fetched page and all pages so far, return the param
+     * for the next page, or `undefined` to signal no more pages.
+     */
+    getNextPageParam: (lastPage: T, allPages: T[]) => P | undefined;
+}
+
+export interface UseInfiniteQueryResult<T> {
+    pages: T[];
+    error: Error | null;
+    loading: boolean;
+    hasNextPage: boolean;
+    fetchNextPage: () => void;
+}
+
+/**
+ * useInfiniteQuery — paged fetch hook.
+ *
+ * Fetches the first page on mount using `initialPageParam`.
+ * Subsequent pages are appended by calling `fetchNextPage()`.
+ * `hasNextPage` becomes false when `getNextPageParam` returns `undefined`.
+ */
+export function useInfiniteQuery<T, P = number>(
+    options: InfiniteQueryOptions<T, P>,
+): UseInfiniteQueryResult<T> {
+    const { queryFn, initialPageParam, getNextPageParam } = options;
+
+    const [pages, setPages] = useState<T[]>([]);
+    const [error, setError] = useState<Error | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    // Per-run AbortController for the initial-page effect.
+    // Each effect run creates a fresh controller and aborts the previous one on
+    // cleanup, so stale promise callbacks see `signal.aborted === true` and bail.
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    // Generation counter for fetchNextPage: incremented when the main effect
+    // re-runs (queryFn / initialPageParam changed), so any in-flight
+    // fetchNextPage response belonging to the old generation is discarded.
+    const generationRef = useRef(0);
+
+    // Guard against rapid double-clicks or fast-scrolling triggering duplicate fetches.
+    const loadingRef = useRef(false);
+
+    // Fetch the first page on mount (re-runs if queryFn / initialPageParam change).
+    useEffect(() => {
+        // Abort any previous in-flight fetch from the last effect run.
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        // Invalidate any in-flight fetchNextPage from the old generation.
+        generationRef.current += 1;
+
+        setLoading(true);
+        loadingRef.current = true;
+
+        queryFn(initialPageParam)
+            .then(page => {
+                if (controller.signal.aborted) return;
+                setPages([page]);
+                setError(null);
+                setLoading(false);
+                loadingRef.current = false;
+            })
+            .catch(err => {
+                if (controller.signal.aborted) return;
+                setError(err instanceof Error ? err : new Error(String(err)));
+                setLoading(false);
+                loadingRef.current = false;
+            });
+
+        return () => {
+            generationRef.current += 1;
+            controller.abort();
+        };
+    }, [queryFn, initialPageParam]);
+
+    // Derive next param and hasNextPage from current pages snapshot.
+    const nextParam = pages.length > 0
+        ? getNextPageParam(pages[pages.length - 1], pages)
+        : undefined;
+
+    const hasNextPage = nextParam !== undefined;
+
+    const fetchNextPage = useCallback(() => {
+        // No-op while a fetch is in flight or when there is no next page.
+        if (loadingRef.current || nextParam === undefined) return;
+
+        loadingRef.current = true;
+
+        // Capture the current generation; if the main effect re-runs before
+        // this promise settles, the generation will have changed and we skip.
+        const myGeneration = generationRef.current;
+
+        setLoading(true);
+        queryFn(nextParam)
+            .then(page => {
+                if (myGeneration !== generationRef.current) return;
+                loadingRef.current = false;
+                setPages(prev => [...prev, page]);
+                setError(null);
+                setLoading(false);
+            })
+            .catch(err => {
+                if (myGeneration !== generationRef.current) return;
+                loadingRef.current = false;
+                setError(err instanceof Error ? err : new Error(String(err)));
+                setLoading(false);
+            });
+    }, [nextParam, queryFn]);
+
+    return { pages, error, loading, hasNextPage, fetchNextPage };
+}

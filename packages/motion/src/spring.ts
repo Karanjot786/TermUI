@@ -16,7 +16,15 @@ export interface SpringConfig {
     precision: number;
 }
 
-export const SPRING_PRESETS: Record<string, SpringConfig> = {
+export type SpringPresetName =
+    | 'default'
+    | 'gentle'
+    | 'wobbly'
+    | 'stiff'
+    | 'slow'
+    | 'molasses';
+
+export const SPRING_PRESETS: Record<SpringPresetName, SpringConfig> = {
     default: { tension: 170, friction: 26, mass: 1, precision: 0.01 },
     gentle: { tension: 120, friction: 14, mass: 1, precision: 0.01 },
     wobbly: { tension: 180, friction: 12, mass: 1, precision: 0.01 },
@@ -24,6 +32,12 @@ export const SPRING_PRESETS: Record<string, SpringConfig> = {
     slow: { tension: 280, friction: 60, mass: 1, precision: 0.01 },
     molasses: { tension: 280, friction: 120, mass: 1, precision: 0.01 },
 };
+
+export function springPreset(name: SpringPresetName): SpringConfig {
+    return {
+        ...(SPRING_PRESETS[name] ?? SPRING_PRESETS.default),
+    };
+}
 
 export interface SpringState {
     value: number;
@@ -66,7 +80,7 @@ export function stepSpring(state: SpringState, config: SpringConfig, dt: number)
 export function animateSpring(
     from: number,
     to: number,
-    config: Partial<SpringConfig>,
+    config: Partial<SpringConfig> | SpringPresetName,
     onFrame: (value: number) => void,
     onComplete?: () => void,
 ): () => void {
@@ -76,7 +90,16 @@ export function animateSpring(
         return () => {};
     }
 
-    const cfg = { ...SPRING_PRESETS.default, ...config };
+    const resolvedConfig =
+        typeof config === 'string'
+            ? springPreset(config)
+            : config;
+
+    const cfg = {
+        ...SPRING_PRESETS.default,
+        ...resolvedConfig,
+    };
+
     let state: SpringState = { value: from, velocity: 0, target: to, done: false };
     let lastTime = Date.now();
 
