@@ -4,7 +4,7 @@
 
 import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
-import { type Route, type RouteMatch, type RouteParams, matchRoute, compilePattern } from './route.js';
+import { type Route, type RouteMatch, type RouteParams, type RouteMeta, matchRoute, compilePattern } from './route.js';
 import { RouterContext } from './hooks.js';
 
 function defaultErrorScreen(err: Error): VNode {
@@ -62,7 +62,60 @@ export class Router {
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
         },
+    ): void;
+
+    addRoute(
+        path: string,
+        component: () => any,
+        layout?: () => any,
+        children?: Route[],
+        meta?: RouteMeta,
+        options?: {
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        },
+    ): void;
+
+    addRoute(
+        path: string,
+        component: () => any,
+        layout?: () => any,
+        childrenOrOptions?: Route[] | {
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        },
+        meta?: RouteMeta,
+        options?: {
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        },
     ): void {
+        let children: Route[] | undefined = undefined;
+        let finalOptions: {
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        } | undefined = options;
+
+        if (Array.isArray(childrenOrOptions)) {
+            children = childrenOrOptions;
+        } else if (childrenOrOptions && typeof childrenOrOptions === 'object') {
+            finalOptions = childrenOrOptions;
+        }
+
+        let finalMeta = meta ?? {};
+        if (options === undefined && meta && typeof meta === 'object' && ('lazy' in meta || 'beforeEnter' in meta || 'afterEnter' in meta)) {
+            finalOptions = meta as any;
+            const strippedMeta = { ...meta };
+            delete (strippedMeta as any).lazy;
+            delete (strippedMeta as any).beforeEnter;
+            delete (strippedMeta as any).afterEnter;
+            finalMeta = strippedMeta;
+        }
+
         const { pattern, paramNames } = compilePattern(path);
 
         this._routes.push({
@@ -71,16 +124,33 @@ export class Router {
             paramNames,
             component,
             layout,
-            lazy: options?.lazy,
-            beforeEnter: options?.beforeEnter,
-            afterEnter: options?.afterEnter,
+            children,
+            meta: finalMeta,
+            lazy: finalOptions?.lazy,
+            beforeEnter: finalOptions?.beforeEnter,
+            afterEnter: finalOptions?.afterEnter,
         });
     }
 
     /** Register multiple routes */
-    addRoutes(routes: Array<{ path: string; component: () => any; layout?: () => any }>): void {
+    addRoutes(
+        routes: Array<{
+            path: string;
+            component: () => any;
+            layout?: () => any;
+            children?: Route[];
+            meta?: RouteMeta;
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        }>,
+    ): void {
         for (const r of routes) {
-            this.addRoute(r.path, r.component, r.layout);
+            this.addRoute(r.path, r.component, r.layout, r.children, r.meta, {
+                lazy: r.lazy,
+                beforeEnter: r.beforeEnter,
+                afterEnter: r.afterEnter,
+            });
         }
     }
 
