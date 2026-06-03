@@ -91,7 +91,26 @@ describe('OrderedList', () => {
         });
     });
 
-    describe('4. setItems triggers markDirty', () => {
+    describe('4. Roman style', () => {
+        it('renders i., ii., iii. prefixes with style: "i."', () => {
+            const items: OrderedListItem[] = [
+                { text: 'Alpha' },
+                { text: 'Beta' },
+                { text: 'Gamma' },
+            ];
+            const list = makeList(items, { style: 'i.' });
+            const screen = renderList(list);
+
+            expect(rowText(screen, 0)).toContain('i.');
+            expect(rowText(screen, 0)).toContain('Alpha');
+            expect(rowText(screen, 1)).toContain('ii.');
+            expect(rowText(screen, 1)).toContain('Beta');
+            expect(rowText(screen, 2)).toContain('iii.');
+            expect(rowText(screen, 2)).toContain('Gamma');
+        });
+    });
+
+    describe('6. setItems triggers markDirty', () => {
         it('calls markDirty when setItems is called', () => {
             const items: OrderedListItem[] = [{ text: 'Item' }];
             const list = makeList(items);

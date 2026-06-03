@@ -29,7 +29,13 @@ interface FlatRow {
 }
 
 function toAlpha(n: number): string {
-    return String.fromCharCode(96 + n);
+    let result = '';
+    while (n > 0) {
+        n--;
+        result = String.fromCharCode(97 + (n % 26)) + result;
+        n = Math.floor(n / 26);
+    }
+    return result || 'a';
 }
 
 function toRoman(n: number): string {
@@ -87,7 +93,7 @@ export class OrderedList extends Widget {
         super(style);
         this._items = items;
         this._opts = {
-            indent: opts.indent ?? 3,
+            indent: Math.max(0, opts.indent ?? 3),
             style: opts.style ?? '1.',
         };
     }
