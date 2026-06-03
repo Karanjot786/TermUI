@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { tokenize, TokenType } from './tokenizer.js';
 import { parse } from './parser.js';
-import { ThemeEngine, compile } from './engine.js';
+import { ThemeEngine, compileRules } from './engine.js';
 
 describe('TSS Mixins — Tokenizer', () => {
     it('tokenizes @mixin keyword', () => {
@@ -82,7 +82,7 @@ describe('TSS Mixins — Engine', () => {
     });
 
     it('compile() returns resolved rules with mixins expanded', () => {
-        const rules = compile(`
+        const rules = compileRules(`
             @mixin bordered { border: single; padding: 1; }
             .box { @include bordered; color: red; }
         `);

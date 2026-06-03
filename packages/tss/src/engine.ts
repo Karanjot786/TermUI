@@ -273,7 +273,7 @@ export class ThemeEngine {
 }
 
 /** Compile a TSS source string and return resolved rules with mixins expanded */
-export function compile(source: string): ResolvedRule[] {
+export function compileRules(source: string): ResolvedRule[] {
     const engine = new ThemeEngine();
     engine.load(source);
     return engine.rules;
