@@ -193,6 +193,19 @@
         "typescript": "^5.9.3",
       },
     },
+    "examples/rest-client": {
+      "name": "@termuijs/example-rest-client",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/showcase": {
       "name": "@termuijs/example-showcase",
       "version": "0.1.0",
@@ -588,6 +601,8 @@
     "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
 
     "@termuijs/example-process-monitor": ["@termuijs/example-process-monitor@workspace:examples/process-monitor"],
+
+    "@termuijs/example-rest-client": ["@termuijs/example-rest-client@workspace:examples/rest-client"],
 
     "@termuijs/example-showcase": ["@termuijs/example-showcase@workspace:examples/showcase"],
 
