@@ -83,6 +83,10 @@ export { StatusMessage } from './feedback/StatusMessage.js';
 export type { StatusMessageOptions, StatusVariant } from './feedback/StatusMessage.js';
 export { Banner } from './feedback/Banner.js';
 export type { BannerOptions } from './feedback/Banner.js';
+export { EmptyState } from './feedback/EmptyState.js';
+export type { EmptyStateOptions } from './feedback/EmptyState.js';
+export { Callout } from './feedback/Callout.js';
+export type { CalloutVariant, CalloutOptions } from './feedback/Callout.js';
 
 // ── New Data Widgets ──────────────────────────────────
 export { KeyValue } from './data/KeyValue.js';
@@ -106,6 +110,8 @@ export type { GradientOptions } from './display/Gradient.js';
 
 export { Markdown } from './display/Markdown.js';
 export type { MarkdownOptions } from './display/Markdown.js';
+export { Code } from './display/Code.js';
+export type { CodeOptions } from './display/Code.js';
 export { Badge } from './display/Badge.js';
 export type { BadgeOptions, BadgeVariant } from './display/Badge.js';
 export { Kbd } from './kbd.js';
@@ -130,6 +136,8 @@ export { ScatterPlot } from './data/ScatterPlot.js';
 export type { ScatterPlotOptions, ScatterPoint } from './data/ScatterPlot.js';
 export { RadarChart } from './data/RadarChart.js';
 export type { RadarChartOptions, RadarSeries } from './data/RadarChart.js';
+export { Stat } from './data/Stat.js';
+export type { StatOptions } from './data/Stat.js';
 
 export { CandlestickChart } from './data/CandlestickChart.js';
 export type { CandlestickChartOptions, Candle } from './data/CandlestickChart.js';
@@ -140,6 +148,9 @@ export type { StopwatchOptions } from './display/Stopwatch.js';
 export { OrderedList } from './display/OrderedList.js';
 export type { OrderedListItem, OrderedListOptions } from './display/OrderedList.js';
 
-
 export { Typewriter } from './display/Typewriter.js';
 export type { TypewriterOptions } from './display/Typewriter.js';
+export { Timeline } from './display/Timeline.js';
+export type { TimelineItem, TimelineStatus } from './display/Timeline.js';
+export { Marquee } from './display/Marquee.js';
+export type { MarqueeDirection, MarqueeOptions } from './display/Marquee.js';
