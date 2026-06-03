@@ -87,6 +87,16 @@ export interface TestRenderOptions {
     height?: number;
 }
 
+/**
+ * A scoped render helper for tests that share default render options.
+ */
+export interface Fixture {
+    /** Render a tree with the fixture defaults; tracked for auto-unmount. */
+    render(element: VNode, options?: TestRenderOptions): TestInstance;
+    /** Unmount every instance this fixture created. Call in afterEach. */
+    cleanup(): void;
+}
+
 // ── Helpers ──
 
 /** Recursively walk a widget tree, collecting matching widgets */
@@ -365,4 +375,27 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
     };
 
     return instance;
+}
+
+/**
+ * Create a render fixture with default options merged into every render().
+ * Tracks each TestInstance so cleanup() unmounts them all.
+ */
+export function createFixture(defaults: TestRenderOptions = {}): Fixture {
+    const instances: TestInstance[] = [];
+
+    return {
+        render(element: VNode, options: TestRenderOptions = {}): TestInstance {
+            const instance = render(element, { ...defaults, ...options });
+            instances.push(instance);
+            return instance;
+        },
+
+        cleanup(): void {
+            for (const instance of instances) {
+                instance.unmount();
+            }
+            instances.length = 0;
+        },
+    };
 }

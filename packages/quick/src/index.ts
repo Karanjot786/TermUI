@@ -6,7 +6,7 @@
 export { app, AppBuilder } from './app.js';
 
 // ── Layout ────────────────────────────────────────────
-export { row, col, grid, toWidget } from './layout.js';
+export { row, col, grid, stack, spacer, toWidget } from './layout.js';
 export type { LayoutChild } from './layout.js';
 
 // ── Widget Shorthands ─────────────────────────────────
