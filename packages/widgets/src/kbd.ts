@@ -2,7 +2,7 @@
 // @termuijs/widgets — Kbd widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, stringWidth, caps, truncate } from '@termuijs/core';
 import { Widget } from './base/Widget.js';
 
 export interface KbdOptions {
@@ -51,9 +51,6 @@ export class Kbd extends Widget {
 
         // Padded text to look like a physical button: " text "
         const padded = ` ${this._text} `;
-        
-        // Ensure we don't render outside the assigned widget width
-        const innerWidth = Math.min(stringWidth(padded), width);
 
         // ── Row 0: content row (Inline Key) ──
         if (height >= 1) {
@@ -61,20 +58,27 @@ export class Kbd extends Widget {
             const leftBracket = caps.unicode ? '⟨' : '[';
             const rightBracket = caps.unicode ? '⟩' : ']';
             
-            // Draw left bracket
+            // 1. Calculate a strict visual text layout budget (total width minus 2 cells for brackets)
+            const textBudget = Math.max(0, width - 2);
+
+            // 2. Safely truncate using the framework's native utility to protect wide characters
+            const visibleText = truncate(padded, textBudget, '');
+            const visibleWidth = stringWidth(visibleText);
+
+            // 3. Write the opening bracket at starting x coordinate
             screen.setCell(x, y, { char: leftBracket, ...contentAttrs });
 
-            // Write the actual padded key text
-            const visibleText = padded.slice(0, innerWidth - 2); 
+            // 4. Write the content string shifted by 1 cell
             screen.writeString(x + 1, y, visibleText, contentAttrs);
 
-            // Draw right bracket if space allows
-            if (innerWidth >= 2) {
-                 screen.setCell(x + innerWidth - 1, y, { char: rightBracket, ...contentAttrs });
+            // 5. Place the closing bracket exactly after the opening bracket + actual visual string width
+            if (width >= 2) {
+                screen.setCell(x + 1 + visibleWidth, y, { char: rightBracket, ...contentAttrs });
             }
 
-            // Fill any remaining widget space with background
-            for (let c = innerWidth; c < width; c++) {
+            // 6. Fill any remaining widget space with background
+            const usedWidth = width >= 2 ? visibleWidth + 2 : 1;
+            for (let c = usedWidth; c < width; c++) {
                 screen.setCell(x + c, y, { char: ' ', ...contentAttrs });
             }
         }
