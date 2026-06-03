@@ -132,8 +132,7 @@ export type {
     CheckboxGroupOption,
     CheckboxGroupOptions,
 } from './CheckboxGroup.js';
-export { SegmentedControl } from './SegmentedControl.js';
-export type { SegmentedControlOptions } from './SegmentedControl.js';
+
 
 export { ButtonGroup } from './ButtonGroup.js';
 export type { ButtonGroupOptions, ButtonGroupItem } from './ButtonGroup.js';
