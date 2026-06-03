@@ -16,3 +16,6 @@ export type {
     StoreOptions,
     PersistOptions,
 } from './store.js';
+
+export { slices } from './slices.js';
+export type { SliceDef } from './slices.js';
