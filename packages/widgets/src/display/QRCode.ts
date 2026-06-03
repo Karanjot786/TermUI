@@ -1,14 +1,21 @@
 import { Widget } from '../base/Widget.js';
-import { type Style, caps } from '@termuijs/core';
+import { type Screen, type Style, caps, styleToCellAttrs } from '@termuijs/core';
 
-export interface QRCodeOptions {
-    errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H';
+export interface QRCodePatternOptions {
     darkChar?: string;
     lightChar?: string;
 }
 
+export interface QRCodeOptions extends QRCodePatternOptions {
+    errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H';
+}
+
 const SIZE = 21;
 
+/**
+ * Decorative QR-style pattern generator.
+ * This widget is intentionally not a scannable QR code.
+ */
 function hashString(str: string): number {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -17,11 +24,11 @@ function hashString(str: string): number {
     return hash;
 }
 
-export class QRCode extends Widget {
+export class QRCodePattern extends Widget {
     private data: string;
-    private opts: QRCodeOptions;
+    private opts: QRCodePatternOptions;
 
-    constructor(data: string, style?: Partial<Style>, opts?: QRCodeOptions) {
+    constructor(data: string, style?: Partial<Style>, opts?: QRCodePatternOptions) {
         super(style);
         this.data = data;
         this.opts = opts ?? {};
@@ -53,32 +60,36 @@ export class QRCode extends Widget {
         return border || center ? dark : light;
     }
 
-  protected _renderSelf(): string {
-    const dark = caps.unicode ? (this.opts.darkChar ?? '█') : '#';
-    const light = caps.unicode ? (this.opts.lightChar ?? ' ') : ' ';
+    protected _renderSelf(screen: Screen): void {
+        const contentRect = this._getContentRect();
+        const { x: baseX, y: baseY, width, height } = contentRect;
+        if (width <= 0 || height <= 0) return;
 
-    const hash = hashString(this.data);
+        const dark = caps.unicode ? (this.opts.darkChar ?? '█') : '#';
+        const light = caps.unicode ? (this.opts.lightChar ?? ' ') : ' ';
+        const attrs = styleToCellAttrs(this._style);
+        const hash = hashString(this.data);
 
-    let out = '';
+        const drawWidth = Math.min(SIZE, width);
+        const drawHeight = Math.min(SIZE, height);
 
-    for (let y = 0; y < SIZE; y++) {
-        for (let x = 0; x < SIZE; x++) {
+        for (let row = 0; row < drawHeight; row++) {
+            for (let col = 0; col < drawWidth; col++) {
+                let char: string;
 
-            let char: string;
+                if (this.isFinder(col, row)) {
+                    char = this.renderFinder(col, row);
+                } else {
+                    const bitIndex = (col * row + hash) % 32;
+                    const bit = (hash >> bitIndex) & 1;
+                    char = bit ? dark : light;
+                }
 
-            if (this.isFinder(x, y)) {
-                char = this.renderFinder(x, y);
-            } else {
-                const bitIndex = (x * y + hash) % 32;
-                const bit = (hash >> bitIndex) & 1;
-                char = bit ? dark : light;
+                screen.writeString(baseX + col, baseY + row, char, attrs);
             }
-
-            out += char;
         }
-        out += '\n';
-    }
-
-    return out;
     }
 }
+
+
+export const QRCode = QRCodePattern;
