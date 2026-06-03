@@ -11,7 +11,9 @@ function createMockSubprocess() {
         exited: Promise.resolve(0),
         stderr: {
             getReader: vi.fn(() => ({
-                read: vi.fn(() => Promise.resolve({ done: true, value: undefined }))
+                read: vi.fn(() =>
+                    Promise.resolve({ done: true, value: undefined })
+                )
             }))
         }
     };
@@ -19,6 +21,7 @@ function createMockSubprocess() {
 
 vi.mock('node:fs', async (importOriginal) => {
     const actual = await importOriginal<typeof import('node:fs')>();
+
     return {
         ...actual,
         existsSync: vi.fn(() => true),
@@ -30,12 +33,18 @@ vi.mock('node:fs', async (importOriginal) => {
 });
 
 describe('DevServer', () => {
-    let mockChild: any;
+    let mockChild: ReturnType<typeof createMockSubprocess>;
 
     beforeEach(() => {
         vi.useFakeTimers();
+
         mockChild = createMockSubprocess();
-        (globalThis as any).Bun = {
+
+        (globalThis as unknown as {
+            Bun: {
+                spawn: ReturnType<typeof vi.fn>;
+            };
+        }).Bun = {
             spawn: vi.fn(() => mockChild)
         };
     });
@@ -52,7 +61,16 @@ describe('DevServer', () => {
         });
 
         server.start();
-        expect((globalThis as any).Bun.spawn).toHaveBeenCalled();
+
+        expect(
+            (
+                globalThis as unknown as {
+                    Bun: {
+                        spawn: ReturnType<typeof vi.fn>;
+                    };
+                }
+            ).Bun.spawn
+        ).toHaveBeenCalled();
     });
 
     it('handles server shutdown cleanly', () => {
@@ -66,5 +84,96 @@ describe('DevServer', () => {
 
         expect(server.isRunning).toBe(false);
         expect(mockChild.kill).toHaveBeenCalledWith('SIGTERM');
+    });
+
+    it('sets banner after a respawn', async () => {
+        const server = new DevServer({
+            rootDir: './project',
+            entry: 'index.ts',
+            bannerMs: 1000
+        });
+
+        server.start();
+
+        server['_handleChange']({
+            filename: 'app.ts',
+            type: 'source'
+        });
+
+        await vi.advanceTimersByTimeAsync(500);
+
+        expect(server.banner).toBe('Reloaded');
+    });
+
+    it('clears banner after bannerMs timeout', async () => {
+        const server = new DevServer({
+            rootDir: './project',
+            entry: 'index.ts',
+            bannerMs: 1000
+        });
+
+        server.start();
+
+        server['_handleChange']({
+            filename: 'app.ts',
+            type: 'source'
+        });
+
+        await vi.advanceTimersByTimeAsync(500);
+
+        expect(server.banner).toBe('Reloaded');
+
+        await vi.advanceTimersByTimeAsync(1000);
+
+        expect(server.banner).toBe(null);
+    });
+
+    it('uses default bannerMs value of 1500', async () => {
+        const server = new DevServer({
+            rootDir: './project',
+            entry: 'index.ts'
+        });
+
+        server.start();
+
+        server['_handleChange']({
+            filename: 'app.ts',
+            type: 'source'
+        });
+
+        await vi.advanceTimersByTimeAsync(500);
+
+        expect(server.banner).toBe('Reloaded');
+
+        await vi.advanceTimersByTimeAsync(1200);
+
+        expect(server.banner).toBe('Reloaded');
+
+        await vi.advanceTimersByTimeAsync(500);
+
+        expect(server.banner).toBe(null);
+    });
+
+    it('clears pending banner timer on stop', async () => {
+        const server = new DevServer({
+            rootDir: './project',
+            entry: 'index.ts',
+            bannerMs: 1000
+        });
+
+        server.start();
+
+        server['_handleChange']({
+            filename: 'app.ts',
+            type: 'source'
+        });
+
+        await vi.advanceTimersByTimeAsync(500);
+
+        expect(server.banner).toBe('Reloaded');
+
+        server.stop();
+
+        expect(server.banner).toBe(null);
     });
 });
