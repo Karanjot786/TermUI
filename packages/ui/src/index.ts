@@ -63,6 +63,9 @@ export type { SnippetPromptOptions } from './SnippetPrompt.js';
 export { MultiSelect } from './MultiSelect.js';
 export type { MultiSelectOption, MultiSelectOptions } from './MultiSelect.js';
 
+export { Transfer } from './Transfer.js';
+export type { TransferItem, TransferOptions } from './Transfer.js';
+
 export { Tree } from './Tree.js';
 export type { TreeNode, TreeOptions } from './Tree.js';
 
