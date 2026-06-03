@@ -120,6 +120,8 @@ export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
+export { QRCodePattern, QRCode } from './display/QRCode.js';
+export type { QRCodePatternOptions, QRCodeOptions } from './display/QRCode.js';
 export { Stack } from './layout/Stack.js';
 export type { StackOptions } from './layout/Stack.js';
 export { ScatterPlot } from './data/ScatterPlot.js';
