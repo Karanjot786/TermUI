@@ -20,6 +20,8 @@ const TEMPLATES = [
     "CLI Wrapper (wrap existing CLI)",
     "CLI Tool (minimal: box + text + useKeymap)",
     "File Manager",
+    "AI Assistant",
+    "REST Client (HTTP requests)",
 ] as const;
 
 const TEMPLATE_KEYS = [
@@ -29,6 +31,8 @@ const TEMPLATE_KEYS = [
     "cli-wrapper",
     "cli-tool",
     "file-manager",
+    "ai-assistant",
+    "rest-client",
 ] as const;
 
 const FEATURES = ["Screen Router", "Data Providers", "Hot Reload"];
@@ -38,7 +42,7 @@ async function main() {
     const themes = getBuiltinThemeNames();
 
     let projectName = args.name;
-    let template: string;
+    let template: ProjectConfig["template"];
     let theme: string;
     let featureFlags: boolean[] = [false, false, true];
 
@@ -65,7 +69,7 @@ async function main() {
             );
         }
 
-        template = args.template ?? "empty";
+        template = (args.template as ProjectConfig["template"]) ?? "empty";
         theme = args.theme ?? themes[0];
 
         featureFlags = [
@@ -101,7 +105,7 @@ async function main() {
 
         console.log();
         console.log("  ┌──────────────────────────────────┐");
-        console.log("  │  ✅ Project created successfully! │");
+        console.log("  │   Project created successfully! │");
         console.log("  └──────────────────────────────────┘");
 
         return;
@@ -156,7 +160,7 @@ async function main() {
 
     console.log();
     console.log("  ┌──────────────────────────────────┐");
-    console.log("  │  ✅ Project created successfully! │");
+    console.log("  │  Project created successfully! │");
     console.log("  └──────────────────────────────────┘");
 }
 

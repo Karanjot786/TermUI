@@ -102,6 +102,47 @@ describe('generateProject', () => {
         expect(parsed.dependencies['@termuijs/widgets']).toBe('latest')
     })
 
+    it('rest-client template generates files', () => {
+        const files = generateProject({
+            ...baseConfig,
+            template: 'rest-client',
+        })
+        const paths = files.map((f) => f.path)
+        expect(paths).toContain('package.json')
+        expect(paths).toContain('tsconfig.json')
+        expect(paths).toContain('src/index.tsx')
+    })
+
+    it('rest-client entry file imports useFetch from @termuijs/data', () => {
+        const files = generateProject({
+            ...baseConfig,
+            template: 'rest-client',
+        })
+        const entry = files.find((f) => f.path === 'src/index.tsx')!
+        expect(entry.content).toContain("from '@termuijs/data'")
+        expect(entry.content).toContain('useFetch')
+    })
+
+    it('rest-client entry file renders JSONView', () => {
+        const files = generateProject({
+            ...baseConfig,
+            template: 'rest-client',
+        })
+        const entry = files.find((f) => f.path === 'src/index.tsx')!
+        expect(entry.content).toContain('JSONView')
+        expect(entry.content).toContain("from '@termuijs/widgets'")
+    })
+
+    it('rest-client package.json includes @termuijs/data', () => {
+        const files = generateProject({
+            ...baseConfig,
+            template: 'rest-client',
+        })
+        const pkg = files.find((f) => f.path === 'package.json')!
+        const parsed = JSON.parse(pkg.content)
+        expect(parsed.dependencies['@termuijs/data']).toBe('latest')
+    })
+
     it('cli-tool template generates a minimal entry under 15 source lines', () => {
         const files = generateProject({
             ...baseConfig,
