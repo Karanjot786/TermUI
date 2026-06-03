@@ -6,6 +6,8 @@
 // ─────────────────────────────────────────────────────
 
 // ── Re-exports from @termuijs/widgets (base components) ──
+// Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
+
 export {
     Box,
     Text,
@@ -29,6 +31,9 @@ export { Spacer } from './Spacer.js';
 
 export { Tabs } from './Tabs.js';
 export type { Tab, TabsOptions } from './Tabs.js';
+
+export { MenuBar } from './MenuBar.js';
+export type { MenuBarOptions, MenuBarItem, MenuItem } from './MenuBar.js';
 
 export { Carousel } from './Carousel.js';
 export type { CarouselOptions } from './Carousel.js';
@@ -86,6 +91,9 @@ export type { PasswordInputOptions } from './PasswordInput.js';
 export { NumberInput } from './NumberInput.js';
 export type { NumberInputOptions } from './NumberInput.js';
 
+export { MaskedInput } from './MaskedInput.js';
+export type { MaskedInputOptions } from './MaskedInput.js';
+
 export { PathInput } from './PathInput.js';
 export type { PathInputOptions } from './PathInput.js';
 
@@ -108,6 +116,8 @@ export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
+
+export { SearchableSelect } from './SearchableSelect.js';
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
 export { Checkbox } from './Checkbox.js';
@@ -121,6 +131,8 @@ export type {
 export { SegmentedControl } from './SegmentedControl.js';
 export type { SegmentedControlOptions } from './SegmentedControl.js';
 
+export { ButtonGroup } from './ButtonGroup.js';
+export type { ButtonGroupOptions, ButtonGroupItem } from './ButtonGroup.js';
 export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';

@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "termui",
+      "dependencies": {
+        "commander": "^15.0.0",
+      },
       "devDependencies": {
         "@types/bun": "latest",
         "@types/node": "^25.2.3",
@@ -32,6 +35,19 @@
         "@termuijs/core": "workspace:*",
         "@termuijs/jsx": "workspace:*",
         "@termuijs/store": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
+    "examples/calculator": {
+      "name": "@termuijs/example-calculator",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
         "@termuijs/ui": "workspace:*",
         "@termuijs/widgets": "workspace:*",
       },
@@ -158,6 +174,20 @@
       },
       "devDependencies": {
         "typescript": "^5.4.0",
+      },
+    },
+    "examples/process-monitor": {
+      "name": "@termuijs/example-process-monitor",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/data": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
       },
     },
     "examples/showcase": {
@@ -335,6 +365,7 @@
       "dependencies": {
         "@termuijs/core": "workspace:*",
         "@termuijs/jsx": "workspace:*",
+        "@termuijs/motion": "workspace:*",
         "@termuijs/widgets": "workspace:*",
       },
       "devDependencies": {
@@ -531,6 +562,11 @@
 
     "@termuijs/example-auth-flow": ["@termuijs/example-auth-flow@workspace:examples/auth-flow"],
 
+    "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
+
+    "@termuijs/example-dashboard": ["@termuijs/example-dashboard@workspace:examples/dashboard"],
+    "@termuijs/example-calculator": ["@termuijs/example-calculator@workspace:examples/calculator"],
+
     "@termuijs/example-chat-app": ["@termuijs/example-chat-app@workspace:examples/chat-app"],
 
     "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
@@ -545,11 +581,15 @@
 
     "@termuijs/example-jsx-dashboard": ["@termuijs/example-jsx-dashboard@workspace:examples/jsx-dashboard"],
 
+    "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
+
     "@termuijs/example-kanban": ["@termuijs/example-kanban@workspace:examples/kanban-board"],
 
     "@termuijs/example-log-viewer": ["@termuijs/example-log-viewer@workspace:examples/log-viewer"],
 
     "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
+
+    "@termuijs/example-process-monitor": ["@termuijs/example-process-monitor@workspace:examples/process-monitor"],
 
     "@termuijs/example-showcase": ["@termuijs/example-showcase@workspace:examples/showcase"],
 

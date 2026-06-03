@@ -14,6 +14,9 @@ export { LogView } from './display/LogView.js';
 export type { LogViewOptions } from './display/LogView.js';
 export { Tree } from './display/Tree.js';
 export type { TreeNode, TreeOptions } from './display/Tree.js';
+export { Collapsible } from './display/Collapsible.js';
+export type { CollapsibleOptions } from './display/Collapsible.js';
+
 export { UnorderedList } from './display/UnorderedList.js';
 export type { UnorderedListOptions } from './display/UnorderedList.js';
 export { JSONView, jsonToTree } from './display/JSONView.js';
@@ -75,12 +78,18 @@ export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { Card } from './layout/Card.js';
 export type { CardOptions } from './layout/Card.js';
+export { Masonry } from './layout/Masonry.js';
+export type { MasonryOptions } from './layout/Masonry.js';
 export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
+export { SplitPane } from './layout/SplitPane.js';
+export type { SplitPaneOptions } from './layout/SplitPane.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
 export type { ProgressBarOptions } from './feedback/ProgressBar.js';
+export { ProgressCircle } from './feedback/ProgressCircle.js';
+export type { ProgressCircleOptions } from './feedback/ProgressCircle.js';
 export { MultiProgress } from './feedback/MultiProgress.js';
 export type { ProgressItem, MultiProgressOptions } from './feedback/MultiProgress.js';
 export { Spinner, SPINNER_FRAMES } from './feedback/Spinner.js';
@@ -129,8 +138,14 @@ export { DirectoryTree } from './display/DirectoryTree.js';
 export type { DirectoryTreeOptions } from './display/DirectoryTree.js';
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
+
+export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
 export { Stack } from './layout/Stack.js';
 export type { StackOptions } from './layout/Stack.js';
+export { ScatterPlot } from './data/ScatterPlot.js';
+export type { ScatterPlotOptions, ScatterPoint } from './data/ScatterPlot.js';
+export { RadarChart } from './data/RadarChart.js';
+export type { RadarChartOptions, RadarSeries } from './data/RadarChart.js';
