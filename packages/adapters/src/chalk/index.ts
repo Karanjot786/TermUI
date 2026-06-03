@@ -18,7 +18,7 @@ export function ensureChalkInstalled(): void {
 }
 
 export function chalkToTermUI(input: string): string {
-  if (process.env.NO_COLOR) {
+  if ('NO_COLOR' in process.env) {
     return input.replace(ANSI_REGEX, '')
   }
 
