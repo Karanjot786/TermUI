@@ -18,7 +18,7 @@ export class BasicAuthPrompt extends Widget {
     private _activeField: "username" | "password" = "username";
     private _opts: BasicAuthPromptOptions;
     private get _maskChar(): string {
-        return caps.unicode ? '●' : '*';
+        return caps.unicode ? "●" : "*";
     }
     constructor(style?: Partial<Style>, opts?: BasicAuthPromptOptions) {
         super(style);
@@ -81,9 +81,9 @@ export class BasicAuthPrompt extends Widget {
         const username = `${this._opts.usernameLabel} ${this._username}`;
         const masked = this._maskChar.repeat(this._password.length);
         const password = `${this._opts.passwordLabel} ${masked}`;
-        screen.writeString(x,y,username);
-        if(height > 1){
-            screen.writeString(x,y+1,password);
+        screen.writeString(x, y, username);
+        if (height > 1) {
+            screen.writeString(x, y + 1, password);
         }
     }
 }
