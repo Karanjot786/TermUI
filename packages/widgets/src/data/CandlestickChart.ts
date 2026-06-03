@@ -21,7 +21,6 @@ export class CandlestickChart extends Widget {
     constructor(style?: Partial<Style>, opts?: CandlestickChartOptions) {
         super(style);
         this.options = {
-            // Safe double-assertion mapping for custom framework Color types
             upColor: opts?.upColor || ('green' as unknown as Color),
             downColor: opts?.downColor || ('red' as unknown as Color),
             wickColor: opts?.wickColor,
@@ -37,12 +36,11 @@ export class CandlestickChart extends Widget {
     protected _renderSelf(screen: any): void {
         if (this.candles.length === 0) return;
 
-        // Safely access layout dimensions dynamically from the Widget instance context
         const self = this as any;
-        const startX = self.x || 0;
-        const startY = self.y || 0;
-        const width = self.width || 10;
-        const height = self.height || 10;
+        const startX = self.style?.left || self.x || 0;
+        const startY = self.style?.top || self.y || 0;
+        const width = self.style?.width || self.width || 10;
+        const height = self.style?.height || self.height || 10;
 
         const highs = this.candles.map(c => c.high);
         const lows = this.candles.map(c => c.low);
