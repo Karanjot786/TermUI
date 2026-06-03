@@ -15,6 +15,7 @@ const TEMPLATES = [
   'CLI Wrapper (wrap existing CLI)',
   'CLI Tool (minimal: box + text + useKeymap)',
   'File Manager',
+  'AI Assistant (Claude + mock mode)',
 ];
 
 const TEMPLATE_KEYS = [
@@ -24,6 +25,7 @@ const TEMPLATE_KEYS = [
   'cli-wrapper',
   'cli-tool',
   'file-manager',
+  'ai-assistant',
 ] as const;
 const FEATURES = ['Screen Router', 'Data Providers', 'Hot Reload'];
 
@@ -75,13 +77,23 @@ async function main() {
 
     const files = generateProject(config);
 
-    for (const file of files) {
-        const fullPath = join(projectDir, file.path);
-        const dir = fullPath.substring(0, fullPath.lastIndexOf('/'));
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(fullPath, file.content, 'utf-8');
-        console.log(`    ✓ ${file.path}`);
-    }
+   for (const file of files) {
+
+
+    const fullPath = join(projectDir, file.path);
+    
+
+    const dir = fullPath.substring(
+        0,
+        Math.max(fullPath.lastIndexOf('/'), fullPath.lastIndexOf('\\'))
+    );
+
+
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(fullPath, file.content, 'utf-8');
+
+    console.log(`    ✓ ${file.path}`);
+}
 
     console.log();
     console.log('  ┌──────────────────────────────────┐');
@@ -99,3 +111,5 @@ main().catch(err => {
     console.error('Error:', err.message);
     process.exit(1);
 });
+
+

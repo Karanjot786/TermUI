@@ -163,6 +163,52 @@ describe('InputParser', () => {
         ]);
     });
 
+    it('emits focus in for \x1b[I', () => {
+        const { stdin, parser } = createParser();
+        const focusHandler = vi.fn();
+        parser.onFocusChange(focusHandler);
+
+        sendKey(stdin, '\x1b[I');
+
+        expect(focusHandler).toHaveBeenCalledWith(true);
+        expect(focusHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it('emits focus out for \x1b[O', () => {
+        const { stdin, parser } = createParser();
+        const focusHandler = vi.fn();
+        parser.onFocusChange(focusHandler);
+
+        sendKey(stdin, '\x1b[O');
+
+        expect(focusHandler).toHaveBeenCalledWith(false);
+        expect(focusHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it('unsubscribes from focus events', () => {
+        const { stdin, parser } = createParser();
+        const focusHandler = vi.fn();
+        const unsubscribe = parser.onFocusChange(focusHandler);
+        unsubscribe();
+
+        sendKey(stdin, '\x1b[I');
+
+        expect(focusHandler).not.toHaveBeenCalled();
+    });
+
+    it('focus sequences do not become key events', () => {
+        const { stdin, parser, handler } = createParser();
+        const focusHandler = vi.fn();
+        parser.onFocusChange(focusHandler);
+
+        sendKey(stdin, '\x1b[I');
+        sendKey(stdin, 'a');
+
+        expect(focusHandler).toHaveBeenCalledWith(true);
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'a' }));
+    });
+
     it('processes rapid multi-byte input correctly', () => {
         const { stdin, handler } = createParser();
         sendKey(stdin, 'abc');
@@ -171,4 +217,17 @@ describe('InputParser', () => {
         expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'b' }));
         expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'c' }));
     });
+    it('emits paste event for bracketed paste', () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        sendKey(stdin, '\x1b[200~hello world\x1b[201~');
+
+        expect(pasteHandler).toHaveBeenCalledWith('hello world');
+    }); 
 });
