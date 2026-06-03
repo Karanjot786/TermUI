@@ -1,0 +1,13 @@
+{
+  "name": "examples-weather",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "bun run src/index.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@termuijs/quick": "workspace:*",
+    "@termuijs/core": "workspace:*"
+  }
+}

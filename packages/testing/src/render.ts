@@ -87,6 +87,16 @@ export interface TestRenderOptions {
     height?: number;
 }
 
+/**
+ * A scoped render helper for tests that share default render options.
+ */
+export interface Fixture {
+    /** Render a tree with the fixture defaults; tracked for auto-unmount. */
+    render(element: VNode, options?: TestRenderOptions): TestInstance;
+    /** Unmount every instance this fixture created. Call in afterEach. */
+    cleanup(): void;
+}
+
 // ── Helpers ──
 
 /** Recursively walk a widget tree, collecting matching widgets */
@@ -286,6 +296,13 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
                 for (const handler of collectInputHandlers(rootInstance.fiber)) {
                     handler(event);
                 }
+                // setState updates hookState.value synchronously but schedules the
+                // re-render via queueMicrotask. Flush now so renderToString() is current.
+                const newRoot = reRenderComponent(rootInstance);
+                container.clearChildren();
+                container.addChild(newRoot);
+                rootWidget = newRoot;
+                renderToScreen(container, screen);
             }
         },
 
@@ -296,23 +313,28 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
         },
 
         rerender(el?: VNode): void {
-            if (el) currentElement = el;
-            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
-            const rootInstance = instances?.get(rootWidget);
-            if (rootInstance) {
-                const newRoot = reRenderComponent(rootInstance);
-                container.clearChildren();
-                container.addChild(newRoot);
-                rootWidget = newRoot;
-                renderToScreen(container, screen);
-            } else if (el) {
+            if (el) {
+                // New element provided: reconcile fresh so new props take effect.
+                // reRenderComponent re-uses stored props and would ignore the new element.
+                currentElement = el;
                 const newRoot = reconcile(currentElement);
                 container.clearChildren();
                 container.addChild(newRoot);
                 rootWidget = newRoot;
                 renderToScreen(container, screen);
             } else {
-                console.warn('[testing] rerender() called but no fiber instance or element available');
+                // No new element: re-render existing fiber, preserving state.
+                const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+                const rootInstance = instances?.get(rootWidget);
+                if (rootInstance) {
+                    const newRoot = reRenderComponent(rootInstance);
+                    container.clearChildren();
+                    container.addChild(newRoot);
+                    rootWidget = newRoot;
+                    renderToScreen(container, screen);
+                } else {
+                    console.warn('[testing] rerender() called but no fiber instance or element available');
+                }
             }
         },
 
@@ -353,4 +375,27 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
     };
 
     return instance;
+}
+
+/**
+ * Create a render fixture with default options merged into every render().
+ * Tracks each TestInstance so cleanup() unmounts them all.
+ */
+export function createFixture(defaults: TestRenderOptions = {}): Fixture {
+    const instances: TestInstance[] = [];
+
+    return {
+        render(element: VNode, options: TestRenderOptions = {}): TestInstance {
+            const instance = render(element, { ...defaults, ...options });
+            instances.push(instance);
+            return instance;
+        },
+
+        cleanup(): void {
+            for (const instance of instances) {
+                instance.unmount();
+            }
+            instances.length = 0;
+        },
+    };
 }
