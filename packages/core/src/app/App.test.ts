@@ -194,12 +194,13 @@ describe('App', () => {
     };
 
     const app = new App(root, {
-        forceFallback: true,
+        forceFallback: false,
+        skipFallback: true,
         dockBorders: false,
     });
 
     // Force fallback path renders immediately
-    (app as any)._renderFallback();
+    (app as any).requestRender();
 
     expect(app.screen.back[3][3].char).toBe(' ');
 });
