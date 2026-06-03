@@ -1,6 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, type KeyEvent } from '@termuijs/core';
 import { ButtonGroup } from './ButtonGroup.js';
+
+function makeKey(key: string): KeyEvent {
+    return {
+        key,
+        shift: false,
+        ctrl: false,
+        alt: false,
+        raw: Buffer.alloc(0),
+        stopPropagation: () => {},
+        preventDefault: () => {},
+    };
+}
 
 const items = [
     { label: 'One', value: 'one' },
@@ -38,11 +50,7 @@ describe('ButtonGroup', () => {
     it('right key moves selection to the next item', () => {
         const buttonGroup = new ButtonGroup(items);
 
-        buttonGroup.handleKey({
-            key: 'right',
-            ctrl: false,
-            alt: false,
-        } as any);
+        buttonGroup.handleKey(makeKey('right'));
 
         expect(buttonGroup.getActiveValue()).toBe('two');
     });
@@ -51,11 +59,7 @@ describe('ButtonGroup', () => {
         const buttonGroup = new ButtonGroup(items);
 
         buttonGroup.setActiveValue('three');
-        buttonGroup.handleKey({
-            key: 'right',
-            ctrl: false,
-            alt: false,
-        } as any);
+        buttonGroup.handleKey(makeKey('right'));
 
         expect(buttonGroup.getActiveValue()).toBe('one');
     });
@@ -65,11 +69,7 @@ describe('ButtonGroup', () => {
         const buttonGroup = new ButtonGroup(items, {}, { onSelect });
 
         buttonGroup.setActiveValue('two');
-        buttonGroup.handleKey({
-            key: 'enter',
-            ctrl: false,
-            alt: false,
-        } as any);
+        buttonGroup.handleKey(makeKey('enter'));
 
         expect(onSelect).toHaveBeenCalledTimes(1);
         expect(onSelect).toHaveBeenCalledWith('two');
@@ -82,11 +82,7 @@ describe('ButtonGroup', () => {
             { label: 'Three', value: 'three' },
         ]);
 
-        buttonGroup.handleKey({
-            key: 'right',
-            ctrl: false,
-            alt: false,
-        } as any);
+        buttonGroup.handleKey(makeKey('right'));
 
         expect(buttonGroup.getActiveValue()).toBe('three');
     });
