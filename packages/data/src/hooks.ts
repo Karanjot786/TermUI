@@ -326,6 +326,12 @@ export function useWebSocket(url: string): UseWebSocketReturn {
 
 export interface UseFetchOptions {
     staleTime?: number;
+
+    /** Max retry attempts after the first failure. Default 0. */
+    retry?: number;
+
+    /** Base backoff in ms. Delay = retryDelay * 2 ** attempt */
+    retryDelay?: number;
 }
 
 export interface UseFetchResult<T> {
@@ -342,6 +348,9 @@ export interface UseFetchResult<T> {
  */
 export function useFetch<T = any>(url: string, options?: UseFetchOptions): UseFetchResult<T> {
     const staleTime = options?.staleTime ?? 0;
+    const retry = options?.retry ?? 0;
+    const retryDelay = options?.retryDelay ?? 300;
+    const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [data, setData] = useState<T | null>(() => {
         if (isFresh(url)) {
@@ -354,42 +363,86 @@ export function useFetch<T = any>(url: string, options?: UseFetchOptions): UseFe
     const [loading, setLoading] = useState<boolean>(() => !isFresh(url));
 
     useEffect(() => {
+        let isMounted = true;
+
+        /**
+         * Clear any pending retry timer.
+         * Used to cancel scheduled retry attempts during cleanup or when a
+         * request succeeds to avoid leaking timers.
+         */
+        const clearRetryTimer = () => {
+            if (retryTimerRef.current !== null) {
+                clearTimeout(retryTimerRef.current);
+                retryTimerRef.current = null;
+            }
+        };
+
         if (isFresh(url)) {
             const entry = getCache<T>(url);
             if (entry) {
-                setData(entry.data);
-                setError(null);
-                setLoading(false);
-                return;
+                if (isMounted) {
+                    clearRetryTimer();
+                    setData(entry.data);
+                    setError(null);
+                    setLoading(false);
+                }
+                return () => {
+                    isMounted = false;
+                    clearRetryTimer();
+                };
             }
         }
 
-        let mounted = true;
         setLoading(true);
 
-        fetchShared<T>(url, () => fetch(url)
-            .then(res => {
-                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
-                return res.json() as Promise<T>;
+        /**
+         * Attempt the fetch and, on failure, schedule a retry using
+         * exponential backoff. `attempt` is zero-based and controls the
+         * backoff multiplier `retryDelay * 2 ** attempt`.
+         */
+        const fetchWithRetry = (attempt: number) => {
+            fetchShared<T>(url, () => fetch(url)
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                    return res.json() as Promise<T>;
+                })
+            )
+            .then(json => {
+                if (!isMounted) return;
+                clearRetryTimer();
+                setCache(url, json, staleTime);
+                setData(json);
+                setError(null);
+                setLoading(false);
             })
-        )
-        .then(json => {
-            if (!mounted) return;
-            setCache(url, json, staleTime);
-            setData(json);
-            setError(null);
-            setLoading(false);
-        })
-        .catch(err => {
-            if (!mounted) return;
-            setError(err instanceof Error ? err : new Error(String(err)));
-            setLoading(false);
-        });
+            .catch(err => {
+                if (!isMounted) return;
+
+                if (attempt < retry) {
+                    clearRetryTimer();
+                    retryTimerRef.current = setTimeout(() => {
+                        retryTimerRef.current = null;
+
+                        if (!isMounted) return;
+
+                        fetchWithRetry(attempt + 1);
+                    }, retryDelay * 2 ** attempt);
+                    return;
+                }
+
+                clearRetryTimer();
+                setError(err instanceof Error ? err : new Error(String(err)));
+                setLoading(false);
+            });
+        };
+
+        fetchWithRetry(0);
 
         return () => {
-            mounted = false;
+            isMounted = false;
+            clearRetryTimer();
         };
-    }, [url, staleTime]);
+    }, [url, staleTime, retry, retryDelay]);
 
     return { data, error, loading };
 }
