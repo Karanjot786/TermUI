@@ -41,7 +41,9 @@
   },
   "peerDependencies": {
     "conf": "^10.2.0",
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "openai": "^4.0.0",
+"@anthropic-ai/sdk": "^0.39.0"
   },
   "peerDependenciesMeta": {
     "conf": {
@@ -49,7 +51,9 @@
     },
     "commander": {
       "optional": true
-    }
+    },
+    "openai": { "optional": true },
+"@anthropic-ai/sdk": { "optional": true }
   },
   "keywords": [
     "terminal",
