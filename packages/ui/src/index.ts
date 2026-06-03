@@ -156,6 +156,8 @@ export type {BasicAuthCredentials,BasicAuthPromptOptions} from './BasicAuthPromp
 
 export { Stepper } from './Stepper.js';
 export type { StepperOptions } from './Stepper.js';
+export { ShortcutHelpOverlay } from './components/ShortcutHelpOverlay.js';
+export type { Shortcut, ShortcutHelpOverlayProps } from './components/ShortcutHelpOverlay.js';
 
 export { RadioGroup } from './RadioGroup.js';
 export type { RadioGroupOption, RadioGroupOptions } from './RadioGroup.js';

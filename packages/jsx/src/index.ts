@@ -80,6 +80,7 @@ export type { UseSubprocessResult } from './hooks/useSubprocess.js';
 // ── Render ──
 export { render, renderApp } from './render.js';
 export type { RenderOptions } from './render.js';
+export { getCurrentApp } from './runtime.js';
 
 // ── Reconciler (internal, but useful for testing) ──
 export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
