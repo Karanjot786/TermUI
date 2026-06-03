@@ -75,7 +75,7 @@ describe('border merge', () => {
     const screen = new Screen(5, 5);
 
     screen.setCell(2, 2, { char: '│' });
-
+    mergeBorders(screen);
     expect(screen.back[2][2].char).toBe('│');
   });
  
@@ -130,7 +130,7 @@ it('merges a bottom-right corner into ┘', () => {
 
     mergeBorders(screen);
 
-    expect(screen.back[2][2].char).toBe('─');
+    expect(screen.back[2][3].char).toBe('─');
   });
 
  it('preserves a left horizontal segment', () => {
@@ -140,7 +140,7 @@ it('merges a bottom-right corner into ┘', () => {
 
     mergeBorders(screen);
 
-    expect(screen.back[2][2].char).toBe('─');
+    expect(screen.back[2][1].char).toBe('─');
   });
 
   it('preserves a top vertical segment', () => {
@@ -150,7 +150,7 @@ it('merges a bottom-right corner into ┘', () => {
 
     mergeBorders(screen);
 
-    expect(screen.back[2][2].char).toBe('│'); 
+    expect(screen.back[1][2].char).toBe('│'); 
    });
 
   it('preserves a bottom vertical segment', () => {
@@ -160,7 +160,7 @@ it('merges a bottom-right corner into ┘', () => {
 
     mergeBorders(screen);
 
-    expect(screen.back[2][2].char).toBe('│');
+    expect(screen.back[3][2].char).toBe('│');
   }  );
    
   
