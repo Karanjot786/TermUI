@@ -260,6 +260,7 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
     // VElement
     if (isVElement(vnode)) {
         let { type, props, children } = vnode;
+        children = children ?? [];
 
         // Map uppercase widget classes to their lowercase intrinsic tags
         const t = type as any;
@@ -363,7 +364,7 @@ function cleanupStaleChildFibers(fiber: Fiber): void {
 function renderComponent(
     component: FC<any>,
     props: Record<string, any>,
-    children: VNode[],
+    children: VNode[] = [],
 ): Widget {
     const parentFiber = _parentFiber;
 

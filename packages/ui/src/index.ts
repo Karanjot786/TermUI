@@ -132,3 +132,5 @@ export type { MultilineTextInputOptions } from './MultilineTextInput.js';
 
 export { Stepper } from './Stepper.js';
 export type { StepperOptions } from './Stepper.js';
+export { ShortcutHelpOverlay } from './components/ShortcutHelpOverlay.js';
+export type { Shortcut, ShortcutHelpOverlayProps } from './components/ShortcutHelpOverlay.js';
