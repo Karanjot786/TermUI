@@ -30,6 +30,9 @@ export { Spacer } from './Spacer.js';
 export { Tabs } from './Tabs.js';
 export type { Tab, TabsOptions } from './Tabs.js';
 
+export { MenuBar } from './MenuBar.js';
+export type { MenuBarOptions, MenuBarItem, MenuItem } from './MenuBar.js';
+
 export { Carousel } from './Carousel.js';
 export type { CarouselOptions } from './Carousel.js';
 
