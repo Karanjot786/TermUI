@@ -58,6 +58,11 @@ export const disableMouse = `${CSI}?1000l${CSI}?1002l${CSI}?1006l`;
 export const enableBracketedPaste = `${CSI}?2004h`;
 export const disableBracketedPaste = `${CSI}?2004l`;
 
+// ── Focus Tracking ──────────────────────────────────
+
+export const enableFocusTracking = `${CSI}?1004h`;
+export const disableFocusTracking = `${CSI}?1004l`;
+
 // ── Text Styling ────────────────────────────────────
 
 export const reset = `${CSI}0m`;
