@@ -31,7 +31,9 @@ export type { ScrollRange } from './input/virtual-scroll.js';
 
 // ── Input Widgets ─────────────────────────────────────
 export { List } from './input/List.js';
-export type { ListItem } from './input/List.js';
+export type { ListItem, ListProps } from './input/List.js';
+export { useListState } from './data/ListState.js';
+export type { ListState } from './data/ListState.js';
 export { TextInput } from './input/TextInput.js';
 export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
