@@ -5,6 +5,8 @@
 // components for building beautiful CLI apps.
 // ─────────────────────────────────────────────────────
 
+import { BasicAuthPrompt } from './BasicAuthPrompt.js';
+
 // ── Re-exports from @termuijs/widgets (base components) ──
 export {
     Box,
@@ -108,4 +110,6 @@ export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';
 export type { MultilineTextInputOptions } from './MultilineTextInput.js';
+export {BasicAuthPrompt} from './BasicAuthPrompt.js';
+export type {BasicAuthCredentials,BasicAuthPromptOptions} from './BasicAuthPrompt.js'
 
