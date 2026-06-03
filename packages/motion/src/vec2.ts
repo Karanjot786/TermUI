@@ -11,8 +11,8 @@ export interface Vec2 {
  */
 export function add(v1: Vec2, v2: Vec2): Vec2 {
     return {
-        x: (v1.x ?? 0) + (v2.x ?? 0),
-        y: (v1.y ?? 0) + (v2.y ?? 0)
+        x: v1.x + v2.x,
+        y: v1.y + v2.y
     };
 }
 
@@ -21,8 +21,8 @@ export function add(v1: Vec2, v2: Vec2): Vec2 {
  */
 export function scale(v: Vec2, factor: number): Vec2 {
     return {
-        x: (v.x ?? 0) * (factor ?? 1),
-        y: (v.y ?? 0) * (factor ?? 1)
+        x: v.x * factor,
+        y: v.y * factor
     };
 }
 
@@ -30,10 +30,9 @@ export function scale(v: Vec2, factor: number): Vec2 {
  * Linearly interpolates between two 2D vectors based on an alpha progress step
  */
 export function lerp(v1: Vec2, v2: Vec2, alpha: number): Vec2 {
-    const validAlpha = alpha ?? 0;
     return {
-        x: (v1.x ?? 0) + ((v2.x ?? 0) - (v1.x ?? 0)) * validAlpha,
-        y: (v1.y ?? 0) + ((v2.y ?? 0) - (v1.y ?? 0)) * validAlpha
+        x: v1.x + (v2.x - v1.x) * alpha,
+        y: v1.y + (v2.y - v1.y) * alpha
     };
 }
 
@@ -41,7 +40,7 @@ export function lerp(v1: Vec2, v2: Vec2, alpha: number): Vec2 {
  * Computes the Euclidean distance between two 2D vector coordinate spaces
  */
 export function distance(v1: Vec2, v2: Vec2): number {
-    const dx = (v2.x ?? 0) - (v1.x ?? 0);
-    const dy = (v2.y ?? 0) - (v1.y ?? 0);
+    const dx = v2.x - v1.x;
+    const dy = v2.y - v1.y;
     return Math.sqrt(dx * dx + dy * dy);
 }

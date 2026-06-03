@@ -35,8 +35,8 @@ describe('Vec2 Motion Utilities', () => {
             expect(distance(zeroVec, zeroVec)).toBe(0);
         });
 
-        it('should cleanly execute with partial fallback defaults if parameters are unaligned', () => {
-            const components: any = { x: undefined, y: null };
+        it('should handle zero-valued components correctly', () => {
+            const components: Vec2 = { x: 0, y: 0 };
             expect(add(components, { x: 2, y: 2 })).toEqual({ x: 2, y: 2 });
             expect(scale(components, 5)).toEqual({ x: 0, y: 0 });
         });
