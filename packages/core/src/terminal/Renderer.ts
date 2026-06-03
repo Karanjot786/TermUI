@@ -9,6 +9,18 @@ import { moveTo, beginSyncUpdate, endSyncUpdate, reset as ansiReset } from '../u
 import { RenderHook } from '../renderer/render-hook.js';
 
 /**
+ * Render frame statistics.
+ */
+export interface FrameStats {
+    /** Number of cells that differed and were redrawn this frame. */
+    cellsChanged: number;
+    /** Total bytes written to the terminal this frame. */
+    bytesWritten: number;
+    /** Wall-clock duration of the flush in milliseconds. */
+    durationMs: number;
+}
+
+/**
  * Differential renderer — compares front/back screen buffers and
  * outputs only the changed cells. Uses synchronized output (CSI 2026)
  * for atomic, flicker-free updates.
@@ -22,6 +34,7 @@ export class Renderer {
     private _colorDepth: ColorDepth;
     private _diffRenderer: boolean;
     private _onTick: (() => void) | null = null;
+    private _callbacks = new Set<(stats: FrameStats) => void>();
     
     /** The stdout interceptor hook for buffering external logs */
     public readonly hook: RenderHook;
@@ -76,6 +89,14 @@ export class Renderer {
         this._flush();
     }
 
+    /** Register a per-frame profiling callback. Returns an unsubscribe function. */
+    onFrame(cb: (stats: FrameStats) => void): () => void {
+        this._callbacks.add(cb);
+        return () => {
+            this._callbacks.delete(cb);
+        };
+    }
+
     /**
      * Full-screen clear and redraw (first render or after resize).
      */
@@ -89,6 +110,8 @@ export class Renderer {
      * emit only changed cells.
      */
     private _flush(): void {
+        const start = this._callbacks.size > 0 ? performance.now() : 0;
+
         // 1. Grab any logs that console.log() caught while we were rendering
         const bufferedLogs = this.hook.flush();
         
@@ -119,6 +142,7 @@ export class Renderer {
             if (isHookActive) this.hook.start();
 
             this._screen.saveLines();
+            this._emitStats(start, bufferedLogs, output);
             this._screen.swap();
             return;
         }
@@ -166,6 +190,7 @@ export class Renderer {
             this.hook.start();
         }
 
+        this._emitStats(start, bufferedLogs, output);
         this._screen.swap();
     }
 
@@ -204,5 +229,36 @@ export class Renderer {
             output += this._renderCell(cell);
         }
         return output;
+    }
+
+    private _emitStats(start: number, bufferedLogs: string | null, output: string): void {
+        if (this._callbacks.size === 0) return;
+
+        const durationMs = performance.now() - start;
+        const { front, back, cols, rows } = this._screen;
+        let cellsChanged = 0;
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (!cellsEqual(front[r][c], back[r][c])) {
+                    cellsChanged++;
+                }
+            }
+        }
+
+        const bytesWritten = (bufferedLogs ? Buffer.byteLength(bufferedLogs) : 0) + Buffer.byteLength(output);
+
+        const stats: FrameStats = {
+            cellsChanged,
+            bytesWritten,
+            durationMs: Math.max(0, durationMs),
+        };
+
+        for (const cb of this._callbacks) {
+            try {
+                cb(stats);
+            } catch {
+                // Callback errors must not break rendering
+            }
+        }
     }
 }
