@@ -101,3 +101,25 @@ export function grid(rows: number, cols: number, items: LayoutChild[]): Widget {
 
     return container;
 }
+
+/**
+ * Vertical stack, children top-to-bottom, sized to content rather than
+ * growing to fill. Use when col()'s flexGrow is too greedy.
+ */
+export function stack(...children: LayoutChild[]): Widget {
+    const box = new Box({
+        flexDirection: 'column',
+    });
+    for (const child of children) {
+        box.addChild(toWidget(child));
+    }
+    return box;
+}
+
+/**
+ * Flexible empty gap. Grows to fill free space and pushes siblings apart.
+ * Optional fixed size in cells.
+ */
+export function spacer(size?: number): Widget {
+    return new Box(size !== undefined ? { height: size } : { flexGrow: 1 });
+}
