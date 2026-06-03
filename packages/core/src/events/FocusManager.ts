@@ -85,6 +85,9 @@ export class FocusManager {
         const idx = this._focusables.findIndex(f => f.id === id);
         if (idx < 0) return;
 
+        // Clean up spatial rect to prevent memory leaks
+        this._rects.delete(id);
+
         const wasFocused = idx === this._currentIndex;
         this._focusables.splice(idx, 1);
 

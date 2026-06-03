@@ -115,6 +115,32 @@ describe('FocusManager Spatial Navigation', () => {
         expect(fm.currentId).toBe('bottom');
     });
 
+    it('up move picks the nearest above neighbor', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('bottom', 0, true));
+        fm.register(makeWidget('top', 1, true));
+        
+        fm.setRect('bottom', { x: 0, y: 5, width: 10, height: 2 });
+        fm.setRect('top', { x: 0, y: 0, width: 10, height: 2 });
+        
+        fm.focusWidget('bottom');
+        expect(fm.focusUp()).toBe(true);
+        expect(fm.currentId).toBe('top');
+    });
+
+    it('left move picks the nearest left neighbor', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('right', 0, true));
+        fm.register(makeWidget('left', 1, true));
+        
+        fm.setRect('right', { x: 10, y: 0, width: 4, height: 1 });
+        fm.setRect('left', { x: 0, y: 0, width: 4, height: 1 });
+        
+        fm.focusWidget('right');
+        expect(fm.focusLeft()).toBe(true);
+        expect(fm.currentId).toBe('left');
+    });
+
     it('no candidate in a direction returns false', () => {
         const fm = new FocusManager();
         fm.register(makeWidget('lonely', 0, true));
