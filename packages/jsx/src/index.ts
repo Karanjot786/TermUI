@@ -31,6 +31,8 @@ export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 export { useCounter } from './hooks/useCounter.js';
 export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
+export { useBoolean } from './hooks/useBoolean.js';
+export type { UseBooleanActions } from './hooks/useBoolean.js';
 export { useClipboard } from './hooks/useClipboard.js';
 export type { UseClipboardOptions, UseClipboardResult } from './hooks/useClipboard.js';
 export { useList } from './hooks/useList.js';
