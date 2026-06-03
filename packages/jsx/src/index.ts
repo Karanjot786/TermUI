@@ -27,6 +27,7 @@ export {
     useInsertBefore,
     useReducer,
 } from './hooks.js';
+export { useMediaQuery } from './hooks/useMediaQuery.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 
 // ── Error Boundary ──
