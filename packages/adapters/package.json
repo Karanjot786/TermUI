@@ -41,6 +41,7 @@
     "zod": "^3.0.0"
   },
   "peerDependencies": {
+    "@octokit/rest": "^21.0.0",
     "conf": "^10.2.0",
     "commander": "^15.0.0",
     "zod": "^3.0.0",
@@ -48,6 +49,9 @@
     "@anthropic-ai/sdk": "^0.39.0"
   },
   "peerDependenciesMeta": {
+    "@octokit/rest": {
+      "optional": true
+    },
     "conf": {
       "optional": true
     },
