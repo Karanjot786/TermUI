@@ -9,6 +9,7 @@
 import {
     Box, Text, Widget, ProgressBar, Grid, Skeleton,
     StatusMessage, Banner, Card, KeyValue, Center, ScrollView, Sidebar,
+    Spinner,
 } from '@termuijs/widgets';
 import type { Style, Color } from '@termuijs/core';
 import { parseColor } from '@termuijs/core';
@@ -19,7 +20,7 @@ import {
     runEffects, destroyFiber, type Fiber,
 } from './hooks.js';
 import { ErrorBoundary } from './error-boundary.js';
-
+import { Suspense } from './Suspense.js';
 // ── Component instance tracking ──
 
 interface ComponentInstance {
@@ -109,6 +110,17 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
                 fillColor:   props.fillColor ? parseColorProp(props.fillColor) : undefined,
                 showLabel:   props.showLabel !== false,
                 labelFormat: props.labelFormat,
+            });
+        }
+
+        case 'spinner': {
+            return new Spinner(style, {
+                preset:      props.preset ?? props.spinner,
+                label:       props.label,
+                color:       props.color ? parseColorProp(props.color) : undefined,
+                active:      props.active !== false,
+                doneText:    props.doneText,
+                interval:    props.interval,
             });
         }
 
@@ -247,7 +259,42 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
 
     // VElement
     if (isVElement(vnode)) {
-        const { type, props, children } = vnode;
+        let { type, props, children } = vnode;
+
+        // Map uppercase widget classes to their lowercase intrinsic tags
+        const t = type as any;
+        if (t === Box) type = 'box';
+        else if (t === Text) type = 'text';
+        else if (t === ProgressBar) type = 'progressbar';
+        else if (t === Grid) type = 'grid';
+        else if (t === Skeleton) type = 'skeleton';
+        else if (t === StatusMessage) type = 'statusmessage';
+        else if (t === Banner) type = 'banner';
+        else if (t === Card) type = 'card';
+        else if (t === KeyValue) type = 'keyvalue';
+        else if (t === Center) type = 'center';
+        else if (t === ScrollView) type = 'scrollview';
+        else if (t === Sidebar) type = 'sidebar';
+        else if (t === Spinner) type = 'spinner';
+
+        // Suspense boundary
+        if (type === Suspense) {
+            try {
+                const suspenseChild = children.length === 1 ? children[0] : {
+                    type: Fragment,
+                    props: {},
+                    children,
+                } as any;
+
+                return reconcile(suspenseChild);
+            } catch (err) {
+                if (err instanceof Promise) {
+                    return reconcile(props.fallback);
+                }
+
+                throw err;
+            }
+        }
 
         // Functional component
         if (typeof type === 'function') {
@@ -258,7 +305,7 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
         const widget = createIntrinsicWidget(type, props, children);
 
         // Add children (except for self-contained widgets that handle content via props/internal render)
-        const SELF_CONTAINED = new Set(['text', 'statusmessage', 'banner', 'keyvalue', 'sidebar', 'divider']);
+        const SELF_CONTAINED = new Set(['text', 'statusmessage', 'banner', 'keyvalue', 'sidebar', 'divider', 'spinner']);
         if (!SELF_CONTAINED.has(type.toLowerCase())) {
             for (const child of children) {
                 widget.addChild(reconcile(child, widget));
@@ -374,6 +421,11 @@ function renderComponent(
     } catch (err) {
         clearCurrentFiber();
         _parentFiber = prevParent;
+
+        if (err instanceof Promise) {
+            throw err;
+        }
+
         const error = err instanceof Error ? err : new Error(String(err));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
@@ -465,6 +517,11 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     } catch (rawErr) {
         clearCurrentFiber();
         _parentFiber = prevParent;
+
+        if (rawErr instanceof Promise) {
+            throw rawErr;
+        }
+
         const err = rawErr instanceof Error ? rawErr : new Error(String(rawErr));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {

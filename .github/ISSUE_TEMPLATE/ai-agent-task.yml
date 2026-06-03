@@ -1,0 +1,190 @@
+name: 🤖 AI-ready task (GSSoC)
+description: A structured spec an AI coding agent can execute on the first try. Use this for new widgets, hooks, and features.
+title: "type(scope): short description"
+labels: ["ai-ready"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This template produces a spec your AI agent (Claude Code, Copilot, Cursor) can follow without guessing.
+
+        Fill every section. The more exact you are, the better the first PR.
+
+        Agents: read [AGENTS.md](../../AGENTS.md) and the reference file in this issue before writing code.
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: One sentence. What does this task deliver? No implementation detail.
+      placeholder: "Add a Spinner widget to @termuijs/widgets that renders an animated loading indicator."
+    validations:
+      required: true
+
+  - type: input
+    id: package-scope
+    attributes:
+      label: Package scope
+      description: The exact package this work is confined to. Touch nothing outside it unless stated below.
+      placeholder: "packages/widgets"
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files to create or modify
+      description: Exact paths from the repo root. Mark each CREATE or MODIFY.
+      placeholder: |
+        CREATE: packages/widgets/src/feedback/Spinner.ts
+        CREATE: packages/widgets/src/feedback/Spinner.test.ts
+        MODIFY: packages/widgets/src/index.ts  (add the Spinner export)
+    validations:
+      required: true
+
+  - type: textarea
+    id: api-contract
+    attributes:
+      label: API contract
+      description: The exact TypeScript signature for the public API. This is the source of truth. The agent implements to this, not around it.
+      render: typescript
+      placeholder: |
+        export interface SpinnerOptions {
+            frames?: string[];     // default: ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏']
+            intervalMs?: number;   // default: 80
+            label?: string;
+            color?: Color;
+        }
+
+        export class Spinner extends Widget {
+            constructor(style?: Partial<Style>, opts?: SpinnerOptions);
+            tick(deltaMs: number): void;
+            setLabel(label: string): void;
+        }
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Binary pass/fail items. Each one must map to a test or an observable render. The agent is done when every box can be checked.
+      placeholder: |
+        - [ ] Spinner renders the first frame on the first render
+        - [ ] tick(deltaMs) advances to the next frame once total elapsed >= intervalMs
+        - [ ] frame index wraps to 0 after the last frame
+        - [ ] when label is set, it renders after the spinner with one space
+        - [ ] uses caps.unicode for frames, ASCII fallback when unicode is off
+        - [ ] every state change calls markDirty()
+        - [ ] bun vitest run packages/widgets passes
+        - [ ] bun run typecheck passes
+    validations:
+      required: true
+
+  - type: textarea
+    id: tests
+    attributes:
+      label: Test expectations
+      description: The test file path, the exact run command, and the specific cases to cover.
+      placeholder: |
+        File: packages/widgets/src/feedback/Spinner.test.ts
+        Run: bun vitest run packages/widgets
+        Use the real Screen from @termuijs/core. Use vi.spyOn for caps, never mutate it.
+
+        Cases:
+        - renders first frame on mount
+        - tick advances frame after intervalMs
+        - wraps to frame 0 after the last frame
+        - renders label after the spinner
+        - ASCII fallback when caps.unicode is false
+    validations:
+      required: true
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference pattern to follow
+      description: The existing file in this repo the agent should copy the structure from.
+      placeholder: |
+        Follow packages/widgets/src/data/Gauge.ts for the widget structure.
+        Follow packages/widgets/src/data/Gauge.test.ts for the test structure.
+    validations:
+      required: true
+
+  - type: textarea
+    id: not-included
+    attributes:
+      label: Not included (out of scope)
+      description: Things that seem related but must NOT be in this PR. This stops the agent from over-building.
+      placeholder: |
+        - No preset frame libraries. The caller passes frames.
+        - No JSX intrinsic registration (separate issue).
+        - No changes to any other widget.
+        - No docs-site changes.
+    validations:
+      required: true
+
+  - type: textarea
+    id: do-not-touch
+    attributes:
+      label: Do not touch
+      description: Files and areas that must stay unchanged.
+      placeholder: |
+        - Any package other than packages/widgets
+        - packages/core (import shared types, do not modify them)
+        - bun.lock (no dependency needed here)
+        - .github/
+    validations:
+      required: true
+
+  - type: textarea
+    id: agent-prompt
+    attributes:
+      label: Agent prompt (copy this into your AI agent)
+      description: A ready-to-paste launcher prompt. Paste it into Claude Code, Copilot, or Cursor to start. Edit the bracketed parts if needed.
+      render: text
+      placeholder: |
+        Read AGENTS.md at the repo root and packages/widgets/AGENTS.md.
+        Read the reference file packages/widgets/src/data/Gauge.ts and copy its structure.
+        Task: implement the Spinner widget exactly to the API contract in this issue.
+        Create packages/widgets/src/feedback/Spinner.ts and Spinner.test.ts. Export Spinner from packages/widgets/src/index.ts.
+        Plan first. List the files you will change and confirm they match the issue. Do not touch any other package, do not edit bun.lock, do not add dependencies.
+        Use the real Screen in tests and vi.spyOn for caps, never mutate caps.
+        When done, run: bun vitest run packages/widgets && bun run typecheck. Both must pass.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: level
+    attributes:
+      label: Difficulty
+      description: Sets the GSSoC level label after review.
+      options:
+        - "beginner"
+        - "intermediate"
+        - "advanced"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: agent-checklist
+    attributes:
+      label: Before you open the PR
+      options:
+        - label: I run bun run build && bun vitest run && bun run typecheck and all pass
+          required: true
+        - label: My change is confined to the package scope above
+          required: true
+        - label: bun.lock has no unrelated changes
+          required: true
+        - label: I starred the repo
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## GSSoC 2026
+
+        Comment "I would like to work on this" to get assigned. You have 7 days to open a PR after assignment.
+
+        Read [CONTRIBUTING.md](./CONTRIBUTING.md) before starting.
