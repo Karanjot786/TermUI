@@ -70,6 +70,19 @@ export const solarizedTheme: ThemeTokens = {
   highlight: '#073642',
 };
 
+export const solarizedLightTheme: ThemeTokens = {
+  bg: '#fdf6e3',
+  fg: '#657b83',
+  primary: '#268bd2',
+  secondary: '#2aa198',
+  success: '#859900',
+  warning: '#b58900',
+  error: '#dc322f',
+  muted: '#93a1a1',
+  border: '#93a1a1',
+  highlight: '#eee8d5',
+};
+
 export const tokyoNightTheme: ThemeTokens = {
   bg: '#1a1b26',
   fg: '#a9b1d6',
@@ -128,6 +141,7 @@ export const NAMED_THEMES: Record<string, ThemeTokens> = {
   catppuccin: catppuccinTheme,
   monokai: monokaiTheme,
   solarized: solarizedTheme,
+  solarizedLight: solarizedLightTheme,
   "tokyo-night": tokyoNightTheme,
   oneDark: oneDarkTheme,
   gruvbox: gruvboxTheme,

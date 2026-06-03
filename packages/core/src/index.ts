@@ -10,7 +10,7 @@ export type { Cell } from './terminal/Screen.js';
 export { Renderer } from './terminal/Renderer.js';
 export { LayerManager } from './terminal/LayerManager.js';
 export type { Layer } from './terminal/LayerManager.js';
-export { caps } from './terminal/env-caps.js';
+export { caps, prefersReducedMotion } from './terminal/env-caps.js';
 export { BOX, BRAILLE_SPIN, BLOCK } from './terminal/ascii-map.js';
 
 // ── Renderer ──────────────────────────────────────────
@@ -20,6 +20,8 @@ export { RenderHook } from './renderer/render-hook.js';
 export { InputParser } from './input/InputParser.js';
 export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './input/KeyMap.js';
 export { parseMouseEvent, isMouseSequence } from './input/MouseParser.js';
+export { ChordMatcher } from './input/ChordMatcher.js';
+export type { ChordMatcherOptions, Chord } from './input/ChordMatcher.js';
 
 // ── Layout ────────────────────────────────────────────
 export { computeLayout, createLayoutNode } from './layout/LayoutEngine.js';
