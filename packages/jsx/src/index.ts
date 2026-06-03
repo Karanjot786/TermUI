@@ -31,6 +31,8 @@ export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 export { useCounter } from './hooks/useCounter.js';
 export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
+export { useBoolean } from './hooks/useBoolean.js';
+export type { UseBooleanActions } from './hooks/useBoolean.js';
 export { useClipboard } from './hooks/useClipboard.js';
 export type { UseClipboardOptions, UseClipboardResult } from './hooks/useClipboard.js';
 export { useList } from './hooks/useList.js';
@@ -38,7 +40,7 @@ export type { UseListActions } from './hooks/useList.js';
 export { useMap } from './hooks/useMap.js';
 export type { UseMapActions } from './hooks/useMap.js';
 
-export { useUnmount } from './hooks/useUnmount.js';
+export { useDefault } from './hooks/useDefault.js';
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
 export type { ErrorBoundaryProps } from './error-boundary.js';

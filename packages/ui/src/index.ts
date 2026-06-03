@@ -158,3 +158,6 @@ export { RadioGroup } from './RadioGroup.js';
 export type { RadioGroupOption, RadioGroupOptions } from './RadioGroup.js';
 export { ThemeSwitcher } from './ThemeSwitcher.js';
 export type { ThemeSwitcherOptions } from './ThemeSwitcher.js';
+
+export { TreeSelect } from './TreeSelect.js';
+export type { TreeSelectNode, TreeSelectOptions } from './TreeSelect.js';
