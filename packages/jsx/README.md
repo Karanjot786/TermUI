@@ -54,6 +54,7 @@ render(<App />)
 | Hook | What it does |
 |------|-------------|
 | `useState` | Component state. Triggers a re-render when the value changes |
+| `useToggle` | Boolean state with `toggle`, `on`, and `off` helpers |
 | `useEffect` | Side effects with cleanup. Runs after render, re-runs when deps change |
 | `useRef` | Mutable ref that persists across renders without causing re-renders |
 | `useInput` | Register a keyboard handler for this component |
@@ -106,6 +107,28 @@ function AnimatedWidget() {
     }, [prefersReducedMotion])
 
     return <Box>...</Box>
+}
+```
+
+## useToggle
+
+Manage a simple boolean state with helpers to flip, enable, or disable it.
+
+```tsx
+import { useToggle } from '@termuijs/jsx'
+import { Box, Text, Button } from '@termuijs/widgets'
+
+function ToggleExample() {
+    const [isOpen, controls] = useToggle()
+
+    return (
+        <Box>
+            <Text>{isOpen ? 'Open' : 'Closed'}</Text>
+            <Button onPress={controls.toggle}>Toggle</Button>
+            <Button onPress={controls.on}>Open</Button>
+            <Button onPress={controls.off}>Close</Button>
+        </Box>
+    )
 }
 ```
 

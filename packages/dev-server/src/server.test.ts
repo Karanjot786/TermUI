@@ -8,13 +8,26 @@ function createMockSubprocess() {
         exitCode: null,
         signalCode: null,
         killed: false,
-        exited: Promise.resolve(0)
+        exited: Promise.resolve(0),
+        stderr: {
+            getReader: vi.fn(() => ({
+                read: vi.fn(() => Promise.resolve({ done: true, value: undefined }))
+            }))
+        }
     };
 }
 
-vi.mock('node:fs', () => ({
-    existsSync: vi.fn(() => true)
-}));
+vi.mock('node:fs', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('node:fs')>();
+    return {
+        ...actual,
+        existsSync: vi.fn(() => true),
+        watch: vi.fn(() => ({
+            on: vi.fn(),
+            close: vi.fn()
+        }))
+    };
+});
 
 describe('DevServer', () => {
     let mockChild: any;

@@ -12,6 +12,7 @@ interface InputEvents {
     key: KeyEvent;
     mouse: MouseEvent;
     focuschange: boolean;
+    paste: string;
 }
 
 /**
@@ -24,7 +25,8 @@ export class InputParser {
     private _handler: ((data: Buffer) => void) | null = null;
     private _escapeTimeout: ReturnType<typeof setTimeout> | null = null;
     private _escapeBuffer = '';
-
+    private _isPasting = false;
+    private _pasteBuffer = '';
     constructor(stdin: NodeJS.ReadStream) {
         this._stdin = stdin;
     }
@@ -42,6 +44,10 @@ export class InputParser {
     /** Subscribe to terminal focus-in (true) / focus-out (false) reports. */
     onFocusChange(handler: (focused: boolean) => void): () => void {
         return this._events.on('focuschange', handler);
+    }
+
+    onPaste(handler: (text: string) => void): () => void {
+        return this._events.on('paste', handler);
     }
 
     /** Start listening for input */
@@ -73,7 +79,17 @@ export class InputParser {
      */
     private _processInput(data: Buffer): void {
         const str = data.toString('utf8');
+        const PASTE_START = '\x1b[200~';
+        const PASTE_END = '\x1b[201~';
 
+        if (str.includes(PASTE_START) && str.includes(PASTE_END)) {
+            const pastedText = str
+                .replace(PASTE_START, '')
+                .replace(PASTE_END, '');
+
+            this._events.emit('paste', pastedText);
+            return;
+        }
         // If we're collecting an escape sequence
         if (this._escapeBuffer) {
             this._escapeBuffer += str;

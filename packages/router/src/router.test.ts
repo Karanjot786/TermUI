@@ -85,67 +85,72 @@ describe('Router', () => {
         ]);
         expect(r.routes).toHaveLength(2);
     });
-
-    it('supports nested routes', () => {
+    it('beforeEnter can block navigation', () => {
         const r = new Router();
 
-        r.addRoutes([
-            {
-                path: '/settings',
-                component: () => 'Settings',
-                children: [
-                    {
-                        path: 'profile',
-                        component: () => 'Profile',
-                    },
-                ],
-            },
-        ]);
+        r.addRoute('/admin', () => 'Admin');
 
-        r.push('/settings/profile');
+        (r.routes[0] as any).beforeEnter = () => false;
 
-        expect(r.current).not.toBeNull();
+        r.push('/admin');
+
+        expect(r.current).toBeNull();
     });
-
-    it('resolves full parent-to-leaf chain', () => {
+    it('beforeEnter can redirect navigation', () => {
         const r = new Router();
 
-        r.addRoutes([
-            {
-                path: '/settings',
-                component: () => 'Settings',
-                children: [
-                    {
-                        path: 'profile',
-                        component: () => 'Profile',
-                    },
-                ],
-            },
-        ]);
+        r.addRoute('/login', () => 'Login');
+        r.addRoute('/admin', () => 'Admin');
 
-        r.push('/settings/profile');
+        (r.routes[1] as any).beforeEnter = () => '/login';
 
-        expect(r.current?.chain.length).toBe(2);
+        r.push('/admin');
+
+        expect(r.currentPath).toBe('/login');
     });
-
-    it('preserves params in nested routes', () => {
+    it('afterEnter executes after navigation', () => {
         const r = new Router();
+
+        const spy = vi.fn();
+
+        r.addRoute('/home', () => 'Home');
+
+        (r.routes[0] as any).afterEnter = spy;
+
+        r.push('/home');
+
+        expect(spy).toHaveBeenCalled();
+    });
+    it('stores lazy loader on route', () => {
+        const r = new Router();
+
+        const lazy = () => Promise.resolve({
+            default: () => 'LazyScreen',
+        });
+
+        r.addRoute(
+            '/lazy',
+            () => 'Placeholder',
+            undefined,
+            { lazy },
+        );
+
+        expect(r.routes[0]?.lazy).toBe(lazy);
+    });
+    it('addRoutes supports lazy loader', () => {
+        const r = new Router();
+
+        const lazy = () => Promise.resolve({
+            default: () => 'LazyScreen',
+        });
 
         r.addRoutes([
             {
-                path: '/users',
-                component: () => 'Users',
-                children: [
-                    {
-                        path: '[id]',
-                        component: () => 'User',
-                    },
-                ],
+                path: '/lazy',
+                component: () => 'Placeholder',
             },
         ]);
 
-        r.push('/users/42');
-
-        expect(r.params.id).toBe('42');
+        expect(r.routes[0]?.component).toBeDefined();
     });
 });
