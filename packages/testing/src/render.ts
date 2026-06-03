@@ -45,6 +45,18 @@ export interface TestInstance {
     getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[];
 
     /**
+     * Find the first widget whose text content includes the given string.
+     * Returns null instead of throwing when nothing matches.
+     */
+    queryByText(text: string): Widget | null;
+
+    /**
+     * Find the first widget of a specific type (by constructor).
+     * Returns null instead of throwing when nothing matches.
+     */
+    queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null;
+
+    /**
      * Simulate a key press event. This dispatches to useInput handlers.
      */
     fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void;
@@ -277,6 +289,21 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
 
         getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
             return walkWidgets(container, (w) => w instanceof type) as T[];
+        },
+
+        queryByText(text: string): Widget | null {
+            const matches = walkWidgets(container, (w) => {
+                if (w instanceof Text) {
+                    return getTextContent(w).includes(text);
+                }
+                return false;
+            });
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null {
+            const matches = walkWidgets(container, (w) => w instanceof type) as T[];
+            return matches.length > 0 ? matches[0] : null;
         },
 
         fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
