@@ -33,6 +33,8 @@ export { useCounter } from './hooks/useCounter.js';
 export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
 export { useClipboard } from './hooks/useClipboard.js';
 export type { UseClipboardOptions, UseClipboardResult } from './hooks/useClipboard.js';
+export { useList } from './hooks/useList.js';
+export type { UseListActions } from './hooks/useList.js';
 
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
