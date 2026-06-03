@@ -20,6 +20,8 @@ const TEMPLATES = [
     "CLI Wrapper (wrap existing CLI)",
     "CLI Tool (minimal: box + text + useKeymap)",
     "File Manager",
+    "AI Assistant (Claude + mock mode)",
+    "Form Wizard (multi-step forms)",
 ] as const;
 
 const TEMPLATE_KEYS = [
@@ -29,6 +31,8 @@ const TEMPLATE_KEYS = [
     "cli-wrapper",
     "cli-tool",
     "file-manager",
+    "ai-assistant",
+    "form-wizard",
 ] as const;
 
 const FEATURES = ["Screen Router", "Data Providers", "Hot Reload"];

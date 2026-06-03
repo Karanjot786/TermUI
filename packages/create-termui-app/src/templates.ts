@@ -19,7 +19,8 @@ export interface ProjectConfig {
     | 'cli-wrapper'
     | 'cli-tool'
     | 'file-manager'
-    | 'ai-assistant';
+    | 'ai-assistant'
+    | 'form-wizard';
     theme: string;
     features: {
         router: boolean;
@@ -102,6 +103,8 @@ export default defineConfig({
         case 'file-manager':
             files.push(...generateFileManagerTemplate(config));
             break;
+        case 'form-wizard':
+            files.push(...generateFormWizardTemplate(config));
             break;
         default:
             files.push(...generateEmptyTemplate(config));
@@ -159,6 +162,79 @@ function createPackageJson(config: ProjectConfig): string {
             bun: '>=1.3.0',
         },
     }, null, 2) + '\n';
+}
+
+function generateFormWizardTemplate(
+    config: ProjectConfig
+): GeneratedFile[] {
+    return [
+        {
+            path: 'src/index.tsx',
+            content: `/** @jsxImportSource @termuijs/jsx */
+import { render, useState } from '@termuijs/jsx';
+import { Wizard } from '@termuijs/ui';
+import { TextInput, Spinner } from '@termuijs/widgets';
+
+function App() {
+    const [name, setName] = useState('');
+    const [theme, setTheme] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleComplete = async () => {
+        setSubmitting(true);
+
+        const data = {
+            name,
+            theme,
+        };
+
+        console.log(JSON.stringify(data, null, 2));
+
+        setTimeout(() => {
+            setSubmitting(false);
+        }, 1000);
+    };
+
+    return (
+        <box flexDirection="column" padding={1}>
+            <text bold>Form Wizard</text>
+
+            <Wizard
+                steps={['Info', 'Preferences', 'Confirm']}
+                onComplete={handleComplete}
+            >
+                <box flexDirection="column">
+                    <text>Name</text>
+                    <TextInput
+                        value={name}
+                        onChange={setName}
+                    />
+                </box>
+
+                <box flexDirection="column">
+                    <text>Theme</text>
+                    <TextInput
+                        value={theme}
+                        onChange={setTheme}
+                    />
+                </box>
+
+                <box flexDirection="column">
+                    <text>Confirm Details</text>
+                    <text>Name: {name}</text>
+                    <text>Theme: {theme}</text>
+                </box>
+            </Wizard>
+
+            {submitting && <Spinner />}
+        </box>
+    );
+}
+
+render(<App />, { title: '${config.name}' });
+`,
+        },
+    ];
 }
 
 function generateEmptyTemplate(config: ProjectConfig): GeneratedFile[] {
