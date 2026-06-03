@@ -92,3 +92,4 @@ export { useDebounce } from './hooks/useDebounce.js';
 export { useTerminalSize } from './hooks/useTerminalSize.js';
 export type { TerminalSize } from './hooks/useTerminalSize.js';
 export { useForceUpdate } from './hooks/useForceUpdate.js';
+export { useEventCallback } from './hooks/useEventCallback.js';
