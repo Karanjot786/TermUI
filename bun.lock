@@ -193,17 +193,14 @@
         "typescript": "^5.9.3",
       },
     },
-    "examples/rest-client": {
-      "name": "@termuijs/example-rest-client",
-      "version": "0.1.0",
+    "examples/rss-reader": {
+      "name": "@termuijs/example-rss-reader",
+      "version": "0.0.1",
       "dependencies": {
         "@termuijs/core": "workspace:*",
+        "@termuijs/data": "workspace:*",
         "@termuijs/jsx": "workspace:*",
-        "@termuijs/ui": "workspace:*",
         "@termuijs/widgets": "workspace:*",
-      },
-      "devDependencies": {
-        "typescript": "^5.9.3",
       },
     },
     "examples/showcase": {
@@ -605,7 +602,7 @@
 
     "@termuijs/example-process-monitor": ["@termuijs/example-process-monitor@workspace:examples/process-monitor"],
 
-    "@termuijs/example-rest-client": ["@termuijs/example-rest-client@workspace:examples/rest-client"],
+    "@termuijs/example-rss-reader": ["@termuijs/example-rss-reader@workspace:examples/rss-reader"],
 
     "@termuijs/example-showcase": ["@termuijs/example-showcase@workspace:examples/showcase"],
 
