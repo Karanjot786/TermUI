@@ -55,10 +55,21 @@ function isHorizontal(char: string): boolean {
     };
 
     // Choose junction set based on terminal capabilities
-    const JUNCTIONS = caps.unicode ? UNICODE_JUNCTIONS : ASCII_JUNCTIONS;
+    function getJunctions() {
+    return caps.unicode
+        ? UNICODE_JUNCTIONS
+        : ASCII_JUNCTIONS;
+     }
 
 export function mergeBorders(screen: Screen): void {
     const grid = screen.back;
+    const junctions = getJunctions();
+
+    const updates: Array<{
+        row: number;
+        col: number;
+        char: string;
+    }> = [];
 
     for (let row = 0; row < screen.rows; row++) {
         for (let col = 0; col < screen.cols; col++) {
@@ -80,11 +91,18 @@ export function mergeBorders(screen: Screen): void {
                 (hasTop ? 'T' : '') +
                 (hasBottom ? 'B' : '');
 
-            const merged = JUNCTIONS[key as keyof typeof JUNCTIONS];
+            const merged = junctions[key as keyof typeof junctions];
 
             if (merged) {
-                cell.char = merged;
-            }
-        }
+           updates.push({
+          row,
+          col,
+          char: merged,
+              }); 
+       }   
+      }
     }
+     for (const update of updates) {
+        grid[update.row][update.col].char = update.char;
+        }
 }
