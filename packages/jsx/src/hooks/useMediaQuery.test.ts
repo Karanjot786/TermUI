@@ -3,6 +3,7 @@ import {
     createFiber,
     setCurrentFiber,
     clearCurrentFiber,
+    runEffects,
 } from '../hooks.js';
 import { setCurrentApp } from '../runtime.js';
 import { useMediaQuery } from './useMediaQuery.js';
@@ -76,4 +77,31 @@ describe('useMediaQuery', () => {
         expect(useMediaQuery('(min-height: 40)')).toBe(true);
         expect(useMediaQuery('(max-height: 60)')).toBe(true);
     });
+
+    it('updates when terminal is resized', () => {
+    let resizeHandler: ((cols: number, rows: number) => void) | undefined;
+
+    const mockApp = {
+        terminal: {
+            cols: 80,
+            rows: 40,
+            onResize: (handler: (cols: number, rows: number) => void) => {
+                resizeHandler = handler;
+                return () => {};
+            },
+        },
+    };
+
+    setCurrentApp(mockApp as any);
+
+    expect(useMediaQuery('(min-width: 100)')).toBe(false);
+
+    runEffects(fiber);
+
+    resizeHandler?.(120, 40);
+
+    fiber.hookIndex = 0;
+
+    expect(useMediaQuery('(min-width: 100)')).toBe(true);
+   });
 });
