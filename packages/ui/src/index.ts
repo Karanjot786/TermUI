@@ -5,6 +5,8 @@
 // components for building beautiful CLI apps.
 // ─────────────────────────────────────────────────────
 
+import { BasicAuthPrompt } from './BasicAuthPrompt.js';
+
 // ── Re-exports from @termuijs/widgets (base components) ──
 // Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
 
@@ -79,6 +81,9 @@ export type { FormField, FormOptions } from './Form.js';
 export { CommandPalette } from './CommandPalette.js';
 export type { Command, CommandPaletteOptions } from './CommandPalette.js';
 
+export { useCommandPalette } from './hooks/useCommandPalette.js';
+export type { UseCommandPaletteOptions, UseCommandPaletteReturn } from './hooks/useCommandPalette.js';
+
 export { prompt, NonInteractiveError } from './prompts.js';
 export type { TextPromptOptions, ConfirmPromptOptions, SelectPromptOptions } from './prompts.js';
 
@@ -117,9 +122,11 @@ export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
 
+export { ScalePrompt } from './ScalePrompt.js';
+export type { ScalePromptOptions } from './ScalePrompt.js';
+
 export { SegmentedControl } from './SegmentedControl.js';
 export type { SegmentedControlOptions } from './SegmentedControl.js';
-
 
 export { SearchableSelect } from './SearchableSelect.js';
 export { Toggle } from './Toggle.js';
@@ -140,6 +147,8 @@ export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';
 export type { MultilineTextInputOptions } from './MultilineTextInput.js';
+export {BasicAuthPrompt} from './BasicAuthPrompt.js';
+export type {BasicAuthCredentials,BasicAuthPromptOptions} from './BasicAuthPrompt.js'
 
 
 export { Stepper } from './Stepper.js';
@@ -147,3 +156,5 @@ export type { StepperOptions } from './Stepper.js';
 
 export { RadioGroup } from './RadioGroup.js';
 export type { RadioGroupOption, RadioGroupOptions } from './RadioGroup.js';
+export { ThemeSwitcher } from './ThemeSwitcher.js';
+export type { ThemeSwitcherOptions } from './ThemeSwitcher.js';

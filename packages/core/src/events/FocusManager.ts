@@ -4,6 +4,7 @@
 
 import { EventEmitter } from './EventEmitter.js';
 import type { FocusEvent } from './types.js';
+import type { Rect } from '../layout/Rect.js';
 
 export interface Focusable {
     id: string;
@@ -19,6 +20,7 @@ export interface Focusable {
  * - Tab-order cycling (focusNext/focusPrev)
  * - Focus trapping (for modals — limits Tab to a container)
  * - Focus groups (for arrow-key navigation within a group)
+ * - 2D Spatial navigation (focusUp/Down/Left/Right)
  */
 export class FocusManager {
     private _focusables: Focusable[] = [];
@@ -42,6 +44,11 @@ export class FocusManager {
      * Maps groupId → ordered list of widget IDs.
      */
     private _groups: Map<string, string[]> = new Map();
+
+    /**
+     * Record of on-screen rects for widgets, used for spatial navigation.
+     */
+    private _rects: Map<string, Rect> = new Map();
 
     /** Currently focused widget ID, or null if none */
     get currentId(): string | null {
@@ -77,6 +84,9 @@ export class FocusManager {
     unregister(id: string): void {
         const idx = this._focusables.findIndex(f => f.id === id);
         if (idx < 0) return;
+
+        // Clean up spatial rect to prevent memory leaks
+        this._rects.delete(id);
 
         const wasFocused = idx === this._currentIndex;
         this._focusables.splice(idx, 1);
@@ -273,6 +283,89 @@ export class FocusManager {
             }
         }
         return false;
+    }
+
+    // ── Spatial Navigation ──────────────────────────────
+
+    /** Record the on-screen rect for a widget, used for spatial navigation. */
+    setRect(id: string, rect: Rect): void {
+        this._rects.set(id, rect);
+    }
+
+    private _spatialFocus(
+        isValid: (cx: number, cy: number, tx: number, ty: number) => boolean,
+        calcDistance: (cx: number, cy: number, tx: number, ty: number) => number
+    ): boolean {
+        const currentId = this.currentId;
+        if (!currentId) return false;
+
+        const currentRect = this._rects.get(currentId);
+        if (!currentRect) return false;
+
+        const cx = currentRect.x + currentRect.width / 2;
+        const cy = currentRect.y + currentRect.height / 2;
+
+        let bestId: string | null = null;
+        let minDistance = Infinity;
+
+        // Iterate over active focusables to respect traps
+        const candidates = this._getActiveFocusables();
+
+        for (const node of candidates) {
+            if (!node.focusable || node.id === currentId) continue;
+            
+            const targetRect = this._rects.get(node.id);
+            if (!targetRect) continue;
+
+            const tx = targetRect.x + targetRect.width / 2;
+            const ty = targetRect.y + targetRect.height / 2;
+
+            if (isValid(cx, cy, tx, ty)) {
+                const dist = calcDistance(cx, cy, tx, ty);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    bestId = node.id;
+                }
+            }
+        }
+
+        if (bestId) {
+            this.focusWidget(bestId);
+            return true;
+        }
+        return false;
+    }
+
+    /** Move focus to the nearest focusable widget above the current one. */
+    focusUp(): boolean {
+        return this._spatialFocus(
+            (cx, cy, tx, ty) => ty < cy,
+            (cx, cy, tx, ty) => (cy - ty) + Math.abs(tx - cx)
+        );
+    }
+
+    /** Move focus to the nearest focusable widget below the current one. */
+    focusDown(): boolean {
+        return this._spatialFocus(
+            (cx, cy, tx, ty) => ty > cy,
+            (cx, cy, tx, ty) => (ty - cy) + Math.abs(tx - cx)
+        );
+    }
+
+    /** Move focus to the nearest focusable widget to the left of the current one. */
+    focusLeft(): boolean {
+        return this._spatialFocus(
+            (cx, cy, tx, ty) => tx < cx,
+            (cx, cy, tx, ty) => (cx - tx) + Math.abs(ty - cy)
+        );
+    }
+
+    /** Move focus to the nearest focusable widget to the right of the current one. */
+    focusRight(): boolean {
+        return this._spatialFocus(
+            (cx, cy, tx, ty) => tx > cx,
+            (cx, cy, tx, ty) => (tx - cx) + Math.abs(ty - cy)
+        );
     }
 
     // ── Private ──────────────────────────────────────────

@@ -25,6 +25,7 @@ export interface Fiber {
     isDirty: boolean;
     onInput?: (event: KeyEvent) => void;
     effects: EffectRecord[];
+    layoutEffects: EffectRecord[];
     cleanups: (() => void)[];
     intervals: ReturnType<typeof setInterval>[];
     /** Context values provided by this fiber's component */
@@ -112,6 +113,7 @@ export function createFiber(parent?: Fiber): Fiber {
         hookIndex: 0,
         isDirty: true,
         effects: [],
+        layoutEffects: [],
         cleanups: [],
         intervals: [],
         contextValues: new Map(),
@@ -220,6 +222,30 @@ export function useEffect(effect: () => void | (() => void), deps?: any[]): void
         fiber.hooks.push({ value: record, deps });
         fiber.effects.push(record);
     } else {
+        const prev = fiber.hooks[idx];
+        const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
+
+        if (shouldRun) {
+            prev.deps = deps;
+            // Update the existing record in-place (avoids duplicates)
+            const record = prev.value as EffectRecord;
+            record.effect = effect;
+            record.deps = deps;
+            record.ran = false;
+        }
+    }
+}
+
+export function useLayoutEffect(effect: () => void | (() => void), deps?: any[]): void {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    // Initialize or check deps
+    if (idx >= fiber.hooks.length) {
+        const record: EffectRecord = { effect, deps, ran: false };
+        fiber.hooks.push({ value: record, deps });
+        fiber.layoutEffects.push(record);
+        } else {
         const prev = fiber.hooks[idx];
         const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
 
@@ -518,9 +544,27 @@ export function runEffects(fiber: Fiber): void {
     }
 }
 
+export function runLayoutEffects(fiber: Fiber): void {
+    for (const record of fiber.layoutEffects) {
+        if (!record.ran) {
+            // Run cleanup from previous effect
+            record.cleanup?.();
+            const cleanup = record.effect();
+            if (typeof cleanup === 'function') {
+                record.cleanup = cleanup;
+            }
+            record.ran = true;
+        }
+    }
+}
+
+
 /** Clean up all effects and intervals for a fiber, including child fibers */
 export function destroyFiber(fiber: Fiber): void {
     for (const record of fiber.effects) {
+        record.cleanup?.();
+    }
+    for (const record of fiber.layoutEffects) {
         record.cleanup?.();
     }
     for (const cleanup of fiber.cleanups) {
@@ -542,6 +586,7 @@ export function destroyFiber(fiber: Fiber): void {
     }
     fiber.hooks = [];
     fiber.effects = [];
+    fiber.layoutEffects = [];
     fiber.cleanups = [];
     fiber.intervals = [];
     fiber.contextValues.clear();

@@ -39,6 +39,7 @@ export interface RouterOptions {
 export class Router {
     private _routes: Route[] = [];
     private _history: string[] = [];
+    private _forwardStack: string[] = [];
     private _currentMatch: RouteMatch | null = null;
     private _maxHistory: number;
 
@@ -177,6 +178,8 @@ export class Router {
             return;
         }
 
+        // A new push(path) clears the forward stack
+        this._forwardStack = [];
         const guardResult = match.route.beforeEnter?.(path);
 
         if (guardResult === false) {
@@ -245,8 +248,12 @@ export class Router {
     /** Go back in history */
     back(): void {
         if (this._history.length <= 1) return;
-
-        this._history.pop();
+        
+        // back() pushes the popped path onto a forward stack
+        const poppedPath = this._history.pop();
+        if (poppedPath) {
+            this._forwardStack.push(poppedPath);
+        }
 
         const prevPath = this._history[this._history.length - 1];
         const match = prevPath ? matchRoute(prevPath, this._routes) : null;
@@ -262,6 +269,52 @@ export class Router {
         } else {
             this.events.emit('back', null);
         }
+    }
+
+    /** Move forward one step if a forward entry exists */
+    forward(): void {
+        if (this._forwardStack.length === 0) return;
+
+        const nextPath = this._forwardStack.pop();
+        if (!nextPath) return;
+
+        const match = matchRoute(nextPath, this._routes);
+        if (!match) {
+            this.events.emit('error', new Error(`No route found for forward path: ${nextPath}`));
+            return;
+        }
+
+        this._history.push(nextPath);
+        this._currentMatch = match;
+        unmountAll();
+        const screen = this._wrapScreen(match);
+        // forward() re-navigates to the most recent forward entry and emits navigate
+        this.events.emit('navigate', { match, screen });
+    }
+
+    /** Move delta steps: negative is back, positive is forward */
+    go(delta: number): void {
+        if (delta === 0) return;
+
+        if (delta < 0) {
+            const steps = Math.abs(delta);
+            // go(n) past either boundary is a no-op (clamped, no error)
+            if (steps >= this._history.length) return;
+            for (let i = 0; i < steps; i++) {
+                this.back();
+            }
+        } else {
+            // go(n) past either boundary is a no-op (clamped, no error)
+            if (delta > this._forwardStack.length) return;
+            for (let i = 0; i < delta; i++) {
+                this.forward();
+            }
+        }
+    }
+
+    /** Whether a forward entry exists */
+    get canGoForward(): boolean {
+        return this._forwardStack.length > 0;
     }
 
     /** Current route match */

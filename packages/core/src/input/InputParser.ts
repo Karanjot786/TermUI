@@ -8,6 +8,11 @@ import { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './KeyMap.js';
 import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 
+export interface CursorPosition {
+    row: number;
+    col: number;
+}
+
 interface InputEvents {
     key: KeyEvent;
     mouse: MouseEvent;
@@ -27,6 +32,12 @@ export class InputParser {
     private _escapeBuffer = '';
     private _isPasting = false;
     private _pasteBuffer = '';
+    private _cursorRequests: Array<{
+        resolve: (position: CursorPosition) => void;
+        reject: (error: Error) => void;
+        timeout: ReturnType<typeof setTimeout>;
+    }> = [];
+
     constructor(stdin: NodeJS.ReadStream) {
         this._stdin = stdin;
     }
@@ -48,6 +59,20 @@ export class InputParser {
 
     onPaste(handler: (text: string) => void): () => void {
         return this._events.on('paste', handler);
+    }
+
+    requestCursorPosition(timeoutMs = 200): Promise<CursorPosition> {
+        return new Promise<CursorPosition>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                const idx = this._cursorRequests.findIndex((item) => item.reject === reject);
+                if (idx !== -1) {
+                    this._cursorRequests.splice(idx, 1);
+                }
+                reject(new Error('Cursor position request timed out'));
+            }, timeoutMs);
+
+            this._cursorRequests.push({ resolve, reject, timeout });
+        });
     }
 
     /** Start listening for input */
@@ -199,14 +224,30 @@ export class InputParser {
             }
         }
 
+        // Cursor position report
+        const cursorMatch = seq.match(/^\x1b\[(\d+);(\d+)R$/);
+        if (cursorMatch) {
+            const row = parseInt(cursorMatch[1], 10);
+            const col = parseInt(cursorMatch[2], 10);
+            const position = { row, col };
+
+            for (const request of this._cursorRequests) {
+                clearTimeout(request.timeout);
+                request.resolve(position);
+            }
+            this._cursorRequests = [];
+            this._escapeBuffer = '';
+            return;
+        }
+
         // Focus tracking sequences
-        if (seq === '[I') {
+        if (seq === '\x1b[I') {
             this._events.emit('focuschange', true);
             this._escapeBuffer = '';
             return;
         }
 
-        if (seq === '[O') {
+        if (seq === '\x1b[O') {
             this._events.emit('focuschange', false);
             this._escapeBuffer = '';
             return;

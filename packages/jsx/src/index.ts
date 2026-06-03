@@ -33,6 +33,10 @@ export { useCounter } from './hooks/useCounter.js';
 export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
 export { useClipboard } from './hooks/useClipboard.js';
 export type { UseClipboardOptions, UseClipboardResult } from './hooks/useClipboard.js';
+export { useList } from './hooks/useList.js';
+export type { UseListActions } from './hooks/useList.js';
+export { useMap } from './hooks/useMap.js';
+export type { UseMapActions } from './hooks/useMap.js';
 
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
@@ -89,3 +93,5 @@ export type { ElementSize } from './hooks/useElementSize.js';
 export { useDebounce } from './hooks/useDebounce.js';
 export { useTerminalSize } from './hooks/useTerminalSize.js';
 export type { TerminalSize } from './hooks/useTerminalSize.js';
+export { useForceUpdate } from './hooks/useForceUpdate.js';
+export { useEventCallback } from './hooks/useEventCallback.js';

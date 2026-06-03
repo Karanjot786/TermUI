@@ -5,9 +5,9 @@
 // with the motion timer pool.
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, afterEach, vi } from 'vitest';
-import { createVirtualClock } from './virtual-clock.js';
-import { timerPoolSubscribe, timerPoolUnsubscribeAll } from '@termuijs/motion';
+import { describe, it, expect, afterEach, vi } from "vitest";
+import { createVirtualClock } from "./virtual-clock.js";
+import { timerPoolSubscribe, timerPoolUnsubscribeAll } from "@termuijs/motion";
 
 afterEach(() => {
     // Always detach the clock between tests so nothing leaks.
@@ -15,13 +15,13 @@ afterEach(() => {
     vi.useRealTimers();
 });
 
-describe('createVirtualClock', () => {
-    it('starts at 0', () => {
+describe("createVirtualClock", () => {
+    it("starts at 0", () => {
         const clock = createVirtualClock();
         expect(clock.now()).toBe(0);
     });
 
-    it('advance(ms) moves now() forward by ms', () => {
+    it("advance(ms) moves now() forward by ms", () => {
         const clock = createVirtualClock();
         clock.advance(250);
         expect(clock.now()).toBe(250);
@@ -30,7 +30,7 @@ describe('createVirtualClock', () => {
         expect(clock.now()).toBe(1000);
     });
 
-    it('tick() advances by one 16ms frame', () => {
+    it("tick() advances by one 16ms frame", () => {
         const clock = createVirtualClock();
         clock.tick();
         expect(clock.now()).toBe(16);
@@ -39,7 +39,7 @@ describe('createVirtualClock', () => {
         expect(clock.now()).toBe(48);
     });
 
-    it('negative advance is a no-op', () => {
+    it("negative advance is a no-op", () => {
         const clock = createVirtualClock();
         clock.advance(100);
         clock.advance(-50);
@@ -47,8 +47,8 @@ describe('createVirtualClock', () => {
     });
 });
 
-describe('createVirtualClock — periodic timers', () => {
-    it('fires a registered interval once per delayMs', () => {
+describe("createVirtualClock — periodic timers", () => {
+    it("fires a registered interval once per delayMs", () => {
         const clock = createVirtualClock();
         const calls: number[] = [];
         clock._setInterval(50, () => calls.push(clock.now()));
@@ -57,7 +57,7 @@ describe('createVirtualClock — periodic timers', () => {
         expect(calls).toEqual([50, 100, 150, 200]);
     });
 
-    it('does not fire when advance is shorter than delayMs', () => {
+    it("does not fire when advance is shorter than delayMs", () => {
         const clock = createVirtualClock();
         const cb = vi.fn();
         clock._setInterval(100, cb);
@@ -69,7 +69,7 @@ describe('createVirtualClock — periodic timers', () => {
         expect(cb).toHaveBeenCalledTimes(1);
     });
 
-    it('multiple intervals share the same clock', () => {
+    it("multiple intervals share the same clock", () => {
         const clock = createVirtualClock();
         const fast: number[] = [];
         const slow: number[] = [];
@@ -82,7 +82,7 @@ describe('createVirtualClock — periodic timers', () => {
         expect(slow).toEqual([100, 200]);
     });
 
-    it('unsubscribe stops further fires', () => {
+    it("unsubscribe stops further fires", () => {
         const clock = createVirtualClock();
         const cb = vi.fn();
         const unsub = clock._setInterval(50, cb);
@@ -95,10 +95,12 @@ describe('createVirtualClock — periodic timers', () => {
         expect(cb).toHaveBeenCalledTimes(2);
     });
 
-    it('runs many fires in a single advance() in under 50ms wall time', () => {
+    it("runs many fires in a single advance() in under 50ms wall time", () => {
         const clock = createVirtualClock();
         let count = 0;
-        clock._setInterval(16, () => { count++; });
+        clock._setInterval(16, () => {
+            count++;
+        });
 
         const start = Date.now();
         clock.advance(2000);
@@ -109,8 +111,8 @@ describe('createVirtualClock — periodic timers', () => {
     });
 });
 
-describe('createVirtualClock — integration with timer pool', () => {
-    it('a usage example: drives a timer pool subscriber synchronously', () => {
+describe("createVirtualClock — integration with timer pool", () => {
+    it("a usage example: drives a timer pool subscriber synchronously", () => {
         // This is the canonical example from the issue spec.
         const clock = createVirtualClock();
         timerPoolSubscribe(clock);
@@ -124,7 +126,7 @@ describe('createVirtualClock — integration with timer pool', () => {
         expect(seen).toEqual([100, 200, 300, 400, 500]);
     });
 
-    it('unsubscribeAll() detaches the clock so real timers are not used', () => {
+    it("unsubscribeAll() detaches the clock so real timers are not used", () => {
         const clock = createVirtualClock();
         timerPoolSubscribe(clock);
         timerPoolUnsubscribeAll();
@@ -135,7 +137,7 @@ describe('createVirtualClock — integration with timer pool', () => {
         expect(clock.now()).toBe(50);
     });
 
-    it('re-injecting a new clock replaces the old one', () => {
+    it("re-injecting a new clock replaces the old one", () => {
         const a = createVirtualClock();
         const b = createVirtualClock();
 
@@ -144,7 +146,7 @@ describe('createVirtualClock — integration with timer pool', () => {
         timerPoolSubscribe(50, () => calls.push(`a:${a.now()}`));
 
         a.advance(100);
-        expect(calls).toEqual(['a:50', 'a:100']);
+        expect(calls).toEqual(["a:50", "a:100"]);
 
         // Swap in clock b. Existing subscribers should follow the new clock.
         timerPoolSubscribe(b);
@@ -153,20 +155,19 @@ describe('createVirtualClock — integration with timer pool', () => {
         b.advance(100);
         timerPoolUnsubscribeAll();
 
-        expect(calls).toEqual([
-            'a:50', 'a:100',
-            'b:50', 'b:100',
-        ]);
+        expect(calls).toEqual(["a:50", "a:100", "b:50", "b:100"]);
     });
 
-    it('a 2000ms animation sequence completes in under 50ms wall time', () => {
+    it("a 2000ms animation sequence completes in under 50ms wall time", () => {
         // Models the issue acceptance criteria: a long animation
         // that would normally sleep finishes almost instantly.
         const clock = createVirtualClock();
         timerPoolSubscribe(clock);
 
         let frames = 0;
-        timerPoolSubscribe(16, () => { frames++; });
+        timerPoolSubscribe(16, () => {
+            frames++;
+        });
 
         const start = Date.now();
         clock.advance(2000);

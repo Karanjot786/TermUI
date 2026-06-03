@@ -102,21 +102,48 @@ describe('generateProject', () => {
         expect(parsed.dependencies['@termuijs/widgets']).toBe('latest')
     })
 
-    it('cli-tool template generates a minimal entry under 15 source lines', () => {
-        const files = generateProject({
-            ...baseConfig,
-            template: 'cli-tool',
-        })
-        const entry = files.find((f) => f.path === 'src/index.tsx')!
-        expect(entry).toBeDefined()
-        expect(entry.content).toContain("from '@termuijs/jsx'")
-        expect(entry.content).toContain('useKeymap')
-        expect(entry.content).toContain("key: 'q'")
-        const sourceLines = entry.content
-            .split('\n')
-            .filter((l) => l.trim() && !l.trim().startsWith('//') && !l.trim().startsWith('/**'))
-        expect(sourceLines.length).toBeLessThanOrEqual(15)
+    it('form-wizard template generates files', () => {
+    const files = generateProject({
+        ...baseConfig,
+        template: 'form-wizard',
+        features: {
+            router: false,
+            dataProviders: false,
+            hotReload: true,
+        },
     })
+
+    const indexFile = files.find(
+        (f) => f.path === 'src/index.tsx',
+    )
+
+    expect(indexFile).toBeDefined()
+    expect(indexFile?.content).toContain('Form Wizard')
+})
+
+it('cli-tool template generates a minimal entry under 15 source lines', () => {
+    const files = generateProject({
+        ...baseConfig,
+        template: 'cli-tool',
+    })
+
+    const entry = files.find((f) => f.path === 'src/index.tsx')!
+    expect(entry).toBeDefined()
+    expect(entry.content).toContain("from '@termuijs/jsx'")
+    expect(entry.content).toContain('useKeymap')
+    expect(entry.content).toContain("key: 'q'")
+
+    const sourceLines = entry.content
+        .split('\n')
+        .filter(
+            (l) =>
+                l.trim() &&
+                !l.trim().startsWith('//') &&
+                !l.trim().startsWith('/**'),
+        )
+
+    expect(sourceLines.length).toBeLessThanOrEqual(15)
+})
 
     it('each generated file has non-empty content', () => {
         const files = generateProject(baseConfig)

@@ -31,7 +31,9 @@ export type { ScrollRange } from './input/virtual-scroll.js';
 
 // ── Input Widgets ─────────────────────────────────────
 export { List } from './input/List.js';
-export type { ListItem } from './input/List.js';
+export type { ListItem, ListProps } from './input/List.js';
+export { useListState } from './data/ListState.js';
+export type { ListState } from './data/ListState.js';
 export { TextInput } from './input/TextInput.js';
 export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
@@ -83,6 +85,10 @@ export { StatusMessage } from './feedback/StatusMessage.js';
 export type { StatusMessageOptions, StatusVariant } from './feedback/StatusMessage.js';
 export { Banner } from './feedback/Banner.js';
 export type { BannerOptions } from './feedback/Banner.js';
+export { EmptyState } from './feedback/EmptyState.js';
+export type { EmptyStateOptions } from './feedback/EmptyState.js';
+export { Callout } from './feedback/Callout.js';
+export type { CalloutVariant, CalloutOptions } from './feedback/Callout.js';
 
 // ── New Data Widgets ──────────────────────────────────
 export { KeyValue } from './data/KeyValue.js';
@@ -91,6 +97,8 @@ export { Sidebar } from './data/Sidebar.js';
 export type { SidebarItem, SidebarOptions } from './data/Sidebar.js';
 export { LineChart } from './data/LineChart.js';
 export type { LineChartOptions } from './data/LineChart.js';
+export { AreaChart } from './data/AreaChart.js';
+export type { AreaChartOptions } from './data/AreaChart.js';
 export { HeatMap } from './data/HeatMap.js';
 export type { HeatMapOptions } from './data/HeatMap.js';
 export { Definition } from './data/Definition.js';
@@ -104,6 +112,8 @@ export type { GradientOptions } from './display/Gradient.js';
 
 export { Markdown } from './display/Markdown.js';
 export type { MarkdownOptions } from './display/Markdown.js';
+export { Code } from './display/Code.js';
+export type { CodeOptions } from './display/Code.js';
 export { Badge } from './display/Badge.js';
 export type { BadgeOptions, BadgeVariant } from './display/Badge.js';
 export { Tag } from './display/Tag.js';
@@ -118,12 +128,16 @@ export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
+export { QRCodePattern, QRCode } from './display/QRCode.js';
+export type { QRCodePatternOptions, QRCodeOptions } from './display/QRCode.js';
 export { Stack } from './layout/Stack.js';
 export type { StackOptions } from './layout/Stack.js';
 export { ScatterPlot } from './data/ScatterPlot.js';
 export type { ScatterPlotOptions, ScatterPoint } from './data/ScatterPlot.js';
 export { RadarChart } from './data/RadarChart.js';
 export type { RadarChartOptions, RadarSeries } from './data/RadarChart.js';
+export { Stat } from './data/Stat.js';
+export type { StatOptions } from './data/Stat.js';
 
 export { CandlestickChart } from './data/CandlestickChart.js';
 export type { CandlestickChartOptions, Candle } from './data/CandlestickChart.js';
@@ -133,3 +147,10 @@ export { Stopwatch } from './display/Stopwatch.js';
 export type { StopwatchOptions } from './display/Stopwatch.js';
 export { OrderedList } from './display/OrderedList.js';
 export type { OrderedListItem, OrderedListOptions } from './display/OrderedList.js';
+
+export { Typewriter } from './display/Typewriter.js';
+export type { TypewriterOptions } from './display/Typewriter.js';
+export { Timeline } from './display/Timeline.js';
+export type { TimelineItem, TimelineStatus } from './display/Timeline.js';
+export { Marquee } from './display/Marquee.js';
+export type { MarqueeDirection, MarqueeOptions } from './display/Marquee.js';

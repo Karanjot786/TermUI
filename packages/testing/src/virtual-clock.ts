@@ -7,7 +7,7 @@
 // animations and intervals can be advanced synchronously.
 // ─────────────────────────────────────────────────────
 
-import type { VirtualClock } from '@termuijs/motion';
+import type { VirtualClock } from "@termuijs/motion";
 
 interface PeriodicTimer {
     delayMs: number;
