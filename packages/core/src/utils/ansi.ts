@@ -25,6 +25,8 @@ export function moveDown(n = 1): string { return `${CSI}${n}B`; }
 export function moveRight(n = 1): string { return `${CSI}${n}C`; }
 export function moveLeft(n = 1): string { return `${CSI}${n}D`; }
 
+export const requestCursorPosition = `${CSI}6n`;
+
 // ── Screen Control ──────────────────────────────────
 
 export const clearScreen = `${CSI}2J`;
