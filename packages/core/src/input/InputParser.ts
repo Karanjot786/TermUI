@@ -11,6 +11,7 @@ import { EventEmitter } from '../events/EventEmitter.js';
 interface InputEvents {
     key: KeyEvent;
     mouse: MouseEvent;
+    focuschange: boolean;
     paste: string;
 }
 
@@ -40,9 +41,15 @@ export class InputParser {
         return this._events.on('mouse', handler);
     }
 
-    onPaste(handler: (text: string) => void): () => void {
-    return this._events.on('paste', handler);
+    /** Subscribe to terminal focus-in (true) / focus-out (false) reports. */
+    onFocusChange(handler: (focused: boolean) => void): () => void {
+        return this._events.on('focuschange', handler);
     }
+
+    onPaste(handler: (text: string) => void): () => void {
+        return this._events.on('paste', handler);
+    }
+
     /** Start listening for input */
     start(): void {
         if (this._handler) return;
@@ -190,6 +197,19 @@ export class InputParser {
                 }, 100);
                 return;
             }
+        }
+
+        // Focus tracking sequences
+        if (seq === '[I') {
+            this._events.emit('focuschange', true);
+            this._escapeBuffer = '';
+            return;
+        }
+
+        if (seq === '[O') {
+            this._events.emit('focuschange', false);
+            this._escapeBuffer = '';
+            return;
         }
 
         // Check known escape sequences
