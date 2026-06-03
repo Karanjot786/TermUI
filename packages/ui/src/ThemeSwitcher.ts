@@ -43,7 +43,7 @@ export class ThemeSwitcher extends Widget {
         this._activeTheme = options.activeTheme ?? 'default';
         this._selectedIndex = this._themes.indexOf(this._activeTheme);
         if (this._selectedIndex === -1) {
-            this._activeTheme = this._themes[0] ?? 'default';
+            this._activeTheme = this._themes[0] ?? '';
             this._selectedIndex = 0;
         }
         this._onChange = options.onChange;
