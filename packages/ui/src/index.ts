@@ -161,3 +161,5 @@ export type { ThemeSwitcherOptions } from './ThemeSwitcher.js';
 
 export { TreeSelect } from './TreeSelect.js';
 export type { TreeSelectNode, TreeSelectOptions } from './TreeSelect.js';
+export { EmailInput } from './EmailInput.js';
+export type { EmailInputOptions } from './EmailInput.js';
