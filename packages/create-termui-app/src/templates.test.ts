@@ -52,6 +52,22 @@ describe('generateProject', () => {
         expect('@termuijs/core' in deps).toBe(true)
     })
 
+    it('dashboard template copies static template files', () => {
+        const files = generateProject({
+            ...baseConfig,
+            template: 'dashboard',
+            features: { ...baseConfig.features, dataProviders: false },
+        })
+        const paths = files.map((f) => f.path)
+        expect(paths).toContain('src/index.tsx')
+        expect(paths).toContain('README.md')
+
+        const entry = files.find((f) => f.path === 'src/index.tsx')!
+        expect(entry.content).toContain("title: 'test-app Dashboard'")
+        const readme = files.find((f) => f.path === 'README.md')!
+        expect(readme.content).toContain('# test-app Dashboard Template')
+    })
+
     it('interactive-tool template generates files', () => {
         const files = generateProject({
             ...baseConfig,

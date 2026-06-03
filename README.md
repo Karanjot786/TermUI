@@ -3,6 +3,7 @@
   <p align="center">Build terminal applications in TypeScript.</p>
 </p>
 
+
 <p align="center">
   <a href="https://www.termui.io/docs/getting-started/installation"><img src="https://img.shields.io/badge/docs-termui.io-00ff88?style=flat" alt="Documentation"></a>
   <a href="https://www.npmjs.com/package/@termuijs/core"><img src="https://img.shields.io/npm/v/@termuijs/core.svg" alt="npm version"></a>
@@ -17,6 +18,7 @@
   <a href="https://github.com/Karanjot786/TermUI/graphs/contributors"><img src="https://img.shields.io/github/contributors/Karanjot786/TermUI?color=00ff88" alt="Contributors"></a>
   <a href="https://github.com/Karanjot786/TermUI/stargazers"><img src="https://img.shields.io/github/stars/Karanjot786/TermUI?style=flat&color=ffd700" alt="Stars"></a>
 </p>
+
 > ⭐ **GSSoC 2026 contributors:** star this repo before opening a PR. The `star-check` workflow blocks unstarred merges. Read [CONTRIBUTING.md](./CONTRIBUTING.md#gssoc-2026) for the full point system.
 
 > 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
@@ -366,10 +368,16 @@ cd TermUI
 bun install
 bun run build
 
-cd examples/dashboard
+To run the AI streaming example:
+
+```bash
+cd examples/ai-streaming
 bun run dev
 ```
 
+<<<<<<< HEAD
+Examples: `ai-streaming`, `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
+=======
 ### Available Examples
 
 | Example | Purpose | Features demonstrated | Path |
@@ -384,6 +392,7 @@ bun run dev
 | Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
 | Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
 | CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
+>>>>>>> upstream/main
 
 ## Project structure
 
@@ -403,23 +412,24 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
-  auth-flow/             Authentication flow example
-  cli-wrapper-live/      Live subprocess log streaming
-  dashboard/             Real-time system monitor
-  forms-and-validation/  Multi-field form with validation
-  jsx-dashboard/         JSX-based dashboard
-    multi-screen-router/   Multi-screen router example
-  showcase/              Widget gallery
-  system-monitor/        Advanced monitor
-  todo-app/              Interactive todo list
-  widget-gallery/        All widgets in one place
+  ai-streaming/          Mock AI chat with StreamingText, ChatMessage, ToolCall
+  auth-flow/            Authentication flow example
+  cli-wrapper-live/     Live subprocess log streaming
+  dashboard/            Real-time system monitor
+  forms-and-validation/ Multi-field form with validation
+  jsx-dashboard/        JSX-based dashboard
+  multi-screen-router/  Multi-screen router example
+  showcase/             Widget gallery
+  system-monitor/       Advanced monitor
+  todo-app/             Interactive todo list
+  widget-gallery/       All widgets in one place
 ```
 
 ## Development
 
 ```bash
 bun install
-bun run build      # Build all 13 packages
+bun run build      # Build all 14 packages
 bun run test       # Run all 600 tests
 bun run typecheck  # Type-check all packages
 ```
@@ -448,3 +458,32 @@ See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and futu
 ## License
 
 MIT
+
+/**
+## ✨ README Improvement Notes
+
+### 📌 Formatting Enhancements Needed
+- Improve heading hierarchy for better readability
+- Ensure consistent spacing between sections
+- Use proper Markdown formatting for code blocks and lists
+- Align all installation and usage steps properly
+
+### 🚀 Suggested Structure Upgrade
+- Introduction
+- Features
+- Tech Stack
+- Installation
+- Usage
+- Project Structure
+- Contribution Guidelines
+- License
+
+### 🛠️ Documentation Improvements
+- Add badges (optional): build, license, contributors
+- Add screenshots for better UI understanding
+- Standardize code blocks for commands
+
+### 🎯 Goal
+Improve onboarding experience for new contributors and users by making README more structured, readable, and professional.
+*/
+

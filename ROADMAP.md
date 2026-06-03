@@ -11,7 +11,7 @@ TermUI ships a working core today:
 - Layout engine with flexbox and constraint rules
 - Differential renderer. Only changed cells redraw.
 - JSX runtime and React-style hooks
-- 13 packages, 600+ tests passing
+- 14 packages, 600+ tests passing
 - Theming, animations, routing, hot-reload dev server
 - 40+ widgets and a headless test harness
 

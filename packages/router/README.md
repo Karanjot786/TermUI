@@ -235,3 +235,127 @@ https://www.termui.io/docs/router/overview
 # License
 
 MIT
+
+---
+
+# Router Guide
+
+## Overview
+
+## Routes
+
+Routes are defined using the `Route` type and managed through the `Router` class.
+
+```ts
+import { Router, type Route, type RouterOptions } from '@termuijs/router'
+
+const routes: Route[] = [
+    {
+        path: '/',
+        component: HomeScreen,
+    },
+    {
+        path: '/settings',
+        component: SettingsScreen,
+    },
+]
+
+const options: RouterOptions = {}
+
+const router = new Router(routes, options)
+```
+
+The router instance handles navigation and active route state.
+
+## Nested Routes
+
+Nested routes can be composed using child route definitions. The `matchRoute` utility helps resolve matching nested paths.
+
+```ts
+import { matchRoute, type Route } from '@termuijs/router'
+
+const routes: Route[] = [
+    {
+        path: '/users',
+        children: [
+            {
+                path: '/users/profile',
+                component: ProfileScreen,
+            },
+        ],
+    },
+]
+
+const match = matchRoute('/users/profile', routes)
+```
+
+Nested matching allows parent and child screens to be organized in a predictable structure.
+
+## Params
+
+Route parameters can be accessed using the `useParams` hook.
+
+```ts
+import { useParams } from '@termuijs/router'
+
+function UserScreen() {
+    const params = useParams()
+
+    return params.id
+}
+```
+
+Parameters are automatically extracted from dynamic route segments.
+
+
+## Navigation
+
+Use the `useNavigate` hook to navigate between routes programmatically.
+
+```ts
+import { useNavigate } from '@termuijs/router'
+
+function HomeScreen() {
+    const navigate = useNavigate()
+
+    function openSettings() {
+        navigate('/settings')
+    }
+
+    return null
+}
+```
+
+The navigate function pushes a new route onto the navigation stack.
+
+## Route Validation
+
+Routes can be validated before navigation using the validation utilities.
+
+```ts
+import { compilePattern } from '@termuijs/router'
+
+const pattern = compilePattern('/users/[id]')
+
+console.log(pattern.regex)
+```
+
+Compiled patterns help the router efficiently match dynamic routes.
+
+## Utilities
+
+The router package also exports helper utilities for route matching and scanning.
+
+```ts
+import {
+    matchRoute,
+    scanRoutes,
+} from '@termuijs/router'
+
+const match = matchRoute('/users/42', routes)
+
+const scanned = await scanRoutes('./screens')
+```
+
+These utilities simplify automatic route discovery and dynamic route matching.
+
