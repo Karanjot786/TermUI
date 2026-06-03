@@ -16,11 +16,12 @@ export interface AIAdapter {
   chat(messages: AIMessage[]): AsyncIterable<string>
 }
 
-function isModuleNotFound(error: unknown): boolean {
+function isModuleNotFound(error: unknown, moduleName: string): boolean {
   return (
     error instanceof Error &&
     'code' in error &&
-    (error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND'
+    (error as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND' &&
+    error.message.includes(moduleName)
   )
 }
 
