@@ -95,6 +95,16 @@ export function setTitle(title: string): string {
     return `${OSC}0;${title}\x07`;
 }
 
+// ── Hyperlinks (OSC 8) ──────────────────────────────
+
+/** OSC 8 open: ESC ] 8 ; ; <url> ST. */
+export function hyperlinkOpen(url: string): string {
+    return `\x1b]8;;${url}\x1b\\`;
+}
+
+/** OSC 8 close: ESC ] 8 ; ; ST. */
+export const hyperlinkClose: string = '\x1b]8;;\x1b\\';
+
 // ── Clipboard ───────────────────────────────────────
 
 /**
