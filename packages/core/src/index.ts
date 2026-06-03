@@ -48,7 +48,7 @@ export { createKeyEvent } from './events/types.js';
 export { defaultStyle, mergeStyles, normalizeEdges, styleToCellAttrs } from './style/Style.js';
 export type { Style, Edges } from './style/Style.js';
 export { getBorderChars, borderSize, BORDER_CHARS } from './style/Border.js';
-export type { BorderStyle, BorderChars } from './style/Border.js';
+export type { BorderStyle, BorderChars, BorderOptions } from './style/Border.js';
 export {
     parseColor, colorToRgb, colorToAnsiFg, colorToAnsiBg,
     detectColorDepth, ColorDepth,
