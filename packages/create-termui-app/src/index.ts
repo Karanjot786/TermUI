@@ -33,6 +33,7 @@ const TEMPLATE_KEYS = [
     "file-manager",
     "ai-assistant",
     "form-wizard",
+>>>>>>> 9517e21 (feat(create-termui-app): add rest-client template)
 ] as const;
 
 const FEATURES = ["Screen Router", "Data Providers", "Hot Reload"];
@@ -46,6 +47,7 @@ async function main() {
     let theme: string;
     let featureFlags: boolean[] = [false, false, true];
 
+>>>>>>> 9517e21 (feat(create-termui-app): add rest-client template)
     console.log();
     console.log("  ┌──────────────────────────────────┐");
     console.log("  │       create-termui-app           │");
@@ -109,6 +111,9 @@ async function main() {
         console.log("  └──────────────────────────────────┘");
 
         return;
+    if (!projectName) {
+        projectName = await textPrompt('Project name', 'my-termui-app');
+>>>>>>> 9517e21 (feat(create-termui-app): add rest-client template)
     }
 
     // ───────── INTERACTIVE MODE ─────────
@@ -162,6 +167,7 @@ async function main() {
     console.log("  ┌──────────────────────────────────┐");
     console.log("  │  ✅ Project created successfully! │");
     console.log("  └──────────────────────────────────┘");
+>>>>>>> 9517e21 (feat(create-termui-app): add rest-client template)
 }
 
 main().catch((err) => {
