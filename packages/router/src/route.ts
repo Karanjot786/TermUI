@@ -8,6 +8,8 @@ export type BeforeEnterGuard = (to: string) => boolean | string;
 
 export type AfterEnterGuard = (to: string) => void;
 
+export type RouteMeta = Record<string, unknown>;
+
 export interface RouteParams {
     [key: string]: string;
 }
@@ -31,12 +33,15 @@ export interface Route {
     beforeEnter?: BeforeEnterGuard;
     /** Hook called after successful navigation */
     afterEnter?: AfterEnterGuard;
+    /** Optional metadata object */
+    meta?: RouteMeta;
 }
 
 export interface RouteMatch {
     route: Route;
     chain: Route[];
     params: RouteParams;
+    meta: RouteMeta;
 }
 
 /**
@@ -110,7 +115,12 @@ function matchNested(
             for (let i = 0; i < paramNames.length; i++) {
                 params[paramNames[i]] = match[i + 1] ?? '';
             }
-            return { route, chain: [...chain, route], params };
+            return {
+                route,
+                chain: [...chain, route],
+                params,
+                meta: route.meta ?? {},
+            };
         }
 
         if (route.children?.length) {
