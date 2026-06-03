@@ -241,7 +241,12 @@ export abstract class Widget {
         if (width < 2 || height < 2) return;
 
         if (hasBorder) {
-            const chars = getBorderChars(border);
+            const chars = getBorderChars(
+                border,
+                undefined,
+                this._style.asciiOnly ?? false
+            );
+
             if (!chars) return;
 
             const attrs = styleToCellAttrs(this._style);

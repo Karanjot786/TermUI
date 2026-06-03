@@ -216,6 +216,7 @@ function extractStyle(props: Record<string, any>): Partial<Style> {
     if (props.padding != null) style.padding = props.padding;
     if (props.margin != null) style.margin = props.margin;
     if (props.border != null) style.border = props.border;
+    if (props.asciiOnly != null) style.asciiOnly = props.asciiOnly;
     if (props.borderColor != null) style.borderColor = parseColorProp(props.borderColor);
     if (props.gap != null) style.gap = props.gap;
     return style;
