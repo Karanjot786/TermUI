@@ -99,6 +99,8 @@ export function setTitle(title: string): string {
 
 /** OSC 8 open: ESC ] 8 ; ; <url> ST. */
 export function hyperlinkOpen(url: string): string {
+    // Block non-http/https/file schemes (e.g. javascript:, data:).
+    if (!/^(https?|file):\/\//i.test(url)) return '';
     // Strip C0/C1 controls and ESC to prevent terminal escape injection.
     const safeUrl = url.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
     return `\x1b]8;;${safeUrl}\x1b\\`;
