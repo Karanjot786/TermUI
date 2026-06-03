@@ -7,3 +7,5 @@ export { DevTools } from './devtools.js';
 export type { WidgetNode, PerfMetrics } from './devtools.js';
 export { ErrorOverlay, parseErrorStack } from './error-overlay.js';
 export type { ParsedError } from './error-overlay.js';
+export { Hexdump } from './data/Hexdump.js';
+export type { HexdumpOptions } from './data/Hexdump.js';
