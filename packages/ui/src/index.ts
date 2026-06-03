@@ -117,6 +117,10 @@ export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
 
+export { SegmentedControl } from './SegmentedControl.js';
+export type { SegmentedControlOptions } from './SegmentedControl.js';
+
+
 export { SearchableSelect } from './SearchableSelect.js';
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
@@ -128,8 +132,7 @@ export type {
     CheckboxGroupOption,
     CheckboxGroupOptions,
 } from './CheckboxGroup.js';
-export { SegmentedControl } from './SegmentedControl.js';
-export type { SegmentedControlOptions } from './SegmentedControl.js';
+
 
 export { ButtonGroup } from './ButtonGroup.js';
 export type { ButtonGroupOptions, ButtonGroupItem } from './ButtonGroup.js';
@@ -141,3 +144,4 @@ export type { MultilineTextInputOptions } from './MultilineTextInput.js';
 
 export { Stepper } from './Stepper.js';
 export type { StepperOptions } from './Stepper.js';
+
