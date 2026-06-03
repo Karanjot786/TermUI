@@ -3,7 +3,20 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
+import { Screen } from '@termuijs/core';
 import { ThemeSwitcher } from './ThemeSwitcher.js';
+
+function rowText(screen: Screen, row: number): string {
+    return screen.back[row].map(c => c.char ?? ' ').join('').trim();
+}
+
+function renderSwitcher(ts: ThemeSwitcher): Screen {
+    const themes = ts.themes;
+    const screen = new Screen(20, themes.length + 2);
+    ts.updateRect({ x: 0, y: 0, width: 20, height: themes.length + 2 });
+    ts.render(screen);
+    return screen;
+}
 
 describe('ThemeSwitcher', () => {
     it('initializes with activeTheme="default" and correct selectedIndex', () => {
@@ -47,5 +60,37 @@ describe('ThemeSwitcher', () => {
         ts.confirm();
         expect(onChange).toHaveBeenCalledWith(ts.themes[1]);
         expect(ts.activeTheme).toBe(ts.themes[1]);
+    });
+
+    it('syncs activeTheme to first theme when provided activeTheme is not in list', () => {
+        const ts = new ThemeSwitcher({ themes: ['light', 'dark'], activeTheme: 'invalid' });
+        expect(ts.selectedIndex).toBe(0);
+        expect(ts.activeTheme).toBe('light');
+    });
+
+    it('renders theme names in output', () => {
+        const ts = new ThemeSwitcher({ themes: ['light', 'dark'] });
+        const screen = renderSwitcher(ts);
+        const row0 = rowText(screen, 1);
+        const row1 = rowText(screen, 2);
+        expect(row0).toContain('Light');
+        expect(row1).toContain('Dark');
+    });
+
+    it('renders selection marker on the selected row', () => {
+        const ts = new ThemeSwitcher({ themes: ['light', 'dark'] });
+        ts.selectNext();
+        const screen = renderSwitcher(ts);
+        const row1 = rowText(screen, 2);
+        expect(row1).toMatch(/[>▸]/);
+    });
+
+    it('renders active marker after confirm', () => {
+        const ts = new ThemeSwitcher({ themes: ['light', 'dark'] });
+        ts.selectNext();
+        ts.confirm();
+        const screen = renderSwitcher(ts);
+        const row1 = rowText(screen, 2);
+        expect(row1).toMatch(/[*●]/);
     });
 });
