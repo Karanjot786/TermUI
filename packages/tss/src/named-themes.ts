@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// Named ThemeTokens — 7 curated color schemes
+// Named ThemeTokens — 9 curated color schemes
 // ─────────────────────────────────────────────────────
 
 import type { ThemeTokens } from './tokens.js';
@@ -96,14 +96,42 @@ export const oneDarkTheme: ThemeTokens = {
   highlight: '#2c313a',
 };
 
+export const gruvboxTheme: ThemeTokens = {
+  bg: '#282828',
+  fg: '#ebdbb2',
+  primary: '#458588',
+  secondary: '#b16286',
+  success: '#98971a',
+  warning: '#d79921',
+  error: '#cc241d',
+  muted: '#928374',
+  border: '#504945',
+  highlight: '#3c3836',
+};
+
+export const highContrastTheme: ThemeTokens = {
+  bg: '#000000',
+  fg: '#ffffff',
+  primary: '#00ffff',
+  secondary: '#ff00ff',
+  success: '#00ff00',
+  warning: '#ffff00',
+  error: '#ff5555',
+  muted: '#b3b3b3',
+  border: '#ffffff',
+  highlight: '#1a1a1a',
+};
+
 export const NAMED_THEMES: Record<string, ThemeTokens> = {
   dracula: draculaTheme,
   nord: nordTheme,
   catppuccin: catppuccinTheme,
   monokai: monokaiTheme,
   solarized: solarizedTheme,
-  tokyoNight: tokyoNightTheme,
+  "tokyo-night": tokyoNightTheme,
   oneDark: oneDarkTheme,
+  gruvbox: gruvboxTheme,
+  highContrast: highContrastTheme,
 };
 
 /** Get a named theme by string key, falling back to defaultDark if not found. */

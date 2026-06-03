@@ -10,8 +10,10 @@
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import type { Subprocess } from 'bun';
+import { App } from '@termuijs/core';
 import { FileWatcher, type FileChange } from './watcher.js';
 import { DevTools } from './devtools.js';
+import { ErrorOverlay } from './error-overlay.js';
 
 export interface DevServerOptions {
     /** Project root directory */
@@ -30,7 +32,7 @@ export interface DevServerOptions {
     debounce?: number;
 }
 
-type ChildSubprocess = Subprocess<'pipe', 'inherit', 'inherit'>;
+type ChildSubprocess = Subprocess<'pipe', 'inherit', 'pipe'>;
 
 export class DevServer {
     private _watcher: FileWatcher;
@@ -46,6 +48,7 @@ export class DevServer {
     private _bunFlags: string[];
     private _debounce: number;
     private _reloadTimer: ReturnType<typeof setTimeout> | null = null;
+    private _errorApp: App | null = null;
 
     constructor(options: DevServerOptions) {
         this._rootDir = resolve(options.rootDir);
@@ -112,6 +115,7 @@ export class DevServer {
     /** Stop the dev server — kills child process and stops watching */
     stop(): void {
         this._running = false;
+        this._hideErrorOverlay();
         this._killChild();
         this._watcher.stop();
         if (this._reloadTimer) {
@@ -130,13 +134,16 @@ export class DevServer {
     private _spawnChild(): void {
         if (!this._entryFile) return;
 
+        // Ensure any active error overlay is cleaned up before spawning the new child process
+        this._hideErrorOverlay();
+
         try {
             const child = Bun.spawn({
                 cmd: ['bun', ...this._bunFlags, this._entryFile],
                 cwd: this._rootDir,
                 stdin: 'pipe',
                 stdout: 'inherit',
-                stderr: 'inherit',
+                stderr: 'pipe',
                 ipc: (msg: unknown) => {
                     const m = msg as { type?: string; event?: string; data?: unknown };
                     if (m?.type === 'devtools' && m.event) {
@@ -150,9 +157,27 @@ export class DevServer {
                     TERMUI_DEV: '1',
                     NODE_ENV: 'development',
                 },
+            // Assert type to specify that stdin and stderr are piped for handling DevTools & crash overlays
             }) as ChildSubprocess;
 
             this._child = child;
+
+            let stderrBuffer = '';
+            (async () => {
+                try {
+                    const reader = child.stderr.getReader();
+                    const decoder = new TextDecoder();
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        const chunk = decoder.decode(value);
+                        stderrBuffer += chunk;
+                        process.stderr.write(chunk);
+                    }
+                } catch {
+                    // Ignored
+                }
+            })();
 
             // Track exit asynchronously via the exited promise.
             // child.exited resolves with the exit code; it does not reject.
@@ -164,6 +189,10 @@ export class DevServer {
                     const time = new Date().toLocaleTimeString();
                     console.log(`  ❌ [${time}] Process exited (code: ${exitCode}, signal: ${signal})`);
                     this._devtools.logEvent('crash', `exit code ${exitCode}`);
+
+                    if (exitCode !== 0 && stderrBuffer.trim().length > 0) {
+                        this._showErrorOverlay(stderrBuffer);
+                    }
                 }
                 this._child = null;
             });
@@ -212,6 +241,9 @@ export class DevServer {
     private _handleChange(change: FileChange): void {
         const time = new Date().toLocaleTimeString();
         const icon = change.type === 'tss' ? '🎨' : change.type === 'config' ? '⚙️' : '📝';
+        
+        this._hideErrorOverlay();
+        
         console.log(`  ${icon} [${time}] ${change.filename} changed — reloading...`);
 
         this._devtools.logEvent('reload', `${change.type}: ${change.filename}`);
@@ -248,6 +280,29 @@ export class DevServer {
                 }
             }, 100);
         }, this._debounce);
+    }
+
+    private _showErrorOverlay(rawStderr: string): void {
+        this._hideErrorOverlay();
+        const overlay = new ErrorOverlay(rawStderr);
+        this._errorApp = new App(overlay, {
+            fullscreen: true,
+            title: 'TermUI Dev Server - Error',
+            fps: 10,
+            skipFallback: true,
+        });
+        this._errorApp.mount().catch(() => {});
+    }
+
+    private _hideErrorOverlay(): void {
+        if (this._errorApp) {
+            try {
+                this._errorApp.unmount();
+            } catch {
+                // Ignore
+            }
+            this._errorApp = null;
+        }
     }
 }
 
