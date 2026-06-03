@@ -6,7 +6,11 @@ import {
   runEffects,
   destroyFiber,
 } from '../hooks.js';
+<<<<<<< HEAD
 import { useUnmount } from './useUnmount';
+=======
+import { useUnmount } from './useUnmount.js';
+>>>>>>> 0d8c8af (feat(jsx): add useUnmount and useUpdateEffect hooks)
 
 describe('useUnmount', () => {
   let fiber = createFiber();
@@ -20,6 +24,7 @@ describe('useUnmount', () => {
     clearCurrentFiber();
   });
 
+<<<<<<< HEAD
   it('does not invoke callback during normal render', () => {
     const fn = vi.fn();
     useUnmount(fn);
@@ -59,5 +64,39 @@ describe('useUnmount', () => {
     useUnmount(fn);
     runEffects(fiber);
     expect(fn).not.toHaveBeenCalled();
+=======
+  it('should not call the callback on mount/first render', () => {
+    const callback = vi.fn();
+    useUnmount(callback);
+    runEffects(fiber);
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('should not call the callback on subsequent renders', () => {
+    const callback = vi.fn();
+    useUnmount(callback);
+    runEffects(fiber);
+
+    // Re-render
+    fiber.hookIndex = 0;
+    useUnmount(callback);
+    runEffects(fiber);
+
+    expect(callback).not.toHaveBeenCalled();
+  });
+
+  it('should call the callback exactly once when component unmounts (destroyFiber is called)', () => {
+    const callback = vi.fn();
+    useUnmount(callback);
+    runEffects(fiber);
+
+    expect(callback).not.toHaveBeenCalled();
+
+    // Destroy fiber (unmount component)
+    destroyFiber(fiber);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+>>>>>>> 0d8c8af (feat(jsx): add useUnmount and useUpdateEffect hooks)
   });
 });
