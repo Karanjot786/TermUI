@@ -15,3 +15,14 @@ export type {
   ReleasesListParams,
   Release,
 } from './github/index.js'
+
+export { zodValidator } from './zod/index.js'
+export type { PromptValidator } from './zod/index.js'
+
+export { useAI } from './ai/index.js'
+export type {
+  AIAdapter,
+  AIMessage,
+  AIOptions,
+  AIProvider,
+} from './ai/index.js'

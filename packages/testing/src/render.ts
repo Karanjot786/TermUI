@@ -45,6 +45,18 @@ export interface TestInstance {
     getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[];
 
     /**
+     * Find the first widget whose text content includes the given string.
+     * Returns null instead of throwing when nothing matches.
+     */
+    queryByText(text: string): Widget | null;
+
+    /**
+     * Find the first widget of a specific type (by constructor).
+     * Returns null instead of throwing when nothing matches.
+     */
+    queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null;
+
+    /**
      * Simulate a key press event. This dispatches to useInput handlers.
      */
     fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void;
@@ -85,6 +97,16 @@ export interface TestRenderOptions {
     width?: number;
     /** Terminal height in rows (default: 24) */
     height?: number;
+}
+
+/**
+ * A scoped render helper for tests that share default render options.
+ */
+export interface Fixture {
+    /** Render a tree with the fixture defaults; tracked for auto-unmount. */
+    render(element: VNode, options?: TestRenderOptions): TestInstance;
+    /** Unmount every instance this fixture created. Call in afterEach. */
+    cleanup(): void;
 }
 
 // ── Helpers ──
@@ -269,6 +291,21 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
             return walkWidgets(container, (w) => w instanceof type) as T[];
         },
 
+        queryByText(text: string): Widget | null {
+            const matches = walkWidgets(container, (w) => {
+                if (w instanceof Text) {
+                    return getTextContent(w).includes(text);
+                }
+                return false;
+            });
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null {
+            const matches = walkWidgets(container, (w) => w instanceof type) as T[];
+            return matches.length > 0 ? matches[0] : null;
+        },
+
         fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
             const event: KeyEvent = {
                 key,
@@ -365,4 +402,27 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
     };
 
     return instance;
+}
+
+/**
+ * Create a render fixture with default options merged into every render().
+ * Tracks each TestInstance so cleanup() unmounts them all.
+ */
+export function createFixture(defaults: TestRenderOptions = {}): Fixture {
+    const instances: TestInstance[] = [];
+
+    return {
+        render(element: VNode, options: TestRenderOptions = {}): TestInstance {
+            const instance = render(element, { ...defaults, ...options });
+            instances.push(instance);
+            return instance;
+        },
+
+        cleanup(): void {
+            for (const instance of instances) {
+                instance.unmount();
+            }
+            instances.length = 0;
+        },
+    };
 }

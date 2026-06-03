@@ -1,7 +1,7 @@
 /** @jsxImportSource @termuijs/jsx */
 
-import { describe, it, expect } from "vitest"
-import { render } from "./render.js"
+import { describe, it, expect, vi } from "vitest"
+import { createFixture, render } from "./render.js"
 import { Text, Box, Widget } from "@termuijs/widgets"
 import { useInput, useState } from "@termuijs/jsx"
 
@@ -209,6 +209,98 @@ describe("render harness", () => {
       expect(() => {
         server.fireKey("+")
       }).not.toThrow()
+    })
+  })
+
+  describe("createFixture", () => {
+    it("applies default size when rendering without options", () => {
+      const fixture = createFixture({ width: 40, height: 10 })
+
+      const screen = fixture.render(<Hello />)
+
+      expect(screen.screen.cols).toBe(40)
+      expect(screen.screen.rows).toBe(10)
+
+      fixture.cleanup()
+    })
+
+    it("allows per-call options to override defaults", () => {
+      const fixture = createFixture({ width: 40, height: 10 })
+
+      const screen = fixture.render(<Hello />, { width: 20, height: 5 })
+
+      expect(screen.screen.cols).toBe(20)
+      expect(screen.screen.rows).toBe(5)
+
+      fixture.cleanup()
+    })
+
+    it("unmounts every tracked instance during cleanup", () => {
+      const fixture = createFixture()
+      const first = fixture.render(<Label text="First" />)
+      const second = fixture.render(<Label text="Second" />)
+      const firstUnmount = vi.spyOn(first, "unmount")
+      const secondUnmount = vi.spyOn(second, "unmount")
+
+      fixture.cleanup()
+
+      expect(firstUnmount).toHaveBeenCalledOnce()
+      expect(secondUnmount).toHaveBeenCalledOnce()
+    })
+
+    it("allows cleanup before any renders", () => {
+      const fixture = createFixture()
+
+      expect(() => {
+        fixture.cleanup()
+      }).not.toThrow()
+    })
+  })
+
+  describe("queryByText", () => {
+    it("returns null on a miss", () => {
+      const screen = render(<Hello />)
+
+      expect(screen.queryByText("Missing")).toBeNull()
+    })
+
+    it("returns the widget on a hit", () => {
+      const screen = render(<Hello />)
+
+      const result = screen.queryByText("Hello")
+
+      expect(result).not.toBeNull()
+    })
+
+    it("does not throw on a miss", () => {
+      const screen = render(<Hello />)
+
+      expect(() => screen.queryByText("NotHere")).not.toThrow()
+    })
+  })
+
+  describe("queryByType", () => {
+    it("returns the first instance of a type", () => {
+      const screen = render(<MultiText />)
+
+      const result = screen.queryByType(Text)
+
+      expect(result).not.toBeNull()
+      expect(result instanceof Text).toBe(true)
+    })
+
+    it("returns null when no instance exists", () => {
+      const screen = render(<MultiText />)
+
+      const result = screen.queryByType(FakeWidget)
+
+      expect(result).toBeNull()
+    })
+
+    it("does not throw when no instance exists", () => {
+      const screen = render(<MultiText />)
+
+      expect(() => screen.queryByType(FakeWidget)).not.toThrow()
     })
   })
 })

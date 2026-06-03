@@ -15,3 +15,24 @@ export const caps = {
     return 'dark';
   },
 } as const;
+
+/**
+ * Returns `true` when animation should be suppressed.
+ *
+ * True when `caps.motion` is `false` — i.e. when `NO_MOTION=1` is set
+ * or when running in a CI environment (`CI=1`).
+ *
+ * Animated widgets **must** check this function and render their static
+ * end-state (a single final frame) when it returns `true`, rather than
+ * playing through intermediate animation frames.
+ *
+ * @example
+ * if (prefersReducedMotion()) {
+ *   renderStaticFrame();
+ * } else {
+ *   startAnimation();
+ * }
+ */
+export function prefersReducedMotion(): boolean {
+  return !caps.motion;
+}

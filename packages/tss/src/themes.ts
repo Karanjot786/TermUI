@@ -217,6 +217,33 @@ Table {
 }
 `,
 
+    solarizedLight: `
+@theme solarizedLight {
+    --primary: #268bd2;
+    --secondary: #2aa198;
+    --bg: #fdf6e3;
+    --surface: #eee8d5;
+    --text: #657b83;
+    --text-muted: #93a1a1;
+    --accent: #859900;
+    --error: #dc322f;
+    --warning: #b58900;
+    --success: #859900;
+    --border: single;
+    --border-color: #93a1a1;
+    --border-focus: #268bd2;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
+}
+`,
+
     highContrast: `
 @theme highContrast {
     --primary: #00ffff;
