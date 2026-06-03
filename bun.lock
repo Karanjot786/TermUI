@@ -289,14 +289,20 @@
         "commander": "^15.0.0",
         "conf": "^10.2.0",
         "openai": "^4.0.0",
+<<<<<<< HEAD
         "zod": "^3.0.0",
+=======
+>>>>>>> feac706 (feat(core): add asciiOnly option to getBorderChars layout handler)
       },
       "optionalPeers": [
         "@anthropic-ai/sdk",
         "commander",
         "conf",
         "openai",
+<<<<<<< HEAD
         "zod",
+=======
+>>>>>>> feac706 (feat(core): add asciiOnly option to getBorderChars layout handler)
       ],
     },
     "packages/core": {

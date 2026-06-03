@@ -24,6 +24,20 @@ describe('getBorderChars', () => {
         const chars = getBorderChars('double');
         expect(chars).toMatchObject({ topLeft: '╔', topRight: '╗', bottomLeft: '╚', bottomRight: '╝' });
     });
+
+    it('returns ASCII characters when asciiOnly option is true', () => {
+        const chars = getBorderChars('single', { asciiOnly: true });
+        expect(chars).toEqual({
+            topLeft: '+',
+            top: '-',
+            topRight: '+',
+            right: '|',
+            bottomRight: '+',
+            bottom: '-',
+            bottomLeft: '+',
+            left: '|'
+        });
+    });
 });
 
 describe('borderSize', () => {
