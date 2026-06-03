@@ -31,6 +31,8 @@ export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 export { useCounter } from './hooks/useCounter.js';
 export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
+export { useClipboard } from './hooks/useClipboard.js';
+export type { UseClipboardOptions, UseClipboardResult } from './hooks/useClipboard.js';
 
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
