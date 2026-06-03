@@ -39,6 +39,7 @@ export { useList } from './hooks/useList.js';
 export type { UseListActions } from './hooks/useList.js';
 export { useMap } from './hooks/useMap.js';
 export type { UseMapActions } from './hooks/useMap.js';
+export { useUpdateEffect } from './hooks/useUpdateEffect.js';
 
 export { useDefault } from './hooks/useDefault.js';
 // ── Error Boundary ──
