@@ -75,6 +75,7 @@ export type { UseModalResult } from './hooks/useModal.js';
 // ── Subprocess ──
 export { useSubprocess } from './hooks/useSubprocess.js';
 export type { UseSubprocessResult } from './hooks/useSubprocess.js';
+
 // ── Render ──
 export { render, renderApp } from './render.js';
 export type { RenderOptions } from './render.js';
@@ -96,5 +97,4 @@ export type { ElementSize } from './hooks/useElementSize.js';
 export { useDebounce } from './hooks/useDebounce.js';
 export { useTerminalSize } from './hooks/useTerminalSize.js';
 export type { TerminalSize } from './hooks/useTerminalSize.js';
-export { useForceUpdate } from './hooks/useForceUpdate.js';
-export { useEventCallback } from './hooks/useEventCallback.js';
+export { useIsMounted } from './hooks/useIsMounted.js';

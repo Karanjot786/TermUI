@@ -116,6 +116,8 @@ export { Code } from './display/Code.js';
 export type { CodeOptions } from './display/Code.js';
 export { Badge } from './display/Badge.js';
 export type { BadgeOptions, BadgeVariant } from './display/Badge.js';
+export { Kbd } from './display/Kbd.js';
+export type { KbdOptions } from './display/Kbd.js';
 export { Tag } from './display/Tag.js';
 export type { TagOptions, TagVariant } from './display/Tag.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
@@ -128,6 +130,7 @@ export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
+// ── Missing layout elements restored ──
 export { QRCodePattern, QRCode } from './display/QRCode.js';
 export type { QRCodePatternOptions, QRCodeOptions } from './display/QRCode.js';
 export { Stack } from './layout/Stack.js';
