@@ -32,7 +32,7 @@ function loadOpenAI() {
     const mod = req('openai') as any
     return 'default' in mod ? mod.default : mod
   } catch (error) {
-    if (isModuleNotFound(error)) {
+    if (isModuleNotFound(error, 'openai')) {
       throw new Error(
         'useAI() requires the optional peer dependency `openai`. Install it with: bun add openai'
       )
@@ -48,7 +48,7 @@ function loadAnthropic() {
     const mod = req('@anthropic-ai/sdk') as any
     return 'default' in mod ? mod.default : mod
   } catch (error) {
-    if (isModuleNotFound(error)) {
+    if (isModuleNotFound(error, '@anthropic-ai/sdk')) {
       throw new Error(
         'useAI() requires the optional peer dependency `@anthropic-ai/sdk`. Install it with: bun add @anthropic-ai/sdk'
       )
