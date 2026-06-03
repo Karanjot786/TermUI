@@ -125,7 +125,7 @@ describe('ScrollView', () => {
     it('down scrolls down by 1', () => {
         const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        sv.onKey(key('down'));
+        sv.handleKey(key('down'));
         expect(sv.scrollOffset).toBe(1);
     });
 
@@ -133,14 +133,14 @@ describe('ScrollView', () => {
         const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
         sv.scrollBy(5);
-        sv.onKey(key('up'));
+        sv.handleKey(key('up'));
         expect(sv.scrollOffset).toBe(4);
     });
 
     it('pagedown scrolls down by viewport height - 1', () => {
         const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        sv.onKey(key('pagedown'));
+        sv.handleKey(key('pagedown'));
         expect(sv.scrollOffset).toBe(4);
     });
 
@@ -148,7 +148,7 @@ describe('ScrollView', () => {
         const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
         sv.scrollBy(10);
-        sv.onKey(key('pageup'));
+        sv.handleKey(key('pageup'));
         expect(sv.scrollOffset).toBe(6);
     });
 });
