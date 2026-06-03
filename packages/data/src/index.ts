@@ -29,6 +29,7 @@ export {
     useHttpHealth,
     useWebSocket,
     useFetch,
+    useInfiniteQuery,
 } from './hooks.js';
 export type {
     CpuMetrics,
@@ -40,6 +41,8 @@ export type {
     WebSocketState,
     UseFetchOptions,
     UseFetchResult,
+    InfiniteQueryOptions,
+    UseInfiniteQueryResult,
 } from './hooks.js';
 export { useBattery } from './hooks/useBattery.js';
 export type { BatteryData, UseBatteryResult } from './hooks/useBattery.js';

@@ -11,7 +11,7 @@ export { parse } from './parser.js';
 export type { TSSStylesheet, TSSTheme, TSSSelector, TSSProperty, TSSValue, TSSRule } from './parser.js';
 
 // Theme Engine
-export { ThemeEngine, compile } from './engine.js';
+export { ThemeEngine, compile, compileRules } from './engine.js';
 export type { ThemeVariables, ResolvedRule } from './engine.js';
 
 // Built-in Themes
@@ -25,7 +25,7 @@ export { adaptive, type AdaptiveColor } from './adaptive.js';
 // Named ThemeTokens
 export {
   draculaTheme, nordTheme, catppuccinTheme, monokaiTheme,
-  solarizedTheme, tokyoNightTheme, oneDarkTheme, highContrastTheme,
+  solarizedTheme, solarizedLightTheme, tokyoNightTheme, oneDarkTheme, highContrastTheme,
   NAMED_THEMES, getNamedTheme,
 } from './named-themes.js';
 
