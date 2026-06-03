@@ -25,7 +25,7 @@ export { adaptive, type AdaptiveColor } from './adaptive.js';
 // Named ThemeTokens
 export {
   draculaTheme, nordTheme, catppuccinTheme, monokaiTheme,
-  solarizedTheme, tokyoNightTheme, oneDarkTheme, highContrastTheme,
+  solarizedTheme, solarizedLightTheme, tokyoNightTheme, oneDarkTheme, highContrastTheme,
   NAMED_THEMES, getNamedTheme,
 } from './named-themes.js';
 
