@@ -1,4 +1,3 @@
-/** @jsxImportSource @termuijs/jsx */
 // ─────────────────────────────────────────────────────
 // TermUI Showcase — Main Entry Point
 // ─────────────────────────────────────────────────────
@@ -24,15 +23,13 @@ import { App } from '@termuijs/core';
 import { Box, Text, Widget } from '@termuijs/widgets';
 import type { Screen, KeyEvent } from '@termuijs/core';
 import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
 
 import { DashboardTab } from './tabs/dashboard.js';
 import { ComponentsTab } from './tabs/components.js';
 import { ThemingTab } from './tabs/theming.js';
 import { AnimationsTab } from './tabs/animations.js';
 import { DevToolsTab } from './tabs/devtools.js';
-import { collectInputHandlers, reconcile, setRequestRender } from '@termuijs/jsx';
+import { reconcile } from '@termuijs/jsx';
 import { ShortcutHelpOverlay } from '@termuijs/ui';
 
 // ── Tab names ──
@@ -52,7 +49,7 @@ class ShowcaseApp extends Widget {
     private _themingTab: ThemingTab;
     private _animationsTab: AnimationsTab;
     private _devtoolsTab: DevToolsTab;
-    private _shortcutOverlay?: Widget;
+    private _overlayLayer: Box;
 
     constructor() {
         super({ flexDirection: 'column' });
@@ -117,59 +114,33 @@ class ShowcaseApp extends Widget {
         this.addChild(this._statusBar);
         this.addChild(this._debugBar);
 
-            // Add a reconciled JSX overlay widget so users can press '?' to open help
-            const overlay = reconcile(<ShortcutHelpOverlay shortcuts={[
-                { key: '?', label: 'Show Help' },
-                { key: 'Ctrl+C', label: 'Exit Application' },
-                { key: 'Ctrl+S', label: 'Save Changes' },
-                { key: '/', label: 'Search' },
-            ]} />);
-            this._shortcutOverlay = overlay;
-            this.addChild(overlay);
-    }
+        // Dedicated overlay layer — always rendered on top, unaffected by switchTab()
+        this._overlayLayer = new Box({ flexDirection: 'column' });
+        this.addChild(this._overlayLayer);
 
-    private isShortcutOverlayVisible(): boolean {
-        const overlay = this._shortcutOverlay;
-        if (!overlay) return false;
-        const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
-        const instance = instances?.get(overlay);
-        const fiber = instance?.fiber as any;
-        return fiber?.hooks?.[0]?.value === true;
-    }
-
-    dispatchShortcutOverlayKey(event: KeyEvent): void {
-        const overlay = this._shortcutOverlay;
-        if (!overlay) return;
-        const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
-        const instance = instances?.get(overlay);
-        const fiber = instance?.fiber as any;
-        if (!fiber) return;
-        for (const handler of collectInputHandlers(fiber)) {
-            handler(event);
-        }
+        // Add the reconciled JSX overlay widget so users can press '?' to open help
+        const overlay = reconcile(
+            <ShortcutHelpOverlay
+                shortcuts={[
+                    { key: '?', label: 'Show Help' },
+                    { key: 'Ctrl+C', label: 'Exit Application' },
+                    { key: 'Ctrl+S', label: 'Save Changes' },
+                    { key: '/', label: 'Search' },
+                ]}
+            />,
+        );
+        this._overlayLayer.addChild(overlay);
     }
 
     handleKey(event: KeyEvent): boolean {
         const dbg = (msg: string) => {
-            try {
-                const tmpDir = process.env.TEMP ?? process.env.TMP ?? os.tmpdir();
-                const file = path.join(tmpDir, 'termui-debug.log');
-                fs.appendFileSync(file, msg + '\n');
-            } catch (e) {
-                // ignore file write errors
-            }
+            fs.appendFileSync('/tmp/termui-debug.log', msg + '\n');
             this._debugBar.setContent(`  [DEBUG] ${msg}`);
         };
         dbg(`key="${event.key}" ctrl=${event.ctrl} tab=${this._activeTab}`);
 
         // Quit
-        if (event.key === 'q') {
-            if (this.isShortcutOverlayVisible()) {
-                return true;
-            }
-            return false;
-        }
-        if (event.ctrl && event.key === 'c') return false;
+        if (event.key === 'q' || (event.ctrl && event.key === 'c')) return false;
 
         // Tab switching: 1-5
         const num = parseInt(event.key);
@@ -210,7 +181,7 @@ class ShowcaseApp extends Widget {
     switchTab(index: number): void {
         if (index === this._activeTab || index < 0 || index >= this._tabPanels.length) return;
 
-        // Remove current panel (it's at index 3 in children: title, tabbar, separator, PANEL, statusbar)
+        // Remove current panel
         this.removeChild(this._tabPanels[this._activeTab]);
 
         // Update tab bar highlights
@@ -221,12 +192,18 @@ class ShowcaseApp extends Widget {
 
         this._activeTab = index;
 
+        // Remove overlay layer temporarily to preserve ordering
+        this.removeChild(this._overlayLayer);
+
         // Insert new panel before status bar and debug bar
         this.removeChild(this._statusBar);
         this.removeChild(this._debugBar);
         this.addChild(this._tabPanels[index]);
         this.addChild(this._statusBar);
         this.addChild(this._debugBar);
+
+        // Re-add overlay layer as last child so it stays on top
+        this.addChild(this._overlayLayer);
     }
 
     tick(dt: number): void {
@@ -251,9 +228,7 @@ async function main() {
     });
 
     // Keyboard handler
-    setRequestRender(() => app.requestRender());
     app.events.on('key', (event) => {
-        showcase.dispatchShortcutOverlayKey(event);
         const shouldContinue = showcase.handleKey(event);
         if (!shouldContinue) app.exit(0);
         app.requestRender();
