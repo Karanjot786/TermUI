@@ -84,6 +84,8 @@ export type { ColumnsOptions } from './layout/Columns.js';
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
 export type { ProgressBarOptions } from './feedback/ProgressBar.js';
+export { ProgressCircle } from './feedback/ProgressCircle.js';
+export type { ProgressCircleOptions } from './feedback/ProgressCircle.js';
 export { MultiProgress } from './feedback/MultiProgress.js';
 export type { ProgressItem, MultiProgressOptions } from './feedback/MultiProgress.js';
 export { Spinner, SPINNER_FRAMES } from './feedback/Spinner.js';
