@@ -89,3 +89,4 @@ export type { ElementSize } from './hooks/useElementSize.js';
 export { useDebounce } from './hooks/useDebounce.js';
 export { useTerminalSize } from './hooks/useTerminalSize.js';
 export type { TerminalSize } from './hooks/useTerminalSize.js';
+export { useForceUpdate } from './hooks/useForceUpdate.js';
