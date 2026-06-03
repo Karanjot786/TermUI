@@ -14,7 +14,7 @@ function makeCommands(): Command[] {
     ];
 }
 
-function makePalette(overrides: Partial<Parameters<typeof CommandPalette>[0]> = {}) {
+function makePalette(overrides: Partial<ConstructorParameters<typeof CommandPalette>[0]> = {}) {
     const onClose = vi.fn();
     const commands = makeCommands();
     const palette = new CommandPalette({ commands, onClose, ...overrides });
@@ -41,15 +41,15 @@ describe('CommandPalette', () => {
             expect(palette.getQuery()).toBe('');
             // _filtered is private; test via ArrowDown reaching end
             // Move down 10 times — should clamp at last item (index 3 → maxVisible capped)
-            for (let i = 0; i < 10; i++) palette.handleKey('ArrowDown');
+            for (let i = 0; i < 10; i++) palette.handleKey('down');
             // maxVisible defaults to 8, but only 4 items — so max index is 3
             // We verify by pressing Enter and checking the last command
             const action = (makeCommands()[3].action) as ReturnType<typeof vi.fn>;
             // Rebuild with fresh mocks so we can observe
             const cmds = makeCommands();
             const p2 = new CommandPalette({ commands: cmds });
-            for (let i = 0; i < 10; i++) p2.handleKey('ArrowDown');
-            p2.handleKey('Enter');
+            for (let i = 0; i < 10; i++) p2.handleKey('down');
+            p2.handleKey('enter');
             expect(cmds[3].action).toHaveBeenCalledTimes(1);
         });
 
@@ -62,8 +62,8 @@ describe('CommandPalette', () => {
             expect(palette.getQuery()).toBe('open');
 
             // Only matching commands reachable: ArrowDown once → index 1 (Open Terminal)
-            palette.handleKey('ArrowDown');
-            palette.handleKey('Enter');
+            palette.handleKey('down');
+            palette.handleKey('enter');
             // 'Open File' is index 0, 'Open Terminal' is index 1 after filter
             expect(cmds[3].action).toHaveBeenCalledTimes(1); // Open Terminal
         });
@@ -74,7 +74,7 @@ describe('CommandPalette', () => {
 
             // 'save-file' id contains 'save'
             'save'.split('').forEach((ch) => palette.handleKey(ch));
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             expect(cmds[1].action).toHaveBeenCalledTimes(1);
         });
 
@@ -83,7 +83,7 @@ describe('CommandPalette', () => {
             const palette = new CommandPalette({ commands: cmds });
 
             'zzzzz'.split('').forEach((ch) => palette.handleKey(ch));
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             cmds.forEach((cmd) => expect(cmd.action).not.toHaveBeenCalled());
         });
     });
@@ -93,9 +93,9 @@ describe('CommandPalette', () => {
             const cmds = makeCommands();
             const palette = new CommandPalette({ commands: cmds });
 
-            palette.handleKey('ArrowDown');
+            palette.handleKey('down');
             // Selected index is now 1 — verify by Enter calling second command
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             expect(cmds[1].action).toHaveBeenCalledTimes(1);
         });
 
@@ -104,7 +104,7 @@ describe('CommandPalette', () => {
             const palette = new CommandPalette({ commands: cmds });
 
             palette.handleKey('j');
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             expect(cmds[1].action).toHaveBeenCalledTimes(1);
         });
 
@@ -112,11 +112,11 @@ describe('CommandPalette', () => {
             const cmds = makeCommands();
             const palette = new CommandPalette({ commands: cmds });
 
-            palette.handleKey('ArrowDown');
-            palette.handleKey('ArrowDown');
-            palette.handleKey('ArrowUp');
+            palette.handleKey('down');
+            palette.handleKey('down');
+            palette.handleKey('up');
             // Selection should be at index 1
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             expect(cmds[1].action).toHaveBeenCalledTimes(1);
         });
 
@@ -124,10 +124,10 @@ describe('CommandPalette', () => {
             const cmds = makeCommands();
             const palette = new CommandPalette({ commands: cmds });
 
-            palette.handleKey('ArrowDown');
-            palette.handleKey('ArrowDown');
+            palette.handleKey('down');
+            palette.handleKey('down');
             palette.handleKey('k');
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             expect(cmds[1].action).toHaveBeenCalledTimes(1);
         });
 
@@ -135,9 +135,9 @@ describe('CommandPalette', () => {
             const cmds = makeCommands();
             const palette = new CommandPalette({ commands: cmds });
 
-            palette.handleKey('ArrowUp');
-            palette.handleKey('ArrowUp');
-            palette.handleKey('Enter');
+            palette.handleKey('up');
+            palette.handleKey('up');
+            palette.handleKey('enter');
             // Should still be index 0
             expect(cmds[0].action).toHaveBeenCalledTimes(1);
         });
@@ -146,8 +146,8 @@ describe('CommandPalette', () => {
             const cmds = makeCommands(); // 4 commands
             const palette = new CommandPalette({ commands: cmds, maxVisible: 8 });
 
-            for (let i = 0; i < 20; i++) palette.handleKey('ArrowDown');
-            palette.handleKey('Enter');
+            for (let i = 0; i < 20; i++) palette.handleKey('down');
+            palette.handleKey('enter');
             // Last item is index 3
             expect(cmds[3].action).toHaveBeenCalledTimes(1);
         });
@@ -156,8 +156,8 @@ describe('CommandPalette', () => {
             const cmds = makeCommands(); // 4 commands
             const palette = new CommandPalette({ commands: cmds, maxVisible: 2 });
 
-            for (let i = 0; i < 20; i++) palette.handleKey('ArrowDown');
-            palette.handleKey('Enter');
+            for (let i = 0; i < 20; i++) palette.handleKey('down');
+            palette.handleKey('enter');
             // maxVisible=2 → max index is 1
             expect(cmds[1].action).toHaveBeenCalledTimes(1);
         });
@@ -168,20 +168,20 @@ describe('CommandPalette', () => {
             const cmds = makeCommands();
             const palette = new CommandPalette({ commands: cmds });
 
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             expect(cmds[0].action).toHaveBeenCalledTimes(1);
         });
 
         it('Escape calls onClose', () => {
             const { palette, onClose } = makePalette();
-            palette.handleKey('Escape');
+            palette.handleKey('escape');
             expect(onClose).toHaveBeenCalledTimes(1);
         });
 
         it('Escape does not crash when onClose is not provided', () => {
             const cmds = makeCommands();
             const palette = new CommandPalette({ commands: cmds });
-            expect(() => palette.handleKey('Escape')).not.toThrow();
+            expect(() => palette.handleKey('escape')).not.toThrow();
         });
     });
 
@@ -196,13 +196,13 @@ describe('CommandPalette', () => {
         it('Backspace removes last query character', () => {
             const { palette } = makePalette();
             'abc'.split('').forEach((ch) => palette.handleKey(ch));
-            palette.handleKey('Backspace');
+            palette.handleKey('backspace');
             expect(palette.getQuery()).toBe('ab');
         });
 
         it('Backspace on empty query is a no-op', () => {
             const { palette } = makePalette();
-            palette.handleKey('Backspace');
+            palette.handleKey('backspace');
             expect(palette.getQuery()).toBe('');
         });
     });
@@ -211,7 +211,7 @@ describe('CommandPalette', () => {
         it('resets query and selection', () => {
             const { palette } = makePalette();
             'save'.split('').forEach((ch) => palette.handleKey(ch));
-            palette.handleKey('ArrowDown');
+            palette.handleKey('down');
             palette.open();
             expect(palette.getQuery()).toBe('');
         });
@@ -225,8 +225,8 @@ describe('CommandPalette', () => {
             // Open resets filter
             palette.open();
             // Now all 4 commands are visible; navigate to last
-            for (let i = 0; i < 10; i++) palette.handleKey('ArrowDown');
-            palette.handleKey('Enter');
+            for (let i = 0; i < 10; i++) palette.handleKey('down');
+            palette.handleKey('enter');
             expect(cmds[3].action).toHaveBeenCalledTimes(1);
         });
 
@@ -245,7 +245,7 @@ describe('CommandPalette', () => {
                 { id: 'quit', label: 'Quit', action: vi.fn() },
             ];
             palette.setCommands(newCmds);
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             expect(newCmds[0].action).toHaveBeenCalledTimes(1);
         });
 
@@ -264,7 +264,7 @@ describe('CommandPalette', () => {
             palette.setCommands(newCmds);
 
             // Only 'Quit Application' matches 'quit'
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             expect(newCmds[0].action).toHaveBeenCalledTimes(1);
             expect(newCmds[1].action).not.toHaveBeenCalled();
         });
@@ -279,14 +279,14 @@ describe('CommandPalette', () => {
         it('clamps selectedIndex when new list is shorter', () => {
             const cmds = makeCommands(); // 4 items
             const palette = new CommandPalette({ commands: cmds });
-            palette.handleKey('ArrowDown');
-            palette.handleKey('ArrowDown'); // index 2
+            palette.handleKey('down');
+            palette.handleKey('down'); // index 2
 
             const shortList: Command[] = [
                 { id: 'a', label: 'Alpha', action: vi.fn() },
             ];
             palette.setCommands(shortList);
-            palette.handleKey('Enter');
+            palette.handleKey('enter');
             expect(shortList[0].action).toHaveBeenCalledTimes(1);
         });
     });

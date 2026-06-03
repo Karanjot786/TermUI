@@ -8,6 +8,10 @@ import { Screen, type KeyEvent } from '@termuijs/core';
 
 const key = (k: string): KeyEvent => ({
     key: k,
+    raw: Buffer.alloc(0),
+    ctrl: false,
+    alt: false,
+    shift: false,
     stopPropagation: () => {},
     preventDefault: () => {},
 });
@@ -93,7 +97,7 @@ describe('ScrollView', () => {
     });
 
     it('renders scrollbar when content exceeds viewport', () => {
-        const sv = new ScrollView({ width: 12, height: 5, border: true }, { contentHeight: 20 });
+        const sv = new ScrollView({ width: 12, height: 5, border: 'single' }, { contentHeight: 20 });
         const screen = new Screen(12, 5);
         sv.updateRect({ x: 0, y: 0, width: 12, height: 5 });
         sv.render(screen);
