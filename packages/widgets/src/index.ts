@@ -154,3 +154,7 @@ export type { RadarChartOptions, RadarSeries } from './data/RadarChart.js';
 
 export { CandlestickChart } from './data/CandlestickChart.js';
 export type { CandlestickChartOptions, Candle } from './data/CandlestickChart.js';
+export { Timer } from './display/Timer.js';
+export type { TimerOptions } from './display/Timer.js';
+export { Stopwatch } from './display/Stopwatch.js';
+export type { StopwatchOptions } from './display/Stopwatch.js';
