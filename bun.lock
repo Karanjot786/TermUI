@@ -562,6 +562,9 @@
 
     "@termuijs/example-auth-flow": ["@termuijs/example-auth-flow@workspace:examples/auth-flow"],
 
+    "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
+
+    "@termuijs/example-dashboard": ["@termuijs/example-dashboard@workspace:examples/dashboard"],
     "@termuijs/example-calculator": ["@termuijs/example-calculator@workspace:examples/calculator"],
 
     "@termuijs/example-chat-app": ["@termuijs/example-chat-app@workspace:examples/chat-app"],
@@ -577,6 +580,8 @@
     "@termuijs/example-git-client": ["@termuijs/example-git-client@workspace:examples/git-client"],
 
     "@termuijs/example-jsx-dashboard": ["@termuijs/example-jsx-dashboard@workspace:examples/jsx-dashboard"],
+
+    "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
 
     "@termuijs/example-kanban": ["@termuijs/example-kanban@workspace:examples/kanban-board"],
 

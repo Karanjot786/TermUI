@@ -78,12 +78,18 @@ export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { Card } from './layout/Card.js';
 export type { CardOptions } from './layout/Card.js';
+export { Masonry } from './layout/Masonry.js';
+export type { MasonryOptions } from './layout/Masonry.js';
 export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
+export { SplitPane } from './layout/SplitPane.js';
+export type { SplitPaneOptions } from './layout/SplitPane.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
 export type { ProgressBarOptions } from './feedback/ProgressBar.js';
+export { ProgressCircle } from './feedback/ProgressCircle.js';
+export type { ProgressCircleOptions } from './feedback/ProgressCircle.js';
 export { MultiProgress } from './feedback/MultiProgress.js';
 export type { ProgressItem, MultiProgressOptions } from './feedback/MultiProgress.js';
 export { Spinner, SPINNER_FRAMES } from './feedback/Spinner.js';
@@ -132,6 +138,8 @@ export { DirectoryTree } from './display/DirectoryTree.js';
 export type { DirectoryTreeOptions } from './display/DirectoryTree.js';
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
+
+export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
