@@ -86,6 +86,10 @@ export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
 export { useHover } from './hooks/useHover.js';
 export { useElementSize } from './hooks/useElementSize.js';
 export type { ElementSize } from './hooks/useElementSize.js';
+<<<<<<< HEAD
 export { useDebounce } from './hooks/useDebounce.js';
 export { useTerminalSize } from './hooks/useTerminalSize.js';
 export type { TerminalSize } from './hooks/useTerminalSize.js';
+=======
+export { useForceUpdate } from './hooks/useForceUpdate.js';
+>>>>>>> 3b1178b (feat(jsx): export useForceUpdate from index)
