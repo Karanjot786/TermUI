@@ -5,7 +5,7 @@ A short inline label with a colored background, used for displaying status indic
 ## Usage
 
 ```typescript
-import { Badge } from './components/badge';
+import { Badge } from './index';
 
 // Create a badge with default variant
 const badge = new Badge('online');

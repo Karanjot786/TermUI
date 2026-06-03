@@ -1,35 +1,25 @@
 # Progress Component
 
-A horizontal progress indicator that displays completion status with customizable fill characters and optional labels.
+Displays progress information in a terminal-friendly progress bar.
 
 ## Usage
 
 ```typescript
-import { Progress } from './components/progress';
+import { Progress } from './index';
 
-// Create a progress bar at 50%
-const progress = new Progress({
-  value: 0.5
-});
+// Create a progress bar
+const progress = new Progress();
 
-// Create with custom fill character and label
-const customProgress = new Progress({
-  value: 0.75,
-  fillChar: '▓',
-  emptyChar: '░',
-  showLabel: true,
-  labelFormat: 'percent'
-});
+// Update progress value
+progress.setValue(0.5);
 ```
 
 ## Features
 
-- Smooth value animation ready
-- Customizable fill and empty characters
-- Percentage or fraction label display
-- Configurable fill color
-- Unicode and ASCII fallback support
-- Range: 0.0 (empty) to 1.0 (full)
+* Terminal-friendly progress display
+* Configurable progress values
+* Supports incremental progress updates
+* Works with Unicode-capable terminals
 
 ## API
 
@@ -41,30 +31,16 @@ constructor(style?: Partial<Style>, options?: ProgressBarOptions)
 
 ### Methods
 
-- `setValue(value: number): void` — Set progress (0–1)
-- `getValue(): number` — Get current progress value
-- `setFillChar(char: string): void` — Update fill character
-- `setEmptyChar(char: string): void` — Update empty character
-- `setShowLabel(show: boolean): void` — Toggle label display
-- `setLabelFormat(format: 'percent' | 'fraction'): void` — Change label format
+* `setValue(value: number): void` — Update the current progress value
+* `getValue(): number` — Get the current progress value
 
 ## Example
 
 ```typescript
-const container = new Box({ height: 5, width: 50 });
+const progress = new Progress();
 
-const progress = new Progress({ value: 0.3 });
-container.addChild(progress);
-
-// Simulate progress
-let value = 0.3;
-setInterval(() => {
-  value = Math.min(1, value + 0.1);
-  progress.setValue(value);
-}, 500);
+progress.setValue(0.25);
+progress.setValue(0.5);
+progress.setValue(0.75);
+progress.setValue(1);
 ```
-
-## Label Formats
-
-- **percent** — Shows "75%" style label
-- **fraction** — Shows "75/100" style label

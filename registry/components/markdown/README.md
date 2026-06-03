@@ -1,42 +1,35 @@
 # Markdown Component
 
-Renders a subset of Markdown syntax in the terminal with support for formatting and layout.
+Renders markdown content in the terminal using a lightweight text-based renderer.
 
 ## Usage
 
 ```typescript
-import { Markdown } from './components/markdown';
+import { Markdown } from './index';
 
 // Create a markdown renderer
 const markdown = new Markdown({
-  content: `# Heading
-This is **bold** and _italic_ text.
+  content: `# Welcome
 
-- List item 1
-- List item 2
-
-\`\`\`typescript
-const code = "example";
-\`\`\``
+This is markdown content rendered in the terminal.
+`
 });
 ```
 
-## Supported Syntax
+## Supported Content
 
-- **Headings** — `# Heading 1`, `## Heading 2`, etc.
-- **Bold** — `**text**`
-- **Italic** — `_text_`
-- **Inline code** — `` `code` ``
-- **Unordered lists** — `- item`
-- **Ordered lists** — `1. item`
-- **Code blocks** — `` ```lang ... ``` ``
+The current implementation supports a limited subset of markdown rendering focused on terminal display.
+
+* Headings
+* Paragraph text
+* Line breaks
+* Basic content rendering
 
 ## Features
 
-- Word wrapping to container width
-- Syntax highlighting for code blocks
-- Proper indentation for list items
-- Terminal-safe formatting
+* Word wrapping to container width
+* Terminal-safe text rendering
+* Lightweight markdown display
 
 ## API
 
@@ -48,16 +41,23 @@ constructor(opts: MarkdownOptions, style?: Partial<Style>)
 
 ### Methods
 
-- `setContent(content: string): void` — Update the markdown content
-- `getContent(): string` — Get the current content
+* `setContent(content: string): void` — Update the markdown content
+* `getContent(): string` — Get the current markdown content
 
 ## Example
 
 ```typescript
-const container = new Box({ height: 20, width: 60 });
-const md = new Markdown({
-  content: `## Welcome
-This is a **terminal markdown** renderer.`
+const container = new Box({
+  height: 20,
+  width: 60
 });
-container.addChild(md);
+
+const markdown = new Markdown({
+  content: `# Welcome
+
+This content is rendered inside the terminal.
+`
+});
+
+container.addChild(markdown);
 ```
