@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { ChordMatcher } from './ChordMatcher.js';
 import { createKeyEvent } from '../events/types.js';
 
@@ -14,6 +14,9 @@ function pressKey(key: string, modifiers: { ctrl?: boolean; alt?: boolean; shift
 }
 
 describe('ChordMatcher', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
   it('g g fires the handler', () => {
     const matcher = new ChordMatcher();
     const handler = vi.fn();
@@ -73,8 +76,6 @@ describe('ChordMatcher', () => {
     // Feed another g
     matcher.feed(pressKey('g'));
     expect(handler).toHaveBeenCalledTimes(1);
-
-    vi.useRealTimers();
   });
 
   it('ctrl+k s matches a modified chord', () => {
