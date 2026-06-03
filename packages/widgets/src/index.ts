@@ -58,6 +58,8 @@ export { TreeTable } from './data/TreeTable.js';
 export type { TreeTableColumn, TreeTableRow, TreeTableOptions } from './data/TreeTable.js';
 export { Gauge } from './data/Gauge.js';
 export type { GaugeOptions } from './data/Gauge.js';
+export { LineGauge } from './data/LineGauge.js';
+export type { LineGaugeOptions } from './data/LineGauge.js';
 export { Calendar } from './data/Calendar.js';
 export type { CalendarOptions } from './data/Calendar.js';
 export { Sparkline } from './data/Sparkline.js';
