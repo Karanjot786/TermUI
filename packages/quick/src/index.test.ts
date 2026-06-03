@@ -39,6 +39,27 @@ describe('quick – layout stack', () => {
         const widget = mod.stack('a');
         expect(widget.children.length).toBe(1);
     });
+
+    it('renders children vertically with correct layout', async () => {
+        const { Screen, computeLayout } = await import('@termuijs/core');
+        const mod = await import('./index.js');
+        const screen = new Screen(20, 10);
+        const widget = mod.stack('a', 'b', 'c');
+        
+        const node = widget.getLayoutNode();
+        computeLayout(node, 20, 10);
+        widget.syncLayout(node);
+        
+        widget.render(screen);
+        
+        const row0 = screen.back[0].map(c => c.char).join('');
+        const row1 = screen.back[1].map(c => c.char).join('');
+        const row2 = screen.back[2].map(c => c.char).join('');
+        
+        expect(row0).toContain('a');
+        expect(row1).toContain('b');
+        expect(row2).toContain('c');
+    });
 });
 
 describe('quick – layout spacer', () => {
