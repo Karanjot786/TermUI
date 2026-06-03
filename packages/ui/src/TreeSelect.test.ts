@@ -6,6 +6,11 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Screen, caps } from '@termuijs/core';
 import { TreeSelect } from './TreeSelect.js';
 
+// KeyEvent stub — tests only need the `key` field; cast avoids importing the full KeyEvent type
+function key(k: string) {
+    return { key: k } as any; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
+
 const ROOTS = [
     {
         label: 'src',
@@ -29,7 +34,7 @@ describe('TreeSelect', () => {
         const ts = new TreeSelect(ROOTS);
         ts.updateRect({ x: 0, y: 0, width: 30, height: 6 });
 
-        ts.handleKey({ key: 'down' } as any);
+        ts.handleKey(key('down'));
         ts.render(screen);
 
         expect(screen.back[1].some(cell => cell.bold)).toBe(true);
@@ -41,27 +46,27 @@ describe('TreeSelect', () => {
         const ts = new TreeSelect(ROOTS);
         ts.updateRect({ x: 0, y: 0, width: 30, height: 6 });
 
-        ts.handleKey({ key: 'space' } as any);
+        ts.handleKey(key('space'));
         expect(ts.selectedValues).toEqual(['s']);
     });
 
     it('single mode replaces prior selection', () => {
         const ts = new TreeSelect(ROOTS, { multiple: false });
 
-        ts.handleKey({ key: 'space' } as any);
+        ts.handleKey(key('space'));
         expect(ts.selectedValues).toEqual(['s']);
 
-        ts.handleKey({ key: 'down' } as any);
-        ts.handleKey({ key: 'space' } as any);
+        ts.handleKey(key('down'));
+        ts.handleKey(key('space'));
         expect(ts.selectedValues).toEqual(['a']);
     });
 
     it('multi mode accumulates selections', () => {
         const ts = new TreeSelect(ROOTS, { multiple: true });
 
-        ts.handleKey({ key: 'space' } as any);
-        ts.handleKey({ key: 'down' } as any);
-        ts.handleKey({ key: 'space' } as any);
+        ts.handleKey(key('space'));
+        ts.handleKey(key('down'));
+        ts.handleKey(key('space'));
 
         expect(ts.selectedValues).toContain('s');
         expect(ts.selectedValues).toContain('a');
@@ -75,7 +80,7 @@ describe('TreeSelect', () => {
         const ts = new TreeSelect(ROOTS);
         ts.updateRect({ x: 0, y: 0, width: 30, height: 6 });
 
-        ts.handleKey({ key: 'space' } as any);
+        ts.handleKey(key('space'));
         ts.render(screen);
 
         const rendered = screen.back
@@ -92,8 +97,8 @@ describe('TreeSelect', () => {
         const screen = new Screen(30, 6);
         const ts = new TreeSelect(roots, { multiple: true });
         ts.updateRect({ x: 0, y: 0, width: 30, height: 6 });
-        ts.handleKey({ key: 'down' } as any);
-        ts.handleKey({ key: 'space' } as any);
+        ts.handleKey(key('down'));
+        ts.handleKey(key('space'));
         expect(ts.selectedValues).toContain('a');
     });
 });
