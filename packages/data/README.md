@@ -127,6 +127,8 @@ MIT
 
 ---
 
+---
+
 ## Data fetching guide
 
 `@termuijs/data` includes reactive hooks for fetching remote data inside
@@ -145,7 +147,7 @@ Four primitives cover the most common patterns:
 | Hook | Use case |
 | --- | --- |
 | `useFetch` | One-shot HTTP request on mount, with optional caching |
-| `usePolling` | Repeated HTTP requests at a fixed interval |
+| `usePolling` | Repeatedly call an async function on a fixed interval |
 | `useSSE` | Streaming updates over a Server-Sent Events connection |
 | `invalidate` | Drop a cached response to force the next `useFetch` to re-fetch |
 
@@ -153,20 +155,19 @@ Four primitives cover the most common patterns:
 
 ### useFetch
 
-`useFetch` fires an HTTP request when the component mounts and exposes the
-result reactively. Responses are cached by URL for the duration of `ttl`.
+`useFetch` fires an HTTP GET request when the component mounts and exposes the
+result reactively. Pass `staleTime` to cache the response in memory and skip
+the network on subsequent mounts while the entry is still fresh.
 
 ```typescript
 import { useFetch } from '@termuijs/data'
 import type { UseFetchOptions, UseFetchResult } from '@termuijs/data'
 
 function PriceWidget() {
-    const options: UseFetchOptions<{ price: number }> = {
-        url: 'https://api.example.com/price',
-        ttl: 30_000, // cache for 30 seconds
-    }
+    const options: UseFetchOptions = { staleTime: 30_000 } // cache 30 s
 
-    const result: UseFetchResult<{ price: number }> = useFetch(options)
+    const result: UseFetchResult<{ price: number }> =
+        useFetch<{ price: number }>('https://api.example.com/price', options)
 
     if (result.loading) return <Text>Loading…</Text>
     if (result.error)   return <Text color="red">{result.error.message}</Text>
@@ -175,42 +176,39 @@ function PriceWidget() {
 }
 ```
 
-`UseFetchOptions<T>` accepts at minimum a `url` string. Common fields:
+`UseFetchOptions` fields:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `url` | `string` | Endpoint to request |
-| `method` | `string` | HTTP method (default `"GET"`) |
-| `headers` | `Record<string, string>` | Extra request headers |
-| `body` | `unknown` | Request body (JSON-serialised) |
-| `ttl` | `number` | Cache lifetime in milliseconds |
+| `staleTime` | `number` | How long (ms) a cached response stays fresh (default `0`) |
 
 `UseFetchResult<T>` fields:
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `data` | `T \| undefined` | Parsed response body |
+| `data` | `T \| null` | Parsed response body, or `null` while loading |
+| `error` | `Error \| null` | Set if the request failed, otherwise `null` |
 | `loading` | `boolean` | `true` while the request is in flight |
-| `error` | `Error \| undefined` | Set if the request failed |
-| `refetch` | `() => void` | Manually re-run the request |
 
 ---
 
 ### Polling
 
-`usePolling` re-fetches a URL at a fixed millisecond interval. Use it for
-dashboards that need periodic refresh without a persistent connection.
+`usePolling` repeatedly executes an async function on a fixed interval. Pass
+any async function that returns data — it is not limited to HTTP requests.
 
 ```typescript
 import { usePolling } from '@termuijs/data'
 import type { UsePollingResult } from '@termuijs/data'
 
 function StockTicker() {
-    // refresh every 5 seconds
     const result: UsePollingResult<{ symbol: string; bid: number }[]> =
-        usePolling('https://api.example.com/quotes', 5_000)
+        usePolling(
+            () => fetch('https://api.example.com/quotes').then(r => r.json()),
+            5_000, // repeat every 5 seconds
+        )
 
-    if (result.loading && !result.data) return <Text>Connecting…</Text>
+    if (result.loading) return <Text>Connecting…</Text>
 
     return (
         <Box flexDirection="column">
@@ -227,12 +225,9 @@ function StockTicker() {
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `data` | `T \| undefined` | Last successful response |
-| `loading` | `boolean` | `true` only on the very first request |
-| `error` | `Error \| undefined` | Last error; polling continues regardless |
-
-After the first successful response `loading` stays `false`, so the UI keeps
-showing stale data while the next request is in flight.
+| `data` | `T \| null` | Last successful return value, or `null` before first success |
+| `error` | `Error \| null` | Last error, if any; polling continues regardless |
+| `loading` | `boolean` | `true` until the first execution completes |
 
 ---
 
@@ -240,7 +235,8 @@ showing stale data while the next request is in flight.
 
 `useSSE` opens a persistent Server-Sent Events connection and pushes each
 received event into `data`. The connection closes automatically when the
-component unmounts.
+component unmounts or `url` changes. An optional `parse` function lets you
+deserialise the raw event string into a typed value.
 
 ```typescript
 import { useSSE } from '@termuijs/data'
@@ -253,19 +249,18 @@ interface LogLine {
 }
 
 function LiveLog() {
-    const result: UseSSEResult<LogLine> =
-        useSSE('https://api.example.com/logs/stream')
+    const result: UseSSEResult<LogLine> = useSSE<LogLine>(
+        'https://api.example.com/logs/stream',
+        (raw) => JSON.parse(raw) as LogLine,
+    )
+
+    if (result.loading) return <Text>Connecting…</Text>
 
     return (
         <Box flexDirection="column">
-            {result.connected
-                ? <Text dim>Connected</Text>
-                : <Text color="yellow">Reconnecting…</Text>}
+            {result.error && <Text color="red">{result.error.message}</Text>}
             {result.data && (
                 <Text>[{result.data.level}] {result.data.msg}</Text>
-            )}
-            {result.error && (
-                <Text color="red">{result.error.message}</Text>
             )}
         </Box>
     )
@@ -276,25 +271,28 @@ function LiveLog() {
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `data` | `T \| undefined` | Most recent parsed event payload |
-| `connected` | `boolean` | `true` when the connection is open |
-| `error` | `Error \| undefined` | Set if the connection failed |
+| `data` | `T \| null` | Most recent parsed event payload, or `null` before first event |
+| `error` | `Error \| null` | Set if the connection failed, otherwise `null` |
+| `loading` | `boolean` | `true` until the first event is received |
 
 ---
 
 ### Caching
 
-`useFetch` caches responses in memory, keyed by URL. Cached entries are reused
-until their `ttl` expires, after which the next render re-fetches
-automatically.
+`useFetch` caches responses in memory keyed by URL. A cached entry is reused
+as long as it is younger than `staleTime`. Once the entry expires, the next
+render re-fetches automatically.
 
-To drop a cached entry early — for example, after a write — call `invalidate`:
+To drop a cached entry early — for example after a write — call `invalidate`:
 
 ```typescript
 import { useFetch, invalidate } from '@termuijs/data'
 
 function TodoList() {
-    const todos = useFetch({ url: '/api/todos', ttl: 60_000 })
+    const result = useFetch<{ id: number; title: string }[]>(
+        '/api/todos',
+        { staleTime: 60_000 },
+    )
 
     async function addTodo(title: string) {
         await fetch('/api/todos', {
@@ -309,6 +307,7 @@ function TodoList() {
 }
 ```
 
-`invalidate(url: string): void` removes the cache entry for the given URL. Any
-mounted component using that URL will re-fetch in the background immediately.
-Calling `invalidate` with a URL that has no cached entry is a no-op.
+`invalidate(key: string): void` removes the cache entry for the given URL and
+cancels any in-flight de-duplicated request for that key. Any mounted component
+using the same URL will re-fetch on its next render. Calling `invalidate` with
+a key that has no cached entry is a no-op.
