@@ -15,6 +15,7 @@ export { BOX, BRAILLE_SPIN, BLOCK } from './terminal/ascii-map.js';
 
 // ── Renderer ──────────────────────────────────────────
 export { RenderHook } from './renderer/render-hook.js';
+export { mergeBorders } from './renderer/border-merge.js';
 
 // ── Input ─────────────────────────────────────────────
 export { InputParser } from './input/InputParser.js';
