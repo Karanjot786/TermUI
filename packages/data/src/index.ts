@@ -61,3 +61,7 @@ export type { GpuData, UseGpuResult } from './hooks/useGpu.js';
 
 export { useTemperature } from './hooks/useTemperature.js';
 export type { TemperatureData, UseTemperatureResult } from './hooks/useTemperature.js';
+
+
+export { useFileWatch } from './hooks/useFileWatch.js'
+export type { FileWatchData, UseFileWatchResult, UseFileWatchOptions } from './hooks/useFileWatch.js'

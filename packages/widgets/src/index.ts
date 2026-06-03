@@ -91,6 +91,8 @@ export { Sidebar } from './data/Sidebar.js';
 export type { SidebarItem, SidebarOptions } from './data/Sidebar.js';
 export { LineChart } from './data/LineChart.js';
 export type { LineChartOptions } from './data/LineChart.js';
+export { AreaChart } from './data/AreaChart.js';
+export type { AreaChartOptions } from './data/AreaChart.js';
 export { HeatMap } from './data/HeatMap.js';
 export type { HeatMapOptions } from './data/HeatMap.js';
 export { Definition } from './data/Definition.js';
@@ -120,6 +122,8 @@ export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
+export { QRCodePattern, QRCode } from './display/QRCode.js';
+export type { QRCodePatternOptions, QRCodeOptions } from './display/QRCode.js';
 export { Stack } from './layout/Stack.js';
 export type { StackOptions } from './layout/Stack.js';
 export { ScatterPlot } from './data/ScatterPlot.js';
@@ -135,3 +139,7 @@ export { Stopwatch } from './display/Stopwatch.js';
 export type { StopwatchOptions } from './display/Stopwatch.js';
 export { OrderedList } from './display/OrderedList.js';
 export type { OrderedListItem, OrderedListOptions } from './display/OrderedList.js';
+
+
+export { Typewriter } from './display/Typewriter.js';
+export type { TypewriterOptions } from './display/Typewriter.js';

@@ -17,7 +17,7 @@ import type { VNode, VElement, FC } from './vnode.js';
 import { isVElement, isVFragment, Fragment, flattenChildren } from './vnode.js';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
-    runEffects, destroyFiber, type Fiber,
+    runEffects, runLayoutEffects, destroyFiber, type Fiber,
 } from './hooks.js';
 import { ErrorBoundary } from './error-boundary.js';
 import { Suspense } from './Suspense.js';
@@ -443,6 +443,7 @@ function renderComponent(
         _parentFiber = prevParent;
 
         cleanupStaleChildFibers(fiber);
+        runLayoutEffects(fiber);
         runEffects(fiber);
 
         _instanceMap.set(vnode, {
@@ -468,6 +469,7 @@ function renderComponent(
     cleanupStaleChildFibers(fiber);
 
     // Run effects after render
+    runLayoutEffects(fiber);
     runEffects(fiber);
 
     // Store instance for cleanup and re-renders
@@ -537,6 +539,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         _parentFiber = prevParent;
 
         cleanupStaleChildFibers(fiber);
+        runLayoutEffects(fiber);
         runEffects(fiber);
         fiber.isDirty = false;
 
@@ -552,6 +555,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     // memo() optimization: if component returned same VNode reference, skip widget rebuild
     if (vnode === instance.lastVNode) {
         _parentFiber = prevParent;
+        runLayoutEffects(fiber);
         runEffects(fiber);
         fiber.isDirty = false;
         return instance.widget;
@@ -566,6 +570,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     // Destroy child fibers not visited during this render
     cleanupStaleChildFibers(fiber);
 
+    runLayoutEffects(fiber);
     runEffects(fiber);
     fiber.isDirty = false;
 

@@ -37,13 +37,15 @@
     "@types/node": "^22.0.0",
     "conf": "^10.2.0",
     "typescript": "^5.7.0",
-    "tsup": "^8.3.0"
+    "tsup": "^8.3.0",
+    "zod": "^3.0.0"
   },
   "peerDependencies": {
     "conf": "^10.2.0",
     "commander": "^15.0.0",
+    "zod": "^3.0.0",
     "openai": "^4.0.0",
-"@anthropic-ai/sdk": "^0.39.0"
+    "@anthropic-ai/sdk": "^0.39.0"
   },
   "peerDependenciesMeta": {
     "conf": {
@@ -52,8 +54,15 @@
     "commander": {
       "optional": true
     },
-    "openai": { "optional": true },
-"@anthropic-ai/sdk": { "optional": true }
+    "zod": {
+      "optional": true
+    },
+    "openai": {
+      "optional": true
+    },
+    "@anthropic-ai/sdk": {
+      "optional": true
+    }
   },
   "keywords": [
     "terminal",

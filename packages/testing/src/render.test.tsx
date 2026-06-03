@@ -256,4 +256,51 @@ describe("render harness", () => {
       }).not.toThrow()
     })
   })
+
+  describe("queryByText", () => {
+    it("returns null on a miss", () => {
+      const screen = render(<Hello />)
+
+      expect(screen.queryByText("Missing")).toBeNull()
+    })
+
+    it("returns the widget on a hit", () => {
+      const screen = render(<Hello />)
+
+      const result = screen.queryByText("Hello")
+
+      expect(result).not.toBeNull()
+    })
+
+    it("does not throw on a miss", () => {
+      const screen = render(<Hello />)
+
+      expect(() => screen.queryByText("NotHere")).not.toThrow()
+    })
+  })
+
+  describe("queryByType", () => {
+    it("returns the first instance of a type", () => {
+      const screen = render(<MultiText />)
+
+      const result = screen.queryByType(Text)
+
+      expect(result).not.toBeNull()
+      expect(result instanceof Text).toBe(true)
+    })
+
+    it("returns null when no instance exists", () => {
+      const screen = render(<MultiText />)
+
+      const result = screen.queryByType(FakeWidget)
+
+      expect(result).toBeNull()
+    })
+
+    it("does not throw when no instance exists", () => {
+      const screen = render(<MultiText />)
+
+      expect(() => screen.queryByType(FakeWidget)).not.toThrow()
+    })
+  })
 })
