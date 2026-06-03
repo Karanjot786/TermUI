@@ -140,6 +140,11 @@ export function parse(tokens: Token[]): TSSStylesheet {
     }
 
     function parseSelector(): TSSSelector {
+        // Pseudo-only selector: :hover { }
+        if (peek().type === TokenType.PseudoClass) {
+            const pseudo = advance().value;
+            return { widget: '*', pseudo };
+        }
         // Class-only selector: .className { }
         if (peek().type === TokenType.Dot) {
             advance();
