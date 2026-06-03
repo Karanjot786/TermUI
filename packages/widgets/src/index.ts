@@ -111,6 +111,8 @@ export { HeatMap } from './data/HeatMap.js';
 export type { HeatMapOptions } from './data/HeatMap.js';
 export { Definition } from './data/Definition.js';
 export type { DefinitionPair, DefinitionOptions } from './data/Definition.js';
+export { Hexdump } from './data/Hexdump.js';
+export type { HexdumpOptions } from './data/Hexdump.js';
 
 // ── New Display Widgets ───────────────────────────────
 export { BigText } from './display/BigText.js';
