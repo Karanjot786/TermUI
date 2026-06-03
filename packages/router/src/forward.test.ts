@@ -3,8 +3,8 @@ import { Router } from './router.js';
 
 const MinimalComponent = () => ({ type: 'text', props: {}, children: [] });
 
-describe('Router History and Event Navigation', () => {
-    it('navigates through history stack via push and tracks depth', () => {
+describe('Router Forward Navigation', () => {
+    it('forward re-navigates after back', () => {
         const router = new Router();
         router.addRoutes([
             { path: '/', component: MinimalComponent },
@@ -16,15 +16,64 @@ describe('Router History and Event Navigation', () => {
 
         router.push('/');
         router.push('/next');
-        expect(router.historyLength).toBe(2);
-        expect(router.currentPath).toBe('/next');
-
         router.back();
+        
         expect(router.currentPath).toBe('/');
-        expect(router.historyLength).toBe(1);
+        router.forward();
+        
+        expect(router.currentPath).toBe('/next');
+        expect(navigateSpy).toHaveBeenCalled();
     });
 
-    it('clearHistory flushes the navigation stack completely', () => {
+    it('push clears the forward stack', () => {
+        const router = new Router();
+        router.addRoutes([
+            { path: '/', component: MinimalComponent },
+            { path: '/page1', component: MinimalComponent },
+            { path: '/page2', component: MinimalComponent }
+        ]);
+
+        router.push('/');
+        router.push('/page1');
+        router.back();
+        expect(router.canGoForward).toBe(true);
+
+        router.push('/page2');
+        expect(router.canGoForward).toBe(false);
+    });
+
+    it('canGoForward reflects forward entries', () => {
+        const router = new Router();
+        router.addRoutes([
+            { path: '/', component: MinimalComponent },
+            { path: '/page1', component: MinimalComponent }
+        ]);
+
+        expect(router.canGoForward).toBe(false);
+        router.push('/');
+        router.push('/page1');
+        router.back();
+        expect(router.canGoForward).toBe(true);
+    });
+
+    it('go(-1) goes back and go(1) goes forward', () => {
+        const router = new Router();
+        router.addRoutes([
+            { path: '/', component: MinimalComponent },
+            { path: '/home', component: MinimalComponent }
+        ]);
+
+        router.push('/');
+        router.push('/home');
+        
+        router.go(-1);
+        expect(router.currentPath).toBe('/');
+
+        router.go(1);
+        expect(router.currentPath).toBe('/home');
+    });
+
+    it('go past the boundary is a no-op', () => {
         const router = new Router();
         router.addRoutes([
             { path: '/', component: MinimalComponent },
@@ -33,41 +82,11 @@ describe('Router History and Event Navigation', () => {
 
         router.push('/');
         router.push('/dashboard');
-        expect(router.historyLength).toBe(2);
-        expect(router.canGoBack).toBe(true);
 
-        // Execute historical state flush
-        router.clearHistory();
+        expect(() => router.go(-100)).not.toThrow();
+        expect(router.currentPath).toBe('/dashboard');
 
-        // Assert empty state structural integrity
-        expect(router.historyLength).toBe(0);
-        expect(router.canGoBack).toBe(false);
-        expect(router.currentPath).toBe('/');
-    });
-
-    it('triggers dynamic router navigation on Enter keypress event for links', () => {
-        const router = new Router();
-        const pushSpy = vi.spyOn(router, 'push').mockImplementation(() => {});
-        const mockEnterEvent = { key: 'return', name: 'return' };
-        
-        const handleKeyPress = (e: Record<string, unknown>) => {
-            if (e.key === 'return') {
-                router.push('/target-route');
-            }
-        };
-
-        const vnode = {
-            type: 'text',
-            props: {
-                focusable: true,
-                onKeyPress: handleKeyPress
-            },
-            children: ['Go to Target']
-        };
-        
-        vnode.props.onKeyPress?.(mockEnterEvent);
-        expect(pushSpy).toHaveBeenCalledWith('/target-route');
-        
-        pushSpy.mockRestore();
+        expect(() => router.go(50)).not.toThrow();
+        expect(router.currentPath).toBe('/dashboard');
     });
 });
