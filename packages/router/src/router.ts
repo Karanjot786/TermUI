@@ -85,19 +85,17 @@ export class Router {
     }
 
     private _wrapScreen(match: RouteMatch): VNode {
-        const screen = createElement(match.route.component, match.params);
+        let screen = createElement(match.route.component, match.params);
 
-        const withProvider = createElement(
-            RouterContext.Provider,
-            { value: this },
-            screen,
-        );
+        for (let i = match.chain.length - 2; i >= 0; i--) {
+            const parent = match.chain[i];
+            const Wrapper = parent.layout ?? parent.component;
+            screen = createElement(Wrapper, { ...match.params, outlet: screen });
+        }
 
-        return createElement(
-            ErrorBoundary,
-            { fallback: defaultErrorScreen },
-            withProvider,
-        );
+        const withProvider = createElement(RouterContext.Provider, { value: this }, screen);
+
+        return createElement(ErrorBoundary, { fallback: defaultErrorScreen }, withProvider);
     }
 
     /** Navigate to a path */
