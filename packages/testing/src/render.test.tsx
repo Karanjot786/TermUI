@@ -211,7 +211,7 @@ describe("render harness", () => {
       }).not.toThrow()
     })
   })
-    
+
   describe("createFixture", () => {
     it("applies default size when rendering without options", () => {
       const fixture = createFixture({ width: 40, height: 10 })
