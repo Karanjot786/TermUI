@@ -99,7 +99,9 @@ export function setTitle(title: string): string {
 
 /** OSC 8 open: ESC ] 8 ; ; <url> ST. */
 export function hyperlinkOpen(url: string): string {
-    return `\x1b]8;;${url}\x1b\\`;
+    // Strip C0/C1 controls and ESC to prevent terminal escape injection.
+    const safeUrl = url.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `\x1b]8;;${safeUrl}\x1b\\`;
 }
 
 /** OSC 8 close: ESC ] 8 ; ; ST. */
