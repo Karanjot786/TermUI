@@ -37,6 +37,8 @@ export interface Cell {
      * - 0 for continuation cells (second half of a wide char)
      */
     width: number;
+    /** Optional OSC 8 hyperlink target for this cell. */
+    link?: string;
 }
 
 /** Create a blank cell with default attributes */
@@ -52,6 +54,7 @@ export function emptyCell(): Cell {
         strikethrough: false,
         inverse: false,
         width: 1,
+        link: undefined,
     };
 }
 
@@ -67,6 +70,7 @@ export function resetCell(cell: Cell): void {
     cell.strikethrough = false;
     cell.inverse = false;
     cell.width = 1;
+    cell.link = undefined;
 }
 
 /** Check if two cells are visually identical */
@@ -80,6 +84,7 @@ export function cellsEqual(a: Cell, b: Cell): boolean {
         a.strikethrough === b.strikethrough &&
         a.inverse === b.inverse &&
         a.width === b.width &&
+        a.link === b.link &&
         colorsEqual(a.fg, b.fg) &&
         colorsEqual(a.bg, b.bg)
     );

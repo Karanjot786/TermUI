@@ -25,6 +25,8 @@ export function moveDown(n = 1): string { return `${CSI}${n}B`; }
 export function moveRight(n = 1): string { return `${CSI}${n}C`; }
 export function moveLeft(n = 1): string { return `${CSI}${n}D`; }
 
+export const requestCursorPosition = `${CSI}6n`;
+
 // ── Screen Control ──────────────────────────────────
 
 export const clearScreen = `${CSI}2J`;
@@ -58,6 +60,11 @@ export const disableMouse = `${CSI}?1000l${CSI}?1002l${CSI}?1006l`;
 export const enableBracketedPaste = `${CSI}?2004h`;
 export const disableBracketedPaste = `${CSI}?2004l`;
 
+// ── Focus Tracking ──────────────────────────────────
+
+export const enableFocusTracking = `${CSI}?1004h`;
+export const disableFocusTracking = `${CSI}?1004l`;
+
 // ── Text Styling ────────────────────────────────────
 
 export const reset = `${CSI}0m`;
@@ -90,6 +97,20 @@ export function setTitle(title: string): string {
     return `${OSC}0;${title}\x07`;
 }
 
+// ── Hyperlinks (OSC 8) ──────────────────────────────
+
+/** OSC 8 open: ESC ] 8 ; ; <url> ST. */
+export function hyperlinkOpen(url: string): string {
+    // Block non-http/https/file schemes (e.g. javascript:, data:).
+    if (!/^(https?|file):\/\//i.test(url)) return '';
+    // Strip C0/C1 controls and ESC to prevent terminal escape injection.
+    const safeUrl = url.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `\x1b]8;;${safeUrl}\x1b\\`;
+}
+
+/** OSC 8 close: ESC ] 8 ; ; ST. */
+export const hyperlinkClose: string = '\x1b]8;;\x1b\\';
+
 // ── Clipboard ───────────────────────────────────────
 
 /**
@@ -101,4 +122,32 @@ export function setTitle(title: string): string {
 export function writeClipboard(text: string, stdout: NodeJS.WriteStream = process.stdout): void {
     const encoded = Buffer.from(text, 'utf8').toString('base64');
     stdout.write(`${OSC}52;c;${encoded}\x07`);
+}
+export function readClipboard(
+    stdin: NodeJS.ReadStream = process.stdin,
+    stdout: NodeJS.WriteStream = process.stdout
+): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const handler = (data: Buffer) => {
+            const str = data.toString('utf8');
+
+            const match = str.match(/\x1b\]52;c;([^\x07]+)\x07/);
+
+            if (!match) return;
+
+            stdin.off('data', handler);
+
+            try {
+                resolve(
+                    Buffer.from(match[1], 'base64').toString('utf8')
+                );
+            } catch (err) {
+                reject(err);
+            }
+        };
+
+        stdin.on('data', handler);
+
+        stdout.write(`${OSC}52;c;?\x07`);
+    });
 }
