@@ -4,6 +4,7 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { type TableState } from './TableState.js';
 
 export interface TableColumn {
     /** Column header label */
@@ -31,6 +32,17 @@ export interface TableOptions {
     separator?: string;
 }
 
+export interface TableProps {
+    columns: TableColumn[];
+    rows?: TableRow[];
+    style?: Partial<Style>;
+    options?: TableOptions;
+    /** External state object – if provided, Table syncs rows through it */
+    state?: TableState;
+    /** Called whenever rows change via setRows */
+    onStateChange?: (state: TableState) => void;
+}
+
 /**
  * Table — renders tabular data with columns, headers, and optional zebra-striping.
  *
@@ -41,6 +53,7 @@ export interface TableOptions {
  * - Zebra striping
  * - Text alignment per column
  * - Truncation for overflow
+ * - External state via `state` prop and `useTableState` hook
  */
 export class Table extends Widget {
     private _columns: TableColumn[];
@@ -50,13 +63,31 @@ export class Table extends Widget {
     private _stripe: boolean;
     private _stripeColor: Color;
     private _separator: string;
+    private _state?: TableState;
+    private _onStateChange?: (state: TableState) => void;
 
     constructor(
-        columns: TableColumn[],
-        rows: TableRow[],
+        columnsOrProps: TableColumn[] | TableProps,
+        rows: TableRow[] = [],
         style: Partial<Style> = {},
         options: TableOptions = {},
     ) {
+        let columns: TableColumn[];
+        let state: TableState | undefined;
+        let onStateChange: ((s: TableState) => void) | undefined;
+
+        if (Array.isArray(columnsOrProps)) {
+            columns = columnsOrProps;
+        } else {
+            const props = columnsOrProps as TableProps;
+            columns = props.columns;
+            rows = props.rows ?? [];
+            style = props.style ?? style;
+            options = props.options ?? options;
+            state = props.state;
+            onStateChange = props.onStateChange;
+        }
+
         super(style);
         this._columns = columns;
         this._rows = rows;
@@ -65,12 +96,28 @@ export class Table extends Widget {
         this._stripe = options.stripe ?? true;
         this._stripeColor = options.stripeColor ?? { type: 'named', name: 'brightBlack' };
         this._separator = options.separator ?? ' │ ';
+        this._state = state;
+        this._onStateChange = onStateChange;
     }
+
+    // ── Mutations ─────────────────────────────────────
 
     setRows(rows: TableRow[]): void {
         this._rows = rows;
         this.markDirty();
+        this._pushState();
     }
+
+    // ── External state sync ───────────────────────────
+
+    private _pushState(): void {
+        if (this._state) {
+            this._state.rows = this._rows;
+            this._onStateChange?.(this._state);
+        }
+    }
+
+    // ── Rendering ─────────────────────────────────────
 
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
@@ -155,7 +202,7 @@ export class Table extends Widget {
         const fixedCols = this._columns.filter(c => c.width !== undefined);
         const flexCols = this._columns.filter(c => c.width === undefined);
 
-        let usedWidth = fixedCols.reduce((sum, c) => sum + (c.width ?? 0), 0);
+        const usedWidth = fixedCols.reduce((sum, c) => sum + (c.width ?? 0), 0);
         const remainingWidth = Math.max(0, totalWidth - usedWidth);
         const flexWidth = flexCols.length > 0 ? Math.floor(remainingWidth / flexCols.length) : 0;
 

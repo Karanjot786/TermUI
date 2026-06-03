@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from 'vitest'
-import { createStore, batch } from './store.js'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { createStore, batch, logger } from './store.js'
+import * as fs from 'node:fs'
+import * as path from 'node:path'
 
 describe('createStore', () => {
     it('initializes state from creator function', () => {
@@ -258,3 +260,150 @@ describe('batch', () => {
         expect(spy.mock.calls[0][0]).toEqual({ a: 1, b: 2 })
     })
 })
+
+describe('middleware', () => {
+    it('middleware is called during setState', () => {
+        const spy = vi.fn((prev, update, next) => next(update))
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [spy] })
+        
+        useStore.setState({ count: 1 })
+        expect(spy).toHaveBeenCalledOnce()
+        expect(spy.mock.calls[0][0]).toEqual({ count: 0 })
+        expect(spy.mock.calls[0][1]).toEqual({ count: 1 })
+    })
+
+    it('multiple middleware execute in correct order', () => {
+        const order: string[] = []
+        const mw1 = (prev: any, update: any, next: any) => {
+            order.push('mw1 start')
+            next(update)
+            order.push('mw1 end')
+        }
+        const mw2 = (prev: any, update: any, next: any) => {
+            order.push('mw2 start')
+            next(update)
+            order.push('mw2 end')
+        }
+
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [mw1, mw2] })
+        useStore.setState({ count: 1 })
+        
+        expect(order).toEqual(['mw1 start', 'mw2 start', 'mw2 end', 'mw1 end'])
+    })
+
+    it('middleware can modify updates before they apply', () => {
+        const doubleCount = (prev: any, update: any, next: any) => {
+            if ('count' in update) {
+                next({ ...update, count: update.count * 2 })
+            } else {
+                next(update)
+            }
+        }
+        
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [doubleCount] })
+        useStore.setState({ count: 5 })
+        expect(useStore.getState().count).toBe(10)
+    })
+
+    it('logger middleware receives previous and next state', () => {
+        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [logger] })
+        
+        useStore.setState({ count: 1 })
+        
+        expect(logSpy).toHaveBeenCalledTimes(2)
+        expect(logSpy.mock.calls[0]).toEqual(['Previous State:', { count: 0 }])
+        expect(logSpy.mock.calls[1]).toEqual(['Next State:', { count: 1 }])
+        
+        logSpy.mockRestore()
+    })
+})
+
+describe('persistence', () => {
+    const testDir = path.join(__dirname, 'temp-test-store-dir')
+    const testFile = path.join(testDir, 'test-store.json')
+
+    afterEach(() => {
+        vi.useRealTimers()
+        if (fs.existsSync(testFile)) {
+            try {
+                fs.unlinkSync(testFile)
+            } catch (err) {}
+        }
+        if (fs.existsSync(testDir)) {
+            try {
+                fs.rmdirSync(testDir)
+            } catch (err) {}
+        }
+    })
+
+    it('initializes store with plain object creator', () => {
+        const useStore = createStore({ count: 5, name: 'plain-object' })
+        expect(useStore.getState().count).toBe(5)
+        expect(useStore.getState().name).toBe('plain-object')
+    })
+
+    it('rehydrates saved state from file on init', () => {
+        if (!fs.existsSync(testDir)) {
+            fs.mkdirSync(testDir, { recursive: true })
+        }
+        fs.writeFileSync(testFile, JSON.stringify({ count: 42, extra: 'loaded' }), 'utf8')
+
+        const useStore = createStore({ count: 0, extra: '', other: true }, {
+            persist: {
+                file: testFile,
+            }
+        })
+
+        expect(useStore.getState().count).toBe(42)
+        expect(useStore.getState().extra).toBe('loaded')
+        expect(useStore.getState().other).toBe(true) // default value untouched
+    })
+
+    it('debounces disk writes and collapses rapid updates', () => {
+        vi.useFakeTimers()
+        const useStore = createStore({ count: 0, text: '' }, {
+            persist: {
+                file: testFile,
+                debounceMs: 50,
+            }
+        })
+
+        useStore.setState({ count: 1 })
+        useStore.setState({ count: 2 })
+        useStore.setState({ text: 'hello' })
+
+        // File should not exist immediately due to debounce
+        expect(fs.existsSync(testFile)).toBe(false)
+
+        // Advance timers by less than debounceMs
+        vi.advanceTimersByTime(40)
+        expect(fs.existsSync(testFile)).toBe(false)
+
+        // Advance timers past debounceMs
+        vi.advanceTimersByTime(15)
+        expect(fs.existsSync(testFile)).toBe(true)
+
+        const data = JSON.parse(fs.readFileSync(testFile, 'utf8'))
+        expect(data).toEqual({ count: 2, text: 'hello' })
+    })
+
+    it('cancels pending writes on destroy', () => {
+        vi.useFakeTimers()
+        const useStore = createStore({ count: 0 }, {
+            persist: {
+                file: testFile,
+                debounceMs: 50,
+            }
+        })
+
+        useStore.setState({ count: 10 })
+        expect(fs.existsSync(testFile)).toBe(false)
+
+        useStore.destroy()
+
+        vi.advanceTimersByTime(100)
+        expect(fs.existsSync(testFile)).toBe(false)
+    })
+})
+
