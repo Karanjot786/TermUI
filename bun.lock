@@ -272,14 +272,17 @@
         "conf": "^10.2.0",
         "tsup": "^8.3.0",
         "typescript": "^5.7.0",
+        "zod": "^3.0.0",
       },
       "peerDependencies": {
         "commander": "^15.0.0",
         "conf": "^10.2.0",
+        "zod": "^3.0.0",
       },
       "optionalPeers": [
         "commander",
         "conf",
+        "zod",
       ],
     },
     "packages/core": {
@@ -897,6 +900,8 @@
     "why-is-node-running": ["why-is-node-running@2.3.0", "", { "dependencies": { "siginfo": "^2.0.0", "stackback": "0.0.2" }, "bin": { "why-is-node-running": "cli.js" } }, "sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w=="],
 
     "yaml": ["yaml@2.9.0", "", { "bin": { "yaml": "bin.mjs" } }, "sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA=="],
+
+    "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@termuijs/adapters/@types/node": ["@types/node@22.19.19", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-dyh/xO2Fh5bYrfWaaqGrRQQGkNdmYw6AmaAUvYeUMNTWQtvb796ikLdmTchRmOlOiIJ1TDXfWgVx1QkUlQ6Hew=="],
 
