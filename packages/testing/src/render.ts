@@ -6,12 +6,18 @@
 // rendered output and simulating user interactions.
 // ─────────────────────────────────────────────────────
 
-import { Screen, type KeyEvent } from '@termuijs/core';
-import { Box, Text, Widget } from '@termuijs/widgets';
+import { Screen, type KeyEvent } from "@termuijs/core";
+import { Box, Text, Widget } from "@termuijs/widgets";
 import {
-    reconcile, reRenderComponent, unmountAll, setRequestRender, getRequestRender,
-    collectInputHandlers, destroyFiber, type VNode,
-} from '@termuijs/jsx';
+    reconcile,
+    reRenderComponent,
+    unmountAll,
+    setRequestRender,
+    getRequestRender,
+    collectInputHandlers,
+    destroyFiber,
+    type VNode,
+} from "@termuijs/jsx";
 
 /**
  * The result of rendering a component tree for testing.
@@ -59,12 +65,20 @@ export interface TestInstance {
     /**
      * Simulate a key press event. This dispatches to useInput handlers.
      */
-    fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void;
+    fireKey(
+        key: string,
+        modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
+    ): void;
 
     /**
      * Type a string — fires each character as a key event.
      */
     typeText(text: string): void;
+
+    /**
+     * Simulate a terminal resize. Re-renders the widget tree at the new dimensions.
+     */
+    fireResize(cols: number, rows: number): void;
 
     /**
      * Force a re-render of the component tree.
@@ -75,7 +89,10 @@ export interface TestInstance {
      * Wait for an assertion to pass within a timeout.
      * Retries fn every interval ms until it stops throwing or the timeout elapses.
      */
-    waitFor(fn: () => void, opts?: { timeout?: number; interval?: number }): Promise<void>;
+    waitFor(
+        fn: () => void,
+        opts?: { timeout?: number; interval?: number },
+    ): Promise<void>;
 
     /**
      * Render the current screen buffer to a plain string.
@@ -112,7 +129,10 @@ export interface Fixture {
 // ── Helpers ──
 
 /** Recursively walk a widget tree, collecting matching widgets */
-function walkWidgets(root: Widget, predicate: (w: Widget) => boolean): Widget[] {
+function walkWidgets(
+    root: Widget,
+    predicate: (w: Widget) => boolean,
+): Widget[] {
     const result: Widget[] = [];
     const stack: Widget[] = [root];
     while (stack.length > 0) {
@@ -130,15 +150,20 @@ function walkWidgets(root: Widget, predicate: (w: Widget) => boolean): Widget[] 
 /** Extract text content from a Text widget */
 function getTextContent(widget: Widget): string {
     if (widget instanceof Text) {
-        return (widget as any)._content ?? '';
+        return (widget as any)._content ?? "";
     }
-    return '';
+    return "";
 }
 
 /** Render the widget tree to the screen buffer */
 function renderToScreen(container: Box, screen: Screen): void {
     // Set the root rect to fill the screen
-    (container as any)._rect = { x: 0, y: 0, width: screen.cols, height: screen.rows };
+    (container as any)._rect = {
+        x: 0,
+        y: 0,
+        width: screen.cols,
+        height: screen.rows,
+    };
 
     // Simple vertical stacking layout for testing
     assignRects(container, 0, 0, screen.cols, screen.rows);
@@ -150,7 +175,13 @@ function renderToScreen(container: Box, screen: Screen): void {
 }
 
 /** Simple recursive layout: stack children vertically */
-function assignRects(widget: Widget, x: number, y: number, width: number, height: number): void {
+function assignRects(
+    widget: Widget,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+): void {
     (widget as any)._rect = { x, y, width, height };
     const children: Widget[] = (widget as any)._children ?? [];
     if (children.length === 0) return;
@@ -174,10 +205,10 @@ function renderChildren(parent: Widget, screen: Screen): void {
 function readScreenLines(screen: Screen): string[] {
     const lines: string[] = [];
     for (let row = 0; row < screen.rows; row++) {
-        let line = '';
+        let line = "";
         for (let col = 0; col < screen.cols; col++) {
             const cell = screen.back[row]?.[col];
-            line += cell?.char ?? ' ';
+            line += cell?.char ?? " ";
         }
         lines.push(line.trimEnd());
     }
@@ -206,7 +237,10 @@ function readScreenLines(screen: Screen): string[] {
  * t.unmount();
  * ```
  */
-export function render(element: VNode, options: TestRenderOptions = {}): TestInstance {
+export function render(
+    element: VNode,
+    options: TestRenderOptions = {},
+): TestInstance {
     const width = options.width ?? 80;
     const height = options.height ?? 24;
     const screen = new Screen(width, height);
@@ -218,9 +252,9 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
 
     // Wrap in a root container
     const container = new Box({
-        flexDirection: 'column',
-        width: '100%',
-        height: '100%',
+        flexDirection: "column",
+        width: "100%",
+        height: "100%",
     });
     container.addChild(rootWidget);
 
@@ -229,7 +263,8 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
 
     // Set up re-render callback — use fiber-preserving reRenderComponent
     setRequestRender(() => {
-        const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+        const instances: Map<Widget, any> = (globalThis as any)
+            .__termuijs_instances;
         const rootInstance = instances?.get(rootWidget);
         if (rootInstance) {
             const newRoot = reRenderComponent(rootInstance);
@@ -253,7 +288,9 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
         screen,
 
         toString(): string {
-            return readScreenLines(screen).filter(l => l.length > 0).join('\n');
+            return readScreenLines(screen)
+                .filter((l) => l.length > 0)
+                .join("\n");
         },
 
         lastFrame(): string[] {
@@ -271,7 +308,7 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
             if (matches.length > 0) return matches[0];
 
             // Fallback: check screen buffer
-            const screenText = readScreenLines(screen).join('\n');
+            const screenText = readScreenLines(screen).join("\n");
             if (screenText.includes(text)) {
                 return container;
             }
@@ -313,14 +350,21 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
                 shift: modifiers?.shift ?? false,
                 alt: modifiers?.alt ?? false,
                 raw: Buffer.from(key),
-                stopPropagation() { this._propagationStopped = true; },
-                preventDefault() { this._defaultPrevented = true; },
+                stopPropagation() {
+                    this._propagationStopped = true;
+                },
+                preventDefault() {
+                    this._defaultPrevented = true;
+                },
             };
 
-            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+            const instances: Map<Widget, any> = (globalThis as any)
+                .__termuijs_instances;
             const rootInstance = instances?.get(rootWidget);
             if (rootInstance?.fiber) {
-                for (const handler of collectInputHandlers(rootInstance.fiber)) {
+                for (const handler of collectInputHandlers(
+                    rootInstance.fiber,
+                )) {
                     handler(event);
                 }
                 // setState updates hookState.value synchronously but schedules the
@@ -351,7 +395,8 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
                 renderToScreen(container, screen);
             } else {
                 // No new element: re-render existing fiber, preserving state.
-                const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+                const instances: Map<Widget, any> = (globalThis as any)
+                    .__termuijs_instances;
                 const rootInstance = instances?.get(rootWidget);
                 if (rootInstance) {
                     const newRoot = reRenderComponent(rootInstance);
@@ -360,12 +405,17 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
                     rootWidget = newRoot;
                     renderToScreen(container, screen);
                 } else {
-                    console.warn('[testing] rerender() called but no fiber instance or element available');
+                    console.warn(
+                        "[testing] rerender() called but no fiber instance or element available",
+                    );
                 }
             }
         },
 
-        async waitFor(fn: () => void, opts = { timeout: 1000, interval: 10 }): Promise<void> {
+        async waitFor(
+            fn: () => void,
+            opts = { timeout: 1000, interval: 10 },
+        ): Promise<void> {
             const timeout = opts.timeout ?? 1000;
             const interval = opts.interval ?? 10;
             const deadline = Date.now() + timeout;
@@ -376,11 +426,14 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
                     return;
                 } catch (err) {
                     lastError = err;
-                    await new Promise(r => setTimeout(r, interval));
+                    await new Promise((r) => setTimeout(r, interval));
                 }
             }
             // Wrap with timeout context
-            const msg = lastError instanceof Error ? lastError.message : String(lastError);
+            const msg =
+                lastError instanceof Error
+                    ? lastError.message
+                    : String(lastError);
             throw new Error(`waitFor timed out after ${timeout}ms: ${msg}`);
         },
 
@@ -388,11 +441,18 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
             return this.toString();
         },
 
+        fireResize(cols: number, rows: number): void {
+            const newScreen = new Screen(cols, rows);
+            Object.assign(instance, { screen: newScreen });
+            renderToScreen(container, newScreen);
+        },
+
         unmount(): void {
             // Restore the caller's render callback (don't leave a stale test callback)
             setRequestRender(prevRender);
             // Destroy only this test's root fiber — don't wipe the whole app
-            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+            const instances: Map<Widget, any> = (globalThis as any)
+                .__termuijs_instances;
             const rootInstance = instances?.get(rootWidget);
             if (rootInstance?.fiber) {
                 destroyFiber(rootInstance.fiber);
