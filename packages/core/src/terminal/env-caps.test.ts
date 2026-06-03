@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { caps, prefersReducedMotion } from './env-caps.js';
 
 // caps is evaluated at module load time, so each test must:
 // 1. vi.stubEnv() to set env vars
@@ -78,21 +79,18 @@ describe('prefersReducedMotion', () => {
     });
 
     it('returns true when caps.motion is false', () => {
-        const { caps, prefersReducedMotion } = require('./env-caps.js');
         const spy = vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
         expect(prefersReducedMotion()).toBe(true);
         spy.mockRestore();
     });
 
     it('returns false when caps.motion is true', () => {
-        const { caps, prefersReducedMotion } = require('./env-caps.js');
         const spy = vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
         expect(prefersReducedMotion()).toBe(false);
         spy.mockRestore();
     });
 
     it('reads caps.motion live on every call, not a cached snapshot', () => {
-        const { caps, prefersReducedMotion } = require('./env-caps.js');
         const spy = vi.spyOn(caps, 'motion', 'get')
             .mockReturnValueOnce(true)
             .mockReturnValueOnce(false);
