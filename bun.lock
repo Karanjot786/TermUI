@@ -272,11 +272,13 @@
         "zod": "^3.0.0",
       },
       "peerDependencies": {
+        "@octokit/rest": "^21.0.0",
         "commander": "^15.0.0",
         "conf": "^10.2.0",
         "zod": "^3.0.0",
       },
       "optionalPeers": [
+        "@octokit/rest",
         "commander",
         "conf",
         "zod",
