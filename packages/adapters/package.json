@@ -40,10 +40,14 @@
     "tsup": "^8.3.0"
   },
   "peerDependencies": {
+    "@octokit/rest": "^21.0.0",
     "conf": "^10.2.0",
     "commander": "^15.0.0"
   },
   "peerDependenciesMeta": {
+    "@octokit/rest": {
+      "optional": true
+    },
     "conf": {
       "optional": true
     },
