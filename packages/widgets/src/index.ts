@@ -58,6 +58,8 @@ export { TreeTable } from './data/TreeTable.js';
 export type { TreeTableColumn, TreeTableRow, TreeTableOptions } from './data/TreeTable.js';
 export { Gauge } from './data/Gauge.js';
 export type { GaugeOptions } from './data/Gauge.js';
+export { LineGauge } from './data/LineGauge.js';
+export type { LineGaugeOptions } from './data/LineGauge.js';
 export { Calendar } from './data/Calendar.js';
 export type { CalendarOptions } from './data/Calendar.js';
 export { Sparkline } from './data/Sparkline.js';
@@ -149,3 +151,6 @@ export { ScatterPlot } from './data/ScatterPlot.js';
 export type { ScatterPlotOptions, ScatterPoint } from './data/ScatterPlot.js';
 export { RadarChart } from './data/RadarChart.js';
 export type { RadarChartOptions, RadarSeries } from './data/RadarChart.js';
+
+export { CandlestickChart } from './data/CandlestickChart.js';
+export type { CandlestickChartOptions, Candle } from './data/CandlestickChart.js';
