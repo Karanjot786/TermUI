@@ -78,6 +78,8 @@ export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { Card } from './layout/Card.js';
 export type { CardOptions } from './layout/Card.js';
+export { Masonry } from './layout/Masonry.js';
+export type { MasonryOptions } from './layout/Masonry.js';
 export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
 export { SplitPane } from './layout/SplitPane.js';
