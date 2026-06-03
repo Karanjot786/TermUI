@@ -1,6 +1,6 @@
 // CommandPalette — fuzzy-search command launcher
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars, caps } from '@termuijs/core';
 
 export interface Command { id: string; label: string; shortcut?: string; action: () => void; category?: string; }
 export interface CommandPaletteOptions { placeholder?: string; borderColor?: Style['fg']; activeColor?: Style['fg']; maxVisible?: number; }
@@ -37,6 +37,76 @@ export class CommandPalette extends Widget {
     selectNext(): void { if (this._selectedIndex < this._filtered.length - 1) { this._selectedIndex++; this.markDirty(); } }
     selectPrev(): void { if (this._selectedIndex > 0) { this._selectedIndex--; this.markDirty(); } }
     confirm(): void { const c = this._filtered[this._selectedIndex]; if (c) { this.hide(); c.action(); } }
+
+    /**
+     * Handle a KeyEvent from @termuijs/core.
+     *
+     * Wires all palette interactions to a single entry point so callers
+     * only need:
+     *   app.on('key', e => palette.handleKey(e))
+     *
+     * Built-in bindings (only active while the palette is visible):
+     *   Ctrl+P          — open / close (toggle)
+     *   ArrowUp / k     — move selection up
+     *   ArrowDown / j   — move selection down
+     *   Enter           — confirm selected command
+     *   Escape          — close
+     *   Backspace       — delete last character
+     *   any printable   — append character to query
+     *
+     * Ctrl+P is also handled while hidden so the palette can be opened.
+     * All handled events have stopPropagation() called automatically.
+     */
+    handleKey(event: KeyEvent): void {
+        // Ctrl+P toggles the palette regardless of current visibility
+        if (event.ctrl && event.key === 'p') {
+            event.stopPropagation();
+            this.toggle();
+            return;
+        }
+
+        // Remaining bindings only apply while the palette is open
+        if (!this._visible) return;
+
+        const { key, ctrl } = event;
+
+        if (key === 'escape' || (ctrl && key === 'c')) {
+            event.stopPropagation();
+            this.hide();
+            return;
+        }
+
+        if (key === 'up') {
+            event.stopPropagation();
+            this.selectPrev();
+            return;
+        }
+
+        if (key === 'down') {
+            event.stopPropagation();
+            this.selectNext();
+            return;
+        }
+
+        if (key === 'return' || key === 'enter') {
+            event.stopPropagation();
+            this.confirm();
+            return;
+        }
+
+        if (key === 'backspace' || key === 'delete') {
+            event.stopPropagation();
+            this.deleteBack();
+            return;
+        }
+
+        // Printable character — append to query
+        // Ignore control sequences (key.length > 1 means special key name)
+        if (!ctrl && !event.alt && key.length === 1) {
+            event.stopPropagation();
+            this.insertChar(key);
+        }
+    }
 
     private _filter(): void {
         const q = this._query.toLowerCase();

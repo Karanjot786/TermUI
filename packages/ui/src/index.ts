@@ -81,6 +81,9 @@ export type { FormField, FormOptions } from './Form.js';
 export { CommandPalette } from './CommandPalette.js';
 export type { Command, CommandPaletteOptions } from './CommandPalette.js';
 
+export { useCommandPalette } from './hooks/useCommandPalette.js';
+export type { UseCommandPaletteOptions, UseCommandPaletteReturn } from './hooks/useCommandPalette.js';
+
 export { prompt, NonInteractiveError } from './prompts.js';
 export type { TextPromptOptions, ConfirmPromptOptions, SelectPromptOptions } from './prompts.js';
 
