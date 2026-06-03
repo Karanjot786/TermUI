@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, caps } from '@termuijs/core';
 import { ThemeSwitcher } from './ThemeSwitcher.js';
 
 function rowText(screen: Screen, row: number): string {
@@ -92,5 +92,44 @@ describe('ThemeSwitcher', () => {
         const screen = renderSwitcher(ts);
         const row1 = rowText(screen, 2);
         expect(row1).toMatch(/[*●]/);
+    });
+
+    it('applies bold and custom/active color styling to selected and active items', () => {
+        const ts = new ThemeSwitcher({ 
+            themes: ['light', 'dark'], 
+            activeTheme: 'light',
+            activeColor: { type: 'named', name: 'green' } 
+        });
+        const screen = renderSwitcher(ts);
+
+        // 'light' (active and selected) should have bold styling and green foreground color
+        expect(screen.back[1][1].bold).toBe(true);
+        expect(screen.back[1][1].fg).toEqual({ type: 'named', name: 'green' });
+
+        // 'dark' (neither active nor selected) should not be bold and not green
+        expect(screen.back[2][1].bold).toBe(false);
+        expect(screen.back[2][1].fg).not.toEqual({ type: 'named', name: 'green' });
+    });
+
+    it('uses unicode markers when caps.unicode is true', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const ts = new ThemeSwitcher({ themes: ['light', 'dark'] });
+        const screen = renderSwitcher(ts);
+        
+        const row1 = rowText(screen, 1);
+        expect(row1).toContain('●▸ Light');
+        
+        vi.restoreAllMocks();
+    });
+
+    it('uses ASCII markers when caps.unicode is false', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const ts = new ThemeSwitcher({ themes: ['light', 'dark'] });
+        const screen = renderSwitcher(ts);
+        
+        const row1 = rowText(screen, 1);
+        expect(row1).toContain('*> Light');
+        
+        vi.restoreAllMocks();
     });
 });
