@@ -82,3 +82,4 @@ export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
 export { useHover } from './hooks/useHover.js';
 export { useElementSize } from './hooks/useElementSize.js';
 export type { ElementSize } from './hooks/useElementSize.js';
+export { useDebounce } from './hooks/useDebounce.js';
