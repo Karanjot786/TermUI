@@ -125,3 +125,5 @@ export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
+export { DataGrid } from './data/DataGrid.js';
+export type { DataGridColumn, DataGridRow, DataGridOptions, SortDirection } from './data/DataGrid.js';
