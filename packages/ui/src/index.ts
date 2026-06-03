@@ -6,6 +6,8 @@
 // ─────────────────────────────────────────────────────
 
 // ── Re-exports from @termuijs/widgets (base components) ──
+// Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
+
 export {
     Box,
     Text,
@@ -29,6 +31,9 @@ export { Spacer } from './Spacer.js';
 
 export { Tabs } from './Tabs.js';
 export type { Tab, TabsOptions } from './Tabs.js';
+
+export { MenuBar } from './MenuBar.js';
+export type { MenuBarOptions, MenuBarItem, MenuItem } from './MenuBar.js';
 
 export { Carousel } from './Carousel.js';
 export type { CarouselOptions } from './Carousel.js';
@@ -111,6 +116,12 @@ export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
+
+export { SegmentedControl } from './SegmentedControl.js';
+export type { SegmentedControlOptions } from './SegmentedControl.js';
+
+
+export { SearchableSelect } from './SearchableSelect.js';
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
 export { Checkbox } from './Checkbox.js';
@@ -121,9 +132,10 @@ export type {
     CheckboxGroupOption,
     CheckboxGroupOptions,
 } from './CheckboxGroup.js';
-export { SegmentedControl } from './SegmentedControl.js';
-export type { SegmentedControlOptions } from './SegmentedControl.js';
 
+
+export { ButtonGroup } from './ButtonGroup.js';
+export type { ButtonGroupOptions, ButtonGroupItem } from './ButtonGroup.js';
 export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
 export { MultilineTextInput } from './MultilineTextInput.js';
@@ -134,3 +146,8 @@ export { Stepper } from './Stepper.js';
 export type { StepperOptions } from './Stepper.js';
 export { ShortcutHelpOverlay } from './components/ShortcutHelpOverlay.js';
 export type { Shortcut, ShortcutHelpOverlayProps } from './components/ShortcutHelpOverlay.js';
+
+export { RadioGroup } from './RadioGroup.js';
+export type { RadioGroupOption, RadioGroupOptions } from './RadioGroup.js';
+export { ThemeSwitcher } from './ThemeSwitcher.js';
+export type { ThemeSwitcherOptions } from './ThemeSwitcher.js';

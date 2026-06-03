@@ -1,4 +1,3 @@
-/// <reference types="@termuijs/motion" />
 import { type Router, type NavigateEvent } from './router.js';
 import { type VNode } from '@termuijs/jsx';
 import { EventEmitter } from '@termuijs/core';
