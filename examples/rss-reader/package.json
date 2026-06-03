@@ -1,0 +1,15 @@
+{
+  "name": "@termuijs/example-rss-reader",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "bun run src/index.tsx",
+    "typecheck": "bun run tsc --noEmit"
+  },
+  "dependencies": {
+    "@termuijs/core": "workspace:*",
+    "@termuijs/data": "workspace:*",
+    "@termuijs/jsx": "workspace:*",
+    "@termuijs/widgets": "workspace:*"
+  }
+}

@@ -190,6 +190,16 @@
         "typescript": "^5.9.3",
       },
     },
+    "examples/rss-reader": {
+      "name": "@termuijs/example-rss-reader",
+      "version": "0.0.1",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/data": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+    },
     "examples/showcase": {
       "name": "@termuijs/example-showcase",
       "version": "0.1.0",
@@ -562,9 +572,6 @@
 
     "@termuijs/example-auth-flow": ["@termuijs/example-auth-flow@workspace:examples/auth-flow"],
 
-    "@termuijs/example-cli-wrapper-live": ["@termuijs/example-cli-wrapper-live@workspace:examples/cli-wrapper-live"],
-
-    "@termuijs/example-dashboard": ["@termuijs/example-dashboard@workspace:examples/dashboard"],
     "@termuijs/example-calculator": ["@termuijs/example-calculator@workspace:examples/calculator"],
 
     "@termuijs/example-chat-app": ["@termuijs/example-chat-app@workspace:examples/chat-app"],
@@ -581,8 +588,6 @@
 
     "@termuijs/example-jsx-dashboard": ["@termuijs/example-jsx-dashboard@workspace:examples/jsx-dashboard"],
 
-    "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
-
     "@termuijs/example-kanban": ["@termuijs/example-kanban@workspace:examples/kanban-board"],
 
     "@termuijs/example-log-viewer": ["@termuijs/example-log-viewer@workspace:examples/log-viewer"],
@@ -590,6 +595,8 @@
     "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
 
     "@termuijs/example-process-monitor": ["@termuijs/example-process-monitor@workspace:examples/process-monitor"],
+
+    "@termuijs/example-rss-reader": ["@termuijs/example-rss-reader@workspace:examples/rss-reader"],
 
     "@termuijs/example-showcase": ["@termuijs/example-showcase@workspace:examples/showcase"],
 
