@@ -145,3 +145,5 @@ export type { MultilineTextInputOptions } from './MultilineTextInput.js';
 export { Stepper } from './Stepper.js';
 export type { StepperOptions } from './Stepper.js';
 
+export { RadioGroup } from './RadioGroup.js';
+export type { RadioGroupOption, RadioGroupOptions } from './RadioGroup.js';
