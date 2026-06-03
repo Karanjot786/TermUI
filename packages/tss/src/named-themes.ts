@@ -1,5 +1,4 @@
-// ─────────────────────────────────────────────────────
-// Named ThemeTokens — 9 curated color schemes
+// Named ThemeTokens — 10 curated color schemes
 // ─────────────────────────────────────────────────────
 
 import type { ThemeTokens } from './tokens.js';
@@ -156,6 +155,7 @@ export const NAMED_THEMES: Record<string, ThemeTokens> = {
   solarized: solarizedTheme,
   solarizedLight: solarizedLightTheme,
   "tokyo-night": tokyoNightTheme,
+  tokyoNight: tokyoNightTheme,
   oneDark: oneDarkTheme,
   gruvbox: gruvboxTheme,
   highContrast: highContrastTheme,
