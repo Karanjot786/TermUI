@@ -1,5 +1,5 @@
 import { Widget } from '../base/Widget.js'
-import type { Style } from '@termuijs/core'
+import type { Screen, Style } from '@termuijs/core'
 
 export interface HexdumpOptions {
     /** Bytes per row. Default: 16 */
@@ -9,7 +9,7 @@ export interface HexdumpOptions {
     placeholder?: string
 }
 
-export class Hexdump extends Widget{
+export class Hexdump extends Widget {
     private data!: Uint8Array
     private opts!: HexdumpOptions
 
@@ -30,9 +30,10 @@ export class Hexdump extends Widget{
 
     setData(data: Uint8Array): void {
         this.data = data
+        this.markDirty()
     }
 
-    protected _renderSelf(): void {
+    protected _renderSelf(screen: Screen): void {
         // TODO: render hexdump rows
     }
 }
