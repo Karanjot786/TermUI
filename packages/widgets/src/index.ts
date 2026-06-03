@@ -158,3 +158,5 @@ export { Timer } from './display/Timer.js';
 export type { TimerOptions } from './display/Timer.js';
 export { Stopwatch } from './display/Stopwatch.js';
 export type { StopwatchOptions } from './display/Stopwatch.js';
+export { OrderedList } from './display/OrderedList.js';
+export type { OrderedListItem, OrderedListOptions } from './display/OrderedList.js';
