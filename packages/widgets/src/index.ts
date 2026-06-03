@@ -14,11 +14,6 @@ export { LogView } from './display/LogView.js';
 export type { LogViewOptions } from './display/LogView.js';
 export { Tree } from './display/Tree.js';
 export type { TreeNode, TreeOptions } from './display/Tree.js';
-export { Collapsible } from './display/Collapsible.js';
-export type { CollapsibleOptions } from './display/Collapsible.js';
-
-export { UnorderedList } from './display/UnorderedList.js';
-export type { UnorderedListOptions } from './display/UnorderedList.js';
 export { JSONView, jsonToTree } from './display/JSONView.js';
 export type { JSONViewOptions, JSONNodeData, JSONNodeType } from './display/JSONView.js';
 export { DiffView } from './display/DiffView.js';
@@ -29,8 +24,6 @@ export { ChatMessage } from './display/ChatMessage.js';
 export type { ChatMessageOptions, MessageRole } from './display/ChatMessage.js';
 export { ToolCall, ToolApproval } from './display/ToolCall.js';
 export type { ToolCallOptions, ToolApprovalOptions, ToolCallStatus } from './display/ToolCall.js';
-export { Digits } from './display/Digits.js';
-export type { DigitsOptions } from './display/Digits.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
@@ -38,24 +31,16 @@ export type { ScrollRange } from './input/virtual-scroll.js';
 
 // ── Input Widgets ─────────────────────────────────────
 export { List } from './input/List.js';
-export type { ListItem, ListProps } from './input/List.js';
-export { useListState } from './data/ListState.js';
-export type { ListState } from './data/ListState.js';
+export type { ListItem } from './input/List.js';
 export { TextInput } from './input/TextInput.js';
 export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
 export { CommandPalette } from './input/CommandPalette.js';
 export type { Command, CommandPaletteOptions } from './input/CommandPalette.js';
-export { ContextMenu } from './input/ContextMenu.js';
-export type { ContextMenuItem } from './input/ContextMenu.js';
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
-export type { TableColumn, TableRow, TableOptions, TableProps } from './data/Table.js';
-export { useTableState } from './data/TableState.js';
-export type { TableState } from './data/TableState.js';
-export { TreeTable } from './data/TreeTable.js';
-export type { TreeTableColumn, TreeTableRow, TreeTableOptions } from './data/TreeTable.js';
+export type { TableColumn, TableRow, TableOptions } from './data/Table.js';
 export { Gauge } from './data/Gauge.js';
 export type { GaugeOptions } from './data/Gauge.js';
 export { LineGauge } from './data/LineGauge.js';
@@ -76,26 +61,20 @@ export { ScrollView } from './layout/ScrollView.js';
 export type { ScrollViewOptions } from './layout/ScrollView.js';
 export { Center } from './layout/Center.js';
 export type { CenterOptions } from './layout/Center.js';
-export { Fill } from './layout/Fill.js';
-export type { FillOptions } from './layout/Fill.js';
 export { Card } from './layout/Card.js';
 export type { CardOptions } from './layout/Card.js';
-export { Masonry } from './layout/Masonry.js';
-export type { MasonryOptions } from './layout/Masonry.js';
 export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
-export { SplitPane } from './layout/SplitPane.js';
-export type { SplitPaneOptions } from './layout/SplitPane.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
 export type { ProgressBarOptions } from './feedback/ProgressBar.js';
-export { ProgressCircle } from './feedback/ProgressCircle.js';
-export type { ProgressCircleOptions } from './feedback/ProgressCircle.js';
 export { MultiProgress } from './feedback/MultiProgress.js';
 export type { ProgressItem, MultiProgressOptions } from './feedback/MultiProgress.js';
 export { Spinner, SPINNER_FRAMES } from './feedback/Spinner.js';
 export type { SpinnerOptions } from './feedback/Spinner.js';
+export { TaskList } from './feedback/TaskList.js';
+export type { TaskItem, TaskStatus, TaskListOptions } from './feedback/TaskList.js';
 export { Scrollbar } from './feedback/Scrollbar.js';
 export type { ScrollbarOrientation, ScrollbarOptions } from './feedback/Scrollbar.js';
 export { Skeleton } from './feedback/Skeleton.js';
@@ -127,17 +106,11 @@ export { Markdown } from './display/Markdown.js';
 export type { MarkdownOptions } from './display/Markdown.js';
 export { Badge } from './display/Badge.js';
 export type { BadgeOptions, BadgeVariant } from './display/Badge.js';
-export { Kbd } from './display/Kbd.js';
-export type { KbdOptions } from './display/Kbd.js';
 export { Tag } from './display/Tag.js';
 export type { TagOptions, TagVariant } from './display/Tag.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
-export { ThinkingBlock } from './display/ThinkingBlock.js';
-export type { ThinkingBlockOptions } from './display/ThinkingBlock.js';
 
-export { DirectoryTree } from './display/DirectoryTree.js';
-export type { DirectoryTreeOptions } from './display/DirectoryTree.js';
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 
