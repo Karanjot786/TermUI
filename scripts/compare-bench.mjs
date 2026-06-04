@@ -19,9 +19,27 @@ const [headPath, mainPath] = args;
 const thresholdIdx = args.indexOf('--threshold');
 const threshold = thresholdIdx >= 0 ? parseFloat(args[thresholdIdx + 1]) : 0.20;
 
+if (Number.isNaN(threshold) || !Number.isFinite(threshold) || threshold < 0) {
+    console.error('Threshold must be a non-negative number');
+    process.exit(2);
+}
+
 const head = JSON.parse(readFileSync(headPath, 'utf8'));
 const main = JSON.parse(readFileSync(mainPath, 'utf8'));
+function validateBench(data, name) {
+    if (!data || typeof data !== 'object') {
+        console.error(`${name}: invalid benchmark file`);
+        process.exit(2);
+    }
 
+    if (!Array.isArray(data.results)) {
+        console.error(`${name}: missing results array`);
+        process.exit(2);
+    }
+}
+
+validateBench(head, 'head benchmark');
+validateBench(main, 'main benchmark');
 const byKey = (r) => `${r.cols}x${r.rows}`;
 const mainBySize = new Map(main.results.map((r) => [byKey(r), r]));
 const headSizes = new Set(head.results.map(byKey));

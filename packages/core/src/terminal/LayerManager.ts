@@ -59,10 +59,13 @@ export class LayerManager {
     private _layers: Map<string, Layer> = new Map();
     private _cols: number;
     private _rows: number;
+    private _hitWidgetGrid!: (string | null)[][];
+    private _hitZGrid!: number[][];
 
     constructor(cols: number, rows: number) {
         this._cols = cols;
         this._rows = rows;
+        this._allocateHitGrids();
     }
 
     get cols(): number { return this._cols; }
@@ -236,6 +239,47 @@ export class LayerManager {
             layer.cells = this._createGrid();
             layer.dirtyRegion = null;
         }
+
+        this._allocateHitGrids();
+    }
+
+    /** Reset the hit grid. Call once at the start of each frame. */
+    clearHitGrid(): void {
+        this._allocateHitGrids();
+    }
+
+    /**
+     * Mark a rectangular region as owned by a widget at a given z-index.
+     * Higher z wins when regions overlap.
+     */
+    setHitRegion(widgetId: string, x: number, y: number, w: number, h: number, z?: number): void {
+        const zVal = z ?? 0;
+        const startX = Math.floor(x);
+        const startY = Math.floor(y);
+        const width = Math.floor(w);
+        const height = Math.floor(h);
+
+        for (let r = startY; r < startY + height; r++) {
+            if (r < 0 || r >= this._rows) continue;
+            for (let c = startX; c < startX + width; c++) {
+                if (c < 0 || c >= this._cols) continue;
+
+                if (zVal >= this._hitZGrid[r][c]) {
+                    this._hitWidgetGrid[r][c] = widgetId;
+                    this._hitZGrid[r][c] = zVal;
+                }
+            }
+        }
+    }
+
+    /** Return the topmost widget id at a cell, or null. */
+    hitTest(col: number, row: number): string | null {
+        const c = Math.floor(col);
+        const r = Math.floor(row);
+        if (c < 0 || c >= this._cols || r < 0 || r >= this._rows) {
+            return null;
+        }
+        return this._hitWidgetGrid[r][c];
     }
 
     /**
@@ -251,6 +295,24 @@ export class LayerManager {
             grid.push(row);
         }
         return grid;
+    }
+
+    /**
+     * Allocate parallel hit grid and z-index grid.
+     */
+    private _allocateHitGrids(): void {
+        this._hitWidgetGrid = [];
+        this._hitZGrid = [];
+        for (let r = 0; r < this._rows; r++) {
+            const widgetRow: (string | null)[] = [];
+            const zRow: number[] = [];
+            for (let c = 0; c < this._cols; c++) {
+                widgetRow.push(null);
+                zRow.push(-Infinity);
+            }
+            this._hitWidgetGrid.push(widgetRow);
+            this._hitZGrid.push(zRow);
+        }
     }
 
     /**

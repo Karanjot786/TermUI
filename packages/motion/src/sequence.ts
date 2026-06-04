@@ -1,83 +1,131 @@
-// ─────────────────────────────────────────────────────
-// Animation Sequencing — chained and parallel execution
-// ─────────────────────────────────────────────────────
+export type AnimatableValue = number | string
 
-export type AnimationRunner = (onComplete: () => void) => () => void;
-
-/**
- * Run a list of animations in order, one after the next.
- * Starts the next animation only when the previous one triggers its onComplete.
- * Returns a master cancel function to stop the sequence immediately.
- */
-export function sequence(animations: AnimationRunner[], onComplete?: () => void): () => void {
-    let currentIndex = 0;
-    let cancelCurrent: (() => void) | null = null;
-    let isCancelled = false;
-    let isFinished = false;
-
-    if (animations.length === 0) {
-        onComplete?.();
-        return () => {};
-    }
-
-    function runNext() {
-        if (isCancelled || isFinished) return;
-
-        if (currentIndex >= animations.length) {
-            isFinished = true;
-            onComplete?.();
-            return;
-        }
-
-        const runner = animations[currentIndex];
-        cancelCurrent = runner(() => {
-            cancelCurrent = null;
-            currentIndex++;
-            runNext();
-        });
-    }
-
-    runNext();
-
-    return () => {
-        if (isCancelled || isFinished) return;
-        isCancelled = true;
-        cancelCurrent?.();
-        cancelCurrent = null;
-    };
+export interface SequenceStep {
+  target: AnimatableValue
+  duration?: number
 }
 
-/**
- * Run several animations at the same time.
- * Fires the completion callback when every animation in the group has finished.
- * Returns a master cancel function to cancel all active animations concurrently.
- */
-export function parallel(animations: AnimationRunner[], onComplete?: () => void): () => void {
-    let completedCount = 0;
-    let isCancelled = false;
-    let isFinished = false;
-    const cancels: (() => void)[] = [];
+export type AnimationRunner = (done: () => void) => () => void
 
-    if (animations.length === 0) {
-        onComplete?.();
-        return () => {};
+export type VirtualClock = {
+  now(): number
+  advance(ms: number): void
+  tick(): void
+  _setInterval(delayMs: number, cb: () => void): () => void
+}
+
+export function sequence(
+  runners: AnimationRunner[] | SequenceStep[],
+  onComplete?: () => void
+): (() => void) | SequenceStep[] {
+  // 1. Handle empty runners (always returns dummy cancel function)
+  if (runners.length === 0) {
+    onComplete?.()
+    return () => {}
+  }
+
+  // 2. Handle SequenceStep[] path
+  if (typeof runners[0] !== 'function') {
+    onComplete?.()
+    return runners as SequenceStep[]
+  }
+
+  // 3. Handle AnimationRunner[] path
+  const fns = runners as AnimationRunner[]
+
+  let cancelled = false
+  let cancelCurrent: () => void = () => {}
+
+  function runNext(index: number) {
+    if (cancelled || index >= fns.length) {
+      if (!cancelled) onComplete?.()
+      return
+    }
+    cancelCurrent = fns[index](() => runNext(index + 1))
+  }
+
+  runNext(0)
+
+  return () => {
+    cancelled = true
+    cancelCurrent()
+  }
+}
+
+export function parallel(
+  runners: AnimationRunner[],
+  onComplete?: () => void
+): () => void {
+  if (runners.length === 0) {
+    onComplete?.()
+    return () => {}
+  }
+
+  let remaining = runners.length
+  const cancellers: Array<() => void> = []
+
+  for (const runner of runners) {
+    const cancel = runner(() => {
+      remaining--
+      if (remaining === 0) onComplete?.()
+    })
+    cancellers.push(cancel)
+  }
+
+  return () => {
+    cancellers.forEach(c => c())
+  }
+}
+
+export interface RepeatOptions {
+  /** Number of passes. Use Infinity for an endless loop. Default 1. */
+  count?: number
+
+  /** Reverse direction on every other pass. Default false. */
+  yoyo?: boolean
+}
+
+export function repeat(
+  runner: AnimationRunner,
+  options?: RepeatOptions,
+): AnimationRunner {
+  const rawCount = options?.count ?? 1;
+  if (rawCount !== Infinity && !(typeof rawCount === 'number' && Number.isInteger(rawCount) && rawCount >= 0)) {
+    throw new TypeError(`repeat count must be a non-negative integer or Infinity, got ${rawCount}`);
+  }
+  const count = rawCount
+  const yoyo = options?.yoyo ?? false
+
+  return (done: () => void) => {
+    if (count <= 0) {
+      done()
+      return () => {}
     }
 
-    animations.forEach((runner, index) => {
-        const cancel = runner(() => {
-            if (isCancelled || isFinished) return;
-            completedCount++;
-            if (completedCount === animations.length) {
-                isFinished = true;
-                onComplete?.();
-            }
-        });
-        cancels.push(cancel);
-    });
+    let cancelled = false
+    let cancelCurrent: () => void = () => {}
+
+    function runNext(index: number) {
+      if (cancelled || index >= count) {
+        if (!cancelled) done()
+        return
+      }
+
+      // If a reversed runner is supplied, use it on odd passes.
+      // Otherwise fall back to the original runner.
+      const reverseRunner = (runner as { reverse?: AnimationRunner }).reverse
+      const currentRunner = yoyo && index % 2 === 1 && reverseRunner
+        ? reverseRunner
+        : runner
+
+      cancelCurrent = currentRunner(() => runNext(index + 1))
+    }
+
+    runNext(0)
 
     return () => {
-        if (isCancelled || isFinished) return;
-        isCancelled = true;
-        cancels.forEach(cancel => cancel());
-    };
+      cancelled = true
+      cancelCurrent()
+    }
+  }
 }

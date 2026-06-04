@@ -37,6 +37,8 @@ export interface Cell {
      * - 0 for continuation cells (second half of a wide char)
      */
     width: number;
+    /** Optional OSC 8 hyperlink target for this cell. */
+    link?: string;
 }
 
 /** Create a blank cell with default attributes */
@@ -52,6 +54,7 @@ export function emptyCell(): Cell {
         strikethrough: false,
         inverse: false,
         width: 1,
+        link: undefined,
     };
 }
 
@@ -67,6 +70,7 @@ export function resetCell(cell: Cell): void {
     cell.strikethrough = false;
     cell.inverse = false;
     cell.width = 1;
+    cell.link = undefined;
 }
 
 /** Check if two cells are visually identical */
@@ -80,6 +84,7 @@ export function cellsEqual(a: Cell, b: Cell): boolean {
         a.strikethrough === b.strikethrough &&
         a.inverse === b.inverse &&
         a.width === b.width &&
+        a.link === b.link &&
         colorsEqual(a.fg, b.fg) &&
         colorsEqual(a.bg, b.bg)
     );
@@ -108,6 +113,7 @@ function colorsEqual(a: Color, b: Color): boolean {
 export class Screen {
     private _cols: number;
     private _rows: number;
+    private _previousLines: string[] = [];
     front: Cell[][];
     back: Cell[][];
 
@@ -122,6 +128,28 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+    }
+
+    /** Serialize a back-buffer row to a plain string (skips continuation cells). */
+    getLine(row: number): string {
+        if (row < 0 || row >= this._rows) return '';
+        return this.back[row]
+            .filter(cell => cell.width !== 0)
+            .map(cell => cell.char || ' ')
+            .join('');
+    }
+
+    /** Return the saved line string for the given row (empty before first saveLines call). */
+    getPreviousLine(row: number): string {
+        return this._previousLines[row] ?? '';
+    }
+
+    /** Snapshot the current back-buffer line strings for use by diffRenderer. */
+    saveLines(): void {
+        this._previousLines = [];
+        for (let r = 0; r < this._rows; r++) {
+            this._previousLines.push(this.getLine(r));
+        }
     }
 
     get cols(): number { return this._cols; }

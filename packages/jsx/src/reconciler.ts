@@ -17,10 +17,10 @@ import type { VNode, VElement, FC } from './vnode.js';
 import { isVElement, isVFragment, Fragment, flattenChildren } from './vnode.js';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
-    runEffects, destroyFiber, type Fiber,
+    runEffects, runLayoutEffects, destroyFiber, type Fiber,
 } from './hooks.js';
 import { ErrorBoundary } from './error-boundary.js';
-
+import { Suspense } from './Suspense.js';
 // ── Component instance tracking ──
 
 interface ComponentInstance {
@@ -260,6 +260,7 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
     // VElement
     if (isVElement(vnode)) {
         let { type, props, children } = vnode;
+        children = children ?? [];
 
         // Map uppercase widget classes to their lowercase intrinsic tags
         const t = type as any;
@@ -276,6 +277,25 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
         else if (t === ScrollView) type = 'scrollview';
         else if (t === Sidebar) type = 'sidebar';
         else if (t === Spinner) type = 'spinner';
+
+        // Suspense boundary
+        if (type === Suspense) {
+            try {
+                const suspenseChild = children.length === 1 ? children[0] : {
+                    type: Fragment,
+                    props: {},
+                    children,
+                } as any;
+
+                return reconcile(suspenseChild);
+            } catch (err) {
+                if (err instanceof Promise) {
+                    return reconcile(props.fallback);
+                }
+
+                throw err;
+            }
+        }
 
         // Functional component
         if (typeof type === 'function') {
@@ -344,7 +364,7 @@ function cleanupStaleChildFibers(fiber: Fiber): void {
 function renderComponent(
     component: FC<any>,
     props: Record<string, any>,
-    children: VNode[],
+    children: VNode[] = [],
 ): Widget {
     const parentFiber = _parentFiber;
 
@@ -402,6 +422,11 @@ function renderComponent(
     } catch (err) {
         clearCurrentFiber();
         _parentFiber = prevParent;
+
+        if (err instanceof Promise) {
+            throw err;
+        }
+
         const error = err instanceof Error ? err : new Error(String(err));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
@@ -419,6 +444,7 @@ function renderComponent(
         _parentFiber = prevParent;
 
         cleanupStaleChildFibers(fiber);
+        runLayoutEffects(fiber);
         runEffects(fiber);
 
         _instanceMap.set(vnode, {
@@ -444,6 +470,7 @@ function renderComponent(
     cleanupStaleChildFibers(fiber);
 
     // Run effects after render
+    runLayoutEffects(fiber);
     runEffects(fiber);
 
     // Store instance for cleanup and re-renders
@@ -493,6 +520,11 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     } catch (rawErr) {
         clearCurrentFiber();
         _parentFiber = prevParent;
+
+        if (rawErr instanceof Promise) {
+            throw rawErr;
+        }
+
         const err = rawErr instanceof Error ? rawErr : new Error(String(rawErr));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
@@ -508,6 +540,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         _parentFiber = prevParent;
 
         cleanupStaleChildFibers(fiber);
+        runLayoutEffects(fiber);
         runEffects(fiber);
         fiber.isDirty = false;
 
@@ -523,6 +556,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     // memo() optimization: if component returned same VNode reference, skip widget rebuild
     if (vnode === instance.lastVNode) {
         _parentFiber = prevParent;
+        runLayoutEffects(fiber);
         runEffects(fiber);
         fiber.isDirty = false;
         return instance.widget;
@@ -537,6 +571,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     // Destroy child fibers not visited during this render
     cleanupStaleChildFibers(fiber);
 
+    runLayoutEffects(fiber);
     runEffects(fiber);
     fiber.isDirty = false;
 

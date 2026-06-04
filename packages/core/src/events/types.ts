@@ -52,7 +52,9 @@ export function createKeyEvent(base: {
 /**
  * Mouse event types.
  */
-export type MouseEventType = 'mousedown' | 'mouseup' | 'mousemove' | 'scroll';
+export type MouseEventType =
+    | 'mousedown' | 'mouseup' | 'mousemove' | 'scroll'
+    | 'dblclick' | 'drag' | 'dragend';
 export type MouseButton = 'left' | 'middle' | 'right' | 'none';
 
 /**
