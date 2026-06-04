@@ -51,6 +51,7 @@ class AIAssistantApp extends Widget {
   private modeLabel: Text;
   private tokenLabel: Text;
   private isStreaming = false;
+  private isMockMode = IS_MOCK;
   private inputTokens = 0;
   private outputTokens = 0;
   private aiAdapter: ReturnType<typeof useAI> | null = null;
@@ -71,6 +72,8 @@ class AIAssistantApp extends Widget {
         });
       } catch (e) {
         console.error('Failed to initialize AI adapter:', e);
+        this.isMockMode = true;
+        this.aiAdapter = null;
       }
     }
 
@@ -80,7 +83,7 @@ class AIAssistantApp extends Widget {
       flexDirection: 'row',
       height: 1,
       gap: 1,
-      padding: [0, 1],
+      padding: { top: 0, bottom: 0, left: 1, right: 1 },
       border: 'single',
       borderColor: { type: 'named' as const, name: 'brightBlack' as const },
     });
@@ -90,7 +93,7 @@ class AIAssistantApp extends Widget {
       fg: { type: 'named' as const, name: 'cyan' as const },
     });
 
-    this.modeLabel = new Text(IS_MOCK ? '[mock mode]' : '[claude-haiku]', {
+    this.modeLabel = new Text(this.isMockMode ? '[mock mode]' : '[claude-haiku]', {
       dim: true,
     });
 
@@ -125,7 +128,7 @@ class AIAssistantApp extends Widget {
     const initialMessage = new ChatMessage(
       {
         role: 'assistant',
-        content: IS_MOCK
+        content: this.isMockMode
           ? 'Hi! Running in mock mode (no ANTHROPIC_API_KEY). Type and press Enter!'
           : 'Hi! I am Claude. How can I help you?',
         timestamp: new Date(),
@@ -140,7 +143,7 @@ class AIAssistantApp extends Widget {
       flexDirection: 'row',
       height: 3,
       gap: 1,
-      padding: [0, 1],
+      padding: { top: 0, bottom: 0, left: 1, right: 1 },
       border: 'single',
       borderColor: { type: 'named' as const, name: 'brightBlack' as const },
     });
@@ -185,6 +188,12 @@ class AIAssistantApp extends Widget {
     this.tokenLabel.setContent(`in:${this.inputTokens} out:${this.outputTokens}`);
   }
 
+  private removeStreamingTextWidget(): void {
+    if (!this.streamingTextWidget) return;
+    this.chatContainer.removeChild(this.streamingTextWidget);
+    this.streamingTextWidget = null;
+  }
+
   private async handleSendMessage(userText: string): Promise<void> {
     if (!userText.trim() || this.isStreaming) return;
 
@@ -210,25 +219,28 @@ class AIAssistantApp extends Widget {
 
       // Stream response
       let fullResponse = '';
+      this.inputTokens += Math.ceil(userText.length / 4);
+      this.updateTokenLabel();
 
       // Create streaming text widget
-      this.streamingTextWidget = new StreamingText(
+      const streamingTextWidget = new StreamingText(
         {
           text: '',
           speed: 1,
         },
         { border: 'single', height: 5 }
       );
-      this.chatContainer.addChild(this.streamingTextWidget);
+      this.streamingTextWidget = streamingTextWidget;
+      this.chatContainer.addChild(streamingTextWidget);
 
-      if (IS_MOCK || !this.aiAdapter) {
+      if (this.isMockMode || !this.aiAdapter) {
         const stream = mockStream();
         for await (const token of stream) {
           fullResponse += token;
-          this.streamingTextWidget.setText(fullResponse);
+          streamingTextWidget.setText(fullResponse);
           this.outputTokens++;
           this.updateTokenLabel();
-          this.streamingTextWidget.tick();
+          streamingTextWidget.tick();
           this.markDirty();
         }
       } else {
@@ -239,19 +251,16 @@ class AIAssistantApp extends Widget {
 
         for await (const token of this.aiAdapter.chat(aiMessages)) {
           fullResponse += token;
-          this.streamingTextWidget.setText(fullResponse);
+          streamingTextWidget.setText(fullResponse);
           this.outputTokens++;
           this.updateTokenLabel();
-          this.streamingTextWidget.tick();
+          streamingTextWidget.tick();
           this.markDirty();
         }
-
-        this.inputTokens += Math.ceil(userText.length / 4);
-        this.updateTokenLabel();
       }
 
       // Replace streaming widget with final ChatMessage
-      this.chatContainer.removeChild(this.streamingTextWidget);
+      this.removeStreamingTextWidget();
       const assistantMessage = new ChatMessage(
         {
           role: 'assistant',
@@ -267,6 +276,7 @@ class AIAssistantApp extends Widget {
         await this.demonstrateToolApproval();
       }
     } catch (e) {
+      this.removeStreamingTextWidget();
       const errorMsg = e instanceof Error ? e.message : String(e);
       const errorMessage = new ChatMessage(
         {
@@ -278,6 +288,7 @@ class AIAssistantApp extends Widget {
       );
       this.chatContainer.addChild(errorMessage);
     } finally {
+      this.removeStreamingTextWidget();
       this.isStreaming = false;
       this.textInput.isFocused = true;
       this.markDirty();

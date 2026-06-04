@@ -69,7 +69,7 @@ The app will stream real responses from Claude.
 ## Implementation Notes
 
 - When `ANTHROPIC_API_KEY` is missing, the app automatically falls back to mock mode
-- Tool calls are demonstrated randomly after assistant responses (real mode only)
+- Tool calls are demonstrated randomly after assistant responses
 - Token counts are tracked and displayed in the header
 - The tool approval system shows a prompt allowing users to approve or deny tool execution
 
