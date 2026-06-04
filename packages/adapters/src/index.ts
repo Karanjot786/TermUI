@@ -18,6 +18,7 @@ export type {
 
 export { zodValidator } from './zod/index.js'
 export type { PromptValidator } from './zod/index.js'
+export { chalkToTermUI } from './chalk/index.js'
 
 export { useAI } from './ai/index.js'
 export type {
