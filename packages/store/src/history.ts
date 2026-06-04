@@ -58,7 +58,7 @@ export function createHistoryStore<T>(initialPresent: T): TemporalStoreActions<T
 
         // Push a new state if it is different from the current `present`.
         set(newState: T): void {
-            if (JSON.stringify(timeline.present) === JSON.stringify(newState)) return;
+            if (Object.is(timeline.present, newState)) return;
 
             timeline = {
                 past: [...timeline.past, timeline.present],
