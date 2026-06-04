@@ -114,6 +114,9 @@ export type { FilePickerOptions, FileEntry } from './FilePicker.js';
 export { DatePicker } from './DatePicker.js';
 export type { DatePickerOptions } from './DatePicker.js';
 
+export { DateRangePicker } from './DateRangePicker.js';
+export type { DateRange, DateRangePickerOptions } from './DateRangePicker.js';
+
 export { ColorPicker } from './ColorPicker.js';
 export type { ColorPickerOptions } from './ColorPicker.js';
 
