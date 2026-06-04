@@ -36,7 +36,7 @@ bun install
 bun run dev
 ```
 
-Requires [Bun](https://bun.sh) 1.3.0 or newer.
+Requires [Bun](https://bun.sh) 1.3.0 or newer. Install it with `curl -fsSL https://bun.sh/install | bash` (macOS/Linux) or `powershell -c "irm bun.sh/install.ps1 | iex"` (Windows).
 
 ## Manual Setup
 
@@ -426,6 +426,7 @@ examples/
 ```
 
 ## Development
+> **Note:** This project uses [Bun](https://bun.sh) as its package manager. Install Bun first: https://bun.sh/docs/installation
 
 ```bash
 bun install
