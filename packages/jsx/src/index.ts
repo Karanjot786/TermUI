@@ -10,6 +10,9 @@ export { Fragment } from './vnode.js';
 export type { VNode, VElement, VFragment, FC, IntrinsicProps } from './vnode.js';
 export { isVElement, isVFragment, flattenChildren } from './vnode.js';
 
+// ── Portal ──
+export { createPortal } from './createPortal.js';
+
 // ── Hooks ──
 export {
     useState,
