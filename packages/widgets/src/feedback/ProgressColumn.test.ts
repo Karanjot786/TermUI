@@ -50,7 +50,7 @@ describe('ProgressColumn', () => {
             kind: 'percentage',
         });
     });
-    it('uses provided columns in Progress', () => {
+   it('uses provided columns in Progress', () => {
     const progress = new Progress({
         columns: [
             BarColumn(),
@@ -58,13 +58,24 @@ describe('ProgressColumn', () => {
         ],
     });
 
-    expect(progress.columns).toHaveLength(2);
-});
+    expect(
+        progress.columns.map(column => column.kind),
+    ).toEqual([
+        'bar',
+        'text',
+    ]);
+  });
 
-it('falls back to default columns', () => {
+  it('falls back to default columns', () => {
     const progress = new Progress();
 
-    expect(progress.columns.length).toBeGreaterThan(0);
-});
+    expect(
+        progress.columns.map(column => column.kind),
+    ).toEqual([
+        'bar',
+        'text',
+        'percentage',
+    ]);
+ });
 
 });
