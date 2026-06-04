@@ -12,6 +12,7 @@ import {
 } from "./prompts.js";
 import { generateProject, type ProjectConfig } from "./templates.js";
 import { parseArgs, isNonInteractive } from "./args.js";
+import { validateProjectName } from "./validate.js";
 
 const TEMPLATES = [
     "Empty (start from scratch)",
@@ -56,6 +57,9 @@ async function main() {
     // ───────── CI MODE ─────────
     if (isNonInteractive(args)) {
         projectName ??= "my-termui-app";
+
+        // Validate project name before any filesystem operations
+        projectName = validateProjectName(projectName);
 
         if (args.template && !TEMPLATE_KEYS.includes(args.template as any)) {
             throw new Error(
@@ -117,6 +121,9 @@ async function main() {
         projectName = await textPrompt("Project name", "my-termui-app");
     }
 
+    // Validate project name before any filesystem operations
+    projectName = validateProjectName(projectName);
+
     const templateIdx = await selectPrompt("What kind of app?", TEMPLATES);
     template = TEMPLATE_KEYS[templateIdx];
 
@@ -134,7 +141,7 @@ async function main() {
     );
 
     const config: ProjectConfig = {
-        name: projectName!,
+        name: projectName,
         template,
         theme,
         features: {
@@ -144,7 +151,7 @@ async function main() {
         },
     };
 
-    const projectDir = resolve(process.cwd(), projectName!);
+    const projectDir = resolve(process.cwd(), projectName);
 
     const files = generateProject(config);
 
