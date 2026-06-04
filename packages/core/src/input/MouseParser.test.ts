@@ -2,7 +2,7 @@
 // @termuijs/core — Tests for MouseParser
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, test } from 'vitest';
 import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { parseMouseEvent } from './MouseParser.js';
 import { describe, expect, test } from 'vitest';
