@@ -33,6 +33,10 @@ export function parseMouseEvent(data: string): MouseEvent | null {
     const motion = (cb & 0b100000) !== 0;
     const isScroll = (cb & 0b1000000) !== 0;
 
+    const shift = (cb & 0b100)   !== 0;
+    const alt   = (cb & 0b1000)  !== 0;
+    const ctrl  = (cb & 0b10000) !== 0;
+
     if (isScroll) {
         button = 'none';
         type = 'scroll';
@@ -54,6 +58,9 @@ export function parseMouseEvent(data: string): MouseEvent | null {
         button,
         type,
         scrollDelta,
+        shift,   
+        alt,     
+        ctrl,
     };
 }
 
