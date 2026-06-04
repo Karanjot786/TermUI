@@ -10,6 +10,9 @@ import { BasicAuthPrompt } from './BasicAuthPrompt.js';
 // ── Re-exports from @termuijs/widgets (base components) ──
 // Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
 
+// ── Re-exports from @termuijs/widgets (base components) ──
+// Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
+
 export {
     Box,
     Text,
