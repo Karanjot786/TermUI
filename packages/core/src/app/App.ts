@@ -10,7 +10,7 @@ import { InputParser } from '../input/InputParser.js';
 import { FocusManager } from '../events/FocusManager.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import { computeLayout, type LayoutNode } from '../layout/LayoutEngine.js';
-import type { EventMap } from '../events/types.js';
+import type { EventMap, FocusEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
 
@@ -51,6 +51,12 @@ export interface RootWidget {
     clearDirty?(): void;
 }
 
+interface FocusAwareWidget {
+    id: string;
+    isFocused: boolean;
+    markDirty?: () => void;
+}
+
 /**
  * Application lifecycle manager.
  *
@@ -77,6 +83,8 @@ export class App {
     private _exitResolve: ((code: number) => void) | null = null;
     private _unsubKey: (() => void) | null = null;
     private _unsubMouse: (() => void) | null = null;
+    private _unsubFocus: (() => void) | null = null;
+    private _unsubBlur: (() => void) | null = null;
     private _widgetById = new Map<string, any>();
     // Lines to insert before inline viewport output. Each entry: { id: symbol, text: string }
     private _insertBefore: Array<{ id: symbol; text: string }> = [];
@@ -101,6 +109,9 @@ export class App {
         this.focus = new FocusManager();
         this.events = new EventEmitter();
         this.layers = new LayerManager(this.terminal.cols, this.terminal.rows);
+
+        this._unsubFocus = this.focus.on('focus', event => this._handleFocusEvent(event));
+        this._unsubBlur = this.focus.on('blur', event => this._handleFocusEvent(event));
     }
 
     /**
@@ -110,6 +121,13 @@ export class App {
      */
     async mount(): Promise<number> {
         if (this._mounted) return 0;
+
+        if (!this._unsubFocus) {
+            this._unsubFocus = this.focus.on('focus', event => this._handleFocusEvent(event));
+        }
+        if (!this._unsubBlur) {
+            this._unsubBlur = this.focus.on('blur', event => this._handleFocusEvent(event));
+        }
 
         // Check if we should use fallback mode
         if (this._options.forceFallback || (!this._options.skipFallback && shouldUseFallback())) {
@@ -222,6 +240,10 @@ export class App {
         this._unsubKey = null;
         this._unsubMouse?.();
         this._unsubMouse = null;
+        this._unsubFocus?.();
+        this._unsubFocus = null;
+        this._unsubBlur?.();
+        this._unsubBlur = null;
 
         // Stop the stdout interceptor to restore native console.log behavior
         this.renderer.hook.stop();
@@ -388,12 +410,44 @@ export class App {
 
     private _walkWidget(widget: any): void {
         if (!widget) return;
-        if (widget.id) this._widgetById.set(widget.id, widget);
+        if (widget.id) {
+            this._widgetById.set(widget.id, widget);
+            if (this._isFocusAwareWidget(widget)) {
+                widget.isFocused = this.focus.currentId === widget.id;
+            }
+        }
         const children = widget._children ?? widget.children ?? [];
         if (Array.isArray(children)) {
             for (const child of children) {
                 this._walkWidget(child);
             }
         }
+    }
+
+    private _handleFocusEvent(event: FocusEvent): void {
+        const changed = this._setWidgetFocused(event.targetId, event.type === 'focus');
+        if (changed) {
+            this.requestRender();
+        }
+    }
+
+    private _setWidgetFocused(id: string, focused: boolean): boolean {
+        const widget = this._widgetById.get(id);
+        if (!this._isFocusAwareWidget(widget) || widget.isFocused === focused) {
+            return false;
+        }
+
+        widget.isFocused = focused;
+        widget.markDirty?.();
+        return true;
+    }
+
+    private _isFocusAwareWidget(widget: unknown): widget is FocusAwareWidget {
+        return typeof widget === 'object'
+            && widget !== null
+            && 'id' in widget
+            && typeof widget.id === 'string'
+            && 'isFocused' in widget
+            && typeof widget.isFocused === 'boolean';
     }
 }

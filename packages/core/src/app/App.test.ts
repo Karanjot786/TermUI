@@ -6,6 +6,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { App, type AppOptions, type RootWidget } from './App.js';
 import type { Screen } from '../terminal/Screen.js';
 import type { LayoutNode } from '../layout/LayoutEngine.js';
+import type { Rect } from '../layout/Rect.js';
+import type { Style } from '../style/Style.js';
 import { renderInlineToTerminal } from '../inline-viewport.js';
 
 /**
@@ -27,6 +29,128 @@ function createMockRootWidget(): RootWidget {
         render(_screen: Screen) { },
         mount() { },
         unmount() { },
+    };
+}
+
+class FocusTestWidget implements RootWidget {
+    readonly children: FocusTestWidget[] = [];
+    parent: FocusTestWidget | null = null;
+    focusable = false;
+    isFocused = false;
+    renderCount = 0;
+    dirtyCount = 0;
+
+    private _dirty = true;
+    private _rect: Rect = { x: 0, y: 0, width: 0, height: 0 };
+    private _layoutNode: LayoutNode | null = null;
+
+    constructor(
+        readonly id: string,
+        private readonly _style: Style = {},
+    ) {}
+
+    get isDirty(): boolean {
+        return this._dirty;
+    }
+
+    addChild(child: FocusTestWidget): void {
+        child.parent = this;
+        this.children.push(child);
+    }
+
+    getLayoutNode(): LayoutNode {
+        this._layoutNode = {
+            id: this.id,
+            style: this._style,
+            children: this.children.map(child => child.getLayoutNode()),
+            computed: { x: 0, y: 0, width: 0, height: 0 },
+            _dirty: true,
+        };
+        return this._layoutNode;
+    }
+
+    syncLayout(): void {
+        if (this._layoutNode) {
+            this._rect = { ...this._layoutNode.computed };
+        }
+        for (const child of this.children) {
+            child.syncLayout();
+        }
+    }
+
+    render(screen: Screen): void {
+        this.renderCount++;
+        if (this.children.length > 0) {
+            for (const child of this.children) {
+                child.render(screen);
+            }
+            return;
+        }
+
+        screen.setCell(this._rect.x, this._rect.y, {
+            char: this.isFocused ? 'F' : '-',
+        });
+    }
+
+    markDirty(): void {
+        this.dirtyCount++;
+        if (this._dirty) return;
+        this._dirty = true;
+        this.parent?.markDirty();
+    }
+
+    clearDirty(): void {
+        this._dirty = false;
+        for (const child of this.children) {
+            child.clearDirty();
+        }
+    }
+}
+
+function createFocusTestRoot(): {
+    root: FocusTestWidget;
+    first: FocusTestWidget;
+    second: FocusTestWidget;
+} {
+    const root = new FocusTestWidget('root', { flexDirection: 'row' });
+    const first = new FocusTestWidget('first', { width: 1, height: 1 });
+    const second = new FocusTestWidget('second', { width: 1, height: 1 });
+
+    first.focusable = true;
+    second.focusable = true;
+    root.addChild(first);
+    root.addChild(second);
+
+    return { root, first, second };
+}
+
+function createInteractiveTestOptions(): AppOptions {
+    const stdout = {
+        columns: 10,
+        rows: 4,
+        isTTY: true,
+        write(_s: string) {},
+        on() {},
+        off() {},
+    };
+    const stdin = {
+        isTTY: true,
+        isRaw: false,
+        setRawMode() {},
+        resume() {},
+        pause() {},
+        on() {},
+        off() {},
+    };
+
+    return {
+        forceFallback: false,
+        skipFallback: true,
+        screenMode: 'main',
+        // Test doubles implement the stream members App uses.
+        stdout: stdout as unknown as NodeJS.WriteStream,
+        // Test doubles implement the stream members App uses.
+        stdin: stdin as unknown as NodeJS.ReadStream,
     };
 }
 
@@ -178,6 +302,76 @@ describe('App', () => {
             expect((app as any).screen.back[3][0].char).toBe('Y');
 
             // Inline output verified via back buffer above; scrollback write is implementation detail
+
+            app.exit(0);
+            await mountPromise.catch(() => {});
+        });
+    });
+
+    describe('focus state integration', () => {
+        it('updates widget isFocused flags when focus changes', async () => {
+            const { root, first, second } = createFocusTestRoot();
+            const app = new App(root, createInteractiveTestOptions());
+            const mountPromise = app.mount();
+
+            app.focus.register({ id: first.id, tabIndex: 0, focusable: true });
+            app.focus.register({ id: second.id, tabIndex: 1, focusable: true });
+
+            expect(first.isFocused).toBe(true);
+            expect(second.isFocused).toBe(false);
+
+            app.focus.focusNext();
+
+            expect(first.isFocused).toBe(false);
+            expect(second.isFocused).toBe(true);
+
+            app.exit(0);
+            await mountPromise.catch(() => {});
+        });
+
+        it('marks changed widgets dirty and re-renders focus output', async () => {
+            const { root, first, second } = createFocusTestRoot();
+            const app = new App(root, createInteractiveTestOptions());
+            const mountPromise = app.mount();
+
+            app.focus.register({ id: first.id, tabIndex: 0, focusable: true });
+            app.focus.register({ id: second.id, tabIndex: 1, focusable: true });
+
+            expect(app.screen.back[0][0].char).toBe('F');
+            expect(app.screen.back[0][1].char).toBe('-');
+
+            const firstDirtyBefore = first.dirtyCount;
+            const secondDirtyBefore = second.dirtyCount;
+            const rootRenderBefore = root.renderCount;
+
+            app.focus.focusNext();
+
+            expect(first.dirtyCount).toBeGreaterThan(firstDirtyBefore);
+            expect(second.dirtyCount).toBeGreaterThan(secondDirtyBefore);
+            expect(root.renderCount).toBeGreaterThan(rootRenderBefore);
+            expect(app.screen.back[0][0].char).toBe('-');
+            expect(app.screen.back[0][1].char).toBe('F');
+
+            app.exit(0);
+            await mountPromise.catch(() => {});
+        });
+
+        it('syncs focus state when focus events happen before the widget map exists', async () => {
+            const { root, first, second } = createFocusTestRoot();
+            const app = new App(root, createInteractiveTestOptions());
+
+            app.focus.register({ id: first.id, tabIndex: 0, focusable: true });
+            app.focus.register({ id: second.id, tabIndex: 1, focusable: true });
+
+            expect(first.isFocused).toBe(false);
+            expect(second.isFocused).toBe(false);
+
+            const mountPromise = app.mount();
+
+            expect(first.isFocused).toBe(true);
+            expect(second.isFocused).toBe(false);
+            expect(app.screen.back[0][0].char).toBe('F');
+            expect(app.screen.back[0][1].char).toBe('-');
 
             app.exit(0);
             await mountPromise.catch(() => {});
