@@ -3,12 +3,14 @@
 //
 // Renders a star rating selector controlled by arrow keys.
 // Right/left arrows adjust the value; enter confirms and
-// fires onChange.
+// fires onSelect.
 // ─────────────────────────────────────────────────────
 
 import { Widget } from '@termuijs/widgets';
 import {
     type Screen,
+    type Style,
+    type Color,
     type KeyEvent,
     mergeStyles,
     defaultStyle,
@@ -17,14 +19,18 @@ import {
 } from '@termuijs/core';
 
 export interface RatingOptions {
-    /** Total number of stars, default 5 */
+    /** Total number of stars. Default: 5 */
     max?: number;
-    /** Initial value, 0 = none, default 0 */
+    /** Initial rating. Default: 0 */
     value?: number;
-    /** Readonly disables key input */
-    readonly?: boolean;
-    /** Callback when value changes */
-    onChange?: (value: number) => void;
+    /** Filled star character. Default: '★' with ASCII fallback '*' */
+    filledChar?: string;
+    /** Empty star character. Default: '☆' with ASCII fallback '-' */
+    emptyChar?: string;
+    /** Color for filled stars */
+    filledColor?: Color;
+    /** Callback when the user confirms a rating via enter */
+    onSelect?: (value: number) => void;
 }
 
 /**
@@ -39,24 +45,26 @@ export interface RatingOptions {
 export class Rating extends Widget {
     private _value: number;
     private _max: number;
+    private _filledChar?: string;
+    private _emptyChar?: string;
+    private _filledColor?: Color;
 
-    /** Readonly disables key input. */
-    readonly: boolean;
-
-    /** Callback when value changes via enter key. */
-    onChange?: (value: number) => void;
+    /** Callback when the user confirms a rating via enter. */
+    onSelect?: (value: number) => void;
 
     focusable = true;
 
-    constructor(options: RatingOptions = {}) {
-        const max = Math.max(options.max ?? 5, 1);
+    constructor(style: Partial<Style> = {}, opts: RatingOptions = {}) {
+        const max = Math.max(opts.max ?? 5, 1);
 
-        super(mergeStyles(defaultStyle(), { height: 1 }));
+        super(mergeStyles(defaultStyle(), { ...style, height: 1 }));
 
         this._max = max;
-        this._value = Math.max(0, Math.min(options.value ?? 0, max));
-        this.readonly = options.readonly ?? false;
-        this.onChange = options.onChange;
+        this._value = Math.max(0, Math.min(opts.value ?? 0, max));
+        this._filledChar = opts.filledChar;
+        this._emptyChar = opts.emptyChar;
+        this._filledColor = opts.filledColor;
+        this.onSelect = opts.onSelect;
     }
 
     // ── Accessors ─────────────────────────────────────
@@ -66,38 +74,44 @@ export class Rating extends Widget {
         return this._value;
     }
 
-    set value(n: number) {
-        const clamped = Math.max(0, Math.min(n, this._max));
-        if (clamped === this._value) return;
-        this._value = clamped;
-        this.markDirty();
-    }
-
     /** The maximum number of stars. */
     get max(): number {
         return this._max;
     }
 
+    // ── Public methods ────────────────────────────────
+
+    /** Set the rating value (clamped to 0..max). Calls markDirty(). */
+    setValue(value: number): void {
+        const clamped = Math.max(0, Math.min(value, this._max));
+        if (clamped === this._value) return;
+        this._value = clamped;
+        this.markDirty();
+    }
+
+    /** Get the current rating value. */
+    getValue(): number {
+        return this._value;
+    }
+
     // ── Key handling ──────────────────────────────────
 
     handleKey(event: KeyEvent): void {
-        if (this.readonly) return;
-
         switch (event.key) {
             case 'right':
-                this.value = this._value + 1;
+                this.setValue(this._value + 1);
                 break;
             case 'left':
-                this.value = this._value - 1;
+                this.setValue(this._value - 1);
                 break;
             case 'home':
-                this.value = 0;
+                this.setValue(0);
                 break;
             case 'end':
-                this.value = this._max;
+                this.setValue(this._max);
                 break;
             case 'enter':
-                this.onChange?.(this._value);
+                this.onSelect?.(this._value);
                 break;
         }
     }
@@ -110,8 +124,8 @@ export class Rating extends Widget {
 
         const attrs = styleToCellAttrs(this.style);
 
-        const filled = caps.unicode ? '★' : '*';
-        const empty = caps.unicode ? '☆' : '-';
+        const filled = this._filledChar ?? (caps.unicode ? '★' : '*');
+        const empty = this._emptyChar ?? (caps.unicode ? '☆' : '-');
 
         let text = '';
         for (let i = 0; i < this._max; i++) {

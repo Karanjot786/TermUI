@@ -17,6 +17,15 @@ function key(name: string) {
     });
 }
 
+/** Create a Rating, set its rect, and render it on a Screen. */
+function renderRating(opts: ConstructorParameters<typeof Rating>[1] = {}, width = 20) {
+    const rating = new Rating({}, opts);
+    const screen = new Screen(width, 1);
+    rating.updateRect({ x: 0, y: 0, width, height: 1 });
+    rating.render(screen);
+    return { rating, screen };
+}
+
 afterEach(() => {
     vi.restoreAllMocks();
 });
@@ -25,121 +34,131 @@ describe('Rating', () => {
     it('renders 5 empty stars on init', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
 
-        const rating = new Rating();
-        const screen = new Screen(20, 1);
-        rating.updateRect({ x: 0, y: 0, width: 20, height: 1 });
-        rating.render(screen);
-
+        const { screen } = renderRating();
         const rendered = screen.back[0].map((c: { char: string }) => c.char).join('');
         expect(rendered).toContain('☆☆☆☆☆');
     });
 
     it('right key fills one star', () => {
-        const rating = new Rating();
-        expect(rating.value).toBe(0);
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+        const { rating, screen } = renderRating();
+        expect(rating.getValue()).toBe(0);
 
         rating.handleKey(key('right'));
-        expect(rating.value).toBe(1);
+        rating.render(screen);
+
+        expect(rating.getValue()).toBe(1);
+        const rendered = screen.back[0].map((c: { char: string }) => c.char).join('');
+        expect(rendered).toContain('★');
     });
 
     it('left key does not go below 0', () => {
-        const rating = new Rating({ value: 0 });
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+        const { rating, screen } = renderRating({ value: 0 });
 
         rating.handleKey(key('left'));
-        expect(rating.value).toBe(0);
+        rating.render(screen);
+
+        expect(rating.getValue()).toBe(0);
     });
 
-    it('enter fires onChange with current value', () => {
-        const onChange = vi.fn();
-        const rating = new Rating({ value: 3, onChange });
+    it('enter fires onSelect with current value', () => {
+        const onSelect = vi.fn();
+        const { rating, screen } = renderRating({ value: 3, onSelect });
 
         rating.handleKey(key('enter'));
-        expect(onChange).toHaveBeenCalledWith(3);
+        rating.render(screen);
+
+        expect(onSelect).toHaveBeenCalledWith(3);
     });
 
     it('ASCII fallback renders - and *', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
 
-        const rating = new Rating({ value: 2, max: 5 });
-        const screen = new Screen(20, 1);
-        rating.updateRect({ x: 0, y: 0, width: 20, height: 1 });
-        rating.render(screen);
-
+        const { screen } = renderRating({ value: 2, max: 5 });
         const rendered = screen.back[0].map((c: { char: string }) => c.char).join('');
         expect(rendered).toContain('**---');
         expect(rendered).not.toMatch(/[★☆]/);
     });
 
-    it('value setter clamps to max', () => {
-        const rating = new Rating({ max: 5 });
-        rating.value = 10;
-        expect(rating.value).toBe(5);
-    });
-
-    it('readonly prevents key input', () => {
-        const onChange = vi.fn();
-        const rating = new Rating({ value: 2, readonly: true, onChange });
-
-        rating.handleKey(key('right'));
-        expect(rating.value).toBe(2);
-
-        rating.handleKey(key('enter'));
-        expect(onChange).not.toHaveBeenCalled();
+    it('setValue clamps to max and calls markDirty', () => {
+        const { rating } = renderRating({ max: 5 });
+        const spy = vi.spyOn(rating as unknown as { markDirty(): void }, 'markDirty');
+        rating.setValue(10);
+        expect(rating.getValue()).toBe(5);
+        expect(spy).toHaveBeenCalled();
     });
 
     it('home key sets value to 0', () => {
-        const rating = new Rating({ value: 3 });
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+        const { rating, screen } = renderRating({ value: 3 });
 
         rating.handleKey(key('home'));
-        expect(rating.value).toBe(0);
+        rating.render(screen);
+
+        expect(rating.getValue()).toBe(0);
     });
 
     it('end key sets value to max', () => {
-        const rating = new Rating({ value: 1, max: 5 });
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+        const { rating, screen } = renderRating({ value: 1, max: 5 });
 
         rating.handleKey(key('end'));
-        expect(rating.value).toBe(5);
+        rating.render(screen);
+
+        expect(rating.getValue()).toBe(5);
     });
 
     it('does not handle space key', () => {
-        const rating = new Rating({ value: 2 });
+        const { rating, screen } = renderRating({ value: 2 });
 
         rating.handleKey(key('space'));
-        expect(rating.value).toBe(2);
+        rating.render(screen);
+
+        expect(rating.getValue()).toBe(2);
     });
 
     it('renders filled and empty unicode stars correctly', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
 
-        const rating = new Rating({ value: 3, max: 5 });
-        const screen = new Screen(20, 1);
-        rating.updateRect({ x: 0, y: 0, width: 20, height: 1 });
-        rating.render(screen);
-
+        const { screen } = renderRating({ value: 3, max: 5 });
         const rendered = screen.back[0].map((c: { char: string }) => c.char).join('');
         expect(rendered).toContain('★★★☆☆');
     });
 
     it('right key caps at max', () => {
-        const rating = new Rating({ value: 5, max: 5 });
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+        const { rating, screen } = renderRating({ value: 5, max: 5 });
 
         rating.handleKey(key('right'));
-        expect(rating.value).toBe(5);
+        rating.render(screen);
+
+        expect(rating.getValue()).toBe(5);
     });
 
     it('respects custom max', () => {
-        const rating = new Rating({ max: 10 });
+        const { rating } = renderRating({ max: 10 });
         expect(rating.max).toBe(10);
     });
 
     it('defaults to max 5 and value 0', () => {
-        const rating = new Rating();
+        const { rating } = renderRating();
         expect(rating.max).toBe(5);
-        expect(rating.value).toBe(0);
+        expect(rating.getValue()).toBe(0);
     });
 
     it('focusable is true', () => {
-        const rating = new Rating();
+        const { rating } = renderRating();
         expect(rating.focusable).toBe(true);
+    });
+
+    it('getValue returns current value', () => {
+        const { rating } = renderRating({ value: 4 });
+        expect(rating.getValue()).toBe(4);
     });
 });
