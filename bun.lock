@@ -633,6 +633,7 @@
     "@termuijs/example-git-client": ["@termuijs/example-git-client@workspace:examples/git-client"],
 
     "@termuijs/example-jsx-dashboard": ["@termuijs/example-jsx-dashboard@workspace:examples/jsx-dashboard"],
+    "@termuijs/example-process-monitor": ["@termuijs/example-process-monitor@workspace:examples/process-monitor"],
 
     "@termuijs/example-kanban": ["@termuijs/example-kanban@workspace:examples/kanban-board"],
 
