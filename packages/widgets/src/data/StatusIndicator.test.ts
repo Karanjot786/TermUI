@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Screen } from '@termuijs/core';
 import { StatusIndicator } from './StatusIndicator.js';
 
@@ -57,5 +57,22 @@ describe('StatusIndicator', () => {
     b.updateRect({ x: 0, y: 0, width: 30, height: 1 });
     b.render(screenB);
     expect(screenA.back[0][0].char).not.toBe(screenB.back[0][0].char);
+  });
+
+  it('setStatus updates status and marks dirty', () => {
+    const si = new StatusIndicator('API Server', true);
+    const markDirtySpy = vi.spyOn(si, 'markDirty');
+    
+    si.setStatus(false);
+    expect(si.getStatus()).toBe(false);
+    expect(markDirtySpy).toHaveBeenCalled();
+  });
+
+  it('setLabel updates label and marks dirty', () => {
+    const si = new StatusIndicator('API Server', true);
+    const markDirtySpy = vi.spyOn(si, 'markDirty');
+    
+    si.setLabel('Database Server');
+    expect(markDirtySpy).toHaveBeenCalled();
   });
 });
