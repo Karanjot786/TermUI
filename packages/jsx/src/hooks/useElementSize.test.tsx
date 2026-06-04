@@ -1,9 +1,18 @@
-import { describe, it, expect } from "vitest";
+/** @jsxImportSource @termuijs/jsx */
+import { describe, it, expect, afterEach } from "vitest";
+import { createFiber, setCurrentFiber, clearCurrentFiber } from "../hooks.js";
+import { useElementSize } from "./useElementSize.js";
 
 describe("useElementSize", () => {
-  it("should return 0 width and height by default when unmounted", () => {
-    const defaultSize = { width: 0, height: 0 };
-    expect(defaultSize.width).toBe(0);
-    expect(defaultSize.height).toBe(0);
-  });
+    afterEach(() => {
+        clearCurrentFiber();
+    });
+
+    it("returns 0 width and height when no widget is attached", () => {
+        const fiber = createFiber();
+        setCurrentFiber(fiber);
+        const [, size] = useElementSize();
+        expect(size.width).toBe(0);
+        expect(size.height).toBe(0);
+    });
 });
