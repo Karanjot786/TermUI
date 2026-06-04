@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createFiber, setCurrentFiber, clearCurrentFiber, setRequestRender } from '../hooks.js';
-import { useFocusManager } from './useFocusManager';
+import { useFocusManager } from './useFocusManager.js';
 
 describe('useFocusManager', () => {
   let fiber = createFiber();
