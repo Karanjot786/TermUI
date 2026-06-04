@@ -111,6 +111,16 @@ export function hyperlinkOpen(url: string): string {
 /** OSC 8 close: ESC ] 8 ; ; ST. */
 export const hyperlinkClose: string = '\x1b]8;;\x1b\\';
 
+/** The BEL control byte. */
+export const bell = '\x07';
+
+/** OSC 9 desktop notification: ESC ] 9 ; <text> BEL. */
+export function notify(text: string): string {
+    // Strip C0/C1 controls and ESC to prevent terminal escape injection.
+    const safeText = text.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `${OSC}9;${safeText}${bell}`;
+}
+
 // ── Clipboard ───────────────────────────────────────
 
 /**

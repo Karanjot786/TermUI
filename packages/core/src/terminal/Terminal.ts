@@ -16,6 +16,8 @@ export interface TerminalOptions {
     mouse?: boolean;
     /** Use alternate screen buffer for full-screen apps */
     altScreen?: boolean;
+    /** Enable bracketed-paste mode so InputParser receives paste events. */
+    bracketedPaste?: boolean;
 }
 
 /**
@@ -32,6 +34,7 @@ export class Terminal {
     private _isRawMode = false;
     private _isAltScreen = false;
     private _isMouseEnabled = false;
+    private _isBracketedPasteEnabled = false;
     private _resizeHandlers: Array<(cols: number, rows: number) => void> = [];
     private _cleanupHandlers: Array<() => void> = [];
     private _originalRawMode: boolean | undefined;
@@ -65,6 +68,9 @@ export class Terminal {
 
         // Set up cleanup on process exit
         this._setupCleanup();
+        if (options.bracketedPaste) {
+            this.enableBracketedPaste();
+        }
     }
 
     /** Current terminal width in columns */
@@ -127,10 +133,33 @@ export class Terminal {
         this._isMouseEnabled = false;
     }
 
+    /** Emit the enable sequence (CSI ?2004h). Idempotent. */
+    enableBracketedPaste(): void {
+        if (this._isBracketedPasteEnabled) return;
+        this.write(ansi.enableBracketedPaste);
+        this._isBracketedPasteEnabled = true;
+    }
+
+    /** Emit the disable sequence (CSI ?2004l). Idempotent. */
+    disableBracketedPaste(): void {
+        if (!this._isBracketedPasteEnabled) return;
+        this.write(ansi.disableBracketedPaste);
+        this._isBracketedPasteEnabled = false;
+    }
+
     // ── Cursor ──────────────────────────────────────────
 
     hideCursor(): void { this.write(ansi.hideCursor); }
     showCursor(): void { this.write(ansi.showCursor); }
+
+    /** Ring the terminal bell (BEL). */
+    bell(): void { this.write(ansi.bell); }
+
+    /** Send an OSC 9 desktop notification. Body is appended after a separator. */
+    notify(title: string, body?: string): void {
+        const payload = body === undefined ? title : `${title}: ${body}`;
+        this.write(ansi.notify(payload));
+    }
 
     // ── Output ──────────────────────────────────────────
 
@@ -177,6 +206,7 @@ export class Terminal {
             this.stdout.off('resize', this._resizeHandler);
         }
 
+        this.disableBracketedPaste();
         this.disableMouse();
         this.exitAltScreen();
         this.exitRawMode();

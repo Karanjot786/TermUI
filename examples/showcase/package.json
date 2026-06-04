@@ -5,14 +5,15 @@
     "type": "module",
     "description": "TermUI Showcase — demonstrates all framework packages",
     "scripts": {
-        "start": "bun src/index.ts",
-        "dev": "bun --watch src/index.ts",
+        "start": "bun src/index.tsx",
+        "dev": "bun --watch src/index.tsx",
         "build": "echo 'no build needed'"
     },
     "dependencies": {
         "@termuijs/core": "workspace:*",
         "@termuijs/widgets": "workspace:*",
         "@termuijs/ui": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
         "@termuijs/tss": "workspace:*",
         "@termuijs/motion": "workspace:*",
         "@termuijs/dev-server": "workspace:*"

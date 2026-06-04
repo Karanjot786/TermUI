@@ -135,6 +135,19 @@ export const highContrastTheme: ThemeTokens = {
   highlight: '#1a1a1a',
 };
 
+export const everforestTheme: ThemeTokens = {
+  bg: '#2d353b',
+  fg: '#d3c6aa',
+  primary: '#a7c080',   // green
+  secondary: '#7fbbb3', // aqua
+  success: '#a7c080',   // green
+  warning: '#dbbc7f',   // yellow
+  error: '#e67e80',     // red
+  muted: '#859289',
+  border: '#859289',
+  highlight: '#343f44',
+};
+
 export const NAMED_THEMES: Record<string, ThemeTokens> = {
   dracula: draculaTheme,
   nord: nordTheme,
@@ -146,6 +159,7 @@ export const NAMED_THEMES: Record<string, ThemeTokens> = {
   oneDark: oneDarkTheme,
   gruvbox: gruvboxTheme,
   highContrast: highContrastTheme,
+  everforest: everforestTheme,
 };
 
 /** Get a named theme by string key, falling back to defaultDark if not found. */
