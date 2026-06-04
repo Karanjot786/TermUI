@@ -17,6 +17,7 @@ import {
     getBorderChars,
     styleToCellAttrs,
     containsPoint,
+    caps,
 } from '@termuijs/core';
 
 /**
@@ -241,10 +242,13 @@ export abstract class Widget {
         if (width < 2 || height < 2) return;
 
         if (hasBorder) {
+            const useAscii =
+                (this._style.asciiOnly ?? false) || !caps.unicode;
+
             const chars = getBorderChars(
                 border,
                 undefined,
-                this._style.asciiOnly ?? false
+                useAscii
             );
 
             if (!chars) return;
