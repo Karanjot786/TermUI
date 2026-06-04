@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Screen, caps } from '@termuijs/core';
+import { DataGrid } from './DataGrid.js';
 
 afterEach(() => {
     vi.restoreAllMocks();
