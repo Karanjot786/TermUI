@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Screen, caps } from '@termuijs/core';
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -114,19 +115,12 @@ describe('DataGrid', () => {
         expect(allText).toContain('no data');
     });
 
-    it('uses ASCII separator when unicode is off', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-
-        const { Screen } = await import('@termuijs/core');
-        const { DataGrid } = await import('./DataGrid.js');
-
+    it('uses ASCII separator when unicode is off', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
         grid.updateRect({ x: 0, y: 0, width: 40, height: 10 });
         const screen = new Screen(40, 10);
         grid.render(screen);
-
         const allText = screen.back.map((r: { char: string }[]) => r.map(c => c.char).join('')).join('\n');
         expect(allText).toContain('|');
     });

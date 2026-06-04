@@ -229,17 +229,18 @@ export class DataGrid extends Widget {
             return this._rows;
         }
 
+        const key = this._sortKey;
+        const dir = this._sortDir;
         return [...this._rows].sort((a, b) => {
-            const left = a[this._sortKey] ?? '';
-            const right = b[this._sortKey] ?? '';
-            const leftStr = String(left);
-            const rightStr = String(right);
-
-            if (leftStr === rightStr) return 0;
-            if (this._sortDir === 'asc') {
-                return leftStr > rightStr ? 1 : -1;
+            const left  = a[key] ?? '';
+            const right = b[key] ?? '';
+            if (typeof left === 'number' && typeof right === 'number') {
+                return dir === 'asc' ? left - right : right - left;
             }
-            return leftStr < rightStr ? 1 : -1;
+            const l = String(left);
+            const r = String(right);
+            if (l === r) return 0;
+            return dir === 'asc' ? (l > r ? 1 : -1) : (l < r ? 1 : -1);
         });
     }
 

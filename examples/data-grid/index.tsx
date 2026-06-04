@@ -1,5 +1,5 @@
 import { render } from '@termuijs/jsx';
-import { DataGrid } from '@termuijs/widgets';
+import { DataGridView } from '@termuijs/widgets';
 
 const columns = [
   { key: 'name', header: 'Name', width: 20, sortable: true },
@@ -11,8 +11,8 @@ const columns = [
 const data = Array.from({ length: 100 }, (_, i) => ({
   name: `process-${i}`,
   pid: 1000 + i,
-  cpu: (Math.random() * 100).toFixed(1),
-  memory: `${(Math.random() * 512).toFixed(0)}MB`,
+  cpu: parseFloat((Math.random() * 100).toFixed(1)),
+  memory: parseFloat((Math.random() * 512).toFixed(0)),
 }));
 
-render(<DataGrid columns={columns} data={data} height={20} width={80} />);
+render(<DataGridView columns={columns} data={data} height={20} width={80} />);
