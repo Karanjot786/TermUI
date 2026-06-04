@@ -30,7 +30,9 @@ describe('useMediaQuery', () => {
             },
         };
 
-        setCurrentApp(mockApp as any);
+        setCurrentApp(
+          mockApp as Parameters<typeof setCurrentApp>[0], // test-only partial app shape for useMediaQuery
+        );
 
         expect(useMediaQuery('(min-width: 100)')).toBe(true);
     });
@@ -44,7 +46,9 @@ describe('useMediaQuery', () => {
             },
         };
 
-        setCurrentApp(mockApp as any);
+        setCurrentApp(
+          mockApp as Parameters<typeof setCurrentApp>[0], // test-only partial app shape for useMediaQuery
+        );
 
         expect(useMediaQuery('(min-width: 100)')).toBe(false);
     });
@@ -58,7 +62,9 @@ describe('useMediaQuery', () => {
             },
         };
 
-        setCurrentApp(mockApp as any);
+        setCurrentApp(
+          mockApp as Parameters<typeof setCurrentApp>[0], // test-only partial app shape for useMediaQuery
+        );
 
         expect(useMediaQuery('(max-width: 100)')).toBe(true);
     });
@@ -72,7 +78,9 @@ describe('useMediaQuery', () => {
             },
         };
 
-        setCurrentApp(mockApp as any);
+        setCurrentApp(
+          mockApp as Parameters<typeof setCurrentApp>[0], // test-only partial app shape for useMediaQuery
+        );
 
         expect(useMediaQuery('(min-height: 40)')).toBe(true);
         expect(useMediaQuery('(max-height: 60)')).toBe(true);
@@ -92,7 +100,9 @@ describe('useMediaQuery', () => {
         },
     };
 
-    setCurrentApp(mockApp as any);
+    setCurrentApp(
+        mockApp as Parameters<typeof setCurrentApp>[0], // test-only partial app shape for useMediaQuery
+    );
 
     expect(useMediaQuery('(min-width: 100)')).toBe(false);
 
