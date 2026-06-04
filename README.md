@@ -1,5 +1,6 @@
 <p align="center">
   <h1 align="center">TermUI</h1>
+    
   <p align="center">Build terminal applications in TypeScript.</p>
 </p>
 
@@ -26,6 +27,8 @@
 ## What is TermUI?
 
 TermUI is a TypeScript framework for building terminal apps. You get a layout engine, JSX support, React-style hooks, focus management, global state, theming, animations, routing, real-time data, error boundaries, and a hot-reload dev server. No curses bindings. No C extensions. Pure TypeScript.
+### Prerequisites
+- Bun >= 1.3.0
 
 ## Quick Start
 
