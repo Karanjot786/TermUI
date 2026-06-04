@@ -111,6 +111,14 @@ export function hyperlinkOpen(url: string): string {
 /** OSC 8 close: ESC ] 8 ; ; ST. */
 export const hyperlinkClose: string = '\x1b]8;;\x1b\\';
 
+/** The BEL control byte. */
+export const bell = '\x07';
+
+/** OSC 9 desktop notification: ESC ] 9 ; <text> BEL. */
+export function notify(text: string): string {
+    return `${OSC}9;${text}${bell}`;
+}
+
 // ── Clipboard ───────────────────────────────────────
 
 /**

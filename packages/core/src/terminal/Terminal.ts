@@ -132,6 +132,15 @@ export class Terminal {
     hideCursor(): void { this.write(ansi.hideCursor); }
     showCursor(): void { this.write(ansi.showCursor); }
 
+    /** Ring the terminal bell (BEL). */
+    bell(): void { this.write(ansi.bell); }
+
+    /** Send an OSC 9 desktop notification. Body is appended after a separator. */
+    notify(title: string, body?: string): void {
+        const payload = body === undefined ? title : `${title}: ${body}`;
+        this.write(ansi.notify(payload));
+    }
+
     // ── Output ──────────────────────────────────────────
 
     write(data: string): void {
