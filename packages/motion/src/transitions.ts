@@ -102,6 +102,14 @@ export function pulse(periodMs: number, onFrame: (intensity: number) => void): (
 
     return unsub;
 }
+/**
+ * Creates a custom cubic bezier easing function for animations.
+ * * @param x1 The x-coordinate of the first control point.
+ * @param y1 The y-coordinate of the first control point.
+ * @param x2 The x-coordinate of the second control point.
+ * @param y2 The y-coordinate of the second control point.
+ * @returns An easing function that maps a progress value (0 to 1) to an eased value.
+ */
 export function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
   const cx = 3.0 * x1;
   const bx = 3.0 * (x2 - x1) - cx;
