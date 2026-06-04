@@ -1,31 +1,19 @@
 {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 3226f40 (Revert "final check")
     "name": "@termuijs/example-showcase",
     "version": "0.1.0",
     "private": true,
     "type": "module",
     "description": "TermUI Showcase — demonstrates all framework packages",
     "scripts": {
-<<<<<<< HEAD
         "start": "bun src/index.tsx",
         "dev": "bun --watch src/index.tsx",
-=======
-        "start": "bun src/index.ts",
-        "dev": "bun --watch src/index.ts",
->>>>>>> 3226f40 (Revert "final check")
         "build": "echo 'no build needed'"
     },
     "dependencies": {
         "@termuijs/core": "workspace:*",
         "@termuijs/widgets": "workspace:*",
         "@termuijs/ui": "workspace:*",
-<<<<<<< HEAD
         "@termuijs/jsx": "workspace:*",
-=======
->>>>>>> 3226f40 (Revert "final check")
         "@termuijs/tss": "workspace:*",
         "@termuijs/motion": "workspace:*",
         "@termuijs/dev-server": "workspace:*"
@@ -33,30 +21,4 @@
     "engines": {
         "bun": ">=1.3.0"
     }
-<<<<<<< HEAD
-=======
-    "name":  "@termuijs/example-showcase",
-    "version":  "0.1.0",
-    "private":  true,
-    "type":  "module",
-    "description":  "TermUI Showcase — demonstrates all framework packages",
-    "scripts":  {
-                    "start":  "bun src/index.ts",
-                    "dev":  "bun --watch src/index.ts",
-                    "build":  "node -e \"const fs = require(\u0027fs\u0027); fs.mkdirSync(\u0027dist\u0027, {recursive: true}); fs.writeFileSync(\u0027dist/.placeholder\u0027, \u0027no build needed\u0027);\""
-                },
-    "dependencies":  {
-                         "@termuijs/core":  "workspace:*",
-                         "@termuijs/widgets":  "workspace:*",
-                         "@termuijs/ui":  "workspace:*",
-                         "@termuijs/tss":  "workspace:*",
-                         "@termuijs/motion":  "workspace:*",
-                         "@termuijs/dev-server":  "workspace:*"
-                     },
-    "engines":  {
-                    "bun":  "\u003e=1.3.0"
-                }
->>>>>>> 90a5b1b (final check)
-=======
->>>>>>> 3226f40 (Revert "final check")
 }

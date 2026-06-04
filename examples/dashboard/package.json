@@ -1,8 +1,4 @@
 {
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 3226f40 (Revert "final check")
     "name": "@termuijs/example-dashboard",
     "version": "0.1.0",
     "private": true,
@@ -20,32 +16,5 @@
     },
     "engines": {
         "bun": ">=1.3.0"
-<<<<<<< HEAD
-    },
-    "devDependencies": {
-        "rimraf": "^6.1.3"
     }
-=======
-    "name":  "@termuijs/example-dashboard",
-    "version":  "0.1.0",
-    "private":  true,
-    "type":  "module",
-    "description":  "Example dashboard app using TermUI",
-    "scripts":  {
-                    "start":  "bun src/index.ts",
-                    "dev":  "bun --watch src/index.ts",
-                    "build":  "node -e \"const fs = require(\u0027fs\u0027); fs.mkdirSync(\u0027dist\u0027, {recursive: true}); fs.writeFileSync(\u0027dist/.placeholder\u0027, \u0027no build needed\u0027);\""
-                },
-    "dependencies":  {
-                         "@termuijs/core":  "workspace:*",
-                         "@termuijs/data":  "workspace:*",
-                         "@termuijs/widgets":  "workspace:*"
-                     },
-    "engines":  {
-                    "bun":  "\u003e=1.3.0"
-                }
->>>>>>> 90a5b1b (final check)
-=======
-    }
->>>>>>> 3226f40 (Revert "final check")
 }
