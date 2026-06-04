@@ -5,7 +5,11 @@
 // components for building beautiful CLI apps.
 // ─────────────────────────────────────────────────────
 
+import { BasicAuthPrompt } from './BasicAuthPrompt.js';
+
 // ── Re-exports from @termuijs/widgets (base components) ──
+// Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
+
 export {
     Box,
     Text,
@@ -30,14 +34,23 @@ export { Spacer } from './Spacer.js';
 export { Tabs } from './Tabs.js';
 export type { Tab, TabsOptions } from './Tabs.js';
 
+export { MenuBar } from './MenuBar.js';
+export type { MenuBarOptions, MenuBarItem, MenuItem } from './MenuBar.js';
+
 export { Carousel } from './Carousel.js';
 export type { CarouselOptions } from './Carousel.js';
 
 export { Modal } from './Modal.js';
 export type { ModalOptions } from './Modal.js';
 
+export { Drawer } from './Drawer.js';
+export type { DrawerOptions, DrawerPosition } from './Drawer.js';
+
 export { Select } from './Select.js';
 export type { SelectOption, SelectOptions } from './Select.js';
+
+export { LinearPrompt } from './LinearPrompt.js';
+export type { LinearPromptOption, LinearPromptOptions } from './LinearPrompt.js';
 
 export { Pages } from './Pages.js';
 export type { Page, PagesOptions } from './Pages.js';
@@ -50,8 +63,14 @@ export type { SnippetPromptOptions } from './SnippetPrompt.js';
 export { MultiSelect } from './MultiSelect.js';
 export type { MultiSelectOption, MultiSelectOptions } from './MultiSelect.js';
 
+export { Transfer } from './Transfer.js';
+export type { TransferItem, TransferOptions } from './Transfer.js';
+
 export { Tree } from './Tree.js';
 export type { TreeNode, TreeOptions } from './Tree.js';
+
+export { SortPrompt } from './SortPrompt.js';
+export type { SortPromptOptions } from './SortPrompt.js';
 
 export { Toast } from './Toast.js';
 export type { ToastType, ToastMessage, ToastOptions } from './Toast.js';
@@ -80,6 +99,9 @@ export type { PasswordInputOptions } from './PasswordInput.js';
 export { NumberInput } from './NumberInput.js';
 export type { NumberInputOptions } from './NumberInput.js';
 
+export { MaskedInput } from './MaskedInput.js';
+export type { MaskedInputOptions } from './MaskedInput.js';
+
 export { PathInput } from './PathInput.js';
 export type { PathInputOptions } from './PathInput.js';
 
@@ -95,11 +117,54 @@ export type { DatePickerOptions } from './DatePicker.js';
 export { ColorPicker } from './ColorPicker.js';
 export type { ColorPickerOptions } from './ColorPicker.js';
 
+export { Accordion } from './Accordion.js';
+export type { AccordionOptions, AccordionItem } from './Accordion.js';
+
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
+
+export { ScalePrompt } from './ScalePrompt.js';
+export type { ScalePromptOptions } from './ScalePrompt.js';
+
+export { SegmentedControl } from './SegmentedControl.js';
+export type { SegmentedControlOptions } from './SegmentedControl.js';
+
+export { SearchableSelect } from './SearchableSelect.js';
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
+export { Checkbox } from './Checkbox.js';
+export type { CheckboxOptions } from './Checkbox.js';
+
+export { CheckboxGroup } from './CheckboxGroup.js';
+export type {
+    CheckboxGroupOption,
+    CheckboxGroupOptions,
+} from './CheckboxGroup.js';
+
+
+export { ButtonGroup } from './ButtonGroup.js';
+export type { ButtonGroupOptions, ButtonGroupItem } from './ButtonGroup.js';
 export { Wizard } from './Wizard.js';
 export type { WizardStep, WizardOptions } from './Wizard.js';
+export { MultilineTextInput } from './MultilineTextInput.js';
+export type { MultilineTextInputOptions } from './MultilineTextInput.js';
+export {BasicAuthPrompt} from './BasicAuthPrompt.js';
+export type {BasicAuthCredentials,BasicAuthPromptOptions} from './BasicAuthPrompt.js'
+
+
+export { Stepper } from './Stepper.js';
+export type { StepperOptions } from './Stepper.js';
+export { ShortcutHelpOverlay } from './components/ShortcutHelpOverlay.js';
+export type { Shortcut, ShortcutHelpOverlayProps } from './components/ShortcutHelpOverlay.js';
+
+export { RadioGroup } from './RadioGroup.js';
+export type { RadioGroupOption, RadioGroupOptions } from './RadioGroup.js';
+export { ThemeSwitcher } from './ThemeSwitcher.js';
+export type { ThemeSwitcherOptions } from './ThemeSwitcher.js';
+
+export { TreeSelect } from './TreeSelect.js';
+export type { TreeSelectNode, TreeSelectOptions } from './TreeSelect.js';
+export { EmailInput } from './EmailInput.js';
+export type { EmailInputOptions } from './EmailInput.js';

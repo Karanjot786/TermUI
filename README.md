@@ -3,12 +3,13 @@
   <p align="center">Build terminal applications in TypeScript.</p>
 </p>
 
+
 <p align="center">
   <a href="https://www.termui.io/docs/getting-started/installation"><img src="https://img.shields.io/badge/docs-termui.io-00ff88?style=flat" alt="Documentation"></a>
   <a href="https://www.npmjs.com/package/@termuijs/core"><img src="https://img.shields.io/npm/v/@termuijs/core.svg" alt="npm version"></a>
   <a href="https://github.com/Karanjot786/TermUI/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <img src="https://img.shields.io/badge/runtime-Bun%201.3+-orange" alt="Bun 1.3+">
-  <img src="https://img.shields.io/badge/tests-600%20passing-brightgreen" alt="600 tests passing">
+  <img src="https://img.shields.io/badge/tests-1394%20passing-brightgreen" alt="1394 tests passing">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript 5.9">
 </p>
 <p align="center">
@@ -17,6 +18,7 @@
   <a href="https://github.com/Karanjot786/TermUI/graphs/contributors"><img src="https://img.shields.io/github/contributors/Karanjot786/TermUI?color=00ff88" alt="Contributors"></a>
   <a href="https://github.com/Karanjot786/TermUI/stargazers"><img src="https://img.shields.io/github/stars/Karanjot786/TermUI?style=flat&color=ffd700" alt="Stars"></a>
 </p>
+
 > ⭐ **GSSoC 2026 contributors:** star this repo before opening a PR. The `star-check` workflow blocks unstarred merges. Read [CONTRIBUTING.md](./CONTRIBUTING.md#gssoc-2026) for the full point system.
 
 > 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
@@ -34,7 +36,7 @@ bun install
 bun run dev
 ```
 
-Requires [Bun](https://bun.sh) 1.3.0 or newer.
+Requires [Bun](https://bun.sh) 1.3.0 or newer. Install it with `curl -fsSL https://bun.sh/install | bash` (macOS/Linux) or `powershell -c "irm bun.sh/install.ps1 | iex"` (Windows).
 
 ## Manual Setup
 
@@ -365,8 +367,12 @@ git clone https://github.com/Karanjot786/TermUI.git
 cd TermUI
 bun install
 bun run build
+```
 
-cd examples/dashboard
+To run the AI streaming example:
+
+```bash
+cd examples/ai-streaming
 bun run dev
 ```
 
@@ -403,24 +409,26 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
-  auth-flow/             Authentication flow example
-  cli-wrapper-live/      Live subprocess log streaming
-  dashboard/             Real-time system monitor
-  forms-and-validation/  Multi-field form with validation
-  jsx-dashboard/         JSX-based dashboard
-    multi-screen-router/   Multi-screen router example
-  showcase/              Widget gallery
-  system-monitor/        Advanced monitor
-  todo-app/              Interactive todo list
-  widget-gallery/        All widgets in one place
+  ai-streaming/          Mock AI chat with StreamingText, ChatMessage, ToolCall
+  auth-flow/            Authentication flow example
+  cli-wrapper-live/     Live subprocess log streaming
+  dashboard/            Real-time system monitor
+  forms-and-validation/ Multi-field form with validation
+  jsx-dashboard/        JSX-based dashboard
+  multi-screen-router/  Multi-screen router example
+  showcase/             Widget gallery
+  system-monitor/       Advanced monitor
+  todo-app/             Interactive todo list
+  widget-gallery/       All widgets in one place
 ```
 
 ## Development
+> **Note:** This project uses [Bun](https://bun.sh) as its package manager. Install Bun first: https://bun.sh/docs/installation
 
 ```bash
 bun install
-bun run build      # Build all 13 packages
-bun run test       # Run all 600 tests
+bun run build      # Build all 14 packages
+bun run test       # Run all 1394 tests
 bun run typecheck  # Type-check all packages
 ```
 
@@ -448,3 +456,4 @@ See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and futu
 ## License
 
 MIT
+

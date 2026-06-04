@@ -76,13 +76,13 @@ export class CommandPalette extends Widget {
             return;
         }
 
-        if (key === 'up' || key === 'k') {
+        if (key === 'up') {
             event.stopPropagation();
             this.selectPrev();
             return;
         }
 
-        if (key === 'down' || key === 'j') {
+        if (key === 'down') {
             event.stopPropagation();
             this.selectNext();
             return;
