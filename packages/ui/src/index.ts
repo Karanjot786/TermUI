@@ -171,3 +171,6 @@ export { TreeSelect } from './TreeSelect.js';
 export type { TreeSelectNode, TreeSelectOptions } from './TreeSelect.js';
 export { EmailInput } from './EmailInput.js';
 export type { EmailInputOptions } from './EmailInput.js';
+
+export { QuizPrompt } from './QuizPrompt.js';
+export type { QuizPromptOptions, QuizQuestion, QuizResult } from './QuizPrompt.js';
