@@ -19,17 +19,11 @@ function PortalComponent({ target, children }: PortalProps): VNode {
     // restored, so Context and Hooks inside the portal children will work flawlessly!
     useLayoutEffect(() => {
         const childArray = Array.isArray(children) ? children : (children != null ? [children] : []);
-        const childWidgets = childArray.map((child: any) => reconcile(child, target));
+        const childWidgets = childArray.map((child: VNode) => reconcile(child, target));
 
         for (const widget of childWidgets) {
             target.addChild(widget);
         }
-
-        return () => {
-            for (const widget of childWidgets) {
-                target.removeChild(widget);
-            }
-        };
 
         // Cleanup: remove ONLY this portal's widgets from the target
         // when the portal unmounts or re-renders.
