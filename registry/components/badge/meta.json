@@ -1,0 +1,15 @@
+{
+  "name": "badge",
+  "category": "utility",
+  "description": "Short inline label with colored background for status indicators.",
+  "files": [
+    "registry/components/badge/index.ts"
+  ],
+  "deps": [
+    "@termuijs/core",
+    "@termuijs/widgets"
+  ],
+  "peerDeps": [],
+  "version": "0.1.0"
+}
+
