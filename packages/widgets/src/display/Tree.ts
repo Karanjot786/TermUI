@@ -183,6 +183,7 @@ export class Tree extends Widget {
                 break;
             case 'enter':
             case ' ':
+            case 'space':
                 this.toggle();
                 break;
             case 'arrowleft':
