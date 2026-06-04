@@ -32,7 +32,7 @@ lerna-debug.log*
 .DS_Store
 .AppleDouble
 .LSOverride
-Icon_
+Icon?
 ._*
 .DocumentRevisions-V100
 .fseventsd
@@ -89,7 +89,6 @@ out/
 .*.swo
 .sw[a-p]
 .swo
-*~
 *.un~
 
 # --- Project-Specific / Local Settings ---
