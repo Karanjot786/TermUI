@@ -8,9 +8,16 @@ import { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './KeyMap.js';
 import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 
+export interface CursorPosition {
+    row: number;
+    col: number;
+}
+
 interface InputEvents {
     key: KeyEvent;
     mouse: MouseEvent;
+    focuschange: boolean;
+    paste: string;
 }
 
 /**
@@ -23,6 +30,13 @@ export class InputParser {
     private _handler: ((data: Buffer) => void) | null = null;
     private _escapeTimeout: ReturnType<typeof setTimeout> | null = null;
     private _escapeBuffer = '';
+    private _isPasting = false;
+    private _pasteBuffer = '';
+    private _cursorRequests: Array<{
+        resolve: (position: CursorPosition) => void;
+        reject: (error: Error) => void;
+        timeout: ReturnType<typeof setTimeout>;
+    }> = [];
 
     constructor(stdin: NodeJS.ReadStream) {
         this._stdin = stdin;
@@ -36,6 +50,29 @@ export class InputParser {
     /** Subscribe to mouse events */
     onMouse(handler: (event: MouseEvent) => void): () => void {
         return this._events.on('mouse', handler);
+    }
+
+    /** Subscribe to terminal focus-in (true) / focus-out (false) reports. */
+    onFocusChange(handler: (focused: boolean) => void): () => void {
+        return this._events.on('focuschange', handler);
+    }
+
+    onPaste(handler: (text: string) => void): () => void {
+        return this._events.on('paste', handler);
+    }
+
+    requestCursorPosition(timeoutMs = 200): Promise<CursorPosition> {
+        return new Promise<CursorPosition>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                const idx = this._cursorRequests.findIndex((item) => item.reject === reject);
+                if (idx !== -1) {
+                    this._cursorRequests.splice(idx, 1);
+                }
+                reject(new Error('Cursor position request timed out'));
+            }, timeoutMs);
+
+            this._cursorRequests.push({ resolve, reject, timeout });
+        });
     }
 
     /** Start listening for input */
@@ -67,7 +104,17 @@ export class InputParser {
      */
     private _processInput(data: Buffer): void {
         const str = data.toString('utf8');
+        const PASTE_START = '\x1b[200~';
+        const PASTE_END = '\x1b[201~';
 
+        if (str.includes(PASTE_START) && str.includes(PASTE_END)) {
+            const pastedText = str
+                .replace(PASTE_START, '')
+                .replace(PASTE_END, '');
+
+            this._events.emit('paste', pastedText);
+            return;
+        }
         // If we're collecting an escape sequence
         if (this._escapeBuffer) {
             this._escapeBuffer += str;
@@ -175,6 +222,35 @@ export class InputParser {
                 }, 100);
                 return;
             }
+        }
+
+        // Cursor position report
+        const cursorMatch = seq.match(/^\x1b\[(\d+);(\d+)R$/);
+        if (cursorMatch) {
+            const row = parseInt(cursorMatch[1], 10);
+            const col = parseInt(cursorMatch[2], 10);
+            const position = { row, col };
+
+            for (const request of this._cursorRequests) {
+                clearTimeout(request.timeout);
+                request.resolve(position);
+            }
+            this._cursorRequests = [];
+            this._escapeBuffer = '';
+            return;
+        }
+
+        // Focus tracking sequences
+        if (seq === '\x1b[I') {
+            this._events.emit('focuschange', true);
+            this._escapeBuffer = '';
+            return;
+        }
+
+        if (seq === '\x1b[O') {
+            this._events.emit('focuschange', false);
+            this._escapeBuffer = '';
+            return;
         }
 
         // Check known escape sequences

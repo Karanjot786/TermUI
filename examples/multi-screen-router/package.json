@@ -1,0 +1,24 @@
+{
+    "name": "@termuijs/example-multi-screen-router",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "description": "Example showing multi-screen routing with @termuijs/router",
+    "scripts": {
+        "start": "bun src/index.tsx",
+        "dev": "bun --watch src/index.tsx",
+        "build": "echo 'no build needed'"
+    },
+    "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+        "@termuijs/router": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.4.0"
+    },
+    "engines": {
+        "bun": ">=1.3.0"
+    }
+}
