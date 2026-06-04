@@ -26,41 +26,41 @@ describe('QuizPrompt', () => {
     it('handleKey moves selection with up/down', () => {
         const quiz = new QuizPrompt(SAMPLE_QUESTIONS);
         const markDirtySpy = vi.spyOn(quiz, 'markDirty');
-        
-        quiz.handleKey({ key: 'down' } as any);
+
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
         expect(quiz['_selectedIndex']).toBe(0);
         expect(markDirtySpy).toHaveBeenCalled();
-        
-        quiz.handleKey({ key: 'down' } as any);
+
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
         expect(quiz['_selectedIndex']).toBe(1);
-        
-        quiz.handleKey({ key: 'up' } as any);
+
+        quiz.handleKey({ key: 'up' } as any); // test: only key field needed
         expect(quiz['_selectedIndex']).toBe(0);
     });
 
     it('handleKey does not move beyond bounds', () => {
         const quiz = new QuizPrompt(SAMPLE_QUESTIONS);
-        quiz.handleKey({ key: 'up' } as any);
+        quiz.handleKey({ key: 'up' } as any); // test: only key field needed
         expect(quiz['_selectedIndex']).toBe(-1);
-        
-        quiz.handleKey({ key: 'down' } as any);
-        quiz.handleKey({ key: 'down' } as any);
-        quiz.handleKey({ key: 'down' } as any);
-        quiz.handleKey({ key: 'down' } as any);
+
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
         expect(quiz['_selectedIndex']).toBe(2);
     });
 
     it('enter submits answer and advances after timeout', async () => {
         vi.useFakeTimers();
         const quiz = new QuizPrompt(SAMPLE_QUESTIONS);
-        quiz.handleKey({ key: 'down' } as any);
-        quiz.handleKey({ key: 'enter' } as any);
-        
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
+        quiz.handleKey({ key: 'enter' } as any); // test: only key field needed
+
         expect(quiz['_answers'][0]).toBe(0);
         expect(quiz['_feedback']).toBe('wrong');
-        
+
         vi.advanceTimersByTime(800);
-        
+
         expect(quiz['_feedback']).toBe(null);
         expect(quiz['_currentIndex']).toBe(1);
         expect(quiz['_selectedIndex']).toBe(-1);
@@ -71,20 +71,20 @@ describe('QuizPrompt', () => {
         vi.useFakeTimers();
         const onComplete = vi.fn();
         const quiz = new QuizPrompt(SAMPLE_QUESTIONS, undefined, { onComplete });
-        
+
         // Answer first question correctly
-        quiz.handleKey({ key: 'down' } as any);
-        quiz.handleKey({ key: 'down' } as any); // Select option 1 (index 1 = '4')
-        quiz.handleKey({ key: 'enter' } as any);
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
+        quiz.handleKey({ key: 'enter' } as any); // test: only key field needed
         vi.advanceTimersByTime(800);
-        
+
         // Answer second question correctly
-        quiz.handleKey({ key: 'down' } as any);
-        quiz.handleKey({ key: 'down' } as any);
-        quiz.handleKey({ key: 'down' } as any); // Select option 2 (index 2 = 'Blue')
-        quiz.handleKey({ key: 'enter' } as any);
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
+        quiz.handleKey({ key: 'down' } as any); // test: only key field needed
+        quiz.handleKey({ key: 'enter' } as any); // test: only key field needed
         vi.advanceTimersByTime(800);
-        
+
         expect(onComplete).toHaveBeenCalledTimes(1);
         const result = onComplete.mock.calls[0][0];
         expect(result.total).toBe(2);
@@ -95,7 +95,7 @@ describe('QuizPrompt', () => {
     it('getResult returns partial results', () => {
         const quiz = new QuizPrompt(SAMPLE_QUESTIONS);
         quiz['_answers'] = [0];
-        
+
         const result = quiz.getResult();
         expect(result.total).toBe(1);
         expect(result.answers).toEqual([0]);
