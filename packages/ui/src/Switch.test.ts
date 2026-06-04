@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Screen, caps } from '@termuijs/core';
 import { Switch } from './Switch.js';
 
 describe('Switch', () => {
+         afterEach(() => {
+          vi.restoreAllMocks();
+         });
     it('initial state uses defaultValue', () => {
         const sw = new Switch({ defaultValue: true });
 
@@ -13,10 +16,10 @@ describe('Switch', () => {
         const sw = new Switch({ defaultValue: false });
 
         sw.handleKey({
-            key: 'space',
-            ctrl: false,
-            alt: false,
-        } as any);
+         key: 'space',
+         ctrl: false,
+         alt: false,
+       } as any); // test: partial KeyEvent is sufficient for unit testing handleKey
 
         expect(sw.value).toBe(true);
     });
@@ -24,12 +27,12 @@ describe('Switch', () => {
     it('left and right set value', () => {
         const sw = new Switch({ defaultValue: false });
 
-        sw.handleKey({ key: 'right' } as any);
+        sw.handleKey({ key: 'right' } as any); // test: partial KeyEvent is sufficient for handleKey unit testing
         expect(sw.value).toBe(true);
 
-        sw.handleKey({ key: 'left' } as any);
-        expect(sw.value).toBe(false);
-    });
+        sw.handleKey({ key: 'left' } as any); // test: partial KeyEvent is sufficient for handleKey unit testing
+        expect(sw.value).toBe(false);  
+      });
 
     it('onChange fires only when value changes', () => {
         const onChange = vi.fn();
