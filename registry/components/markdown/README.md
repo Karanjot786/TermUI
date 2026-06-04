@@ -18,12 +18,17 @@ This is markdown content rendered in the terminal.
 
 ## Supported Content
 
-The current implementation supports a limited subset of markdown rendering focused on terminal display.
+The current implementation supports:
 
 * Headings
 * Paragraph text
 * Line breaks
-* Basic content rendering
+* **Bold** — `**text**`
+* *Italic* — `_text_`
+* Inline code — `` `code` ``
+* Unordered lists — `- item`
+* Ordered lists — `1. item`
+* Code fences — fenced code blocks
 
 ## Features
 
