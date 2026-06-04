@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-import { useEffect, useRef } from '../hooks';
-
-export function useUpdateEffect(
-  effect: () => void | (() => void),
-  deps?: unknown[],
-): void {
-  const isFirst = useRef(true);
-
-  useEffect(() => {
-    if (isFirst.current) {
-      isFirst.current = false;
-=======
 import { useEffect, useRef } from '../hooks.js';
 
 /**
@@ -21,14 +8,13 @@ import { useEffect, useRef } from '../hooks.js';
  */
 export function useUpdateEffect(
   effect: () => void | (() => void),
-  deps?: any[]
+  deps?: unknown[]
 ): void {
   const isMounted = useRef(false);
 
   useEffect(() => {
     if (!isMounted.current) {
       isMounted.current = true;
->>>>>>> 0d8c8af (feat(jsx): add useUnmount and useUpdateEffect hooks)
       return;
     }
     return effect();

@@ -5,11 +5,7 @@ import {
   clearCurrentFiber,
   runEffects,
 } from '../hooks.js';
-<<<<<<< HEAD
-import { useUpdateEffect } from './useUpdateEffect';
-=======
 import { useUpdateEffect } from './useUpdateEffect.js';
->>>>>>> 0d8c8af (feat(jsx): add useUnmount and useUpdateEffect hooks)
 
 describe('useUpdateEffect', () => {
   let fiber = createFiber();
@@ -23,57 +19,6 @@ describe('useUpdateEffect', () => {
     clearCurrentFiber();
   });
 
-<<<<<<< HEAD
-  it('does not run on the first render', () => {
-    const fn = vi.fn();
-    useUpdateEffect(fn, []);
-    runEffects(fiber);
-    expect(fn).not.toHaveBeenCalled();
-  });
-
-  it('runs when a dependency changes after the first render', () => {
-    const fn = vi.fn();
-    useUpdateEffect(fn, ['a']);
-    runEffects(fiber);
-
-    fiber.hookIndex = 0;
-    useUpdateEffect(fn, ['b']);
-    runEffects(fiber);
-
-    expect(fn).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not run when dependencies are unchanged', () => {
-    const fn = vi.fn();
-    useUpdateEffect(fn, ['a']);
-    runEffects(fiber);
-
-    fiber.hookIndex = 0;
-    useUpdateEffect(fn, ['a']);
-    runEffects(fiber);
-
-    expect(fn).not.toHaveBeenCalled();
-  });
-
-  it('runs cleanup before the next effect', () => {
-    const cleanup = vi.fn();
-    const effect = vi.fn(() => cleanup);
-
-    useUpdateEffect(effect, ['a']);
-    runEffects(fiber);
-
-    fiber.hookIndex = 0;
-    useUpdateEffect(effect, ['b']);
-    runEffects(fiber);
-
-    expect(effect).toHaveBeenCalledTimes(1);
-    expect(cleanup).not.toHaveBeenCalled();
-
-    fiber.hookIndex = 0;
-    useUpdateEffect(effect, ['c']);
-    runEffects(fiber);
-
-=======
   it('should not execute the effect on the first render/mount', () => {
     const effect = vi.fn();
     useUpdateEffect(effect, []);
@@ -128,8 +73,28 @@ describe('useUpdateEffect', () => {
     fiber.hookIndex = 0;
     useUpdateEffect(effect, [count]);
     runEffects(fiber);
->>>>>>> 0d8c8af (feat(jsx): add useUnmount and useUpdateEffect hooks)
     expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(effect).toHaveBeenCalledTimes(2);
+  });
+
+  it('should execute the effect on all updates if no dependency array is provided, but still skip the initial render', () => {
+    const effect = vi.fn();
+
+    // Render 1: mount
+    useUpdateEffect(effect);
+    runEffects(fiber);
+    expect(effect).not.toHaveBeenCalled();
+
+    // Render 2: update -> should run
+    fiber.hookIndex = 0;
+    useUpdateEffect(effect);
+    runEffects(fiber);
+    expect(effect).toHaveBeenCalledTimes(1);
+
+    // Render 3: update -> should run again
+    fiber.hookIndex = 0;
+    useUpdateEffect(effect);
+    runEffects(fiber);
     expect(effect).toHaveBeenCalledTimes(2);
   });
 });
