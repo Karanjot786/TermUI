@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────
 
 import type { WidgetNode } from './devtools.js';
+import { caps } from '@termuijs/core';
 
 /** A flattened entry in the visible tree list. */
 interface FlatEntry {
@@ -151,7 +152,9 @@ export class WidgetTreeInspector {
     /** Get the expand/collapse marker character. */
     private _getMarker(entry: FlatEntry): string {
         if (!entry.hasChildren) return '  ';
-        return entry.expanded ? '\u25be ' : '\u25b8 ';
+        return entry.expanded
+            ? (caps.unicode ? '\u25be ' : 'v ')
+            : (caps.unicode ? '\u25b8 ' : '> ');
     }
 
     /** Recursively count all nodes in a tree. */
