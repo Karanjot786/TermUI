@@ -118,33 +118,33 @@ describe('ScrollView', () => {
         expect(screen.back[0][9].char).toBe(' ');
     });
 
-    it('ArrowDown scrolls down by 1', () => {
+    it('down scrolls down by 1', () => {
         const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        sv.onKey(key('ArrowDown'));
+        sv.onKey(key('down'));
         expect(sv.scrollOffset).toBe(1);
     });
 
-    it('ArrowUp scrolls up by 1', () => {
+    it('up scrolls up by 1', () => {
         const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
         sv.scrollBy(5);
-        sv.onKey(key('ArrowUp'));
+        sv.onKey(key('up'));
         expect(sv.scrollOffset).toBe(4);
     });
 
-    it('PageDown scrolls down by viewport height - 1', () => {
+    it('pagedown scrolls down by viewport height - 1', () => {
         const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        sv.onKey(key('PageDown'));
+        sv.onKey(key('pagedown'));
         expect(sv.scrollOffset).toBe(4);
     });
 
-    it('PageUp scrolls up by viewport height - 1', () => {
+    it('pageup scrolls up by viewport height - 1', () => {
         const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
         sv.scrollBy(10);
-        sv.onKey(key('PageUp'));
+        sv.onKey(key('pageup'));
         expect(sv.scrollOffset).toBe(6);
     });
 });

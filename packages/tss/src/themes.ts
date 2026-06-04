@@ -217,6 +217,33 @@ Table {
 }
 `,
 
+    solarizedLight: `
+@theme solarizedLight {
+    --primary: #268bd2;
+    --secondary: #2aa198;
+    --bg: #fdf6e3;
+    --surface: #eee8d5;
+    --text: #657b83;
+    --text-muted: #93a1a1;
+    --accent: #859900;
+    --error: #dc322f;
+    --warning: #b58900;
+    --success: #859900;
+    --border: single;
+    --border-color: #93a1a1;
+    --border-focus: #268bd2;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
+}
+`,
+
     highContrast: `
 @theme highContrast {
     --primary: #00ffff;
@@ -246,6 +273,33 @@ Table {
 
 Box:focused {
     border-color: var(--border-focus);
+}
+`,
+
+    everforest: `
+@theme everforest {
+    --primary: #a7c080;
+    --secondary: #7fbbb3;
+    --bg: #2d353b;
+    --surface: #343f44;
+    --text: #d3c6aa;
+    --text-muted: #859289;
+    --accent: #7fbbb3;
+    --error: #e67e80;
+    --warning: #dbbc7f;
+    --success: #a7c080;
+    --border: round;
+    --border-color: #859289;
+    --border-focus: #a7c080;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--primary);
 }
 `,
 };

@@ -13,6 +13,7 @@ export type {
     LazyLoader,
     BeforeEnterGuard,
     AfterEnterGuard,
+    RouteMeta,
 } from './route.js';
 
 export { scanRoutes } from './scanner.js';
@@ -26,4 +27,4 @@ export type { RouteTransitionEvents, TransitionManagerOptions } from './transiti
 export * from './validation.js';
 
 // Upstream Hooks
-export { useParams, useNavigate } from './hooks.js';
+export { useParams, useNavigate, useRouteMeta } from './hooks.js';

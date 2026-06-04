@@ -70,6 +70,19 @@ export const solarizedTheme: ThemeTokens = {
   highlight: '#073642',
 };
 
+export const solarizedLightTheme: ThemeTokens = {
+  bg: '#fdf6e3',
+  fg: '#657b83',
+  primary: '#268bd2',
+  secondary: '#2aa198',
+  success: '#859900',
+  warning: '#b58900',
+  error: '#dc322f',
+  muted: '#93a1a1',
+  border: '#93a1a1',
+  highlight: '#eee8d5',
+};
+
 export const tokyoNightTheme: ThemeTokens = {
   bg: '#1a1b26',
   fg: '#a9b1d6',
@@ -122,16 +135,31 @@ export const highContrastTheme: ThemeTokens = {
   highlight: '#1a1a1a',
 };
 
+export const everforestTheme: ThemeTokens = {
+  bg: '#2d353b',
+  fg: '#d3c6aa',
+  primary: '#a7c080',   // green
+  secondary: '#7fbbb3', // aqua
+  success: '#a7c080',   // green
+  warning: '#dbbc7f',   // yellow
+  error: '#e67e80',     // red
+  muted: '#859289',
+  border: '#859289',
+  highlight: '#343f44',
+};
+
 export const NAMED_THEMES: Record<string, ThemeTokens> = {
   dracula: draculaTheme,
   nord: nordTheme,
   catppuccin: catppuccinTheme,
   monokai: monokaiTheme,
   solarized: solarizedTheme,
+  solarizedLight: solarizedLightTheme,
   "tokyo-night": tokyoNightTheme,
   oneDark: oneDarkTheme,
   gruvbox: gruvboxTheme,
   highContrast: highContrastTheme,
+  everforest: everforestTheme,
 };
 
 /** Get a named theme by string key, falling back to defaultDark if not found. */

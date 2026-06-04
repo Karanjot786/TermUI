@@ -25,6 +25,8 @@ export function moveDown(n = 1): string { return `${CSI}${n}B`; }
 export function moveRight(n = 1): string { return `${CSI}${n}C`; }
 export function moveLeft(n = 1): string { return `${CSI}${n}D`; }
 
+export const requestCursorPosition = `${CSI}6n`;
+
 // ── Screen Control ──────────────────────────────────
 
 export const clearScreen = `${CSI}2J`;
@@ -58,6 +60,11 @@ export const disableMouse = `${CSI}?1000l${CSI}?1002l${CSI}?1006l`;
 export const enableBracketedPaste = `${CSI}?2004h`;
 export const disableBracketedPaste = `${CSI}?2004l`;
 
+// ── Focus Tracking ──────────────────────────────────
+
+export const enableFocusTracking = `${CSI}?1004h`;
+export const disableFocusTracking = `${CSI}?1004l`;
+
 // ── Text Styling ────────────────────────────────────
 
 export const reset = `${CSI}0m`;
@@ -88,6 +95,30 @@ export const resetScrollRegion = `${CSI}r`;
 
 export function setTitle(title: string): string {
     return `${OSC}0;${title}\x07`;
+}
+
+// ── Hyperlinks (OSC 8) ──────────────────────────────
+
+/** OSC 8 open: ESC ] 8 ; ; <url> ST. */
+export function hyperlinkOpen(url: string): string {
+    // Block non-http/https/file schemes (e.g. javascript:, data:).
+    if (!/^(https?|file):\/\//i.test(url)) return '';
+    // Strip C0/C1 controls and ESC to prevent terminal escape injection.
+    const safeUrl = url.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `\x1b]8;;${safeUrl}\x1b\\`;
+}
+
+/** OSC 8 close: ESC ] 8 ; ; ST. */
+export const hyperlinkClose: string = '\x1b]8;;\x1b\\';
+
+/** The BEL control byte. */
+export const bell = '\x07';
+
+/** OSC 9 desktop notification: ESC ] 9 ; <text> BEL. */
+export function notify(text: string): string {
+    // Strip C0/C1 controls and ESC to prevent terminal escape injection.
+    const safeText = text.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `${OSC}9;${safeText}${bell}`;
 }
 
 // ── Clipboard ───────────────────────────────────────

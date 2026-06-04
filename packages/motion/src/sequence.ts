@@ -76,3 +76,56 @@ export function parallel(
     cancellers.forEach(c => c())
   }
 }
+
+export interface RepeatOptions {
+  /** Number of passes. Use Infinity for an endless loop. Default 1. */
+  count?: number
+
+  /** Reverse direction on every other pass. Default false. */
+  yoyo?: boolean
+}
+
+export function repeat(
+  runner: AnimationRunner,
+  options?: RepeatOptions,
+): AnimationRunner {
+  const rawCount = options?.count ?? 1;
+  if (rawCount !== Infinity && !(typeof rawCount === 'number' && Number.isInteger(rawCount) && rawCount >= 0)) {
+    throw new TypeError(`repeat count must be a non-negative integer or Infinity, got ${rawCount}`);
+  }
+  const count = rawCount
+  const yoyo = options?.yoyo ?? false
+
+  return (done: () => void) => {
+    if (count <= 0) {
+      done()
+      return () => {}
+    }
+
+    let cancelled = false
+    let cancelCurrent: () => void = () => {}
+
+    function runNext(index: number) {
+      if (cancelled || index >= count) {
+        if (!cancelled) done()
+        return
+      }
+
+      // If a reversed runner is supplied, use it on odd passes.
+      // Otherwise fall back to the original runner.
+      const reverseRunner = (runner as { reverse?: AnimationRunner }).reverse
+      const currentRunner = yoyo && index % 2 === 1 && reverseRunner
+        ? reverseRunner
+        : runner
+
+      cancelCurrent = currentRunner(() => runNext(index + 1))
+    }
+
+    runNext(0)
+
+    return () => {
+      cancelled = true
+      cancelCurrent()
+    }
+  }
+}

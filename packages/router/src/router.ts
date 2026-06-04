@@ -4,7 +4,7 @@
 
 import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
-import { type Route, type RouteMatch, type RouteParams, matchRoute, compilePattern } from './route.js';
+import { type Route, type RouteMatch, type RouteParams, type RouteMeta, matchRoute, compilePattern } from './route.js';
 import { RouterContext } from './hooks.js';
 
 function defaultErrorScreen(err: Error): VNode {
@@ -39,6 +39,7 @@ export interface RouterOptions {
 export class Router {
     private _routes: Route[] = [];
     private _history: string[] = [];
+    private _forwardStack: string[] = [];
     private _currentMatch: RouteMatch | null = null;
     private _maxHistory: number;
 
@@ -62,7 +63,60 @@ export class Router {
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
         },
+    ): void;
+
+    addRoute(
+        path: string,
+        component: () => any,
+        layout?: () => any,
+        children?: Route[],
+        meta?: RouteMeta,
+        options?: {
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        },
+    ): void;
+
+    addRoute(
+        path: string,
+        component: () => any,
+        layout?: () => any,
+        childrenOrOptions?: Route[] | {
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        },
+        meta?: RouteMeta,
+        options?: {
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        },
     ): void {
+        let children: Route[] | undefined = undefined;
+        let finalOptions: {
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        } | undefined = options;
+
+        if (Array.isArray(childrenOrOptions)) {
+            children = childrenOrOptions;
+        } else if (childrenOrOptions && typeof childrenOrOptions === 'object') {
+            finalOptions = childrenOrOptions;
+        }
+
+        let finalMeta = meta ?? {};
+        if (options === undefined && meta && typeof meta === 'object' && ('lazy' in meta || 'beforeEnter' in meta || 'afterEnter' in meta)) {
+            finalOptions = meta as any;
+            const strippedMeta = { ...meta };
+            delete (strippedMeta as any).lazy;
+            delete (strippedMeta as any).beforeEnter;
+            delete (strippedMeta as any).afterEnter;
+            finalMeta = strippedMeta;
+        }
+
         const { pattern, paramNames } = compilePattern(path);
 
         this._routes.push({
@@ -71,16 +125,33 @@ export class Router {
             paramNames,
             component,
             layout,
-            lazy: options?.lazy,
-            beforeEnter: options?.beforeEnter,
-            afterEnter: options?.afterEnter,
+            children,
+            meta: finalMeta,
+            lazy: finalOptions?.lazy,
+            beforeEnter: finalOptions?.beforeEnter,
+            afterEnter: finalOptions?.afterEnter,
         });
     }
 
     /** Register multiple routes */
-    addRoutes(routes: Array<{ path: string; component: () => any; layout?: () => any }>): void {
+    addRoutes(
+        routes: Array<{
+            path: string;
+            component: () => any;
+            layout?: () => any;
+            children?: Route[];
+            meta?: RouteMeta;
+            lazy?: () => Promise<any>;
+            beforeEnter?: (to: string) => boolean | string;
+            afterEnter?: (to: string) => void;
+        }>,
+    ): void {
         for (const r of routes) {
-            this.addRoute(r.path, r.component, r.layout);
+            this.addRoute(r.path, r.component, r.layout, r.children, r.meta, {
+                lazy: r.lazy,
+                beforeEnter: r.beforeEnter,
+                afterEnter: r.afterEnter,
+            });
         }
     }
 
@@ -107,6 +178,8 @@ export class Router {
             return;
         }
 
+        // A new push(path) clears the forward stack
+        this._forwardStack = [];
         const guardResult = match.route.beforeEnter?.(path);
 
         if (guardResult === false) {
@@ -175,8 +248,12 @@ export class Router {
     /** Go back in history */
     back(): void {
         if (this._history.length <= 1) return;
-
-        this._history.pop();
+        
+        // back() pushes the popped path onto a forward stack
+        const poppedPath = this._history.pop();
+        if (poppedPath) {
+            this._forwardStack.push(poppedPath);
+        }
 
         const prevPath = this._history[this._history.length - 1];
         const match = prevPath ? matchRoute(prevPath, this._routes) : null;
@@ -192,6 +269,52 @@ export class Router {
         } else {
             this.events.emit('back', null);
         }
+    }
+
+    /** Move forward one step if a forward entry exists */
+    forward(): void {
+        if (this._forwardStack.length === 0) return;
+
+        const nextPath = this._forwardStack.pop();
+        if (!nextPath) return;
+
+        const match = matchRoute(nextPath, this._routes);
+        if (!match) {
+            this.events.emit('error', new Error(`No route found for forward path: ${nextPath}`));
+            return;
+        }
+
+        this._history.push(nextPath);
+        this._currentMatch = match;
+        unmountAll();
+        const screen = this._wrapScreen(match);
+        // forward() re-navigates to the most recent forward entry and emits navigate
+        this.events.emit('navigate', { match, screen });
+    }
+
+    /** Move delta steps: negative is back, positive is forward */
+    go(delta: number): void {
+        if (delta === 0) return;
+
+        if (delta < 0) {
+            const steps = Math.abs(delta);
+            // go(n) past either boundary is a no-op (clamped, no error)
+            if (steps >= this._history.length) return;
+            for (let i = 0; i < steps; i++) {
+                this.back();
+            }
+        } else {
+            // go(n) past either boundary is a no-op (clamped, no error)
+            if (delta > this._forwardStack.length) return;
+            for (let i = 0; i < delta; i++) {
+                this.forward();
+            }
+        }
+    }
+
+    /** Whether a forward entry exists */
+    get canGoForward(): boolean {
+        return this._forwardStack.length > 0;
     }
 
     /** Current route match */

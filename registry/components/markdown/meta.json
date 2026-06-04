@@ -1,0 +1,14 @@
+{
+  "name": "markdown",
+  "category": "data",
+  "description": "Renders a subset of Markdown syntax in the terminal with formatting support.",
+  "files": [
+    "registry/components/markdown/index.ts"
+  ],
+  "deps": [
+    "@termuijs/core",
+    "@termuijs/widgets"
+  ],
+  "peerDeps": [],
+  "version": "0.1.0"
+}
