@@ -11,6 +11,7 @@ import {
     SpeedColumn,
     PercentageColumn,
 } from './ProgressColumn.js';
+import type { Screen } from '@termuijs/core';
 export interface ProgressTask {
     label?: string;
     value?: number;
@@ -29,6 +30,7 @@ export class Progress extends Widget {
     private _columns: ProgressColumnDefinition[];
     
     private _lastRefreshTimes = new Map<number, number>();
+    private _columnCache = new Map<string, string>();
 
   private _resolveColumns(
     children?: unknown,
@@ -110,7 +112,7 @@ this._columns =
     this.markDirty();
 }
 
-    protected _renderSelf(screen: any): void {
+    protected _renderSelf(screen: Screen): void {
     const rect = this._getContentRect();
     const { x, y, width, height } = rect;
 
@@ -140,8 +142,13 @@ if (
         this._lastRefreshTimes.get(columnIndex) ?? 0;
 
     const intervalMs = 1000 / refreshRate;
-
-    if (now - last < intervalMs) {
+    if (now - last < intervalMs) { 
+         const cached = this._columnCache.get(
+        `${index}-${columnIndex}`,
+    );
+    if (cached) {
+        parts.push(cached);
+    }
         continue;
     }
 
@@ -191,13 +198,24 @@ if (
                     break;
                 }
 
-                case 'time':
-                    parts.push('--:--');
-                    break;
-
-                case 'speed':
-                    parts.push('--/s');
-                    break;
+                case 'time': {
+                    const value = '--:--';
+                   this._columnCache.set(
+                 `${index}-${columnIndex}`,
+                 value,
+                  );
+                 parts.push(value);
+                 break;
+                }
+                 case 'speed': {
+                  const value = '--/s';
+                  this._columnCache.set(
+                 `${index}-${columnIndex}`,
+                 value,
+                    );
+                 parts.push(value);
+                 break;
+}
             }
         }
 
@@ -205,7 +223,7 @@ if (
             x,
             y + index,
             parts.join(' '),
-            this.style as any,
+            this.style,
         );
     });
 }
