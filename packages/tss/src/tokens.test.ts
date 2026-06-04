@@ -20,7 +20,9 @@ describe('ThemeTokens', () => {
     const { defaultDark } = await import('./tokens.js');
     for (const key of requiredKeys) {
       expect(defaultDark).toHaveProperty(key);
+      // key is a keyof defaultDark because we iterate Object.keys(defaultDark)
       expect(typeof defaultDark[key as keyof typeof defaultDark]).toBe('string');
+      // key is a keyof defaultDark because we iterate Object.keys(defaultDark)
       expect(defaultDark[key as keyof typeof defaultDark]).toBeTruthy();
     }
     expect(Object.keys(defaultDark)).toHaveLength(10);
@@ -30,7 +32,9 @@ describe('ThemeTokens', () => {
     const { defaultLight } = await import('./tokens.js');
     for (const key of requiredKeys) {
       expect(defaultLight).toHaveProperty(key);
+      // key is a keyof defaultLight because we iterate Object.keys(defaultLight)
       expect(typeof defaultLight[key as keyof typeof defaultLight]).toBe('string');
+      // key is a keyof defaultLight because we iterate Object.keys(defaultLight)
       expect(defaultLight[key as keyof typeof defaultLight]).toBeTruthy();
     }
     expect(Object.keys(defaultLight)).toHaveLength(10);
