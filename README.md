@@ -36,7 +36,7 @@ bun install
 bun run dev
 ```
 
-Requires [Bun](https://bun.sh) 1.3.0 or newer.
+Requires [Bun](https://bun.sh) 1.3.0 or newer and [Node.js](https://nodejs.org/) 18.0.0 or newer.
 
 ## Manual Setup
 
