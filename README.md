@@ -39,7 +39,7 @@ bun install
 bun run dev
 ```
 
-Requires [Bun](https://bun.sh) 1.3.0 or newer. Install it with `curl -fsSL https://bun.sh/install | bash` (macOS/Linux) or `powershell -c "irm bun.sh/install.ps1 | iex"` (Windows).
+Requires [Bun](https://bun.sh) 1.3.0 or newer and [Node.js](https://nodejs.org/) 18.0.0 or newer.
 
 ## Manual Setup
 
