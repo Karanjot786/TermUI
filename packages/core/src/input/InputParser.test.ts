@@ -16,7 +16,10 @@ function createParser() {
 }
 
 describe('InputParser', () => {
-    afterEach(() => { vi.restoreAllMocks(); });
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.useRealTimers();
+    });
 
     it('parses regular ASCII character "a"', () => {
         const { stdin, handler } = createParser();
@@ -106,6 +109,58 @@ describe('InputParser', () => {
         const { stdin, handler } = createParser();
         sendKey(stdin, '\x1bx');
         expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'x', alt: true }));
+    });
+
+    it('resolves cursor position reports with correct row/col', async () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition();
+        sendKey(stdin, '\x1b[12;34R');
+
+        await expect(positionPromise).resolves.toEqual({ row: 12, col: 34 });
+    });
+
+    it('rejects cursor position request after timeout', async () => {
+        vi.useFakeTimers();
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition(200);
+        vi.advanceTimersByTime(201);
+
+        await expect(positionPromise).rejects.toThrow('Cursor position request timed out');
+    });
+
+    it('does not emit a key event for cursor position reports', async () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        const keyHandler = vi.fn();
+        parser.onKey(keyHandler);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition();
+        sendKey(stdin, '\x1b[5;7R');
+
+        await expect(positionPromise).resolves.toEqual({ row: 5, col: 7 });
+        expect(keyHandler).not.toHaveBeenCalled();
+    });
+
+    it('resolves two pending cursor position requests', async () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const first = parser.requestCursorPosition();
+        const second = parser.requestCursorPosition();
+        sendKey(stdin, '\x1b[8;9R');
+
+        await expect(Promise.all([first, second])).resolves.toEqual([
+            { row: 8, col: 9 },
+            { row: 8, col: 9 },
+        ]);
     });
 
     it('emits focus in for \x1b[I', () => {
