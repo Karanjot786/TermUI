@@ -2,8 +2,8 @@
 // @termuijs/motion — Tests for Transitions (easing functions)
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { easings } from './transitions.js';
+import { describe, it, expect, vi, beforeEach, test } from 'vitest';
+import { easings, cubicBezier } from './transitions.js';
 
 describe('Easing Functions', () => {
     it('linear(0) = 0 and linear(1) = 1', () => {
@@ -116,8 +116,6 @@ describe('pulse — caps.motion=false', () => {
     });
 });
 
-import { expect, test, describe } from "vitest";
-import { cubicBezier } from "./transitions.js";
 
 describe("cubicBezier easing", () => {
   test("should map progress smoothly from 0 to 1", () => {

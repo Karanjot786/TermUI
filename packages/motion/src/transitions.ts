@@ -103,28 +103,48 @@ export function pulse(periodMs: number, onFrame: (intensity: number) => void): (
     return unsub;
 }
 export function cubicBezier(x1: number, y1: number, x2: number, y2: number) {
+  const cx = 3.0 * x1;
+  const bx = 3.0 * (x2 - x1) - cx;
+  const ax = 1.0 - cx - bx;
+
+  const cy = 3.0 * y1;
+  const by = 3.0 * (y2 - y1) - cy;
+  const ay = 1.0 - cy - by;
+
+  const sampleCurveX = (t: number) => ((ax * t + bx) * t + cx) * t;
+  const sampleCurveY = (t: number) => ((ay * t + by) * t + cy) * t;
+  const sampleCurveDerivativeX = (t: number) => (3.0 * ax * t + 2.0 * bx) * t + cx;
+
   return function (progress: number): number {
     if (progress === 0 || progress === 1) return progress;
-
-    const cx = 3.0 * x1;
-    const bx = 3.0 * (x2 - x1) - cx;
-    const ax = 1.0 - cx - bx;
-
-    const cy = 3.0 * y1;
-    const by = 3.0 * (y2 - y1) - cy;
-    const ay = 1.0 - cy - by;
-
-    const sampleCurveX = (t: number) => ((ax * t + bx) * t + cx) * t;
-    const sampleCurveY = (t: number) => ((ay * t + by) * t + cy) * t;
-    const sampleCurveDerivativeX = (t: number) => (3.0 * ax * t + 2.0 * bx) * t + cx;
 
     let t = progress;
     for (let i = 0; i < 8; i++) {
       const currentX = sampleCurveX(t) - progress;
       const dX = sampleCurveDerivativeX(t);
-      if (Math.abs(currentX) < 0.001) break;
-      if (Math.abs(dX) < 1e-6) break;
-      t -= currentX / dX;
+      if (Math.abs(currentX) < 1e-7) {
+        return sampleCurveY(t);
+      }
+      if (Math.abs(dX) < 1e-6) {
+        break;
+      }
+      t = Math.min(1, Math.max(0, t - currentX / dX));
+    }
+
+    let low = 0;
+    let high = 1;
+    t = progress;
+    for (let i = 0; i < 12; i++) {
+      const currentX = sampleCurveX(t);
+      if (Math.abs(currentX - progress) < 1e-7) {
+        break;
+      }
+      if (currentX < progress) {
+        low = t;
+      } else {
+        high = t;
+      }
+      t = (low + high) / 2;
     }
 
     return sampleCurveY(t);
