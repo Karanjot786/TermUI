@@ -9,7 +9,7 @@
   <a href="https://www.npmjs.com/package/@termuijs/core"><img src="https://img.shields.io/npm/v/@termuijs/core.svg" alt="npm version"></a>
   <a href="https://github.com/Karanjot786/TermUI/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <img src="https://img.shields.io/badge/runtime-Bun%201.3+-orange" alt="Bun 1.3+">
-  <img src="https://img.shields.io/badge/tests-600%20passing-brightgreen" alt="600 tests passing">
+  <img src="https://img.shields.io/badge/tests-1394%20passing-brightgreen" alt="1394 tests passing">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript 5.9">
 </p>
 <p align="center">
@@ -367,6 +367,7 @@ git clone https://github.com/Karanjot786/TermUI.git
 cd TermUI
 bun install
 bun run build
+```
 
 To run the AI streaming example:
 
@@ -375,9 +376,6 @@ cd examples/ai-streaming
 bun run dev
 ```
 
-<<<<<<< HEAD
-Examples: `ai-streaming`, `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `showcase`, `system-monitor`, `todo-app`, `widget-gallery`, `forms-and-validation`.
-=======
 ### Available Examples
 
 | Example | Purpose | Features demonstrated | Path |
@@ -392,7 +390,6 @@ Examples: `ai-streaming`, `cli-wrapper-live`, `dashboard`, `jsx-dashboard`, `sho
 | Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
 | Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
 | CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
->>>>>>> upstream/main
 
 ## Project structure
 
@@ -431,7 +428,7 @@ examples/
 ```bash
 bun install
 bun run build      # Build all 14 packages
-bun run test       # Run all 600 tests
+bun run test       # Run all 1394 tests
 bun run typecheck  # Type-check all packages
 ```
 
@@ -459,32 +456,4 @@ See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and futu
 ## License
 
 MIT
-
-/**
-## ✨ README Improvement Notes
-
-### 📌 Formatting Enhancements Needed
-- Improve heading hierarchy for better readability
-- Ensure consistent spacing between sections
-- Use proper Markdown formatting for code blocks and lists
-- Align all installation and usage steps properly
-
-### 🚀 Suggested Structure Upgrade
-- Introduction
-- Features
-- Tech Stack
-- Installation
-- Usage
-- Project Structure
-- Contribution Guidelines
-- License
-
-### 🛠️ Documentation Improvements
-- Add badges (optional): build, license, contributors
-- Add screenshots for better UI understanding
-- Standardize code blocks for commands
-
-### 🎯 Goal
-Improve onboarding experience for new contributors and users by making README more structured, readable, and professional.
-*/
 
