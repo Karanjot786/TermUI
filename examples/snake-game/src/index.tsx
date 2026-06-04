@@ -83,7 +83,13 @@ class SnakeGame extends Widget {
             fg: { type: 'named', name: 'green' },
         }, { align: 'center' });
 
-        this.food = this.generateRandomFood();
+        const initialFood = this.generateRandomFood();
+        if (!initialFood) {
+            // Should never happen with 1 cell snake, but just in case
+            this.food = { x: 0, y: 0 };
+        } else {
+            this.food = initialFood;
+        }
         this.board = new SnakeBoard(GRID_SIZE, this.snake, this.food);
 
         this.addChild(title);
@@ -93,7 +99,11 @@ class SnakeGame extends Widget {
         this.addChild(this.board);
     }
 
-    private generateRandomFood(): { x: number; y: number } {
+    // Returns null when board is full (victory condition)
+    private generateRandomFood(): { x: number; y: number } | null {
+        if (this.snake.length >= GRID_SIZE * GRID_SIZE) {
+            return null;
+        }
         let newPos: { x: number; y: number };
         do {
             newPos = {
@@ -117,8 +127,9 @@ class SnakeGame extends Widget {
             case 'down':  newHead.y++; break;
         }
 
+        // Wall collision
         if (newHead.x < 0 || newHead.x >= GRID_SIZE || newHead.y < 0 || newHead.y >= GRID_SIZE) {
-            this.endGame();
+            this.endGame(false);
             return;
         }
 
@@ -126,9 +137,10 @@ class SnakeGame extends Widget {
         let newSnake = [newHead, ...this.snake];
         if (!willEat) newSnake.pop();
 
+        // Self collision
         const headPos = newSnake[0];
         if (newSnake.slice(1).some(seg => seg.x === headPos.x && seg.y === headPos.y)) {
-            this.endGame();
+            this.endGame(false);
             return;
         }
 
@@ -137,20 +149,27 @@ class SnakeGame extends Widget {
         if (willEat) {
             this.score++;
             this.scoreText.setContent(`Score: ${this.score}`);
-            this.food = this.generateRandomFood();
+            const nextFood = this.generateRandomFood();
+            if (!nextFood) {
+                // Board full → victory
+                this.endGame(true);
+                return;
+            }
+            this.food = nextFood;
         }
 
         this.board.updateState(this.snake, this.food);
         this.markDirty();
     }
 
-    private endGame() {
+    private endGame(victory: boolean = false) {
         if (this.gameOver) return;
         this.gameOver = true;
         if (this.timer) clearInterval(this.timer);
-        this.gameOverText = new Text(' GAME OVER - Press R to restart ', {
+        const message = victory ? ' 🎉 YOU WIN! 🎉 ' : ' 💀 GAME OVER 💀 ';
+        this.gameOverText = new Text(message, {
             bold: true,
-            fg: { type: 'named', name: 'red' },
+            fg: victory ? { type: 'named', name: 'green' } : { type: 'named', name: 'red' },
         }, { align: 'center' });
         this.addChild(this.gameOverText);
         this.markDirty();
@@ -161,7 +180,8 @@ class SnakeGame extends Widget {
         this.direction = 'right';
         this.score = 0;
         this.gameOver = false;
-        this.food = this.generateRandomFood();
+        const newFood = this.generateRandomFood();
+        if (newFood) this.food = newFood;
         this.scoreText.setContent('Score: 0');
         if (this.gameOverText) {
             this.removeChild(this.gameOverText);
