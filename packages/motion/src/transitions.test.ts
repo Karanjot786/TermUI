@@ -115,3 +115,21 @@ describe('pulse — caps.motion=false', () => {
         expect(() => cancel()).not.toThrow();
     });
 });
+
+import { expect, test, describe } from "vitest";
+import { cubicBezier } from "./transitions.js";
+
+describe("cubicBezier easing", () => {
+  test("should map progress smoothly from 0 to 1", () => {
+    const ease = cubicBezier(0.25, 0.1, 0.25, 1);
+    
+    // Core boundary conditions
+    expect(ease(0)).toBe(0);
+    expect(ease(1)).toBe(1);
+    
+    // Intermediate curve logic checks
+    const midValue = ease(0.5);
+    expect(midValue).toBeGreaterThan(0);
+    expect(midValue).toBeLessThan(1);
+  });
+});
