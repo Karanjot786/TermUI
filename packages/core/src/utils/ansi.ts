@@ -116,7 +116,9 @@ export const bell = '\x07';
 
 /** OSC 9 desktop notification: ESC ] 9 ; <text> BEL. */
 export function notify(text: string): string {
-    return `${OSC}9;${text}${bell}`;
+    // Strip C0/C1 controls and ESC to prevent terminal escape injection.
+    const safeText = text.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `${OSC}9;${safeText}${bell}`;
 }
 
 // ── Clipboard ───────────────────────────────────────
