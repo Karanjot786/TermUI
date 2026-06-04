@@ -69,8 +69,12 @@ export { Center } from './layout/Center.js';
 export type { CenterOptions } from './layout/Center.js';
 export { Card } from './layout/Card.js';
 export type { CardOptions } from './layout/Card.js';
+export { Masonry } from './layout/Masonry.js';
+export type { MasonryOptions } from './layout/Masonry.js';
 export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
+export { Dock } from './layout/Dock.js';
+export type { DockOptions, DockItem, DockEdge } from './layout/Dock.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
