@@ -4,8 +4,6 @@
 
 import { describe, it, expect, test } from 'vitest';
 import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
-import { parseMouseEvent } from './MouseParser.js';
-import { describe, expect, test } from 'vitest';
 
 describe('parseMouseEvent modifier keys', () => {
   test('plain left click reports all modifiers false', () => {
