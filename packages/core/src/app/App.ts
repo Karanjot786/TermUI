@@ -13,12 +13,15 @@ import { computeLayout, type LayoutNode } from '../layout/LayoutEngine.js';
 import type { EventMap } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
+import { mergeBorders } from '../renderer/border-merge.js';
 
 export interface AppOptions extends TerminalOptions {
     /** Frames per second for the render loop */
     fps?: number;
     /** Use alternate screen (full-screen mode). Default: true */
     fullscreen?: boolean;
+    /** Merge adjacent borders into junction characters */
+    dockBorders?: boolean;
     /** Screen mode: 'alternate' = alt screen (default), 'main' = render to main screen, 'inline' = render N rows at cursor */
     screenMode?: 'alternate' | 'main' | 'inline';
     /** Number of rows to render in inline mode (only used when screenMode='inline') */
@@ -31,6 +34,7 @@ export interface AppOptions extends TerminalOptions {
     skipFallback?: boolean;
     /** Title to set on the terminal window */
     title?: string;
+    diffRenderer?: boolean;
 }
 
 /**
@@ -86,6 +90,8 @@ export class App {
             fullscreen: true,
             mouse: false,
             fps: 30,
+            dockBorders: false,
+            diffRenderer: true,
             // Default screenMode: if fullscreen explicitly disabled, treat as 'main', otherwise 'alternate'
             screenMode: options.fullscreen === false ? 'main' : 'alternate',
             inlineRows: 0,
@@ -94,7 +100,7 @@ export class App {
 
         this.terminal = new Terminal(options);
         this.screen = new Screen(this.terminal.cols, this.terminal.rows);
-        this.renderer = new Renderer(this.terminal, this.screen, this._options.fps);
+        this.renderer = new Renderer(this.terminal, this.screen, this._options.fps, this._options.diffRenderer);
         this.input = new InputParser(this.terminal.stdin);
         this.focus = new FocusManager();
         this.events = new EventEmitter();
@@ -279,7 +285,10 @@ export class App {
         // Clear dirty flags now that we've rendered — future requestRender()
         // calls will skip layout until markDirty() is called again.
         this._rootWidget.clearDirty?.();
-
+        // Merge adjacent borders into junction characters for a cleaner look
+        if (this._options.dockBorders) {
+           mergeBorders(this.screen);
+        }
         // Composite overlay layers on top of the base rendering
         this.layers.composite(this.screen);
 
