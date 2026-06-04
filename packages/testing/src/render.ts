@@ -6,7 +6,7 @@
 // rendered output and simulating user interactions.
 // ─────────────────────────────────────────────────────
 
-import { Screen, type KeyEvent } from "@termuijs/core";
+import { Screen, type KeyEvent, type MouseEvent } from "@termuijs/core";
 import { Box, Text, Widget } from "@termuijs/widgets";
 import {
     reconcile,
@@ -69,6 +69,12 @@ export interface TestInstance {
         key: string,
         modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
     ): void;
+
+    /** Simulate a mouse event at (x, y). */
+    fireMouse(x: number, y: number, init?: Partial<MouseEvent>): void;
+
+    /** Simulate a full click (mousedown + mouseup) at (x, y). */
+    click(x: number, y: number): void;
 
     /**
      * Type a string — fires each character as a key event.
