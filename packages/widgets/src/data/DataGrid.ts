@@ -289,3 +289,6 @@ export class DataGrid extends Widget {
         return this._showHeader ? Math.max(0, height - 1) : height;
     }
 }
+
+/** JSX-friendly alias for the DataGrid class widget */
+export { DataGrid as DataGridView } from './DataGrid.js';
