@@ -14,9 +14,14 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "bench": "bun packages/core/src/benchmark/render-loop.ts",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \".\""
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "devDependencies": {
+
     "@types/bun": "latest",
     "@types/node": "^25.2.3",
     "tsup": "^8.3.0",
