@@ -1,5 +1,5 @@
 import { Widget } from '../base/Widget.js';
-import { type Style } from '@termuijs/core';
+import { type Screen, type Style } from '@termuijs/core';
 
 export interface MasonryOptions {
   /** Number of columns. Default: 2 */
@@ -9,48 +9,47 @@ export interface MasonryOptions {
 }
 
 export class Masonry extends Widget {
-  protected _children: Widget[];
   private _columns: number;
   private _gap: number;
 
   constructor(
     children: Widget[],
     style?: Partial<Style>,
-    opts?: MasonryOptions
+    opts?: MasonryOptions,
   ) {
     super(style);
     this._columns = opts?.columns ?? 2;
     this._gap = opts?.gap ?? 0;
-    this._children = [];
     this.setChildren(children);
   }
 
   setChildren(children: Widget[]): void {
-    this._children = children;
+    this.clearChildren();
+    for (const child of children) this.addChild(child);
     this._layout();
     this.markDirty();
   }
 
-  protected _renderSelf(): string {
-    return '';
+  override syncLayout(): void {
+    super.syncLayout();
+    this._layout();
   }
 
+  protected _renderSelf(_screen: Screen): void {}
+
   private _layout(): void {
-    const totalWidth = this.rect?.width ?? 80;
+    const totalWidth = this.rect.width || 80;
     const colWidth = Math.floor(totalWidth / this._columns);
     const colHeights = new Array<number>(this._columns).fill(0);
 
-    for (const child of this._children) {
-      // Find the shortest column
+    for (const child of this.children) {
       const col = colHeights.indexOf(Math.min(...colHeights));
       const x = col * colWidth;
       const y = colHeights[col];
-      const height = child.rect?.height ?? 1;
+      const height = (child as any).preferredHeight ?? (child.rect.height || 1);
 
-      // FIX: Use updateRect() instead of direct assignment
-    child.updateRect({ x, y, width: colWidth, height });
+      child.updateRect({ x, y, width: colWidth, height });
 
-      // Advance that column's height
       colHeights[col] += height + this._gap;
     }
   }
