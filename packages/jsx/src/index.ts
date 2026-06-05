@@ -102,6 +102,7 @@ export { useDebounce } from './hooks/useDebounce.js';
 export { useTerminalSize } from './hooks/useTerminalSize.js';
 export type { TerminalSize } from './hooks/useTerminalSize.js';
 export { useIsMounted } from './hooks/useIsMounted.js';
+export { useUnmount } from './hooks/useUnmount.js';
 export { useTransition } from './hooks/useTransition.js';
 export { useStopwatch } from './hooks/useStopwatch.js';
 export type { UseStopwatchOptions, UseStopwatchControls } from './hooks/useStopwatch.js';
