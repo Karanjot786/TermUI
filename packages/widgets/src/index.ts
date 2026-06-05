@@ -137,6 +137,9 @@ export type { TagOptions, TagVariant } from './display/Tag.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
 
+export { Carousel } from './display/Carousel.js';
+export type { CarouselOptions } from './display/Carousel.js';
+
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 
