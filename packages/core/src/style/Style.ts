@@ -35,6 +35,7 @@ export interface Style {
     padding?: Partial<Edges> | number;
     margin?: Partial<Edges> | number;
     border?: BorderStyle;
+    asciiOnly?: boolean; 
     borderColor?: Color;
 
     // ── Dimensions ──────────

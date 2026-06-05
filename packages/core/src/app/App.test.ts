@@ -182,5 +182,27 @@ describe('App', () => {
             app.exit(0);
             await mountPromise.catch(() => {});
         });
+        it('does not merge borders when dockBorders is false', () => {
+    const root = createMockRootWidget();
+
+    (root as any).render = (screen: any) => {
+        screen.setCell(3, 2, { char: '│' });
+        screen.setCell(3, 4, { char: '│' });
+
+        screen.setCell(2, 3, { char: '─' });
+        screen.setCell(4, 3, { char: '─' });
+    };
+
+    const app = new App(root, {
+        forceFallback: false,
+        skipFallback: true,
+        dockBorders: false,
+    });
+
+    // Force fallback path renders immediately
+    (app as any).requestRender();
+
+    expect(app.screen.back[3][3].char).toBe(' ');
+});
     });
 });

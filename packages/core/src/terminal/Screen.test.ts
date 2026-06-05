@@ -3,8 +3,9 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
-import { Screen, emptyCell, cellsEqual } from '../terminal/Screen.js';
-import { caps } from '../terminal/env-caps.js';
+import { Screen, emptyCell, resetCell, cellsEqual } from './Screen.js';
+import { caps } from './env-caps.js';
+import { hyperlinkOpen, hyperlinkClose } from '../utils/ansi.js';
 
 describe('Screen', () => {
     it('initializes with correct dimensions', () => {
@@ -147,5 +148,46 @@ describe('cellsEqual', () => {
         const a = emptyCell();
         const b = { ...emptyCell(), fg: { type: 'named' as const, name: 'red' as const } };
         expect(cellsEqual(a, b)).toBe(false);
+    });
+});
+
+describe('Screen and Cell Hyperlink Support', () => {
+    it('a cell written with link retains it', () => {
+        const s = new Screen(20, 1);
+        s.setCell(0, 0, { char: 'x', link: 'https://termui.dev' });
+        expect(s.back[0][0].link).toBe('https://termui.dev');
+    });
+
+    it('emptyCell().link is undefined', () => {
+        expect(emptyCell().link).toBeUndefined();
+    });
+
+    it('resetCell clears a previously set link', () => {
+        const cell = emptyCell();
+        cell.link = 'https://termui.dev';
+        resetCell(cell);
+        expect(cell.link).toBeUndefined();
+    });
+
+    it('cellsEqual distinguishes differing links', () => {
+        const c1 = emptyCell();
+        const c2 = emptyCell();
+        
+        expect(cellsEqual(c1, c2)).toBe(true);
+        
+        c1.link = 'https://termui.dev';
+        expect(cellsEqual(c1, c2)).toBe(false);
+        
+        c2.link = 'https://termui.dev';
+        expect(cellsEqual(c1, c2)).toBe(true);
+    });
+
+    it('hyperlinkOpen produces a valid OSC 8 prefix', () => {
+        const url = 'https://termui.dev';
+        expect(hyperlinkOpen(url)).toBe(`\x1b]8;;${url}\x1b\\`);
+    });
+
+    it('hyperlinkClose produces a valid OSC 8 suffix', () => {
+        expect(hyperlinkClose).toBe(`\x1b]8;;\x1b\\`);
     });
 });

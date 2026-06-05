@@ -17,10 +17,10 @@ import type { VNode, VElement, FC } from './vnode.js';
 import { isVElement, isVFragment, Fragment, flattenChildren } from './vnode.js';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
-    runEffects, destroyFiber, type Fiber,
+    runEffects, runLayoutEffects, destroyFiber, type Fiber,
 } from './hooks.js';
 import { ErrorBoundary } from './error-boundary.js';
-
+import { Suspense } from './Suspense.js';
 // ── Component instance tracking ──
 
 interface ComponentInstance {
@@ -104,40 +104,40 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
 
         case 'progressbar': {
             return new ProgressBar(style, {
-                value:       typeof props.value === 'number' ? props.value : 0,
-                fillChar:    props.fillChar,
-                emptyChar:   props.emptyChar,
-                fillColor:   props.fillColor ? parseColorProp(props.fillColor) : undefined,
-                showLabel:   props.showLabel !== false,
+                value: typeof props.value === 'number' ? props.value : 0,
+                fillChar: props.fillChar,
+                emptyChar: props.emptyChar,
+                fillColor: props.fillColor ? parseColorProp(props.fillColor) : undefined,
+                showLabel: props.showLabel !== false,
                 labelFormat: props.labelFormat,
             });
         }
 
         case 'spinner': {
             return new Spinner(style, {
-                preset:      props.preset ?? props.spinner,
-                label:       props.label,
-                color:       props.color ? parseColorProp(props.color) : undefined,
-                active:      props.active !== false,
-                doneText:    props.doneText,
-                interval:    props.interval,
+                preset: props.preset ?? props.spinner,
+                label: props.label,
+                color: props.color ? parseColorProp(props.color) : undefined,
+                active: props.active !== false,
+                doneText: props.doneText,
+                interval: props.interval,
             });
         }
 
         case 'grid': {
             return new Grid({ ...style }, {
                 columns: props.columns ?? 12,
-                gap:     props.gap,
-                rowGap:  props.rowGap,
-                colGap:  props.colGap,
+                gap: props.gap,
+                rowGap: props.rowGap,
+                colGap: props.colGap,
             });
         }
 
         case 'skeleton': {
             return new Skeleton({ ...style }, {
-                variant:    props.variant,
+                variant: props.variant,
                 intervalMs: props.intervalMs,
-                chars:      props.chars,
+                chars: props.chars,
             });
         }
 
@@ -147,21 +147,21 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
                 .join('') || props.message || '';
             return new StatusMessage(content, { height: 1, ...style }, {
                 variant: props.variant,
-                icon:    props.icon,
+                icon: props.icon,
             });
         }
 
         case 'banner': {
             return new Banner({ ...style }, {
                 variant: props.variant,
-                title:   props.title,
-                body:    props.body,
+                title: props.title,
+                body: props.body,
             });
         }
 
         case 'card': {
             return new Card({ ...style }, {
-                title:       props.title,
+                title: props.title,
                 borderColor: props.borderColor ? parseColorProp(props.borderColor) : undefined,
             });
         }
@@ -169,8 +169,8 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
         case 'keyvalue': {
             const pairs = props.pairs ?? props.data ?? {};
             return new KeyValue(pairs, { ...style }, {
-                separator:  props.separator,
-                keyColor:   props.keyColor   ? parseColorProp(props.keyColor)   : undefined,
+                separator: props.separator,
+                keyColor: props.keyColor ? parseColorProp(props.keyColor) : undefined,
                 valueColor: props.valueColor ? parseColorProp(props.valueColor) : undefined,
             });
         }
@@ -178,7 +178,7 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
         case 'center': {
             return new Center({ ...style }, {
                 horizontal: props.horizontal !== false,
-                vertical:   props.vertical !== false,
+                vertical: props.vertical !== false,
             });
         }
 
@@ -192,10 +192,10 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
         case 'sidebar': {
             const items = props.items ?? [];
             return new Sidebar(items, { ...style }, {
-                collapsed:      props.collapsed,
+                collapsed: props.collapsed,
                 collapsedWidth: props.collapsedWidth,
-                activeColor:    props.activeColor ? parseColorProp(props.activeColor) : undefined,
-                badgeColor:     props.badgeColor  ? parseColorProp(props.badgeColor)  : undefined,
+                activeColor: props.activeColor ? parseColorProp(props.activeColor) : undefined,
+                badgeColor: props.badgeColor ? parseColorProp(props.badgeColor) : undefined,
             });
         }
 
@@ -216,6 +216,12 @@ function extractStyle(props: Record<string, any>): Partial<Style> {
     if (props.padding != null) style.padding = props.padding;
     if (props.margin != null) style.margin = props.margin;
     if (props.border != null) style.border = props.border;
+    const ascii =
+        typeof props.asciiOnly === 'string'
+            ? props.asciiOnly.toLowerCase() === 'true'
+            : !!props.asciiOnly;
+
+    if (props.asciiOnly != null) style.asciiOnly = ascii;
     if (props.borderColor != null) style.borderColor = parseColorProp(props.borderColor);
     if (props.gap != null) style.gap = props.gap;
     return style;
@@ -260,6 +266,7 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
     // VElement
     if (isVElement(vnode)) {
         let { type, props, children } = vnode;
+        children = children ?? [];
 
         // Map uppercase widget classes to their lowercase intrinsic tags
         const t = type as any;
@@ -276,6 +283,25 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
         else if (t === ScrollView) type = 'scrollview';
         else if (t === Sidebar) type = 'sidebar';
         else if (t === Spinner) type = 'spinner';
+
+        // Suspense boundary
+        if (type === Suspense) {
+            try {
+                const suspenseChild = children.length === 1 ? children[0] : {
+                    type: Fragment,
+                    props: {},
+                    children,
+                } as any;
+
+                return reconcile(suspenseChild);
+            } catch (err) {
+                if (err instanceof Promise) {
+                    return reconcile(props.fallback);
+                }
+
+                throw err;
+            }
+        }
 
         // Functional component
         if (typeof type === 'function') {
@@ -344,7 +370,7 @@ function cleanupStaleChildFibers(fiber: Fiber): void {
 function renderComponent(
     component: FC<any>,
     props: Record<string, any>,
-    children: VNode[],
+    children: VNode[] = [],
 ): Widget {
     const parentFiber = _parentFiber;
 
@@ -402,6 +428,11 @@ function renderComponent(
     } catch (err) {
         clearCurrentFiber();
         _parentFiber = prevParent;
+
+        if (err instanceof Promise) {
+            throw err;
+        }
+
         const error = err instanceof Error ? err : new Error(String(err));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
@@ -419,6 +450,7 @@ function renderComponent(
         _parentFiber = prevParent;
 
         cleanupStaleChildFibers(fiber);
+        runLayoutEffects(fiber);
         runEffects(fiber);
 
         _instanceMap.set(vnode, {
@@ -444,6 +476,7 @@ function renderComponent(
     cleanupStaleChildFibers(fiber);
 
     // Run effects after render
+    runLayoutEffects(fiber);
     runEffects(fiber);
 
     // Store instance for cleanup and re-renders
@@ -493,6 +526,11 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     } catch (rawErr) {
         clearCurrentFiber();
         _parentFiber = prevParent;
+
+        if (rawErr instanceof Promise) {
+            throw rawErr;
+        }
+
         const err = rawErr instanceof Error ? rawErr : new Error(String(rawErr));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
@@ -508,6 +546,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         _parentFiber = prevParent;
 
         cleanupStaleChildFibers(fiber);
+        runLayoutEffects(fiber);
         runEffects(fiber);
         fiber.isDirty = false;
 
@@ -523,6 +562,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     // memo() optimization: if component returned same VNode reference, skip widget rebuild
     if (vnode === instance.lastVNode) {
         _parentFiber = prevParent;
+        runLayoutEffects(fiber);
         runEffects(fiber);
         fiber.isDirty = false;
         return instance.widget;
@@ -537,6 +577,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     // Destroy child fibers not visited during this render
     cleanupStaleChildFibers(fiber);
 
+    runLayoutEffects(fiber);
     runEffects(fiber);
     fiber.isDirty = false;
 

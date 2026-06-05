@@ -26,6 +26,7 @@ export class DevTools {
     private _eventLog: Array<{ time: number; type: string; detail: string }> = [];
     private _maxEvents = 100;
     private _renderTimes: number[] = [];
+    private _frameRows: string[] = [];
 
     get visible(): boolean { return this._visible; }
     toggle(): void { this._visible = !this._visible; }
@@ -62,6 +63,31 @@ export class DevTools {
     logEvent(type: string, detail: string): void {
         this._eventLog.push({ time: Date.now(), type, detail });
         while (this._eventLog.length > this._maxEvents) this._eventLog.shift();
+    }
+
+    /** Store the latest rendered frame rows */
+    setFrame(rows: string[]): void {
+        this._frameRows = rows;
+    }
+
+    /** Capture the stored frame, trimmed and joined with newlines. Returns empty string if no frame has been stored. */
+    captureFrame(): string {
+        if (this._frameRows.length === 0) return '';
+        
+        // Trim trailing blank rows
+        let endIndex = this._frameRows.length;
+        while (endIndex > 0 && this._frameRows[endIndex - 1].trim() === '') {
+            endIndex--;
+        }
+        
+        const trimmedRows = this._frameRows.slice(0, endIndex);
+        return trimmedRows.join('\n');
+    }
+
+    /** Generate a deterministic screenshot filename containing 'termui-frame' and '.txt' */
+    screenshotFilename(now?: number): string {
+        const timestamp = now ?? Date.now();
+        return `termui-frame-${timestamp}.txt`;
     }
 
     /** Get displayable panel content (plain text for rendering) */

@@ -1,5 +1,6 @@
 <p align="center">
   <h1 align="center">TermUI</h1>
+    
   <p align="center">Build terminal applications in TypeScript.</p>
 </p>
 
@@ -9,7 +10,7 @@
   <a href="https://www.npmjs.com/package/@termuijs/core"><img src="https://img.shields.io/npm/v/@termuijs/core.svg" alt="npm version"></a>
   <a href="https://github.com/Karanjot786/TermUI/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <img src="https://img.shields.io/badge/runtime-Bun%201.3+-orange" alt="Bun 1.3+">
-  <img src="https://img.shields.io/badge/tests-600%20passing-brightgreen" alt="600 tests passing">
+  <img src="https://img.shields.io/badge/tests-1394%20passing-brightgreen" alt="1394 tests passing">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript 5.9">
 </p>
 <p align="center">
@@ -18,6 +19,7 @@
   <a href="https://github.com/Karanjot786/TermUI/graphs/contributors"><img src="https://img.shields.io/github/contributors/Karanjot786/TermUI?color=00ff88" alt="Contributors"></a>
   <a href="https://github.com/Karanjot786/TermUI/stargazers"><img src="https://img.shields.io/github/stars/Karanjot786/TermUI?style=flat&color=ffd700" alt="Stars"></a>
 </p>
+
 > ⭐ **GSSoC 2026 contributors:** star this repo before opening a PR. The `star-check` workflow blocks unstarred merges. Read [CONTRIBUTING.md](./CONTRIBUTING.md#gssoc-2026) for the full point system.
 
 > 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
@@ -25,6 +27,8 @@
 ## What is TermUI?
 
 TermUI is a TypeScript framework for building terminal apps. You get a layout engine, JSX support, React-style hooks, focus management, global state, theming, animations, routing, real-time data, error boundaries, and a hot-reload dev server. No curses bindings. No C extensions. Pure TypeScript.
+### Prerequisites
+- Bun >= 1.3.0
 
 ## Quick Start
 
@@ -35,7 +39,7 @@ bun install
 bun run dev
 ```
 
-Requires [Bun](https://bun.sh) 1.3.0 or newer.
+Requires [Bun](https://bun.sh) 1.3.0 or newer and [Node.js](https://nodejs.org/) 18.0.0 or newer.
 
 ## Manual Setup
 
@@ -366,8 +370,12 @@ git clone https://github.com/Karanjot786/TermUI.git
 cd TermUI
 bun install
 bun run build
+```
 
-cd examples/dashboard
+To run the AI streaming example:
+
+```bash
+cd examples/ai-streaming
 bun run dev
 ```
 
@@ -385,6 +393,7 @@ bun run dev
 | Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
 | Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
 | CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
+| AI Assistant | Interactive AI chat with streaming | ChatMessage, StreamingText, ToolCall, ToolApproval, useAI, dual-mode operation | [`examples/ai-assistant`](./examples/ai-assistant) |
 
 ## Project structure
 
@@ -404,24 +413,26 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
-  auth-flow/             Authentication flow example
-  cli-wrapper-live/      Live subprocess log streaming
-  dashboard/             Real-time system monitor
-  forms-and-validation/  Multi-field form with validation
-  jsx-dashboard/         JSX-based dashboard
-    multi-screen-router/   Multi-screen router example
-  showcase/              Widget gallery
-  system-monitor/        Advanced monitor
-  todo-app/              Interactive todo list
-  widget-gallery/        All widgets in one place
+  ai-streaming/          Mock AI chat with StreamingText, ChatMessage, ToolCall
+  auth-flow/            Authentication flow example
+  cli-wrapper-live/     Live subprocess log streaming
+  dashboard/            Real-time system monitor
+  forms-and-validation/ Multi-field form with validation
+  jsx-dashboard/        JSX-based dashboard
+  multi-screen-router/  Multi-screen router example
+  showcase/             Widget gallery
+  system-monitor/       Advanced monitor
+  todo-app/             Interactive todo list
+  widget-gallery/       All widgets in one place
 ```
 
 ## Development
+> **Note:** This project uses [Bun](https://bun.sh) as its package manager. Install Bun first: https://bun.sh/docs/installation
 
 ```bash
 bun install
 bun run build      # Build all 14 packages
-bun run test       # Run all 600 tests
+bun run test       # Run all 1394 tests
 bun run typecheck  # Type-check all packages
 ```
 
@@ -457,7 +468,28 @@ A huge thank you to all contributors for helping improve and grow this project �
 </a>
 
 ---
+## Contributors
+
+Thank you to everyone who has contributed to TermUI. Every bug fix, feature, test, and doc improvement makes this project better for everyone who builds with it.
+
+<a href="https://github.com/Karanjot786/TermUI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Karanjot786/TermUI" alt="Contributors" />
+</a>
+
+Want to join this list? Check the [open issues](https://github.com/Karanjot786/TermUI/issues) and read [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
 
 ## License
 
 MIT
+
+## Troubleshooting
+
+### Build Cache and Dependency Synchronization Issues
+If you encounter runtime rendering issues or stale execution logs while working with cross-package scripts inside this monorepo ecosystem, clear your local project configurations and refresh your setups completely by running:
+
+```bash
+bun run clean
+bun install
+```
+
+

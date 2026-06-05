@@ -1,0 +1,14 @@
+{
+  "name": "alert",
+  "category": "feedback",
+  "description": "Notification badge with count display positioned at corner locations.",
+  "files": [
+    "registry/components/alert/index.ts"
+  ],
+  "deps": [
+    "@termuijs/core",
+    "@termuijs/widgets"
+  ],
+  "peerDeps": [],
+  "version": "0.1.0"
+}

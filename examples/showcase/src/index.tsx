@@ -29,6 +29,8 @@ import { ComponentsTab } from './tabs/components.js';
 import { ThemingTab } from './tabs/theming.js';
 import { AnimationsTab } from './tabs/animations.js';
 import { DevToolsTab } from './tabs/devtools.js';
+import { reconcile } from '@termuijs/jsx';
+import { ShortcutHelpOverlay } from '@termuijs/ui';
 
 // ── Tab names ──
 const TAB_LABELS = ['📊 Dashboard', '🧩 Components', '🎨 Theming', '🎬 Animations', '🔧 DevTools'];
@@ -47,6 +49,7 @@ class ShowcaseApp extends Widget {
     private _themingTab: ThemingTab;
     private _animationsTab: AnimationsTab;
     private _devtoolsTab: DevToolsTab;
+    private _overlayLayer: Box;
 
     constructor() {
         super({ flexDirection: 'column' });
@@ -110,6 +113,23 @@ class ShowcaseApp extends Widget {
         this.addChild(this._tabPanels[0]); // Show first tab
         this.addChild(this._statusBar);
         this.addChild(this._debugBar);
+
+        // Dedicated overlay layer — always rendered on top, unaffected by switchTab()
+        this._overlayLayer = new Box({ flexDirection: 'column' });
+        this.addChild(this._overlayLayer);
+
+        // Add the reconciled JSX overlay widget so users can press '?' to open help
+        const overlay = reconcile(
+            <ShortcutHelpOverlay
+                shortcuts={[
+                    { key: '?', label: 'Show Help' },
+                    { key: 'Ctrl+C', label: 'Exit Application' },
+                    { key: 'Ctrl+S', label: 'Save Changes' },
+                    { key: '/', label: 'Search' },
+                ]}
+            />,
+        );
+        this._overlayLayer.addChild(overlay);
     }
 
     handleKey(event: KeyEvent): boolean {
@@ -161,7 +181,7 @@ class ShowcaseApp extends Widget {
     switchTab(index: number): void {
         if (index === this._activeTab || index < 0 || index >= this._tabPanels.length) return;
 
-        // Remove current panel (it's at index 3 in children: title, tabbar, separator, PANEL, statusbar)
+        // Remove current panel
         this.removeChild(this._tabPanels[this._activeTab]);
 
         // Update tab bar highlights
@@ -172,12 +192,18 @@ class ShowcaseApp extends Widget {
 
         this._activeTab = index;
 
+        // Remove overlay layer temporarily to preserve ordering
+        this.removeChild(this._overlayLayer);
+
         // Insert new panel before status bar and debug bar
         this.removeChild(this._statusBar);
         this.removeChild(this._debugBar);
         this.addChild(this._tabPanels[index]);
         this.addChild(this._statusBar);
         this.addChild(this._debugBar);
+
+        // Re-add overlay layer as last child so it stays on top
+        this.addChild(this._overlayLayer);
     }
 
     tick(dt: number): void {
@@ -192,12 +218,13 @@ class ShowcaseApp extends Widget {
 // ── Main ─────────────────────────────────────────────
 
 async function main() {
+    process.stdout.write('\x1b[?25l');
     const showcase = new ShowcaseApp();
 
     const app = new App(showcase, {
         fullscreen: true,
         title: 'TermUI Showcase',
-        fps: 30,
+        fps: 60,
     });
 
     // Keyboard handler
@@ -214,12 +241,13 @@ async function main() {
         showcase.tick(now - lastTick);
         lastTick = now;
         app.requestRender();
-    }, 33); // ~30fps
+    }, 16); // ~60fps
 
     app.terminal.onCleanup(() => clearInterval(tickInterval));
 
     const exitCode = await app.mount();
     clearInterval(tickInterval);
+    process.stdout.write('\x1b[?25h');
     process.exit(exitCode);
 }
 
