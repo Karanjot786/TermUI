@@ -40,12 +40,13 @@ describe("Timer Pool", () => {
 describe("Motion Presets and Easings", () => {
   it("spring presets return the expected config", () => {
     expect(SPRING_PRESETS).toBeDefined();
-    
-    const presetKeys = Object.keys(SPRING_PRESETS);
-    expect(presetKeys.length).toBeGreaterThan(0);
-    
-    const firstPreset = SPRING_PRESETS[presetKeys[0] as keyof typeof SPRING_PRESETS];
-    expect(firstPreset).toBeDefined();
+    expect(SPRING_PRESETS.default).toEqual({
+      tension: 170,
+      friction: 26,
+      mass: 1,
+      precision: 0.01,
+    });
+    expect(SPRING_PRESETS.gentle).toBeDefined();
   });
 
   it("easings map inputs to outputs", () => {
