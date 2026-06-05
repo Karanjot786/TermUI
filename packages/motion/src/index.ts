@@ -14,7 +14,7 @@ export type {
     SpringPresetName,
 } from './spring.js';
 // Transitions & easings
-export { transition, fadeIn, fadeOut, slideIn, typewriter, pulse, easings } from './transitions.js';
+export { transition, fadeIn, fadeOut, slideIn, typewriter, pulse, easings, cubicBezier } from './transitions.js';
 export type { TransitionOptions, EasingFn } from './transitions.js';
 // Sequencing
 export { sequence, parallel, repeat } from './sequence.js';
