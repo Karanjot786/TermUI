@@ -6,7 +6,7 @@
 // rendered output and simulating user interactions.
 // ─────────────────────────────────────────────────────
 
-import { Screen, type KeyEvent } from "@termuijs/core";
+import { Screen, type KeyEvent, type MouseEvent } from "@termuijs/core";
 import { Box, Text, Widget } from "@termuijs/widgets";
 import {
     reconcile,
@@ -69,6 +69,12 @@ export interface TestInstance {
         key: string,
         modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
     ): void;
+
+    /** Simulate a mouse event at (x, y). */
+    fireMouse(x: number, y: number, init?: Partial<MouseEvent>): void;
+
+    /** Simulate a full click (mousedown + mouseup) at (x, y). */
+    click(x: number, y: number): void;
 
     /**
      * Type a string — fires each character as a key event.
@@ -367,14 +373,57 @@ export function render(
                 )) {
                     handler(event);
                 }
-                // setState updates hookState.value synchronously but schedules the
-                // re-render via queueMicrotask. Flush now so renderToString() is current.
+                // Re-render and flush any sync state updates
                 const newRoot = reRenderComponent(rootInstance);
                 container.clearChildren();
                 container.addChild(newRoot);
                 rootWidget = newRoot;
                 renderToScreen(container, screen);
             }
+        },
+
+        fireMouse(x: number, y: number, init?: Partial<MouseEvent>) {
+            // Normalize the mouse event
+            const event: MouseEvent = {
+                x,
+                y,
+                type: init?.type ?? 'mousedown',
+                button: init?.button ?? 'left',
+            };
+
+            // Hit-test the widget tree
+            let target: Widget | undefined;
+            walkWidgets(rootWidget, (w) => {
+                if (w.hitTest(x, y)) {
+                    target = w;
+                }
+                return false; // walkWidgets result doesn't matter here
+            });
+
+            if (target) {
+                // Dispatch to the widget
+                if (typeof (target as any).handleMouse === 'function') {
+                    (target as any).handleMouse(event);
+                } else {
+                    target.events.emit('mouse', event);
+                }
+            }
+
+            // Re-render and flush any sync state updates
+            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+            const rootInstance = instances?.get(rootWidget);
+            if (rootInstance) {
+                const newRoot = reRenderComponent(rootInstance);
+                container.clearChildren();
+                container.addChild(newRoot);
+                rootWidget = newRoot;
+            }
+            renderToScreen(container, screen);
+        },
+
+        click(x: number, y: number) {
+            this.fireMouse(x, y, { type: 'mousedown' });
+            this.fireMouse(x, y, { type: 'mouseup' });
         },
 
         typeText(text: string): void {
