@@ -161,6 +161,9 @@ export type { MultilineTextInputOptions } from './MultilineTextInput.js';
 export {BasicAuthPrompt} from './BasicAuthPrompt.js';
 export type {BasicAuthCredentials,BasicAuthPromptOptions} from './BasicAuthPrompt.js'
 
+export { TextArea } from './TextArea.js';
+export type { TextAreaOptions } from './TextArea.js';
+
 
 export { Stepper } from './Stepper.js';
 export type { StepperOptions } from './Stepper.js';
