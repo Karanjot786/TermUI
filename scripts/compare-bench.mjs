@@ -46,6 +46,38 @@ function validateBench(data, name) {
         console.error(`${name}: missing results array`);
         process.exit(2);
     }
+
+    for (const [index, result] of data.results.entries()) {
+        if (
+            typeof result.cols !== 'number' ||
+            !Number.isFinite(result.cols)
+        ) {
+            console.error(
+                `${name}: result[${index}] has invalid cols value`
+            );
+            process.exit(2);
+        }
+
+        if (
+            typeof result.rows !== 'number' ||
+            !Number.isFinite(result.rows)
+        ) {
+            console.error(
+                `${name}: result[${index}] has invalid rows value`
+            );
+            process.exit(2);
+        }
+
+        if (
+            typeof result.cellsPerSec !== 'number' ||
+            !Number.isFinite(result.cellsPerSec)
+        ) {
+            console.error(
+                `${name}: result[${index}] has invalid cellsPerSec value`
+            );
+            process.exit(2);
+        }
+    }
 }
 
 validateBench(head, 'head benchmark');
