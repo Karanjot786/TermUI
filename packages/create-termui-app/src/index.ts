@@ -22,6 +22,7 @@ const TEMPLATES = [
     "File Manager",
     "AI Assistant (Claude + mock mode)",
     "Form Wizard (multi-step forms)",
+    "REST Client (HTTP request explorer)",
 ] as const;
 
 const TEMPLATE_KEYS = [
@@ -33,6 +34,7 @@ const TEMPLATE_KEYS = [
     "file-manager",
     "ai-assistant",
     "form-wizard",
+    "rest-client",
 ] as const;
 
 const FEATURES = ["Screen Router", "Data Providers", "Hot Reload"];
