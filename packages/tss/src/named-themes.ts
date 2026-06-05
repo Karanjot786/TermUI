@@ -1,5 +1,4 @@
-// ─────────────────────────────────────────────────────
-// Named ThemeTokens — 7 curated color schemes
+// Named ThemeTokens — 10 curated color schemes
 // ─────────────────────────────────────────────────────
 
 import type { ThemeTokens } from './tokens.js';
@@ -70,6 +69,19 @@ export const solarizedTheme: ThemeTokens = {
   highlight: '#073642',
 };
 
+export const solarizedLightTheme: ThemeTokens = {
+  bg: '#fdf6e3',
+  fg: '#657b83',
+  primary: '#268bd2',
+  secondary: '#2aa198',
+  success: '#859900',
+  warning: '#b58900',
+  error: '#dc322f',
+  muted: '#93a1a1',
+  border: '#93a1a1',
+  highlight: '#eee8d5',
+};
+
 export const tokyoNightTheme: ThemeTokens = {
   bg: '#1a1b26',
   fg: '#a9b1d6',
@@ -96,14 +108,58 @@ export const oneDarkTheme: ThemeTokens = {
   highlight: '#2c313a',
 };
 
+export const gruvboxTheme: ThemeTokens = {
+  bg: '#282828',
+  fg: '#ebdbb2',
+  primary: '#458588',
+  secondary: '#b16286',
+  success: '#98971a',
+  warning: '#d79921',
+  error: '#cc241d',
+  muted: '#928374',
+  border: '#504945',
+  highlight: '#3c3836',
+};
+
+export const highContrastTheme: ThemeTokens = {
+  bg: '#000000',
+  fg: '#ffffff',
+  primary: '#00ffff',
+  secondary: '#ff00ff',
+  success: '#00ff00',
+  warning: '#ffff00',
+  error: '#ff5555',
+  muted: '#b3b3b3',
+  border: '#ffffff',
+  highlight: '#1a1a1a',
+};
+
+export const everforestTheme: ThemeTokens = {
+  bg: '#2d353b',
+  fg: '#d3c6aa',
+  primary: '#a7c080',   // green
+  secondary: '#7fbbb3', // aqua
+  success: '#a7c080',   // green
+  warning: '#dbbc7f',   // yellow
+  error: '#e67e80',     // red
+  muted: '#859289',
+  border: '#859289',
+  highlight: '#343f44',
+};
+
 export const NAMED_THEMES: Record<string, ThemeTokens> = {
   dracula: draculaTheme,
   nord: nordTheme,
   catppuccin: catppuccinTheme,
   monokai: monokaiTheme,
   solarized: solarizedTheme,
+  solarizedLight: solarizedLightTheme,
+  "tokyo-night": tokyoNightTheme,
   tokyoNight: tokyoNightTheme,
   oneDark: oneDarkTheme,
+  gruvbox: gruvboxTheme,
+  highContrast: highContrastTheme,
+  everforest: everforestTheme,
 };
 
 /** Get a named theme by string key, falling back to defaultDark if not found. */

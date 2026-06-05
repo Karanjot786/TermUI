@@ -1,0 +1,14 @@
+{
+  "name": "progress",
+  "category": "feedback",
+  "description": "Horizontal progress indicator with customizable fill characters and labels.",
+  "files": [
+    "registry/components/progress/index.ts"
+  ],
+  "deps": [
+    "@termuijs/core",
+    "@termuijs/widgets"
+  ],
+  "peerDeps": [],
+  "version": "0.1.0"
+}

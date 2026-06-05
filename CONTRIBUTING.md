@@ -14,7 +14,7 @@ bun run build
 bun run test
 ```
 
-You need **Bun 1.3 or newer**. The project is a Bun workspace monorepo with 13 packages under `packages/`. Node 18+ matters only if you consume published `@termuijs/*` packages from npm. Development is Bun-only.
+You need **Bun 1.3 or newer**. The project is a Bun workspace monorepo with 14 packages under `packages/`. Node 18+ matters only if you consume published `@termuijs/*` packages from npm. Development is Bun-only.
 
 For local development setup and workspace commands, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
@@ -25,7 +25,7 @@ Framework code lives here. Docs site lives in a separate repo.
 
 | Repo | Contents | Where to send your PR |
 |------|----------|------------------------|
-| **TermUI** (this repo) | 13 packages, examples, tests, scaffolding CLI | Bug fixes, new widgets, hooks, refactors, tests |
+| **TermUI** (this repo) | 14 packages, examples, tests, scaffolding CLI | Bug fixes, new widgets, hooks, refactors, tests |
 | **TermUI_Docs** | [termui.io](https://www.termui.io) source: Vite + TanStack + MDX content | Doc typos, new doc pages, website UI changes |
 
 [TermUI_Docs on GitHub](https://github.com/Karanjot786/TermUI_Docs). GSSoC 2026 counts only on **this** repo; the docs repo does not participate.
@@ -57,6 +57,16 @@ API docs for each package live on https://www.termui.io. Edit those pages in [Te
 1. **Check existing issues.** Someone might already work on it.
 2. **Open an issue first** for anything larger than a small fix. Describe your change and your reason. Saves everyone time if the approach needs discussion.
 3. **One pull request per change.** Do not bundle unrelated fixes.
+
+## Using AI coding agents
+
+Using Claude Code, Copilot, Cursor, or another agent is welcome. Most PRs here are written with one. The agent does better work when you set it up right.
+
+1. **Point the agent at the rules.** This repo has [`AGENTS.md`](./AGENTS.md) at the root and one in each major package (`packages/widgets/AGENTS.md`, `packages/ui/AGENTS.md`, and others). Claude Code and Copilot read these automatically. Tell your agent to read the root `AGENTS.md` and the one for the package you are working in before it writes code.
+2. **Give it the whole issue.** Issues opened with the **AI-ready task** template carry everything the agent needs: the exact files, the API signature, the acceptance criteria, the test command, and a reference file to copy. Paste the full issue to your agent. Do not summarize it.
+3. **Run plan mode first** for anything bigger than a one-line fix. In Claude Code, ask for a plan before edits. Read the plan. Confirm it touches only the files the issue names.
+4. **You own the PR, not the agent.** Read the diff before you push. Run `bun run build && bun vitest run && bun run typecheck` yourself. If you do not understand a line the agent wrote, do not submit it. PRs that are clearly generated without understanding get the `gssoc:ai-slop` label and earn zero points.
+5. **Keep it surgical.** Agents like to refactor nearby code, reformat files, and add features no one asked for. Reject that. One change per PR. If `bun.lock` shows changes unrelated to your work, revert it with `git checkout origin/main -- bun.lock`.
 
 ## Writing code
 
@@ -248,4 +258,4 @@ Format your question: *"Hi, I am stuck on issue #42. Tried approach Y. Got error
 
 ## Questions?
 
-Open an issue or start a discussion. No question is stupid. The codebase has 13 packages and a lot of moving parts. Ask first, guess later.
+Open an issue or start a discussion. No question is stupid. The codebase has 14 packages and a lot of moving parts. Ask first, guess later.

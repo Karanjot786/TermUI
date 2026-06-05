@@ -1,0 +1,59 @@
+name: GSSoC / Auto-assign issue opener
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign issue to opener
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const opener = context.payload.issue.user.login;
+            const number = context.payload.issue.number;
+            const OWNER  = 'Karanjot786';
+
+            // Skip bots
+            if (opener.endsWith('[bot]')) return;
+
+            // Skip repo owner
+            if (opener === OWNER) return;
+
+            // Assign + label
+            await github.rest.issues.addAssignees({
+              ...context.repo,
+              issue_number: number,
+              assignees: [opener],
+            });
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: number,
+              labels: ['assigned'],
+            });
+
+            const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+              .toISOString().slice(0, 10);
+
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: number,
+              body: [
+                `✅ Auto-assigned to @${opener} (issue opener).`,
+                ``,
+                `Open your PR by **${due}** (7 days). The bot frees this issue for another contributor after that date.`,
+                ``,
+                `**Reminders:**`,
+                `- ⭐ Star the repo first. The \`star-check\` job blocks your merge otherwise.`,
+                `- PR title: \`type: short description\``,
+                `- Link this issue in your PR body: \`Closes #${number}\``,
+                ``,
+                `Good luck. 🚀`,
+              ].join('\n'),
+            });

@@ -1,0 +1,12 @@
+{
+  "name": "data-grid-example",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "bun run src/index.tsx"
+  },
+  "dependencies": {
+    "@termuijs/widgets": "workspace:*",
+    "@termuijs/jsx": "workspace:*"
+  }
+}

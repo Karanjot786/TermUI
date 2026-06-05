@@ -14,6 +14,7 @@ function makeTree(nodes: TreeNode[], onSelect?: (node: TreeNode, path: number[])
     return tree;
 }
 
+// helper to easily call handleKey
 function renderTree(tree: Tree, width = 40, height = 20): Screen {
     const screen = new Screen(width, height);
     tree.updateRect({ x: 0, y: 0, width, height });
@@ -142,13 +143,13 @@ describe('Tree', () => {
         });
     });
 
-    describe('4. Cursor moves with ArrowDown / ArrowUp', () => {
-        it('ArrowDown moves cursor down', () => {
+    describe('4. Cursor moves with down / up', () => {
+        it('down moves cursor down', () => {
             const nodes = makeNodes();
             const tree = makeTree(nodes);
             expect(tree.selectedIndex).toBe(0);
 
-            tree.handleKey('ArrowDown');
+            tree.handleKey('down');
             expect(tree.selectedIndex).toBe(1);
         });
 
@@ -160,12 +161,12 @@ describe('Tree', () => {
             expect(tree.selectedIndex).toBe(1);
         });
 
-        it('ArrowUp moves cursor up', () => {
+        it('up moves cursor up', () => {
             const nodes = makeNodes();
             const tree = makeTree(nodes);
 
-            tree.handleKey('ArrowDown'); // → 1
-            tree.handleKey('ArrowUp');   // → 0
+            tree.handleKey('down'); // → 1
+            tree.handleKey('up');   // → 0
             expect(tree.selectedIndex).toBe(0);
         });
 
@@ -178,29 +179,29 @@ describe('Tree', () => {
             expect(tree.selectedIndex).toBe(0);
         });
 
-        it('ArrowUp at first item is a no-op', () => {
+        it('up at first item is a no-op', () => {
             const nodes = makeNodes();
             const tree = makeTree(nodes);
-            tree.handleKey('ArrowUp');
+            tree.handleKey('up');
             expect(tree.selectedIndex).toBe(0);
         });
 
-        it('ArrowDown at last item is a no-op', () => {
+        it('down at last item is a no-op', () => {
             const nodes = makeNodes();
             const tree = makeTree(nodes);
-            tree.handleKey('ArrowDown'); // → 1 (last)
-            tree.handleKey('ArrowDown'); // no-op
+            tree.handleKey('down'); // → 1 (last)
+            tree.handleKey('down'); // no-op
             expect(tree.selectedIndex).toBe(1);
         });
     });
 
-    describe('5. ArrowRight expands a collapsed parent', () => {
-        it('ArrowRight expands collapsed parent', () => {
+    describe('5. right expands a collapsed parent', () => {
+        it('right expands collapsed parent', () => {
             const nodes = makeNodes();
             const tree = makeTree(nodes);
             // "src" is at index 0, collapsed
 
-            tree.handleKey('ArrowRight');
+            tree.handleKey('right');
 
             expect(nodes[0].expanded).toBe(true);
         });
@@ -214,13 +215,13 @@ describe('Tree', () => {
             expect(nodes[0].expanded).toBe(true);
         });
 
-        it('ArrowRight on already-expanded parent is a no-op', () => {
+        it('right on already-expanded parent is a no-op', () => {
             const nodes = makeNodes();
             nodes[0].expanded = true;
             const tree = makeTree(nodes);
 
             const before = (tree as any)._visibleNodes.length;
-            tree.handleKey('ArrowRight'); // already expanded
+            tree.handleKey('right'); // already expanded
             const after = (tree as any)._visibleNodes.length;
 
             // No change
@@ -228,14 +229,14 @@ describe('Tree', () => {
         });
     });
 
-    describe('6. ArrowLeft collapses an expanded parent', () => {
-        it('ArrowLeft collapses an expanded parent', () => {
+    describe('6. left collapses an expanded parent', () => {
+        it('left collapses an expanded parent', () => {
             const nodes = makeNodes();
             nodes[0].expanded = true;
             const tree = makeTree(nodes);
             // src is expanded and selected
 
-            tree.handleKey('ArrowLeft');
+            tree.handleKey('left');
 
             expect(nodes[0].expanded).toBe(false);
         });
@@ -250,25 +251,25 @@ describe('Tree', () => {
             expect(nodes[0].expanded).toBe(false);
         });
 
-        it('ArrowLeft on collapsed node moves to parent', () => {
+        it('left on collapsed node moves to parent', () => {
             const nodes = makeNodes();
             nodes[0].expanded = true;
             const tree = makeTree(nodes);
             // visible: [src(0), components(1), utils(2), package.json(3)]
-            tree.handleKey('ArrowDown'); // → components (index 1)
-            tree.handleKey('ArrowLeft'); // components is collapsed → move to parent (src, index 0)
+            tree.handleKey('down'); // → components (index 1)
+            tree.handleKey('left'); // components is collapsed → move to parent (src, index 0)
 
             expect(tree.selectedIndex).toBe(0);
         });
     });
 
-    describe('7. onSelect called when Enter pressed on leaf node', () => {
-        it('calls onSelect for a leaf node on Enter', () => {
+    describe('7. onSelect called when enter pressed on leaf node', () => {
+        it('calls onSelect for a leaf node on enter', () => {
             const handler = vi.fn();
             const nodes: TreeNode[] = [{ label: 'README.md', data: 'readme' }];
             const tree = makeTree(nodes, handler);
 
-            tree.handleKey('Enter');
+            tree.handleKey('enter');
 
             expect(handler).toHaveBeenCalledOnce();
             expect(handler).toHaveBeenCalledWith(nodes[0], [0]);
@@ -279,18 +280,18 @@ describe('Tree', () => {
             const nodes: TreeNode[] = [{ label: 'index.ts' }];
             const tree = makeTree(nodes, handler);
 
-            tree.handleKey(' ');
+            tree.handleKey('space');
 
             expect(handler).toHaveBeenCalledOnce();
             expect(handler).toHaveBeenCalledWith(nodes[0], [0]);
         });
 
-        it('does not call onSelect when Enter pressed on parent node', () => {
+        it('does not call onSelect when enter pressed on parent node', () => {
             const handler = vi.fn();
             const nodes = makeNodes(); // src is a parent
             const tree = makeTree(nodes, handler);
 
-            tree.handleKey('Enter'); // should toggle, not select
+            tree.handleKey('enter'); // should toggle, not select
 
             expect(handler).not.toHaveBeenCalled();
         });
@@ -304,9 +305,9 @@ describe('Tree', () => {
             // visible: src(0), components(1), Button.ts(2), utils(3), package.json(4)
 
             // Navigate to Button.ts (index 2)
-            tree.handleKey('ArrowDown'); // → 1 (components)
-            tree.handleKey('ArrowDown'); // → 2 (Button.ts)
-            tree.handleKey('Enter');
+            tree.handleKey('down'); // → 1 (components)
+            tree.handleKey('down'); // → 2 (Button.ts)
+            tree.handleKey('enter');
 
             expect(handler).toHaveBeenCalledOnce();
             const [calledNode, calledPath] = handler.mock.calls[0];
@@ -315,19 +316,19 @@ describe('Tree', () => {
         });
     });
 
-    describe('Home / End navigation', () => {
-        it('Home moves to first node', () => {
+    describe('home / end navigation', () => {
+        it('home moves to first node', () => {
             const nodes = makeNodes();
             const tree = makeTree(nodes);
-            tree.handleKey('ArrowDown');
-            tree.handleKey('Home');
+            tree.handleKey('down');
+            tree.handleKey('home');
             expect(tree.selectedIndex).toBe(0);
         });
 
-        it('End moves to last visible node', () => {
+        it('end moves to last visible node', () => {
             const nodes = makeNodes();
             const tree = makeTree(nodes);
-            tree.handleKey('End');
+            tree.handleKey('end');
             expect(tree.selectedIndex).toBe(1); // "package.json"
         });
     });
@@ -335,7 +336,7 @@ describe('Tree', () => {
     describe('setNodes()', () => {
         it('resets selection and rebuilds visible nodes', () => {
             const tree = makeTree(makeNodes());
-            tree.handleKey('ArrowDown');
+            tree.handleKey('down');
             expect(tree.selectedIndex).toBe(1);
 
             const newNodes: TreeNode[] = [{ label: 'only' }];
