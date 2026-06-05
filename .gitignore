@@ -16,3 +16,11 @@ bench-head.txt
 bench-main.txt
 bench-comment.md
 docs/superpowers/
+
+# Local environment configurations
+.env
+.env.local
+
+# Operating System cache and log files
+*.log
+Thumbs.db
