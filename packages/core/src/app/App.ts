@@ -211,7 +211,7 @@ export class App {
     /**
      * Stop the application and restore terminal state.
      */
-    unmount(): void {
+    unmount(exitCode: number = 0): void {
         if (!this._mounted) return;
         this._mounted = false;
 
@@ -232,7 +232,7 @@ export class App {
         this.events.removeAll();
 
         if (this._exitResolve) {
-            this._exitResolve(0);
+            this._exitResolve(exitCode);
             this._exitResolve = null;
         }
     }
@@ -326,7 +326,7 @@ export class App {
      * Exit the app (convenience method).
      */
     exit(code = 0): void {
-        this.unmount();
+        this.unmount(code);
         if (this._exitResolve) {
             this._exitResolve(code);
             this._exitResolve = null;

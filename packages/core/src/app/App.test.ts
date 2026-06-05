@@ -34,7 +34,7 @@ describe('App', () => {
     describe('unmount()', () => {
         it('mount() promise resolves when unmount() is called directly', async () => {
             const root = createMockRootWidget();
-            const fakeStdout: any = {
+            const fakeStdout: any = { // minimal stdout stub — full NodeJS.WriteStream type not required here
                 writes: '',
                 columns: 80,
                 rows: 24,
@@ -42,7 +42,7 @@ describe('App', () => {
                 write(s: string) { this.writes += s; },
                 on() {}, off() {},
             };
-            const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
+            const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} }; // minimal stdin stub — full NodeJS.ReadStream type not required here
 
             const app = new App(root, {
                 forceFallback: false,
@@ -50,7 +50,7 @@ describe('App', () => {
                 screenMode: 'main',
                 stdout: fakeStdout,
                 stdin: fakeStdin,
-            } as AppOptions);
+            } as AppOptions); // cast needed — not all internal AppOptions fields are publicly exposed
 
             const mountPromise = app.mount();
 
