@@ -95,6 +95,7 @@ export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandle
 // ── Convenience alias ──
 /** h() — shorthand for createElement */
 export { createElement as h } from './createElement.js';
+export { useMount } from './hooks/useMount.js';
 export { usePrevious } from './hooks/usePrevious.js';
 export { useFirstRender } from './hooks/useFirstRender.js';
 export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
