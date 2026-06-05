@@ -39,6 +39,8 @@ export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
 export { CommandPalette } from './input/CommandPalette.js';
 export type { Command, CommandPaletteOptions } from './input/CommandPalette.js';
+export { Button } from './input/Button.js';
+export type { ButtonOptions, ButtonVariant } from './input/Button.js';
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
