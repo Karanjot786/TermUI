@@ -120,6 +120,15 @@ export class Router {
         }
     }
 
+    /**
+     * Manually flushes the internal history navigation array stack.
+     * Resets navigation records completely during profile changes or session shifts.
+     */
+    clearHistory(): void {
+        this._history = [];
+        this._currentMatch = null;
+    }
+
     /** Current route match */
     get current(): RouteMatch | null { return this._currentMatch; }
 
