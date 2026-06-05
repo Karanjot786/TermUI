@@ -8,118 +8,172 @@ import { Scrollbar } from './Scrollbar.js';
 
 describe('Scrollbar', () => {
     it('does not render if contentLength <= viewportLength', () => {
-        const screen = new Screen(10, 10);
-        const sb = new Scrollbar({}, {
+        const scrollbar = new Scrollbar({}, {
             contentLength: 10,
             viewportLength: 10,
-            orientation: 'verticalRight',
         });
-        sb.updateRect({ x: 0, y: 0, width: 10, height: 10 });
-        sb.render(screen);
+        scrollbar.updateRect({ x: 0, y: 0, width: 1, height: 10 });
+        const screen = new Screen(1, 10);
+        scrollbar.render(screen);
 
-        // Grid should remain empty (all empty characters)
-        const allChars = screen.back.flat().map(c => c.char).join('').trim();
-        expect(allChars).toBe('');
+        const cells = screen.back.flat().map(c => c.char);
+        expect(cells.every(c => c === ' ')).toBe(true);
     });
 
-    it('renders verticalRight scrollbar with arrows', () => {
-        const screen = new Screen(5, 5);
-        const sb = new Scrollbar({}, {
+    it('renders verticalRight mode correctly', () => {
+        const scrollbar = new Scrollbar({}, {
             contentLength: 100,
-            viewportLength: 20,
+            viewportLength: 10,
             orientation: 'verticalRight',
             showArrows: true,
         });
-        sb.updateRect({ x: 0, y: 0, width: 5, height: 5 });
-        sb.render(screen);
+        // 10 high, verticalRight should be on the right edge of the rect
+        scrollbar.updateRect({ x: 0, y: 0, width: 2, height: 10 });
+        const screen = new Screen(2, 10);
+        scrollbar.render(screen);
 
-        // Rightmost column (index 4) should have the scrollbar cells
-        const column4 = screen.back.map(row => row[4].char).join('');
-        const vertical = ScrollbarSets.VERTICAL;
+        const rightColumn = screen.back.map(row => row[1].char);
+        const leftColumn = screen.back.map(row => row[0].char);
 
-        expect(column4[0]).toBe(vertical.begin);
-        expect(column4[4]).toBe(vertical.end);
-        expect(column4).toContain(vertical.thumb);
-        expect(column4).toContain(vertical.track);
+        expect(leftColumn.every(c => c === ' ')).toBe(true);
+        expect(rightColumn[0]).toBe(ScrollbarSets.VERTICAL.begin);
+        expect(rightColumn[9]).toBe(ScrollbarSets.VERTICAL.end);
+        expect(rightColumn.filter(c => c === ScrollbarSets.VERTICAL.thumb).length).toBeGreaterThan(0);
+        expect(rightColumn.filter(c => c === ScrollbarSets.VERTICAL.track).length).toBeGreaterThan(0);
     });
 
-    it('renders horizontalBottom scrollbar with arrows', () => {
-        const screen = new Screen(5, 5);
-        const sb = new Scrollbar({}, {
+    it('renders verticalLeft mode correctly', () => {
+        const scrollbar = new Scrollbar({}, {
             contentLength: 100,
-            viewportLength: 20,
+            viewportLength: 10,
+            orientation: 'verticalLeft',
+            showArrows: true,
+        });
+        scrollbar.updateRect({ x: 0, y: 0, width: 2, height: 10 });
+        const screen = new Screen(2, 10);
+        scrollbar.render(screen);
+
+        const leftColumn = screen.back.map(row => row[0].char);
+        const rightColumn = screen.back.map(row => row[1].char);
+
+        expect(rightColumn.every(c => c === ' ')).toBe(true);
+        expect(leftColumn[0]).toBe(ScrollbarSets.VERTICAL.begin);
+        expect(leftColumn[9]).toBe(ScrollbarSets.VERTICAL.end);
+        expect(leftColumn.filter(c => c === ScrollbarSets.VERTICAL.thumb).length).toBeGreaterThan(0);
+    });
+
+    it('renders horizontalBottom mode correctly', () => {
+        const scrollbar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
             orientation: 'horizontalBottom',
             showArrows: true,
         });
-        sb.updateRect({ x: 0, y: 0, width: 5, height: 5 });
-        sb.render(screen);
+        scrollbar.updateRect({ x: 0, y: 0, width: 10, height: 2 });
+        const screen = new Screen(10, 2);
+        scrollbar.render(screen);
 
-        // Bottom row (index 4) should have the scrollbar cells
-        const row4 = screen.back[4].map(cell => cell.char).join('');
-        const horizontal = ScrollbarSets.HORIZONTAL;
+        const bottomRow = screen.back[1].map(c => c.char);
+        const topRow = screen.back[0].map(c => c.char);
 
-        expect(row4[0]).toBe(horizontal.begin);
-        expect(row4[4]).toBe(horizontal.end);
-        expect(row4).toContain(horizontal.thumb);
-        expect(row4).toContain(horizontal.track);
+        expect(topRow.every(c => c === ' ')).toBe(true);
+        expect(bottomRow[0]).toBe(ScrollbarSets.HORIZONTAL.begin);
+        expect(bottomRow[9]).toBe(ScrollbarSets.HORIZONTAL.end);
+        expect(bottomRow.filter(c => c === ScrollbarSets.HORIZONTAL.thumb).length).toBeGreaterThan(0);
     });
 
-    it('renders without arrows when showArrows is false', () => {
-        const screen = new Screen(5, 5);
-        const sb = new Scrollbar({}, {
+    it('renders horizontalTop mode correctly', () => {
+        const scrollbar = new Scrollbar({}, {
             contentLength: 100,
-            viewportLength: 20,
-            orientation: 'verticalRight',
+            viewportLength: 10,
+            orientation: 'horizontalTop',
+            showArrows: true,
+        });
+        scrollbar.updateRect({ x: 0, y: 0, width: 10, height: 2 });
+        const screen = new Screen(10, 2);
+        scrollbar.render(screen);
+
+        const topRow = screen.back[0].map(c => c.char);
+        const bottomRow = screen.back[1].map(c => c.char);
+
+        expect(bottomRow.every(c => c === ' ')).toBe(true);
+        expect(topRow[0]).toBe(ScrollbarSets.HORIZONTAL.begin);
+        expect(topRow[9]).toBe(ScrollbarSets.HORIZONTAL.end);
+    });
+
+    it('toggles arrows correctly', () => {
+        const withArrows = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+            showArrows: true,
+        });
+        const withoutArrows = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
             showArrows: false,
         });
-        sb.updateRect({ x: 0, y: 0, width: 5, height: 5 });
-        sb.render(screen);
 
-        const column4 = screen.back.map(row => row[4].char).join('');
-        const vertical = ScrollbarSets.VERTICAL;
+        const screen1 = new Screen(1, 10);
+        withArrows.updateRect({ x: 0, y: 0, width: 1, height: 10 });
+        withArrows.render(screen1);
+        expect(screen1.back[0][0].char).toBe(ScrollbarSets.VERTICAL.begin);
 
-        expect(column4[0]).not.toBe(vertical.begin);
-        expect(column4[4]).not.toBe(vertical.end);
-        expect(column4).toContain(vertical.thumb);
-        expect(column4).toContain(vertical.track);
+        const screen2 = new Screen(1, 10);
+        withoutArrows.updateRect({ x: 0, y: 0, width: 1, height: 10 });
+        withoutArrows.render(screen2);
+        expect(screen2.back[0][0].char).not.toBe(ScrollbarSets.VERTICAL.begin);
+        expect(screen2.back[0][0].char).toBe(ScrollbarSets.VERTICAL.thumb);
     });
 
-    it('updates position and triggers re-render', () => {
-        const screen = new Screen(5, 5);
-        const sb = new Scrollbar({}, {
+    it('changes thumb offset proportionally with setPosition', () => {
+        const scrollbar = new Scrollbar({}, {
             contentLength: 100,
             viewportLength: 20,
             position: 0,
-            orientation: 'verticalRight',
             showArrows: false,
         });
-        sb.updateRect({ x: 0, y: 0, width: 5, height: 5 });
-        sb.render(screen);
+        scrollbar.updateRect({ x: 0, y: 0, width: 1, height: 10 });
+        const screen = new Screen(1, 10);
 
-        const firstRender = screen.back.map(row => row[4].char).join('');
+        // Position 0
+        scrollbar.render(screen);
+        let column = screen.back.map(row => row[0].char);
+        expect(column[0]).toBe(ScrollbarSets.VERTICAL.thumb);
 
-        // Move to the bottom scroll position
-        sb.setPosition(80);
-        
-        // Clear screen and render again
-        const freshScreen = new Screen(5, 5);
-        sb.render(freshScreen);
-        const secondRender = freshScreen.back.map(row => row[4].char).join('');
+        // Position at 50%
+        scrollbar.setPosition(40); // (100 - 20) / 2 = 40
+        scrollbar.render(screen);
+        column = screen.back.map(row => row[0].char);
+        // trackLength is 10. thumbSize = floor(10 * 20 / 100) = 2.
+        // thumbOffset = floor(40 * (10 - 2) / 80) = floor(40 * 8 / 80) = 4.
+        expect(column[4]).toBe(ScrollbarSets.VERTICAL.thumb);
+        expect(column[5]).toBe(ScrollbarSets.VERTICAL.thumb);
+        expect(column[3]).toBe(ScrollbarSets.VERTICAL.track);
+        expect(column[6]).toBe(ScrollbarSets.VERTICAL.track);
 
-        expect(firstRender).not.toBe(secondRender);
+        // Position at 100%
+        scrollbar.setPosition(80);
+        scrollbar.render(screen);
+        column = screen.back.map(row => row[0].char);
+        // thumbOffset = floor(80 * 8 / 80) = 8.
+        expect(column[8]).toBe(ScrollbarSets.VERTICAL.thumb);
+        expect(column[9]).toBe(ScrollbarSets.VERTICAL.thumb);
     });
 
-    it('updates contentLength and viewportLength', () => {
-        const sb = new Scrollbar({}, {
+    it('setters call markDirty', () => {
+        const scrollbar = new Scrollbar({}, {
             contentLength: 100,
-            viewportLength: 20,
+            viewportLength: 10,
         });
-        const markDirtySpy = vi.spyOn(sb, 'markDirty');
+        const spy = vi.spyOn(scrollbar, 'markDirty');
 
-        sb.setContentLength(150);
-        expect(markDirtySpy).toHaveBeenCalledTimes(1);
+        scrollbar.setPosition(50);
+        expect(spy).toHaveBeenCalledTimes(1);
 
-        sb.setViewportLength(30);
-        expect(markDirtySpy).toHaveBeenCalledTimes(2);
+        scrollbar.setContentLength(200);
+        expect(spy).toHaveBeenCalledTimes(2);
+
+        scrollbar.setViewportLength(20);
+        expect(spy).toHaveBeenCalledTimes(3);
     });
 });

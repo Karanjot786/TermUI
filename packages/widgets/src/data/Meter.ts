@@ -1,4 +1,3 @@
-
 // ─────────────────────────────────────────────────────
 // @termuijs/widgets — Meter widget (label + bar + value with thresholds)
 // ─────────────────────────────────────────────────────
@@ -53,6 +52,11 @@ export class Meter extends Widget {
 
     getValue(): number {
         return this._value;
+    }
+
+    setLabel(label: string): void {
+        this._label = label;
+        this.markDirty();
     }
 
     private _getBarColor(): Color {

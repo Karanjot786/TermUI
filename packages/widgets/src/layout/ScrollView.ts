@@ -61,7 +61,7 @@ export class ScrollView extends Widget {
     }
 
     /** Handle keyboard navigation */
-    onKey(event: KeyEvent): void {
+    handleKey(event: KeyEvent): void {
         switch (event.key) {
             case 'up':       this.scrollBy(-1); break;
             case 'down':     this.scrollBy(1); break;

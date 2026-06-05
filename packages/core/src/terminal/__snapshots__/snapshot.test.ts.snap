@@ -10,14 +10,3 @@ exports[`terminal snapshot rendering > captures wide/unicode characters consiste
 "你好，世界 🌍
 🏳🌈 multi-codepoint"
 `;
-
-exports[`terminal snapshot rendering captures a simple ASCII frame 1`] = `
-"Hello, TermUI!
-
-Line 2 content"
-`;
-
-exports[`terminal snapshot rendering captures wide/unicode characters consistently 1`] = `
-"你好，世界 🌍
-🏳🌈 multi-codepoint"
-`;

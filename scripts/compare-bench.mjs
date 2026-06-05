@@ -24,8 +24,18 @@ if (Number.isNaN(threshold) || !Number.isFinite(threshold) || threshold < 0) {
     process.exit(2);
 }
 
-const head = JSON.parse(readFileSync(headPath, 'utf8'));
-const main = JSON.parse(readFileSync(mainPath, 'utf8'));
+let head, main;
+try {
+    head = JSON.parse(readFileSync(headPath, 'utf8'));
+    main = JSON.parse(readFileSync(mainPath, 'utf8'));
+} catch (e) {
+    console.error(`Error parsing benchmark files: ${e.message}`);
+    const errMarkdown = `<!-- termui-bench-comment -->\n## Render-loop benchmark\n\n❌ **Error:** Failed to parse benchmark results. Check CI logs for details.`;
+    const outPath = process.env.BENCH_COMMENT_OUT ?? 'bench-comment.md';
+    writeFileSync(outPath, errMarkdown + '\n', 'utf8');
+    process.exit(2);
+}
+
 function validateBench(data, name) {
     if (!data || typeof data !== 'object') {
         console.error(`${name}: invalid benchmark file`);

@@ -1,165 +1,254 @@
-/** @jsxImportSource @termuijs/jsx */
-import { render, useState, useKeymap, useEffect, ErrorBoundary } from '@termuijs/jsx';
-import { AutoThemeProvider, useTheme } from '@termuijs/tss';
+import { App } from '@termuijs/core';
+import { Widget, Box, Text, ChatMessage, StreamingText, ScrollView, TextInput } from '@termuijs/widgets';
+import type { Screen, KeyEvent } from '@termuijs/core';
+import { useAI, type AIMessage } from '@termuijs/adapters';
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
-interface Message { role: 'user' | 'assistant'; content: string; }
-interface TokenUsageData { inputTokens: number; outputTokens: number; }
-
-// ── Mock adapter (works without ANTHROPIC_API_KEY) ────────────────────────────
-
-const MOCK_REPLIES = [
-    'Hello! Running in mock mode. Set ANTHROPIC_API_KEY for real Claude.',
-    'Mock mode active — your message was received!',
-    'No API key needed in mock mode. Real Claude would answer here.',
-];
-
-async function* mockStream(_prompt: string): AsyncGenerator<string> {
-    const reply = MOCK_REPLIES[Math.floor(Math.random() * MOCK_REPLIES.length)];
-    for (const ch of reply) {
-        yield ch;
-        await new Promise(r => setTimeout(r, 20));
-    }
-}
-
-async function* claudeStream(
-    messages: Message[],
-    onUsage: (u: TokenUsageData) => void,
-): AsyncGenerator<string> {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': process.env.ANTHROPIC_API_KEY ?? '',
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model: 'claude-3-5-haiku-20241022',
-            max_tokens: 1024,
-            stream: true,
-            messages: messages.map(m => ({ role: m.role, content: m.content })),
-        }),
-    });
-    if (!res.ok) throw new Error('Claude API ' + res.status + ': ' + res.statusText);
-    const reader = res.body!.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop() ?? '';
-        for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const raw = line.slice(6).trim();
-            if (raw === '[DONE]') return;
-            try {
-                const ev = JSON.parse(raw);
-                if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') yield ev.delta.text as string;
-                if (ev.type === 'message_delta' && ev.usage) onUsage({ inputTokens: ev.usage.input_tokens ?? 0, outputTokens: ev.usage.output_tokens ?? 0 });
-            } catch { /* skip */ }
-        }
-    }
-}
-
-// ── Components ────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+// AI Assistant Template - Minimal Version
+// ──────────────────────────────────────────────────────────────────────────────
+//
+// A simple starter template demonstrating:
+//   - ChatMessage widget for conversation display
+//   - StreamingText widget for streamed responses
+//   - useAI for Claude API integration
+//   - Dual-mode: mock (no API key) and real (with API key)
 
 const IS_MOCK = !process.env.ANTHROPIC_API_KEY;
 
-function AiAssistant() {
-    const theme = useTheme();
-    const [messages, setMessages] = useState<Message[]>([{
+const MOCK_REPLY = 'Hello! This is a mock response. Set ANTHROPIC_API_KEY to use real Claude.';
+
+async function* mockStream(): AsyncGenerator<string> {
+  for (const ch of MOCK_REPLY) {
+    yield ch;
+    await new Promise(r => setTimeout(r, 20));
+  }
+}
+
+class AIAssistantApp extends Widget {
+  private chatContainer: Box;
+  private streamingTextWidget: StreamingText | null = null;
+  private textInput: TextInput;
+  private isStreaming = false;
+  private isMockMode = IS_MOCK;
+  private aiAdapter: ReturnType<typeof useAI> | null = null;
+
+  constructor() {
+    super({
+      flexDirection: 'column',
+      flexGrow: 1,
+      padding: 1,
+      gap: 1,
+    });
+
+    if (!IS_MOCK) {
+      try {
+        this.aiAdapter = useAI('anthropic', {
+          apiKey: process.env.ANTHROPIC_API_KEY!,
+        });
+      } catch (e) {
+        console.error('Failed to initialize AI adapter:', e);
+        this.isMockMode = true;
+        this.aiAdapter = null;
+      }
+    }
+
+    // Header
+    const headerBox = new Box({
+      flexDirection: 'row',
+      height: 1,
+      gap: 1,
+      padding: { top: 0, bottom: 0, left: 1, right: 1 },
+      border: 'single',
+      borderColor: { type: 'named' as const, name: 'brightBlack' as const },
+    });
+
+    const titleText = new Text('AI Assistant', {
+      bold: true,
+      fg: { type: 'named' as const, name: 'cyan' as const },
+    });
+
+    const modeLabel = new Text(this.isMockMode ? '[mock mode]' : '[claude]', {
+      dim: true,
+    });
+
+    headerBox.addChild(titleText);
+    headerBox.addChild(modeLabel);
+
+    // Messages scroll view
+    const messagesScroll = new ScrollView(
+      {
+        flexGrow: 1,
+        border: 'single',
+        borderColor: { type: 'named' as const, name: 'brightBlack' as const },
+      },
+      { showScrollbar: true }
+    );
+
+    this.chatContainer = new Box({
+      flexDirection: 'column',
+      gap: 1,
+    });
+
+    messagesScroll.addChild(this.chatContainer);
+
+    const initialMessage = new ChatMessage(
+      {
         role: 'assistant',
-        content: IS_MOCK
-            ? 'Hi! Running in mock mode (no ANTHROPIC_API_KEY). Type and press Enter!'
-            : 'Hi! I am Claude. How can I help you?',
-    }]);
-    const [input, setInput]           = useState('');
-    const [streaming, setStreaming]   = useState('');
-    const [busy, setBusy]             = useState(false);
-    const [usage, setUsage]           = useState<TokenUsageData>({ inputTokens: 0, outputTokens: 0 });
-
-    const send = async () => {
-        const text = input.trim();
-        if (!text || busy) return;
-        const next: Message[] = [...messages, { role: 'user', content: text }];
-        setMessages(next);
-        setInput('');
-        setBusy(true);
-        setStreaming('');
-        try {
-            let full = '';
-            const src = IS_MOCK ? mockStream(text) : claudeStream(next, setUsage);
-            for await (const chunk of src) { full += chunk; setStreaming(full); }
-            setMessages(m => [...m, { role: 'assistant', content: full }]);
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            setMessages(m => [...m, { role: 'assistant', content: 'Error: ' + msg }]);
-        } finally { setStreaming(''); setBusy(false); }
-    };
-
-    useKeymap([
-        { key: 'enter',     action: () => { void send(); },                   description: 'Send' },
-        { key: 'backspace', action: () => setInput(v => v.slice(0, -1)),       description: 'Delete' },
-        { key: 'c', ctrl: true, action: () => process.exit(0),                description: 'Quit' },
-        ...(' abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-_()').split('').map(ch => ({
-            key: ch, action: () => { if (!busy) setInput(v => v + ch); }, description: '',
-        })),
-    ]);
-
-    return (
-        <box flexDirection="column" flexGrow={1} padding={1}>
-            <box border="single" padding={1} flexDirection="row">
-                <text bold>AI Assistant</text>
-                <text> {IS_MOCK ? '[mock mode]' : '[claude-3-5-haiku]'}</text>
-                <text color={theme.colors.muted}> in:{usage.inputTokens} out:{usage.outputTokens}</text>
-            </box>
-
-            <box flexDirection="column" flexGrow={1} padding={1}>
-                {messages.map((m, i) => (
-                    <box key={i} flexDirection="column" marginBottom={1}>
-                        <text bold color={m.role === 'user' ? theme.colors.primary : theme.colors.success}>
-                            {m.role === 'user' ? 'You' : 'Claude'}
-                        </text>
-                        <text>{m.content}</text>
-                    </box>
-                ))}
-                {streaming.length > 0 && (
-                    <box flexDirection="column">
-                        <text bold color={theme.colors.success}>Claude</text>
-                        <text>{streaming}█</text>
-                    </box>
-                )}
-            </box>
-
-            <box border="single" padding={1}>
-                <text color={theme.colors.muted}>&gt; </text>
-                <text>{input}{busy ? '' : '█'}</text>
-                {busy && <text color={theme.colors.muted}> thinking...</text>}
-            </box>
-
-            <box padding={1}>
-                <text dim>Ctrl+C to quit{IS_MOCK ? ' | Set ANTHROPIC_API_KEY for real Claude' : ''}</text>
-            </box>
-        </box>
+        content: this.isMockMode
+          ? 'Hi! Running in mock mode. Set ANTHROPIC_API_KEY to use real Claude.'
+          : 'Hi! I am Claude. How can I help you?',
+        timestamp: new Date(),
+      },
+      { height: 3 }
     );
+    this.chatContainer.addChild(initialMessage);
+
+    // Input area
+    const inputBox = new Box({
+      flexDirection: 'row',
+      height: 3,
+      gap: 1,
+      padding: { top: 0, bottom: 0, left: 1, right: 1 },
+      border: 'single',
+      borderColor: { type: 'named' as const, name: 'brightBlack' as const },
+    });
+
+    const inputLabel = new Text('> ', {
+      fg: { type: 'named' as const, name: 'green' as const },
+      bold: true,
+    });
+
+    this.textInput = new TextInput(
+      { flexGrow: 1 },
+      {
+        placeholder: 'Type a message...',
+        onSubmit: (val) => this.handleSendMessage(val),
+      }
+    );
+
+    inputBox.addChild(inputLabel);
+    inputBox.addChild(this.textInput);
+
+    const helpText = new Text(' [Enter] Send | [Ctrl+C] Quit ', {
+      dim: true,
+      height: 1,
+    });
+
+    this.addChild(headerBox);
+    this.addChild(messagesScroll);
+    this.addChild(inputBox);
+    this.addChild(helpText);
+
+    this.textInput.isFocused = true;
+  }
+
+  private removeStreamingTextWidget(): void {
+    if (!this.streamingTextWidget) return;
+    this.chatContainer.removeChild(this.streamingTextWidget);
+    this.streamingTextWidget = null;
+  }
+
+  private async handleSendMessage(userText: string): Promise<void> {
+    if (!userText.trim() || this.isStreaming) return;
+
+    this.isStreaming = true;
+    this.textInput.isFocused = false;
+
+    const userMessage = new ChatMessage(
+      { role: 'user', content: userText, timestamp: new Date() },
+      { height: 3 }
+    );
+    this.chatContainer.addChild(userMessage);
+
+    try {
+      let fullResponse = '';
+
+      const streamingTextWidget = new StreamingText(
+        { text: '', speed: 1 },
+        { border: 'single', height: 5 }
+      );
+      this.streamingTextWidget = streamingTextWidget;
+      this.chatContainer.addChild(streamingTextWidget);
+
+      if (this.isMockMode || !this.aiAdapter) {
+        const stream = mockStream();
+        for await (const token of stream) {
+          fullResponse += token;
+          streamingTextWidget.setText(fullResponse);
+          streamingTextWidget.tick();
+          this.markDirty();
+        }
+      } else {
+        const aiMessages: AIMessage[] = [{ role: 'user', content: userText }];
+        for await (const token of this.aiAdapter.chat(aiMessages)) {
+          fullResponse += token;
+          streamingTextWidget.setText(fullResponse);
+          streamingTextWidget.tick();
+          this.markDirty();
+        }
+      }
+
+      this.removeStreamingTextWidget();
+      const assistantMessage = new ChatMessage(
+        { role: 'assistant', content: fullResponse, timestamp: new Date() },
+        { height: 5 }
+      );
+      this.chatContainer.addChild(assistantMessage);
+    } catch (e) {
+      this.removeStreamingTextWidget();
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      const errorMessage = new ChatMessage(
+        { role: 'assistant', content: `Error: ${errorMsg}`, timestamp: new Date() },
+        { height: 3 }
+      );
+      this.chatContainer.addChild(errorMessage);
+    } finally {
+      this.removeStreamingTextWidget();
+      this.isStreaming = false;
+      this.textInput.isFocused = true;
+      this.markDirty();
+    }
+  }
+
+  handleKey(event: KeyEvent): boolean {
+    if (event.key === 'q' || (event.ctrl && event.key === 'c')) {
+      return false;
+    }
+
+    if (event.key === 'enter' || event.key === 'return') {
+      this.textInput.submit();
+      return true;
+    }
+
+    if (event.key === 'backspace') {
+      this.textInput.deleteBack();
+      return true;
+    }
+
+    if (event.key && event.key.length === 1 && !event.ctrl && !event.alt) {
+      this.textInput.insertChar(event.key);
+      return true;
+    }
+
+    return true;
+  }
+
+  protected _renderSelf(_screen: Screen): void {}
 }
 
-function App() {
-    return (
-        <AutoThemeProvider>
-            <ErrorBoundary fallback={(err) => (
-                <box border="single" borderColor="red" padding={1}>
-                    <text color="red" bold>Error</text>
-                    <text>{err.message}</text>
-                </box>
-            )}>
-                <AiAssistant />
-            </ErrorBoundary>
-        </AutoThemeProvider>
-    );
+async function main() {
+  const root = new AIAssistantApp();
+  const app = new App(root, {
+    fullscreen: true,
+    title: 'AI Assistant',
+    fps: 30,
+  });
+  const exitCode = await app.mount();
+  process.exit(exitCode);
 }
 
-render(<App />, { title: 'my-ai-app' });
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+

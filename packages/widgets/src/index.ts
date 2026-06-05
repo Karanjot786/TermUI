@@ -39,6 +39,8 @@ export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
 export { CommandPalette } from './input/CommandPalette.js';
 export type { Command, CommandPaletteOptions } from './input/CommandPalette.js';
+export { Button } from './input/Button.js';
+export type { ButtonOptions, ButtonVariant } from './input/Button.js';
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
@@ -83,6 +85,8 @@ export { MultiProgress } from './feedback/MultiProgress.js';
 export type { ProgressItem, MultiProgressOptions } from './feedback/MultiProgress.js';
 export { Spinner, SPINNER_FRAMES } from './feedback/Spinner.js';
 export type { SpinnerOptions } from './feedback/Spinner.js';
+export { LoadingDots } from './feedback/LoadingDots.js';
+export type { LoadingDotsOptions } from './feedback/LoadingDots.js';
 export { TaskList } from './feedback/TaskList.js';
 export type { TaskItem, TaskStatus, TaskListOptions } from './feedback/TaskList.js';
 export { Scrollbar } from './feedback/Scrollbar.js';
@@ -167,7 +171,26 @@ export { Timeline } from './display/Timeline.js';
 export type { TimelineItem, TimelineStatus } from './display/Timeline.js';
 
 export { Marquee } from './display/Marquee.js';
-export type { MarqueeDirection, MarqueeOptions } from './display/Marquee.js';export { DataGrid } from './data/DataGrid.js';
+export type { MarqueeDirection, MarqueeOptions } from './display/Marquee.js';
+export { DataGrid } from './data/DataGrid.js';
 export { DataGrid as DataGridView } from './data/DataGrid.js';
 export type { DataGridColumn, DataGridRow, DataGridOptions, SortDirection } from './data/DataGrid.js';
 
+export {
+    BarColumn,
+    TextColumn,
+    TimeColumn,
+    SpeedColumn,
+    PercentageColumn,
+} from './feedback/ProgressColumn.js';
+
+export type {
+    ProgressColumnDefinition,
+    ProgressColumnProps,
+} from './feedback/ProgressColumn.js';
+export { Progress } from './feedback/Progress.js';
+
+export type {
+    ProgressProps,
+    ProgressTask,
+} from './feedback/Progress.js';
