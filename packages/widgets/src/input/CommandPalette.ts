@@ -91,7 +91,8 @@ export class CommandPalette extends Widget {
 
     // ─── Private helpers ────────────────────────────────
 
-    /** Filter commands based on current query (case-insensitive substring). */
+    
+    /** Compute a fuzzy-match score for a single text against a query. */
     private _fuzzyScore(text: string, query: string): number {
     text = text.toLowerCase();
     query = query.toLowerCase();
@@ -114,6 +115,8 @@ export class CommandPalette extends Widget {
 
     return qi === query.length ? score : -1;
 }
+    
+    /** Filter commands based on current query (case-insensitive substring). */
     private _filter(): void {
     const q = this._query.toLowerCase();
 
