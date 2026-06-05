@@ -1,6 +1,6 @@
-// -----------------------------------------------------
-// Router � manages screen navigation
-// -----------------------------------------------------
+// ─────────────────────────────────────────────────────
+// Router — manages screen navigation
+// ─────────────────────────────────────────────────────
 
 import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
@@ -72,7 +72,7 @@ export class Router {
     push(path: string): void {
         const match = matchRoute(path, this._routes);
         if (!match) {
-            this.events.emit('error', new Error(No route found for path: ));
+            this.events.emit('error', new Error("No route found for path: " + path));
             return;
         }
         this._history.push(path);
@@ -89,7 +89,7 @@ export class Router {
     replace(path: string): void {
         const match = matchRoute(path, this._routes);
         if (!match) {
-            this.events.emit('error', new Error(No route found for path: ));
+            this.events.emit('error', new Error("No route found for path: " + path));
             return;
         }
         if (this._history.length > 0) {
