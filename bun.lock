@@ -221,6 +221,20 @@
         "typescript": "^5.4.0",
       },
     },
+    "examples/pomodoro-timer": {
+      "name": "@termuijs/example-pomodoro-timer",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/motion": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/process-monitor": {
       "name": "@termuijs/example-process-monitor",
       "version": "0.1.0",
@@ -683,6 +697,8 @@
     "@termuijs/example-markdown-editor": ["@termuijs/example-markdown-editor@workspace:examples/markdown-editor"],
 
     "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
+
+    "@termuijs/example-pomodoro-timer": ["@termuijs/example-pomodoro-timer@workspace:examples/pomodoro-timer"],
 
     "@termuijs/example-process-monitor": ["@termuijs/example-process-monitor@workspace:examples/process-monitor"],
 
