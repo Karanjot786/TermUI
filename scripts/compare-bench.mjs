@@ -7,7 +7,7 @@
 //
 // Usage: node scripts/compare-bench.mjs <head.json> <main.json> [--threshold 0.20]
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const args = process.argv.slice(2);
 if (args.length < 2) {
@@ -25,6 +25,17 @@ if (Number.isNaN(threshold) || !Number.isFinite(threshold) || threshold < 0) {
 }
 
 let head, main;
+
+if (!existsSync(headPath)) {
+    console.error(`Benchmark file not found: ${headPath}`);
+    process.exit(2);
+}
+
+if (!existsSync(mainPath)) {
+    console.error(`Benchmark file not found: ${mainPath}`);
+    process.exit(2);
+}
+
 try {
     head = JSON.parse(readFileSync(headPath, 'utf8'));
     main = JSON.parse(readFileSync(mainPath, 'utf8'));
