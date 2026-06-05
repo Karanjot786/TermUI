@@ -19,39 +19,12 @@ jobs:
             const opener = context.payload.issue.user.login;
             const number = context.payload.issue.number;
             const OWNER  = 'Karanjot786';
-            const MAX_OPEN = 2;
 
             // Skip bots
             if (opener.endsWith('[bot]')) return;
 
             // Skip repo owner
             if (opener === OWNER) return;
-
-            // Cap: max 2 open issues assigned per contributor
-            const { owner, repo } = context.repo;
-            const search = await github.rest.search.issuesAndPullRequests({
-              q: `repo:${owner}/${repo} is:issue is:open assignee:${opener}`,
-              per_page: 100,
-            });
-            const openAssigned = search.data.items
-              .filter(i => i.number !== number)
-              .map(i => `#${i.number}`);
-
-            if (openAssigned.length >= MAX_OPEN) {
-              await github.rest.issues.createComment({
-                ...context.repo,
-                issue_number: number,
-                body: [
-                  `Hi @${opener}. You already have ${openAssigned.length} open issues assigned: ${openAssigned.join(', ')}.`,
-                  ``,
-                  `Open and merge a PR from one of those first, then comment here to claim this issue.`,
-                  ``,
-                  `This keeps work moving and gives every contributor a fair chance.`,
-                ].join('\n'),
-              });
-              core.info(`@${opener} at cap (${openAssigned.length}); not assigning.`);
-              return;
-            }
 
             // Assign + label
             await github.rest.issues.addAssignees({
