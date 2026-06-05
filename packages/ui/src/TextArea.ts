@@ -197,7 +197,8 @@ export class TextArea extends Widget {
             if (screenRow >= 0 && screenRow < height && screenCol >= 0 && screenCol < width) {
                 const lineStr = this._lines[this._cursor.row] || '';
                 const cursorChar = this._cursor.col < lineStr.length ? lineStr[this._cursor.col] : ' ';
-                const cursorGlyph = caps.unicode ? cursorChar : cursorChar;
+                const asciiFallback = cursorChar === ' ' ? '_' : cursorChar;
+                const cursorGlyph = caps.unicode ? cursorChar : asciiFallback;
                 screen.setCell(x + screenCol, y + screenRow, {
                     char: cursorGlyph,
                     ...attrs,
