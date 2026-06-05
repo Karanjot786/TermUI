@@ -95,11 +95,11 @@ describe('Router Forward Navigation', () => {
         const router = new Router();
         const pushSpy = vi.spyOn(router, 'push').mockImplementation(() => {});
 
-        // Mock event mimicry for terminal key inputs
+        // Mock event mimicry for terminal key inputs using explicit property typing
         const mockEnterEvent = { key: 'return', name: 'return' };
         
-        // Simulating a focused link's keypress trigger hook
-        const handleKeyPress = (e: any) => {
+        // Simulating a focused link's keypress trigger hook without 'any'
+        const handleKeyPress = (e: Record<string, unknown>) => {
             if (e.key === 'return') {
                 router.push('/target-route');
             }
