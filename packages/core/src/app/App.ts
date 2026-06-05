@@ -56,14 +56,6 @@ export interface RootWidget {
 
 /**
  * Application lifecycle manager.
- *
- * Manages:
- * - Terminal setup/teardown (alt screen, raw mode, cursor, mouse)
- * - Screen buffer and renderer initialization
- * - Input parsing and event dispatch
- * - Layout computation and rect sync
- * - Render loop
- * - Graceful shutdown
  */
 export class App {
     readonly terminal: Terminal;
@@ -83,6 +75,9 @@ export class App {
     private _widgetById = new Map<string, any>();
     // Lines to insert before inline viewport output. Each entry: { id: symbol, text: string }
     private _insertBefore: Array<{ id: symbol; text: string }> = [];
+    
+    // Core fix patch: Track if a paint task has been queued for the next event loop tick
+    private _isRenderPending = false;
 
     constructor(rootWidget: RootWidget, options: AppOptions = {}) {
         this._rootWidget = rootWidget;
@@ -109,8 +104,6 @@ export class App {
 
     /**
      * Start the application.
-     * Sets up the terminal, starts the render loop, and mounts the root widget.
-     * Returns a promise that resolves when exit() is called.
      */
     async mount(): Promise<number> {
         if (this._mounted) return 0;
@@ -238,8 +231,6 @@ export class App {
 
     /**
      * Create an overlay layer for rendering above normal widgets.
-     * @param id     Unique layer identifier (e.g. 'modal', 'select-dropdown', 'toast')
-     * @param zIndex Stacking order (higher = rendered on top). Default: 100
      */
     addOverlay(id: string, zIndex = 100): void {
         this.layers.createLayer(id, zIndex);
@@ -254,74 +245,87 @@ export class App {
 
     /**
      * Request a re-render on the next frame.
-     * Skips layout + render pass when the root widget reports no dirty state.
+     * Patched to batch rapid structural updates via setImmediate micro-task scheduling.
      */
     requestRender(): void {
         if (!this._mounted) return;
 
+        // If a layout computation is already scheduled for execution on this tick,
+        // intercept and bundle any concurrent incoming hook dispatches.
+        if (this._isRenderPending) return;
+
         // Skip full layout pass if widget tree reports nothing has changed.
-        // isDirty propagates upward via markDirty(), so the root being clean
-        // means no descendant needs re-rendering either.
-        // Do NOT call requestFrame() here — back buffer is stale after swap()
-        // and flushing it would write old content over the current display.
         if (this._rootWidget.isDirty === false) {
             return;
         }
 
-        // Compute layout
-        const layoutRoot = this._rootWidget.getLayoutNode();
-        computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+        this._isRenderPending = true;
 
-        // Sync computed rects from layout tree back to widgets
-        this._rootWidget.syncLayout?.();
-
-        // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
-        this._buildWidgetMap(this._rootWidget);
-
-        // Clear the back buffer and render widgets into it
-        this.screen.clear();
-        this._rootWidget.render(this.screen);
-
-        // Clear dirty flags now that we've rendered — future requestRender()
-        // calls will skip layout until markDirty() is called again.
-        this._rootWidget.clearDirty?.();
-        // Merge adjacent borders into junction characters for a cleaner look
-        if (this._options.dockBorders) {
-           mergeBorders(this.screen);
-        }
-        // Composite overlay layers on top of the base rendering
-        this.layers.composite(this.screen);
-
-        // Inline rendering bypasses the differential renderer and writes
-        // the bottom N rows directly into the main buffer so scrollback
-        // is preserved. It also emits any registered `insertBefore` lines
-        // above the live UI.
-        if (this._options.screenMode === 'inline') {
-            // Lazy import to avoid circular deps in tests
-            // Render any insertBefore lines first
-            for (const item of this._insertBefore) {
-                this.terminal.write(item.text + '\n');
+        // Defer rendering to the end of the current macro-task poll pool.
+        // This guarantees that multiple state updates called synchronously end up in a single render frame.
+        setImmediate(() => {
+            if (!this._mounted) {
+                this._isRenderPending = false;
+                return;
             }
-            // Render bottom N rows as plain text
+
             try {
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const mod = require('../inline-viewport.js');
-                const renderInlineToTerminal = mod.renderInlineToTerminal ?? mod.default?.renderInlineToTerminal;
-                if (typeof renderInlineToTerminal === 'function') {
-                    // Ensure we pass an object with a `write` method. Support Terminal instance
-                    // or raw stdout-like streams used in tests.
-                    const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
-                        ? (this.terminal as any)
-                        : { write: (s: string) => (this.terminal as any).stdout.write(s) };
-                    renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
-                }
-            } catch (e) {
-                // Fallback: write nothing
-            }
-            return;
-        }
+                // Double check dirty flag before processing heavy grid steps
+                if (this._rootWidget.isDirty !== false) {
+                    // Compute layout
+                    const layoutRoot = this._rootWidget.getLayoutNode();
+                    computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
 
-        this.renderer.requestFrame();
+                    // Sync computed rects from layout tree back to widgets
+                    this._rootWidget.syncLayout?.();
+
+                    // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
+                    this._buildWidgetMap(this._rootWidget);
+
+                    // Clear the back buffer and render widgets into it
+                    this.screen.clear();
+                    this._rootWidget.render(this.screen);
+
+                    // Clear dirty flags now that we've rendered — future requestRender()
+                    // calls will skip layout until markDirty() is called again.
+                    this._rootWidget.clearDirty?.();
+                    
+                    // Merge adjacent borders into junction characters for a cleaner look
+                    if (this._options.dockBorders) {
+                        mergeBorders(this.screen);
+                    }
+                    // Composite overlay layers on top of the base rendering
+                    this.layers.composite(this.screen);
+
+                    // Inline rendering bypasses the differential renderer and writes
+                    // the bottom N rows directly into the main buffer so scrollback is preserved.
+                    if (this._options.screenMode === 'inline') {
+                        for (const item of this._insertBefore) {
+                            this.terminal.write(item.text + '\n');
+                        }
+                        try {
+                            // eslint-disable-next-line @typescript-eslint/no-var-requires
+                            const mod = require('../inline-viewport.js');
+                            const renderInlineToTerminal = mod.renderInlineToTerminal ?? mod.default?.renderInlineToTerminal;
+                            if (typeof renderInlineToTerminal === 'function') {
+                                const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
+                                    ? (this.terminal as any)
+                                    : { write: (s: string) => (this.terminal as any).stdout.write(s) };
+                                renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
+                            }
+                        } catch (e) {
+                            // Fallback: write nothing
+                        }
+                        return;
+                    }
+
+                    this.renderer.requestFrame();
+                }
+            } finally {
+                // Unlock the queue flag so subsequent application frames can schedule updates
+                this._isRenderPending = false;
+            }
+        });
     }
 
     /**
@@ -337,7 +341,6 @@ export class App {
 
     /**
      * Register a persistent line to be written above inline viewport output.
-     * Returns an unregister function.
      */
     insertBefore(line: string): () => void {
         const id = Symbol();
@@ -366,12 +369,10 @@ export class App {
 
     /**
      * Build the bubble chain for keyboard events.
-     * Returns an array: [focused widget, parent, grandparent, ..., root]
-     * Uses the cached _widgetById map for O(1) lookup instead of DFS.
      */
     private _buildBubbleChain(widgetId: string): Array<{ events: { emit: (event: string, data: any) => void } }> {
         const chain: Array<{ events: { emit: (event: string, data: any) => void } }> = [];
-        const widget = this._widgetById.get(widgetId);  // O(1) lookup
+        const widget = this._widgetById.get(widgetId);
         if (!widget) return chain;
 
         let current: any = widget;
@@ -386,7 +387,6 @@ export class App {
 
     /**
      * Rebuild the widget ID cache by walking the entire widget tree.
-     * Called after syncLayout() so the map stays current.
      */
     private _buildWidgetMap(root: any): void {
         this._widgetById.clear();
