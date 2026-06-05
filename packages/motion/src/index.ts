@@ -31,3 +31,8 @@ export { pathAnimation } from './path.js'
 
 // Virtual clock (for testing)
 export type { VirtualClock } from './virtual-clock.js'
+
+// Interpolation
+export { mapRange, interpolate } from './interpolate.js';
+export type { InterpolateOptions } from './interpolate.js';
+
