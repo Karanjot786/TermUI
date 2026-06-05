@@ -106,4 +106,3 @@ export { useUnmount } from './hooks/useUnmount.js';
 export { useTransition } from './hooks/useTransition.js';
 export { useStopwatch } from './hooks/useStopwatch.js';
 export type { UseStopwatchOptions, UseStopwatchControls } from './hooks/useStopwatch.js';
-export { useUnmount } from './hooks/useUnmount.js';

@@ -2,8 +2,7 @@
   "name": "termui",
   "version": "0.0.5",
   "private": true,
-    "type": "module",
-"description": "A TypeScript-first framework for building beautiful, interactive terminal user interfaces",
+  "description": "A TypeScript-first framework for building beautiful, interactive terminal user interfaces",
   "workspaces": [
     "packages/*",
     "examples/*"
