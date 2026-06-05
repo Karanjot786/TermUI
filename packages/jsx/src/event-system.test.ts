@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { matchesSelector, applyDelegatedEvents } from './event-system.js';
-import type { VElement } from './vnode.js';
-import { Fragment } from './vnode.js';
+import type { VElement, VNode } from './vnode.js';
+import { Fragment, isVElement } from './vnode.js';
 
 describe('Event System: Selector Matching', () => {
     it('matches #id', () => {
@@ -76,7 +76,13 @@ describe('Event System: Delegation', () => {
 
         applyDelegatedEvents(props, children);
 
-        const deepBtn = (children[0].children[0] as VElement).children[0] as VElement;
+        const child1 = children[0];
+        if (!isVElement(child1)) throw new Error('Expected VElement');
+        const child2 = child1.children[0];
+        if (!isVElement(child2)) throw new Error('Expected VElement');
+        const deepBtn = child2.children[0];
+        if (!isVElement(deepBtn)) throw new Error('Expected VElement');
+        
         expect(deepBtn.props.onPress).toBe(handler);
     });
 
@@ -85,10 +91,9 @@ describe('Event System: Delegation', () => {
         const props = {
             onPress: { from: '#frag-btn', handler }
         };
-        const children: any[] = [
+        const children: VNode[] = [
             {
                 type: Fragment,
-                props: {},
                 children: [
                     { type: 'button', props: { id: 'frag-btn' }, children: [] }
                 ]
@@ -97,7 +102,9 @@ describe('Event System: Delegation', () => {
 
         applyDelegatedEvents(props, children);
 
-        const fragBtn = children[0].children[0];
+        const fragment = children[0];
+        // Fragment's children contains the button
+        const fragBtn = (fragment as any).children[0] as VElement;
         expect(fragBtn.props.onPress).toBe(handler);
     });
 

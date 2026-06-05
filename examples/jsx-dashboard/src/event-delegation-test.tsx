@@ -1,8 +1,17 @@
 /* @jsxImportSource @termuijs/jsx */
 import { render, h, useInput, useState, getCurrentApp } from '@termuijs/jsx';
 
+interface ButtonProps {
+    id?: string;
+    class?: string;
+    children?: any;
+    onPress?: () => void;
+    onFocus?: () => void;
+    triggerKey: string;
+}
+
 // A simple button component that emits onPress and onFocus when its trigger key is pressed
-function Button({ id, class: className, children, onPress, onFocus, triggerKey }: any) {
+function Button({ id, class: className, children, onPress, onFocus, triggerKey }: ButtonProps) {
     // When the user types the trigger key, we simulate an event on this button
     useInput((key) => {
         if (key === triggerKey) {

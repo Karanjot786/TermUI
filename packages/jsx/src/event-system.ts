@@ -1,6 +1,6 @@
-import { type VNode, isVElement, Fragment } from './vnode.js';
+import { type VNode, isVElement, isVFragment, Fragment } from './vnode.js';
 
-export interface DelegatedEvent<E = any> {
+export interface DelegatedEvent<E = any /* Supports various DOM/custom event shapes where type cannot be inferred */> {
     from: string;
     handler: (event?: E) => void;
 }
@@ -11,7 +11,7 @@ export interface DelegatedEvent<E = any> {
  * - `#id`: matches props.id
  * - `.class`: matches props.class or props.className
  */
-export function matchesSelector(props: Record<string, any>, selector: string): boolean {
+export function matchesSelector(props: Record<string, any /* Props are arbitrary attributes from JSX runtime */>, selector: string): boolean {
     if (!selector) return false;
 
     // ID selector
@@ -31,13 +31,15 @@ export function matchesSelector(props: Record<string, any>, selector: string): b
     return false;
 }
 
+type EventHandler = (...args: unknown[]) => unknown;
+
 /**
  * Scans the props of a container element for delegated event handlers
  * (e.g., onPress={{ from: '#btn', handler: ... }}) and applies them
  * to any descendant VNode that matches the selector.
  */
-export function applyDelegatedEvents(props: Record<string, any>, children: VNode[]): void {
-    const delegates: Array<{ propName: string; from: string; handler: any }> = [];
+export function applyDelegatedEvents(props: Record<string, unknown>, children: VNode[]): void {
+    const delegates: Array<{ propName: string; from: string; handler: EventHandler }> = [];
 
     for (const key of Object.keys(props)) {
         if (key.startsWith('on')) {
@@ -45,8 +47,8 @@ export function applyDelegatedEvents(props: Record<string, any>, children: VNode
             if (value && typeof value === 'object' && 'from' in value && 'handler' in value) {
                 delegates.push({
                     propName: key,
-                    from: value.from,
-                    handler: value.handler,
+                    from: (value as any).from, // Cast required: TS cannot infer props on 'unknown' even after 'in' check
+                    handler: (value as any).handler, // Cast required: same reason as above
                 });
                 delete props[key];
             }
@@ -64,7 +66,7 @@ export function applyDelegatedEvents(props: Record<string, any>, children: VNode
                         const existing = node.props[delegate.propName];
                         if (existing && typeof existing === 'function') {
                             const handler = delegate.handler;
-                            node.props[delegate.propName] = (...args: any[]) => {
+                            node.props[delegate.propName] = (...args: unknown[]) => {
                                 existing(...args);
                                 handler(...args);
                             };
@@ -77,8 +79,8 @@ export function applyDelegatedEvents(props: Record<string, any>, children: VNode
                 if (node.children) {
                     traverse(node.children);
                 }
-            } else if (node && typeof node === 'object' && 'type' in node && (node as any).type === Fragment) {
-                traverse((node as any).children);
+            } else if (isVFragment(node)) {
+                traverse(node.children);
             }
         }
     }
