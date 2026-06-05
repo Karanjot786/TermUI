@@ -19,11 +19,15 @@ const [headPath, mainPath] = args;
 const thresholdIdx = args.indexOf('--threshold');
 const threshold = thresholdIdx >= 0 ? parseFloat(args[thresholdIdx + 1]) : 0.20;
 
-if (Number.isNaN(threshold) || !Number.isFinite(threshold) || threshold < 0) {
-    console.error('Threshold must be a non-negative number');
+if (
+    Number.isNaN(threshold) ||
+    !Number.isFinite(threshold) ||
+    threshold < 0 ||
+    threshold > 1
+) {
+    console.error('Threshold must be between 0 and 1');
     process.exit(2);
 }
-
 let head, main;
 try {
     head = JSON.parse(readFileSync(headPath, 'utf8'));
