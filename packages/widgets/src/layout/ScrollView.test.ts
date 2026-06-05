@@ -2,7 +2,7 @@
 // @termuijs/widgets — Tests for ScrollView widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect,vi, afterEach } from 'vitest';
 import { ScrollView } from './ScrollView.js';
 import { Screen, type KeyEvent } from '@termuijs/core';
 
@@ -16,6 +16,9 @@ const key = (k: string): KeyEvent => ({
     preventDefault: () => {},
 });
 
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 describe('ScrollView', () => {
     it('renders without error when content is taller than viewport', () => {
         const sv = new ScrollView({ width: 10, height: 5 }, { contentHeight: 20 });
@@ -151,4 +154,32 @@ describe('ScrollView', () => {
         sv.handleKey(key('pageup'));
         expect(sv.scrollOffset).toBe(6);
     });
+    it('uses acceleration when enabled', () => {
+    const sv = new ScrollView(
+        { height: 5 },
+        {
+            contentHeight: 100,
+            scrollAccel: true,
+        }
+    );
+
+    sv.updateRect({
+        x: 0,
+        y: 0,
+        width: 40,
+        height: 5,
+    });
+
+    let t = 0;
+
+    vi.spyOn(Date, 'now').mockImplementation(() => {
+        t += 10;
+        return t;
+    });
+
+    sv.handleKey(key('down'));
+    sv.handleKey(key('down'));
+
+    expect(sv.scrollOffset).toBeGreaterThan(1);
+});
 });

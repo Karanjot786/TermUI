@@ -175,7 +175,7 @@ export type { MarqueeDirection, MarqueeOptions } from './display/Marquee.js';
 export { DataGrid } from './data/DataGrid.js';
 export { DataGrid as DataGridView } from './data/DataGrid.js';
 export type { DataGridColumn, DataGridRow, DataGridOptions, SortDirection } from './data/DataGrid.js';
-
+export { ScrollAcceleration } from './layout/scroll-acceleration.js';
 export {
     BarColumn,
     TextColumn,
