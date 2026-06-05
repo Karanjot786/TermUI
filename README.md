@@ -393,6 +393,7 @@ bun run dev
 | Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
 | Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
 | CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
+| AI Assistant | Interactive AI chat with streaming | ChatMessage, StreamingText, ToolCall, ToolApproval, useAI, dual-mode operation | [`examples/ai-assistant`](./examples/ai-assistant) |
 
 ## Project structure
 
@@ -456,7 +457,28 @@ See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and futu
 - [Issues](https://github.com/Karanjot786/TermUI/issues): report bugs, claim tasks
 - [Docs](https://www.termui.io): API reference, guides, examples
 
+## Contributors
+
+Thank you to everyone who has contributed to TermUI. Every bug fix, feature, test, and doc improvement makes this project better for everyone who builds with it.
+
+<a href="https://github.com/Karanjot786/TermUI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Karanjot786/TermUI" alt="Contributors" />
+</a>
+
+Want to join this list? Check the [open issues](https://github.com/Karanjot786/TermUI/issues) and read [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
+
 ## License
 
 MIT
+
+## Troubleshooting
+
+### Build Cache and Dependency Synchronization Issues
+If you encounter runtime rendering issues or stale execution logs while working with cross-package scripts inside this monorepo ecosystem, clear your local project configurations and refresh your setups completely by running:
+
+```bash
+bun run clean
+bun install
+```
+
 

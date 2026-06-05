@@ -14,7 +14,8 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "bench": "bun packages/core/src/benchmark/render-loop.ts",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \".\""
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -36,6 +37,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "dotenv": "^16.0.0"
   }
 }

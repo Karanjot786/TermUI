@@ -106,6 +106,7 @@ export default defineConfig({
         case 'form-wizard':
             files.push(...generateFormWizardTemplate(config));
             break;
+
         default:
             files.push(...generateEmptyTemplate(config));
     }
@@ -116,6 +117,7 @@ export default defineConfig({
 function createPackageJson(config: ProjectConfig): string {
     const isFileManager = config.template === 'file-manager';
     const isAiAssistant = config.template === 'ai-assistant';
+    const isRestClient = config.template === 'rest-client';
     return JSON.stringify({
         name: config.name,
         version: '0.1.0',
@@ -134,13 +136,14 @@ function createPackageJson(config: ProjectConfig): string {
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
             }
-            : isFileManager
+            : isFileManager || isRestClient
             ? {
                 '@termuijs/core': 'latest',
                 '@termuijs/widgets': 'latest',
                 '@termuijs/ui': 'latest',
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
+                ...(isRestClient ? { '@termuijs/data': 'latest' } : {}),
             }
             : {
                 '@termuijs/core': 'latest',
@@ -1033,6 +1036,55 @@ function App() {
                 </box>
             )}>
                 <AiAssistant />
+            </ErrorBoundary>
+        </AutoThemeProvider>
+    );
+}
+
+render(<App />, { title: '${config.name}' });
+`,
+    }];
+}
+
+function generateRestClientTemplate(config: ProjectConfig): GeneratedFile[] {
+    return [{
+        path: 'src/index.tsx',
+        content: `/** @jsxImportSource @termuijs/jsx */
+import { render, useState, useKeymap, ErrorBoundary } from '@termuijs/jsx';
+import { AutoThemeProvider } from '@termuijs/tss';
+import { useFetch } from '@termuijs/data';
+import { JSONView, Text } from '@termuijs/widgets';
+
+function RestClient() {
+    const result = useFetch<{ id: number; name: string; email: string }>(
+        'https://jsonplaceholder.typicode.com/users/1',
+    );
+
+    useKeymap([
+        { key: 'q', action: () => process.exit(0), description: 'Quit' },
+        { key: 'c', ctrl: true, action: () => process.exit(0), description: 'Quit' },
+    ]);
+
+    return (
+        <box flexDirection="column" padding={1} gap={1}>
+            <text bold>${config.name}</text>
+            {result.loading && <text>Loading...</text>}
+            {result.error && <text color="red">Error: {String(result.error.message)}</text>}
+            {result.data && <jsonview data={result.data} />}
+        </box>
+    );
+}
+
+function App() {
+    return (
+        <AutoThemeProvider>
+            <ErrorBoundary fallback={(err) => (
+                <box border="single" borderColor="red" padding={1}>
+                    <text color="red" bold>Error</text>
+                    <text>{err.message}</text>
+                </box>
+            )}>
+                <RestClient />
             </ErrorBoundary>
         </AutoThemeProvider>
     );

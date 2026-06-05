@@ -140,6 +140,8 @@ export type { SegmentedControlOptions } from './SegmentedControl.js';
 export { SearchableSelect } from './SearchableSelect.js';
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
+export { Switch } from './Switch.js';
+export type { SwitchOptions } from './Switch.js';
 export { Checkbox } from './Checkbox.js';
 export type { CheckboxOptions } from './Checkbox.js';
 
@@ -167,6 +169,9 @@ export type { Shortcut, ShortcutHelpOverlayProps } from './components/ShortcutHe
 
 export { RadioGroup } from './RadioGroup.js';
 export type { RadioGroupOption, RadioGroupOptions } from './RadioGroup.js';
+
+export { Rating } from './Rating.js';
+export type { RatingOptions } from './Rating.js';
 export { ThemeSwitcher } from './ThemeSwitcher.js';
 export type { ThemeSwitcherOptions } from './ThemeSwitcher.js';
 

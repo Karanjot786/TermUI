@@ -14,6 +14,7 @@ function makeTree(nodes: TreeNode[], onSelect?: (node: TreeNode, path: number[])
     return tree;
 }
 
+// helper to easily call handleKey
 function renderTree(tree: Tree, width = 40, height = 20): Screen {
     const screen = new Screen(width, height);
     tree.updateRect({ x: 0, y: 0, width, height });
@@ -279,7 +280,7 @@ describe('Tree', () => {
             const nodes: TreeNode[] = [{ label: 'index.ts' }];
             const tree = makeTree(nodes, handler);
 
-            tree.handleKey(' ');
+            tree.handleKey('space');
 
             expect(handler).toHaveBeenCalledOnce();
             expect(handler).toHaveBeenCalledWith(nodes[0], [0]);
