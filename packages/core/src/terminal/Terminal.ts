@@ -18,6 +18,8 @@ export interface TerminalOptions {
     altScreen?: boolean;
     /** Enable bracketed-paste mode so InputParser receives paste events. */
     bracketedPaste?: boolean;
+    /** Debounce window in ms for resize dispatch. Default 16. */
+    resizeDebounceMs?: number;
 }
 
 /**
@@ -39,6 +41,12 @@ export class Terminal {
     private _cleanupHandlers: Array<() => void> = [];
     private _originalRawMode: boolean | undefined;
 
+    // Debounce state properties
+    private _resizeDebounceMs: number;
+    private _resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    private _lastDispatchedCols: number;
+    private _lastDispatchedRows: number;
+
     // Stored handler references for proper cleanup
     private _resizeHandler: (() => void) | null = null;
     private _exitHandler: (() => void) | null = null;
@@ -56,13 +64,35 @@ export class Terminal {
         this._cols = this.stdout.columns ?? 80;
         this._rows = this.stdout.rows ?? 24;
 
+        this._resizeDebounceMs = options.resizeDebounceMs ?? 16;
+        this._lastDispatchedCols = this._cols;
+        this._lastDispatchedRows = this._rows;
+
         // Listen for terminal resize (store ref for cleanup)
         this._resizeHandler = () => {
+            // Update immediately so getters are fresh
             this._cols = this.stdout.columns ?? 80;
             this._rows = this.stdout.rows ?? 24;
-            for (const handler of this._resizeHandlers) {
-                handler(this._cols, this._rows);
+
+            // Clear existing debounce timer
+            if (this._resizeTimer) {
+                clearTimeout(this._resizeTimer);
             }
+
+            // Schedule debounced dispatch
+            this._resizeTimer = setTimeout(() => {
+                this._resizeTimer = null;
+
+                // Dedup check: skip if dims match the last dispatched dims
+                if (this._cols !== this._lastDispatchedCols || this._rows !== this._lastDispatchedRows) {
+                    this._lastDispatchedCols = this._cols;
+                    this._lastDispatchedRows = this._rows;
+
+                    for (const handler of this._resizeHandlers) {
+                        handler(this._cols, this._rows);
+                    }
+                }
+            }, this._resizeDebounceMs);
         };
         this.stdout.on('resize', this._resizeHandler);
 
@@ -187,6 +217,11 @@ export class Terminal {
     restore(): void {
         if (this._restored) return; // Prevent double-restore
         this._restored = true;
+
+        if (this._resizeTimer) {
+            clearTimeout(this._resizeTimer);
+            this._resizeTimer = null;
+        }
 
         // Remove process-level signal handlers to prevent leaks
         if (this._exitHandler) process.off('exit', this._exitHandler);
