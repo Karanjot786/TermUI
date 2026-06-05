@@ -1,4 +1,4 @@
-import { type Screen, type Style, type KeyEvent, styleToCellAttrs, caps, truncate } from '@termuijs/core';
+import { type Screen, type Style, type KeyEvent, styleToCellAttrs, caps, truncate, mergeStyles, defaultStyle } from '@termuijs/core';
 import { Widget } from '@termuijs/widgets';
 
 export interface TextAreaOptions {
@@ -27,7 +27,7 @@ export class TextArea extends Widget {
 
     constructor(style: Partial<Style> = {}, options: TextAreaOptions = {}) {
         // default rows = 4, add 2 for top/bottom single borders
-        super({ border: 'single', height: (options.rows ?? 4) + 2, ...style });
+        super(mergeStyles(defaultStyle(), { border: 'single', height: (options.rows ?? 4) + 2, ...style }));
         this._placeholder = options.placeholder ?? '';
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
@@ -121,6 +121,7 @@ export class TextArea extends Widget {
     }
 
     handleKey(event: KeyEvent): void {
+        this.markDirty();
         const isEnter = event.key === 'enter' || event.key === 'return' || event.key === '\r' || event.key === '\n';
         
         if (isEnter && (event.ctrl || event.alt)) {
