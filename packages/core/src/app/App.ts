@@ -230,6 +230,11 @@ export class App {
         this.input.stop();
         this.terminal.restore();
         this.events.removeAll();
+
+        if (this._exitResolve) {
+            this._exitResolve(0);
+            this._exitResolve = null;
+        }
     }
 
     /**
