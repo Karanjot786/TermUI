@@ -15,6 +15,7 @@ import type { Style, Color } from '@termuijs/core';
 import { parseColor } from '@termuijs/core';
 import type { VNode, VElement, FC } from './vnode.js';
 import { isVElement, isVFragment, Fragment, flattenChildren } from './vnode.js';
+import { applyDelegatedEvents } from './event-system.js';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
     runEffects, runLayoutEffects, destroyFiber, type Fiber,
@@ -267,6 +268,8 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
     if (isVElement(vnode)) {
         let { type, props, children } = vnode;
         children = children ?? [];
+
+        applyDelegatedEvents(props, children);
 
         // Map uppercase widget classes to their lowercase intrinsic tags
         const t = type as any;
