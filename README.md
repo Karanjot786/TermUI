@@ -457,6 +457,16 @@ See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and futu
 - [Issues](https://github.com/Karanjot786/TermUI/issues): report bugs, claim tasks
 - [Docs](https://www.termui.io): API reference, guides, examples
 
+## Contributors
+
+Thank you to everyone who has contributed to TermUI. Every bug fix, feature, test, and doc improvement makes this project better for everyone who builds with it.
+
+<a href="https://github.com/Karanjot786/TermUI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Karanjot786/TermUI" alt="Contributors" />
+</a>
+
+Want to join this list? Check the [open issues](https://github.com/Karanjot786/TermUI/issues) and read [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
+
 ## License
 
 MIT
