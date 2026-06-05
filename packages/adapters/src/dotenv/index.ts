@@ -1,5 +1,4 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import type {} from 'dotenv'
 
@@ -14,29 +13,19 @@ interface DotenvModule {
   parse(src: string | Buffer): DotenvValues
 }
 
-// Checks whether a caught error is a missing-module error specifically for dotenv.
-function isMissingDotenvError(error: unknown): error is NodeJS.ErrnoException {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    error.code === 'MODULE_NOT_FOUND' &&
-    error.message.includes('dotenv')
-  )
-}
+let _dotenv: DotenvModule | undefined
 
-// Lazily loads dotenv via createRequire so it is not required at module load time.
+// Lazily loads dotenv. Uses a cached reference after first load.
 function resolveDotenv(): DotenvModule {
+  if (_dotenv) return _dotenv
   try {
-    const require = createRequire(import.meta.url)
-    return require('dotenv') as DotenvModule
-  } catch (error) {
-    if (isMissingDotenvError(error)) {
-      throw new Error(
-        'useDotenv() requires the optional peer dependency `dotenv`. Install `dotenv@^16.0.0` in your app before calling useDotenv().',
-        { cause: error }
-      )
-    }
-    throw error
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    _dotenv = require('dotenv') as DotenvModule
+    return _dotenv
+  } catch {
+    throw new Error(
+      'useDotenv() requires the optional peer dependency `dotenv`. Install `dotenv@^16.0.0` in your app before calling useDotenv().'
+    )
   }
 }
 
