@@ -13,6 +13,21 @@ import {
 import { generateProject, type ProjectConfig } from "./templates.js";
 import { parseArgs, isNonInteractive } from "./args.js";
 
+const VALID_PROJECT_NAME_RE = /^[a-zA-Z0-9@][a-zA-Z0-9_.-]*$/;
+
+function validateProjectName(name: string, source: string): void {
+    if (!VALID_PROJECT_NAME_RE.test(name)) {
+        throw new Error(
+            `Invalid project name "${name}" (from ${source}). Use only letters, digits, hyphens, underscores, dots, or start with @ for scoped packages.`
+        );
+    }
+    if (name === "." || name === "..") {
+        throw new Error(
+            `Invalid project name "${name}". "." and ".." are not allowed as project names.`
+        );
+    }
+}
+
 const TEMPLATES = [
     "Empty (start from scratch)",
     "Dashboard (real-time data)",
@@ -58,6 +73,7 @@ async function main() {
     // ───────── CI MODE ─────────
     if (isNonInteractive(args)) {
         projectName ??= "my-termui-app";
+        validateProjectName(projectName, "command-line argument");
 
         if (args.template && !TEMPLATE_KEYS.includes(args.template as any)) {
             throw new Error(
@@ -118,6 +134,7 @@ async function main() {
     if (!projectName) {
         projectName = await textPrompt("Project name", "my-termui-app");
     }
+    validateProjectName(projectName, "interactive prompt");
 
     const templateIdx = await selectPrompt("What kind of app?", TEMPLATES);
     template = TEMPLATE_KEYS[templateIdx];
