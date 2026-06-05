@@ -156,4 +156,29 @@ describe('useKeychain', () => {
     expect(deleted).toBe(true)
     expect(await keychain.get('anthropic-api-key')).toBe(null)
   })
+
+  it('falls back when keytar access fails at runtime', async () => {
+    mockKeytar = {
+      getPassword: vi.fn(async () => {
+        throw new Error('Keychain access denied')
+      }),
+      setPassword: vi.fn(async () => {
+        throw new Error('Keychain access denied')
+      }),
+      deletePassword: vi.fn(async () => {
+        throw new Error('Keychain access denied')
+      }),
+    }
+    process.env.ANTHROPIC_API_KEY = 'env-secret'
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const useKeychain = await loadUseKeychain()
+    const keychain = useKeychain('my-cli-app')
+
+    expect(await keychain.get('anthropic-api-key')).toBe('env-secret')
+    await keychain.set('anthropic-api-key', 'memory-secret')
+    expect(await keychain.get('anthropic-api-key')).toBe('memory-secret')
+    expect(await keychain.delete('anthropic-api-key')).toBe(true)
+    expect(await keychain.get('anthropic-api-key')).toBe('env-secret')
+    expect(warn).toHaveBeenCalledWith('Keychain access denied')
+  })
 })
