@@ -12,6 +12,7 @@ import {
 } from "./prompts.js";
 import { generateProject, type ProjectConfig } from "./templates.js";
 import { parseArgs, isNonInteractive } from "./args.js";
+import { validateProjectName } from "./validate.js";
 
 const VALID_PROJECT_NAME_RE = /^[a-zA-Z0-9@][a-zA-Z0-9_.-]*$/;
 
@@ -75,6 +76,9 @@ async function main() {
         projectName ??= "my-termui-app";
         validateProjectName(projectName, "command-line argument");
 
+        // Validate project name before any filesystem operations
+        projectName = validateProjectName(projectName);
+
         if (args.template && !TEMPLATE_KEYS.includes(args.template as any)) {
             throw new Error(
                 `Invalid template "${args.template}". Valid: ${TEMPLATE_KEYS.join(", ")}`
@@ -136,6 +140,9 @@ async function main() {
     }
     validateProjectName(projectName, "interactive prompt");
 
+    // Validate project name before any filesystem operations
+    projectName = validateProjectName(projectName);
+
     const templateIdx = await selectPrompt("What kind of app?", TEMPLATES);
     template = TEMPLATE_KEYS[templateIdx];
 
@@ -153,7 +160,7 @@ async function main() {
     );
 
     const config: ProjectConfig = {
-        name: projectName!,
+        name: projectName,
         template,
         theme,
         features: {
@@ -163,7 +170,7 @@ async function main() {
         },
     };
 
-    const projectDir = resolve(process.cwd(), projectName!);
+    const projectDir = resolve(process.cwd(), projectName);
 
     const files = generateProject(config);
 
