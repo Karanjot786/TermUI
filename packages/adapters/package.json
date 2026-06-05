@@ -37,8 +37,9 @@
     "@types/node": "^22.0.0",
     "conf": "^10.2.0",
     "dotenv": "^16.0.0",
-    "typescript": "^5.7.0",
+    "simple-git": "^3.27.0",
     "tsup": "^8.3.0",
+    "typescript": "^5.7.0",
     "zod": "^3.0.0"
   },
   "peerDependencies": {
@@ -49,7 +50,8 @@
     "openai": "^4.0.0",
     "@anthropic-ai/sdk": "^0.39.0",
     "chalk": "^5.0.0",
-    "dotenv": "^16.0.0"
+    "dotenv": "^16.0.0",
+    "simple-git": "^3.27.0"
   },
   "peerDependenciesMeta": {
     "@octokit/rest": {
@@ -74,6 +76,9 @@
       "optional": true
     },
     "dotenv": {
+      "optional": true
+    },
+    "simple-git": {
       "optional": true
     }
   },
