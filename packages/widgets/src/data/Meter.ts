@@ -45,11 +45,6 @@ export class Meter extends Widget {
         this.markDirty();
     }
 
-    setLabel(label: string): void {
-        this._label = label;
-        this.markDirty();
-    }
-
     getValue(): number {
         return this._value;
     }
