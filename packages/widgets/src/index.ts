@@ -85,6 +85,8 @@ export { MultiProgress } from './feedback/MultiProgress.js';
 export type { ProgressItem, MultiProgressOptions } from './feedback/MultiProgress.js';
 export { Spinner, SPINNER_FRAMES } from './feedback/Spinner.js';
 export type { SpinnerOptions } from './feedback/Spinner.js';
+export { LoadingDots } from './feedback/LoadingDots.js';
+export type { LoadingDotsOptions } from './feedback/LoadingDots.js';
 export { TaskList } from './feedback/TaskList.js';
 export type { TaskItem, TaskStatus, TaskListOptions } from './feedback/TaskList.js';
 export { Scrollbar } from './feedback/Scrollbar.js';
