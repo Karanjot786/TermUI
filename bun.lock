@@ -6,6 +6,7 @@
       "name": "termui",
       "dependencies": {
         "commander": "^15.0.0",
+        "dotenv": "^16.0.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
