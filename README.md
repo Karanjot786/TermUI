@@ -460,3 +460,14 @@ See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and futu
 
 MIT
 
+## Troubleshooting
+
+### Build Cache and Dependency Synchronization Issues
+If you encounter runtime rendering issues or stale execution logs while working with cross-package scripts inside this monorepo ecosystem, clear your local project configurations and refresh your setups completely by running:
+
+```bash
+bun run clean
+bun install
+```
+
+
