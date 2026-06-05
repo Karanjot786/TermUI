@@ -299,4 +299,41 @@ describe('CommandPalette', () => {
             expect(palette.isDirty).toBe(true);
         });
     });
+    describe('fuzzy search', () => {
+        it('matches non-contiguous characters', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette({ commands: cmds });
+
+            'of'.split('').forEach((ch) => palette.handleKey(ch));
+
+            palette.handleKey('enter');
+
+            expect(cmds[0].action).toHaveBeenCalledTimes(1);
+        });
+
+        it('is case-insensitive', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette({ commands: cmds });
+
+            'OF'.split('').forEach((ch) => palette.handleKey(ch));
+
+            palette.handleKey('enter');
+
+            expect(cmds[0].action).toHaveBeenCalledTimes(1);
+        });
+
+        it('returns no matches when characters are missing', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette({ commands: cmds });
+
+            'xyz'.split('').forEach((ch) => palette.handleKey(ch));
+
+            palette.handleKey('enter');
+
+            cmds.forEach((cmd) =>
+                expect(cmd.action).not.toHaveBeenCalled()
+            );
+        });
+    });
 });
+
