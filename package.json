@@ -7,15 +7,18 @@
     "packages/*",
     "examples/*"
   ],
-  "scripts": {
+    "scripts": {
     "build": "turbo run build",
     "test": "bun vitest run",
     "test:watch": "bun vitest",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "bench": "bun packages/core/src/benchmark/render-loop.ts",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \".\""
   },
+
+
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^25.2.3",
