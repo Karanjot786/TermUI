@@ -303,6 +303,7 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+        this._previousLines = [];
     }
 
     /**
