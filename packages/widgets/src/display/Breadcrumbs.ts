@@ -37,8 +37,8 @@ export class Breadcrumbs extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        const { x, y, width } = this._rect;
-        if (width <= 0 || this._segments.length === 0) return;
+        const { x, y, width, height } = this._getContentRect();
+        if (width <= 0 || height <= 0 || this._segments.length === 0) return;
 
         const attrs = styleToCellAttrs(this._style);
         const activeColor: Color = this._activeColor ?? { type: 'named', name: 'cyan' };
@@ -58,16 +58,25 @@ export class Breadcrumbs extends Widget {
         }
 
         const hasTruncated = visibleSegments.length < this._segments.length;
+        let showEllipsis = hasTruncated;
+        
+        // If width is so narrow that ellipsis + separator consumes all space,
+        // hide them so at least part of the final segment stays visible.
+        if (showEllipsis && visibleSegments.length === 1) {
+            if (stringWidth(ellipsis + sep) >= width) {
+                showEllipsis = false;
+            }
+        }
         
         let currentX = x;
         const renderList: Array<{ type: 'normal' | 'separator' | 'active', text: string }> = [];
 
-        if (hasTruncated) {
+        if (showEllipsis) {
             renderList.push({ type: 'normal', text: ellipsis });
         }
 
         for (let i = 0; i < visibleSegments.length; i++) {
-            if (i > 0 || hasTruncated) {
+            if (i > 0 || (showEllipsis && hasTruncated)) {
                 renderList.push({ type: 'separator', text: sep });
             }
             const isLast = i === visibleSegments.length - 1;
