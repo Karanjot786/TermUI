@@ -140,6 +140,8 @@ export type { SegmentedControlOptions } from './SegmentedControl.js';
 export { SearchableSelect } from './SearchableSelect.js';
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
+export { Switch } from './Switch.js';
+export type { SwitchOptions } from './Switch.js';
 export { Checkbox } from './Checkbox.js';
 export type { CheckboxOptions } from './Checkbox.js';
 
