@@ -16,6 +16,18 @@
         "vitest": "^2.1.0",
       },
     },
+    "examples/ai-assistant": {
+      "name": "@termuijs/example-ai-assistant",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/adapters": "workspace:*",
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/tss": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+    },
     "examples/ai-streaming": {
       "name": "@termuijs/example-ai-streaming",
       "version": "0.1.0",
@@ -612,6 +624,8 @@
     "@termuijs/data": ["@termuijs/data@workspace:packages/data"],
 
     "@termuijs/dev-server": ["@termuijs/dev-server@workspace:packages/dev-server"],
+
+    "@termuijs/example-ai-assistant": ["@termuijs/example-ai-assistant@workspace:examples/ai-assistant"],
 
     "@termuijs/example-ai-streaming": ["@termuijs/example-ai-streaming@workspace:examples/ai-streaming"],
 

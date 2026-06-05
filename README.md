@@ -393,6 +393,7 @@ bun run dev
 | Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
 | Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
 | CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
+| AI Assistant | Interactive AI chat with streaming | ChatMessage, StreamingText, ToolCall, ToolApproval, useAI, dual-mode operation | [`examples/ai-assistant`](./examples/ai-assistant) |
 
 ## Project structure
 
