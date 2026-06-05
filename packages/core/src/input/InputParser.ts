@@ -30,7 +30,7 @@ export class InputParser {
     private _stdin: NodeJS.ReadStream;
     private _handler: ((data: Buffer) => void) | null = null;
     private _escapeTimeout: ReturnType<typeof setTimeout> | null = null;
-    private _escapeBuffer = Buffer.alloc(0);
+    private _escapeBuffer: Buffer = Buffer.alloc(0);
     private _isPasting = false;
     private _pasteBuffer = '';
     private _cursorRequests: Array<{
