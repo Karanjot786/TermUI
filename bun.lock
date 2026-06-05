@@ -271,6 +271,17 @@
         "@termuijs/widgets": "workspace:*",
       },
     },
+    "examples/snake-game": {
+      "name": "@termuijs/example-snake-game",
+      "version": "0.0.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.0.0",
+      },
+    },
     "examples/system-monitor": {
       "name": "@termuijs/example-sysmon",
       "version": "0.1.0",
@@ -680,6 +691,8 @@
     "@termuijs/example-rss-reader": ["@termuijs/example-rss-reader@workspace:examples/rss-reader"],
 
     "@termuijs/example-showcase": ["@termuijs/example-showcase@workspace:examples/showcase"],
+
+    "@termuijs/example-snake-game": ["@termuijs/example-snake-game@workspace:examples/snake-game"],
 
     "@termuijs/example-sysmon": ["@termuijs/example-sysmon@workspace:examples/system-monitor"],
 
