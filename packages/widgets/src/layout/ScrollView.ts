@@ -28,7 +28,7 @@ export class ScrollView extends Widget {
     private _showScrollbar: boolean;
     private _scrollAccel: boolean;
     private _acceleration = new ScrollAcceleration();
-    private _now = () => Date.now();
+    
 
     constructor(style: Partial<Style> = {}, opts: ScrollViewOptions = {}) {
         super({ overflow: 'hidden', ...style });
@@ -75,7 +75,7 @@ export class ScrollView extends Widget {
 
     const multiplier =
         this._acceleration.getMultiplier(
-            this._now()
+            Date.now()
         );
 
     return baseDelta * multiplier; 
