@@ -132,8 +132,9 @@ export class RangeInput extends Widget {
     const ratioStart = (this._value[0] - this._min) / rangeSize;
     const ratioEnd = (this._value[1] - this._min) / rangeSize;
 
-    const trackStart = Math.round(trackWidth * ratioStart);
-    const trackEnd = Math.round(trackWidth * ratioEnd);
+    const maxTrackIndex = Math.max(0, trackWidth - 1);
+    const trackStart = Math.min(maxTrackIndex, Math.round(maxTrackIndex * ratioStart));
+    const trackEnd = Math.min(maxTrackIndex, Math.round(maxTrackIndex * ratioEnd));
 
     screen.writeString(x, y, prefix, {
       ...attrs,
