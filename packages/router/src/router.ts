@@ -40,14 +40,9 @@ function defaultErrorScreen(err: Error): VNode {
     } as any;
 }
 
-export interface NavigateEvent {
-    match: RouteMatch;
-    screen: VNode;
-}
-
 export interface RouterEvents {
-    navigate: NavigateEvent;
-    back: NavigateEvent | null;
+    navigate: { match: RouteMatch; screen: VNode };
+    back: { match: RouteMatch; screen: VNode } | null;
     error: Error;
 }
 
@@ -61,6 +56,7 @@ export interface RouterOptions {
 export class Router {
     private _routes: Route[] = [];
     private _history: string[] = [];
+    private _forwardStack: string[] = [];
     private _currentMatch: RouteMatch | null = null;
     private _maxHistory: number;
     private _isCleared: boolean = false;
@@ -84,7 +80,6 @@ export class Router {
     ): void {
         const { pattern, paramNames } = compilePattern(path);
 
-        // Extract beforeEnter if it was passed inside the options/meta object block
         const { beforeEnter: beforeEnterFromMeta, ...metaWithoutBeforeEnter } = meta || {};
         const finalBeforeEnter = beforeEnter || beforeEnterFromMeta;
 
@@ -144,6 +139,7 @@ export class Router {
             return;
         }
 
+        this._forwardStack = [];
         this._isCleared = false;
         this._history.push(path);
 
@@ -207,7 +203,10 @@ export class Router {
         }
 
         this._isCleared = false;
-        this._history.pop();
+        const poppedPath = this._history.pop();
+        if (poppedPath) {
+            this._forwardStack.push(poppedPath);
+        }
 
         const prevPath = this._history[this._history.length - 1];
         const match = prevPath ? matchRoute(prevPath, this._routes) : null;
@@ -226,10 +225,69 @@ export class Router {
         }
     }
 
+    /** Move forward one step if a forward entry exists */
+    forward(): void {
+        if (this._forwardStack.length === 0) return;
+
+        const nextPath = this._forwardStack.pop();
+        if (!nextPath) return;
+
+        const match = matchRoute(nextPath, this._routes);
+        if (!match) {
+            this.events.emit('error', new Error(`No route found for forward path: ${nextPath}`));
+            return;
+        }
+
+        this._history.push(nextPath);
+        this._currentMatch = { ...match, meta: match.route?.meta || {} };
+        unmountAll();
+        const screen = this._wrapScreen(this._currentMatch);
+        this.events.emit('navigate', { match: this._currentMatch, screen });
+    }
+
+    /** Move delta steps: negative is back, positive is forward */
+    go(delta: number): void {
+        if (delta === 0) return;
+
+        if (delta < 0) {
+            const steps = Math.abs(delta);
+            if (steps >= this._history.length) return;
+            for (let i = 0; i < steps; i++) {
+                this.back();
+            }
+        } else {
+            if (delta > this._forwardStack.length) return;
+            for (let i = 0; i < delta; i++) {
+                this.forward();
+            }
+        }
+    }
+
     /** Clears the router navigation history securely. */
     clearHistory(): void {
-        this._history = ['/'];
+        this._history = [];
+        this._forwardStack = [];
+        this._currentMatch = null;
         this._isCleared = true;
+    }
+
+    /** Checks if a given path matches the currently active route pattern. */
+    isActive(path: string): boolean {
+        if (this.currentPath === path) {
+            return true;
+        }
+
+        const targetMatch = matchRoute(path, this._routes);
+        if (!targetMatch || !this._currentMatch) {
+            return false;
+        }
+
+        return targetMatch.route.path === this._currentMatch.route.path;
+    }
+
+    /** Whether a forward entry exists */
+    get canGoForward(): boolean {
+        return this._forwardStack.length > 0;
     }
 
     /** Current route match */

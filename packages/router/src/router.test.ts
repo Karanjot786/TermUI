@@ -6,6 +6,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { Router } from './router.js';
 
 describe('Router', () => {
+    const MinimalComponent = () => ({ type: 'text', props: {}, children: [] });
+
     it('initializes with empty history', () => {
         const r = new Router();
         expect(r.historyLength).toBe(0);
@@ -85,72 +87,105 @@ describe('Router', () => {
         ]);
         expect(r.routes).toHaveLength(2);
     });
+
     it('beforeEnter can block navigation', () => {
         const r = new Router();
-
         r.addRoute('/admin', () => 'Admin');
-
         (r.routes[0] as any).beforeEnter = () => false;
-
         r.push('/admin');
-
         expect(r.current).toBeNull();
     });
+
     it('beforeEnter can redirect navigation', () => {
         const r = new Router();
-
         r.addRoute('/login', () => 'Login');
         r.addRoute('/admin', () => 'Admin');
-
         (r.routes[1] as any).beforeEnter = () => '/login';
-
         r.push('/admin');
-
         expect(r.currentPath).toBe('/login');
     });
+
     it('afterEnter executes after navigation', () => {
         const r = new Router();
-
         const spy = vi.fn();
-
         r.addRoute('/home', () => 'Home');
-
         (r.routes[0] as any).afterEnter = spy;
-
         r.push('/home');
-
         expect(spy).toHaveBeenCalled();
     });
+
     it('stores lazy loader on route', () => {
         const r = new Router();
-
         const lazy = () => Promise.resolve({
             default: () => 'LazyScreen',
         });
-
         r.addRoute(
             '/lazy',
             () => 'Placeholder',
             undefined,
-            { lazy },
+            undefined,
+            { beforeEnter: undefined, lazy } as any
         );
-
         expect(r.routes[0]?.lazy).toBe(lazy);
     });
+
     it('addRoutes supports lazy loader', () => {
         const r = new Router();
-
-        const lazy = () => Promise.resolve({
-            default: () => 'LazyScreen',
-        });
-
         r.addRoutes([
             {
                 path: '/lazy',
                 component: () => 'Placeholder',
             },
         ]);
-
         expect(r.routes[0]?.component).toBeDefined();
+    });
+
+    // 🌟 Public API Router.clearHistory() Method Testing Suite
+    describe('clearHistory()', () => {
+        it('should completely flush navigation vectors and history metrics', () => {
+            const r = new Router();
+            r.addRoute('/a', MinimalComponent);
+            r.addRoute('/b', MinimalComponent);
+            
+            r.push('/a');
+            r.push('/b');
+            expect(r.historyLength).toBe(2);
+
+            r.clearHistory();
+            expect(r.historyLength).toBe(0);
+            expect(r.current).toBeNull();
+            expect(r.canGoBack).toBe(false);
+        });
+    });
+
+    // 🌟 Public API Router.isActive() Method Testing Suite
+    describe('isActive()', () => {
+        it('should return true for exact static path string matches', () => {
+            const r = new Router({ initialPath: '/dashboard' });
+            r.addRoute('/dashboard', MinimalComponent);
+            r.addRoute('/settings', MinimalComponent);
+
+            r.push('/dashboard');
+
+            expect(r.isActive('/dashboard')).toBe(true);
+            expect(r.isActive('/settings')).toBe(false);
+        });
+
+        it('should evaluate true for paths matching active dynamic parameter routes', () => {
+            const r = new Router({ initialPath: '/user/42' });
+            r.addRoute('/user/[id]', MinimalComponent);
+
+            r.push('/user/42');
+
+            expect(r.isActive('/user/42')).toBe(true);
+        });
+
+        it('should return false for unmatched or non-existent route paths', () => {
+            const r = new Router({ initialPath: '/' });
+            r.addRoute('/', MinimalComponent);
+            r.push('/');
+
+            expect(r.isActive('/unknown-route-path')).toBe(false);
+        });
     });
 });
