@@ -157,4 +157,22 @@ describe('Button', () => {
         expect(screen.back[0][1].char).toBe('-');
         expect(screen.back[1][0].char).toBe('|');
     });
+
+    it('does not mark dirty when label is unchanged', () => {
+        const button = new Button('Save');
+    
+        button.clearDirty();
+        button.setLabel('Save');
+    
+        expect(button.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when disabled state is unchanged', () => {
+        const button = new Button('Save');
+    
+        button.clearDirty();
+        button.setDisabled(false);
+    
+        expect(button.isDirty).toBe(false);
+    });
 });

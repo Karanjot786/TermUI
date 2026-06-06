@@ -42,6 +42,9 @@ export type { Command, CommandPaletteOptions } from './input/CommandPalette.js';
 export { Button } from './input/Button.js';
 export type { ButtonOptions, ButtonVariant } from './input/Button.js';
 
+export { Slider } from "./input/Slider.js";
+export type { SliderOptions } from "./input/Slider.js";
+
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
 export type { TableColumn, TableRow, TableOptions, TableProps } from './data/Table.js';
@@ -119,6 +122,9 @@ export { Hexdump } from './data/Hexdump.js';
 export type { HexdumpOptions } from './data/Hexdump.js';
 
 // ── New Display Widgets ───────────────────────────────
+export { Breadcrumbs } from './display/Breadcrumbs.js';
+export type { BreadcrumbsOptions } from './display/Breadcrumbs.js';
+
 export { BigText } from './display/BigText.js';
 export type { BigTextOptions } from './display/BigText.js';
 export { Gradient } from './display/Gradient.js';
@@ -175,6 +181,8 @@ export type { MarqueeDirection, MarqueeOptions } from './display/Marquee.js';
 export { DataGrid } from './data/DataGrid.js';
 export { DataGrid as DataGridView } from './data/DataGrid.js';
 export type { DataGridColumn, DataGridRow, DataGridOptions, SortDirection } from './data/DataGrid.js';
+export { PieChart } from './data/PieChart.js';
+export type { PieSlice, PieChartOptions } from './data/PieChart.js';
 
 export {
     BarColumn,

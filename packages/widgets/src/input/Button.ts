@@ -53,11 +53,15 @@ export class Button extends Widget {
     }
 
     setLabel(label: string): void {
+        if (this._label === label) return;
+
         this._label = label;
         this.markDirty();
     }
 
     setDisabled(disabled: boolean): void {
+        if (this._disabled === disabled) return;
+        
         this._disabled = disabled;
         this.markDirty();
     }

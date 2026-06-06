@@ -43,9 +43,9 @@ export class FileWatcher {
                     if (!filename || typeof filename !== 'string') return;
                     const ext = extname(filename);
                     let type: FileChange['type'] | null = null;
-                    if (ext === '.tsx' || ext === '.ts' || ext === '.jsx' || ext === '.js') type = 'tsx';
+                    if (filename.includes('termui.config')) type = 'config';
+                    else if (ext === '.tsx' || ext === '.ts' || ext === '.jsx' || ext === '.js') type = 'tsx';
                     else if (ext === '.tss') type = 'tss';
-                    else if (filename.includes('termui.config')) type = 'config';
                     if (!type) return;
 
                     // Debounce: coalesce rapid saves
