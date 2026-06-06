@@ -4,8 +4,14 @@
 
 import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
-import { type Route, type RouteMatch, type RouteParams, matchRoute, compilePattern } from './route.js';
-
+import {
+    type Route,
+    type RouteMatch,
+    type RouteParams,
+    type RedirectTarget,
+    matchRoute,
+    compilePattern,
+} from './route.js';
 function defaultErrorScreen(err: Error): VNode {
     return {
         type: 'box',
@@ -58,6 +64,42 @@ export class Router {
     /** Register multiple routes */
     addRoutes(routes: Array<{ path: string; component: () => any; layout?: () => any }>): void {
         for (const r of routes) this.addRoute(r.path, r.component, r.layout);
+    }
+    private resolveRedirect(path: string): string {
+        const visited = new Set<string>();
+
+        let currentPath = path;
+
+        for (let depth = 0; depth < 10; depth++) {
+            if (visited.has(currentPath)) {
+                this.events.emit(
+                    'error',
+                    new Error('Redirect cycle detected'),
+                );
+
+                return currentPath;
+            }
+
+            visited.add(currentPath);
+
+            const match = matchRoute(currentPath, this._routes);
+
+            if (!match || !match.route.redirect) {
+                return currentPath;
+            }
+
+            currentPath =
+                typeof match.route.redirect === 'function'
+                    ? match.route.redirect(match.params)
+                    : match.route.redirect;
+        }
+
+        this.events.emit(
+            'error',
+            new Error('Redirect depth exceeded'),
+        );
+
+        return currentPath;
     }
 
     private _wrapScreen(match: RouteMatch): VNode {

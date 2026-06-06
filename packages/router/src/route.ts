@@ -5,6 +5,9 @@
 export interface RouteParams {
     [key: string]: string;
 }
+export type RedirectTarget =
+    | string
+    | ((params: RouteParams) => string);
 
 export interface Route {
     /** URL-like path, e.g. "/settings/theme" */
@@ -17,6 +20,7 @@ export interface Route {
     component: () => any;
     /** Optional layout component */
     layout?: () => any;
+    redirect?: RedirectTarget;
 }
 
 export interface RouteMatch {
