@@ -8,9 +8,11 @@ import {
     type Route,
     type RouteMatch,
     type RouteParams,
+    type RouteMeta,
     matchRoute,
     compilePattern,
 } from './route.js';
+import { RouterContext } from './hooks.js';
 
 function defaultErrorScreen(err: Error): VNode {
     return {
