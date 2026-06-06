@@ -17,6 +17,7 @@ import {
     getBorderChars,
     styleToCellAttrs,
     containsPoint,
+    caps,
 } from '@termuijs/core';
 
 /**
@@ -90,6 +91,11 @@ export abstract class Widget {
     constructor(style: Partial<Style> = {}) {
         this.id = `widget_${++_widgetIdCounter}`;
         this._style = mergeStyles(defaultStyle(), style);
+    }
+
+    /** Check if this widget is currently active (focused) */
+    isActive(): boolean {
+        return this.isFocused;
     }
 
     /** Get the current style */
@@ -249,7 +255,15 @@ export abstract class Widget {
         if (width < 2 || height < 2) return;
 
         if (hasBorder) {
-            const chars = getBorderChars(border);
+            const useAscii =
+                (this._style.asciiOnly ?? false) || !caps.unicode;
+
+            const chars = getBorderChars(
+                border,
+                undefined,
+                useAscii
+            );
+
             if (!chars) return;
 
             const attrs = styleToCellAttrs(this._style);

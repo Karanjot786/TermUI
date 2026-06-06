@@ -16,8 +16,5 @@
     },
     "engines": {
         "bun": ">=1.3.0"
-    },
-    "devDependencies": {
-        "rimraf": "^6.1.3"
     }
 }

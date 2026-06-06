@@ -36,6 +36,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "conf": "^10.2.0",
+    "dotenv": "^16.0.0",
     "typescript": "^5.7.0",
     "tsup": "^8.3.0",
     "zod": "^3.0.0"
@@ -47,7 +48,9 @@
     "zod": "^3.0.0",
     "openai": "^4.0.0",
     "@anthropic-ai/sdk": "^0.39.0",
-    "chalk": "^5.0.0"
+    "chalk": "^5.0.0",
+    "dotenv": "^16.0.0",
+    "keytar": "^7.9.0"
   },
   "peerDependenciesMeta": {
     "@octokit/rest": {
@@ -68,15 +71,22 @@
     "@anthropic-ai/sdk": {
       "optional": true
     },
-     "chalk": {
-    "optional": true
-  }
+    "chalk": {
+      "optional": true
+    },
+    "dotenv": {
+      "optional": true
+    },
+    "keytar": {
+      "optional": true
+    }
   },
   "keywords": [
     "terminal",
     "tui",
     "cli",
-    "adapters"
+    "adapters",
+    "dotenv"
   ],
   "license": "MIT",
   "engines": {

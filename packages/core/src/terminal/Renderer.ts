@@ -127,7 +127,8 @@ export class Renderer {
 
         if (this._diffRenderer) {
             for (let r = 0; r < rows; r++) {
-                if (this._screen.getLine(r) === this._screen.getPreviousLine(r)) continue;
+                if (this._screen.getLine(r) === this._screen.getPreviousLine(r)
+                    && this._screen.getStyleLine(r) === this._screen.getPreviousStyleLine(r)) continue;
                 output += moveTo(0, r);
                 output += this._renderLine(r);
             }

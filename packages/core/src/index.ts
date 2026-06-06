@@ -31,11 +31,20 @@ export { computeLayout, createLayoutNode, invalidateLayout } from './layout/Layo
 export type { LayoutNode } from './layout/LayoutEngine.js';
 export { emptyRect, containsPoint, shrinkRect, intersectRect, unionRect } from './layout/Rect.js';
 export type { Rect, Size } from './layout/Rect.js';
+export { Pos } from './layout/pos.js';
+export { Dim } from './layout/dim.js';
 export {
-    splitRect,
-    length, percentage, ratio, min, max, fill,
-} from './layout/ConstraintLayout.js';
-export type { Constraint } from './layout/ConstraintLayout.js';
+    Constraint,
+    LengthConstraint,
+    PercentageConstraint,
+    MinConstraint,
+    MaxConstraint,
+    FillConstraint,
+    Flex,
+    resolveConstraints,
+    resolveLayoutVariables
+} from './layout/constraint.js';
+export type { ResolvableNode } from './layout/constraint.js';
 
 // ── Events ────────────────────────────────────────────
 export { EventEmitter } from './events/EventEmitter.js';
@@ -81,3 +90,5 @@ export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';
 export * as ansi from './utils/ansi.js';
 export { writeClipboard, readClipboard } from './utils/ansi.js';
+export { debounce } from './utils/debounce.js';
+export type { DebounceOptions } from './utils/debounce.js';

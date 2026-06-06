@@ -79,4 +79,32 @@ describe('Widget', () => {
         const node = parent.getLayoutNode();
         expect(node.children).toHaveLength(2);
     });
+
+    // 🌟 Added verification tests for Widget active state lifecycles
+    describe('isActive() Lifecycle', () => {
+        class FocusableTestWidget extends Widget {
+            focusable = true;
+            protected _renderSelf(): void {}
+        }
+
+        it('should return false when the widget is not active', () => {
+            const widget = new FocusableTestWidget();
+            expect(widget.isActive()).toBe(false);
+        });
+
+        it('should return true after the widget is activated', () => {
+            const widget = new FocusableTestWidget();
+            widget.isFocused = true; // Simulating activation pass
+            expect(widget.isActive()).toBe(true);
+        });
+
+        it('should return false again after deactivation', () => {
+            const widget = new FocusableTestWidget();
+            widget.isFocused = true;
+            expect(widget.isActive()).toBe(true);
+            
+            widget.isFocused = false; // Simulating deactivation pass
+            expect(widget.isActive()).toBe(false);
+        });
+    });
 });

@@ -1,5 +1,6 @@
 <p align="center">
   <h1 align="center">TermUI</h1>
+    
   <p align="center">Build terminal applications in TypeScript.</p>
 </p>
 
@@ -23,9 +24,18 @@
 
 > 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
 
+## Available Scripts
+
+- `dev` → Runs the development server
+- `build` → Builds the project for production
+- `test` → Runs test cases (if available)
+- `lint` → Runs code linter to check errors and style issues
+
 ## What is TermUI?
 
 TermUI is a TypeScript framework for building terminal apps. You get a layout engine, JSX support, React-style hooks, focus management, global state, theming, animations, routing, real-time data, error boundaries, and a hot-reload dev server. No curses bindings. No C extensions. Pure TypeScript.
+### Prerequisites
+- Bun >= 1.3.0
 
 ## Quick Start
 
@@ -36,7 +46,7 @@ bun install
 bun run dev
 ```
 
-Requires [Bun](https://bun.sh) 1.3.0 or newer. Install it with `curl -fsSL https://bun.sh/install | bash` (macOS/Linux) or `powershell -c "irm bun.sh/install.ps1 | iex"` (Windows).
+Requires [Bun](https://bun.sh) 1.3.0 or newer and [Node.js](https://nodejs.org/) 18.0.0 or newer.
 
 ## Manual Setup
 
@@ -390,6 +400,7 @@ bun run dev
 | Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
 | Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
 | CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
+| AI Assistant | Interactive AI chat with streaming | ChatMessage, StreamingText, ToolCall, ToolApproval, useAI, dual-mode operation | [`examples/ai-assistant`](./examples/ai-assistant) |
 
 ## Project structure
 
@@ -453,7 +464,28 @@ See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and futu
 - [Issues](https://github.com/Karanjot786/TermUI/issues): report bugs, claim tasks
 - [Docs](https://www.termui.io): API reference, guides, examples
 
+## Contributors
+
+Thank you to everyone who has contributed to TermUI. Every bug fix, feature, test, and doc improvement makes this project better for everyone who builds with it.
+
+<a href="https://github.com/Karanjot786/TermUI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Karanjot786/TermUI" alt="Contributors" />
+</a>
+
+Want to join this list? Check the [open issues](https://github.com/Karanjot786/TermUI/issues) and read [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
+
 ## License
 
 MIT
+
+## Troubleshooting
+
+### Build Cache and Dependency Synchronization Issues
+If you encounter runtime rendering issues or stale execution logs while working with cross-package scripts inside this monorepo ecosystem, clear your local project configurations and refresh your setups completely by running:
+
+```bash
+bun run clean
+bun install
+```
+
 

@@ -4,6 +4,10 @@ export const caps = {
   motion:  !process.env.NO_MOTION && !process.env.CI,
   ci:      !!process.env.CI,
   get background(): 'light' | 'dark' {
+    // Explicit override takes priority over terminal heuristics.
+    if (process.env.TERM_BACKGROUND === 'light') return 'light';
+    if (process.env.TERM_BACKGROUND === 'dark') return 'dark';
+
     const colorfgbg = process.env.COLORFGBG;
     if (colorfgbg) {
       const parts = colorfgbg.split(';');
@@ -11,7 +15,6 @@ export const caps = {
       if (!Number.isNaN(bg)) return bg < 8 ? 'dark' : 'light';
     }
 
-    if (process.env.TERM_BACKGROUND === 'light') return 'light';
     return 'dark';
   },
 } as const;

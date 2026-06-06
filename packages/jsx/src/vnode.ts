@@ -48,8 +48,12 @@ export interface IntrinsicProps {
     // Common
     flexGrow?: number;
     flexShrink?: number;
-    width?: number | string;
-    height?: number | string;
+    width?: number | string | any;  // any for now because we don't import Dim here to avoid circular dep or we can import from core
+    height?: number | string | any;
+    x?: number | any;
+    y?: number | any;
+    groupId?: string;
+    constraints?: any[];
     padding?: number;
     margin?: number;
 }

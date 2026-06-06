@@ -31,6 +31,42 @@ function createMockRootWidget(): RootWidget {
 }
 
 describe('App', () => {
+    describe('unmount()', () => {
+        it('mount() promise resolves when unmount() is called directly', async () => {
+            const root = createMockRootWidget();
+            const fakeStdout: any = { // minimal stdout stub — full NodeJS.WriteStream type not required here
+                writes: '',
+                columns: 80,
+                rows: 24,
+                isTTY: true,
+                write(s: string) { this.writes += s; },
+                on() {}, off() {},
+            };
+            const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} }; // minimal stdin stub — full NodeJS.ReadStream type not required here
+
+            const app = new App(root, {
+                forceFallback: false,
+                skipFallback: true,
+                screenMode: 'main',
+                stdout: fakeStdout,
+                stdin: fakeStdin,
+            } as AppOptions); // cast needed — not all internal AppOptions fields are publicly exposed
+
+            const mountPromise = app.mount();
+
+            await new Promise((r) => setTimeout(r, 10));
+
+            app.unmount();
+
+            const result = await Promise.race([
+                mountPromise.then(() => 'resolved'),
+                new Promise<string>((r) => setTimeout(() => r('timeout'), 500)),
+            ]);
+
+            expect(result).toBe('resolved');
+        });
+    });
+
     describe('exit()', () => {
         it('does NOT call process.exit when called before mount()', () => {
             const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);

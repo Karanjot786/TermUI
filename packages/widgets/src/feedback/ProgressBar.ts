@@ -77,7 +77,7 @@ export class ProgressBar extends Widget {
         }
 
         const barWidth = Math.max(0, width - label.length);
-        const filled = Math.round(barWidth * this._value);
+        const filled = this._value <= 0 ? 0 : Math.round(barWidth * this._value);
         const empty = barWidth - filled;
 
         // Render bar

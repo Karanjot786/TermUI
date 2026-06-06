@@ -15,6 +15,8 @@ export type {
   ReleasesListParams,
   Release,
 } from './github/index.js'
+export { useKeychain } from './keychain/index.js'
+export type { UseKeychainResult } from './keychain/index.js'
 
 export { zodValidator } from './zod/index.js'
 export type { PromptValidator } from './zod/index.js'
@@ -27,3 +29,7 @@ export type {
   AIOptions,
   AIProvider,
 } from './ai/index.js'
+
+export { useDotenv } from './dotenv/index.js'
+export type { DotenvValues, UseDotenvResult } from './dotenv/index.js'
+
