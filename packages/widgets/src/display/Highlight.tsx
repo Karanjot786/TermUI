@@ -1,3 +1,4 @@
+import { h } from '@termuijs/jsx';
 import { Text } from './Text.js';
 
 export interface HighlightProps {
