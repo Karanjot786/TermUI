@@ -12,6 +12,7 @@ import {
     matchRoute,
     compilePattern,
 } from './route.js';
+import { RouterContext } from './hooks.js';
 
 function defaultErrorScreen(err: Error): VNode {
     return {
@@ -116,10 +117,15 @@ export class Router {
     }
 
     private _wrapScreen(match: RouteMatch): VNode {
+        // Wrap the component with RouterContext.Provider so hooks can read the active router state
         return createElement(
-            ErrorBoundary,
-            { fallback: defaultErrorScreen },
-            createElement(match.route.component, match.params),
+            RouterContext.Provider,
+            { value: this },
+            createElement(
+                ErrorBoundary,
+                { fallback: defaultErrorScreen },
+                createElement(match.route.component, match.params),
+            ),
         );
     }
 

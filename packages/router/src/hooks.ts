@@ -42,5 +42,5 @@ export function useNavigate(): (path: string, options?: { replace?: boolean }) =
  */
 export function useRouteMeta(): RouteMeta {
     const router = useContext(RouterContext);
-    return router?.current?.meta ?? {};
+    return (router?.current?.meta ?? {}) as RouteMeta;
 }
