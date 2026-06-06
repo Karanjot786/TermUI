@@ -10,6 +10,9 @@ import { BasicAuthPrompt } from './BasicAuthPrompt.js';
 // ── Re-exports from @termuijs/widgets (base components) ──
 // Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
 
+// ── Re-exports from @termuijs/widgets (base components) ──
+// Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
+
 export {
     Box,
     Text,
@@ -114,6 +117,9 @@ export type { FilePickerOptions, FileEntry } from './FilePicker.js';
 export { DatePicker } from './DatePicker.js';
 export type { DatePickerOptions } from './DatePicker.js';
 
+export { DateRangePicker } from './DateRangePicker.js';
+export type { DateRange, DateRangePickerOptions } from './DateRangePicker.js';
+
 export { ColorPicker } from './ColorPicker.js';
 export type { ColorPickerOptions } from './ColorPicker.js';
 
@@ -134,6 +140,8 @@ export type { SegmentedControlOptions } from './SegmentedControl.js';
 export { SearchableSelect } from './SearchableSelect.js';
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
+export { Switch } from './Switch.js';
+export type { SwitchOptions } from './Switch.js';
 export { Checkbox } from './Checkbox.js';
 export type { CheckboxOptions } from './Checkbox.js';
 
@@ -153,6 +161,9 @@ export type { MultilineTextInputOptions } from './MultilineTextInput.js';
 export {BasicAuthPrompt} from './BasicAuthPrompt.js';
 export type {BasicAuthCredentials,BasicAuthPromptOptions} from './BasicAuthPrompt.js'
 
+export { TextArea } from './TextArea.js';
+export type { TextAreaOptions } from './TextArea.js';
+
 
 export { Stepper } from './Stepper.js';
 export type { StepperOptions } from './Stepper.js';
@@ -161,6 +172,9 @@ export type { Shortcut, ShortcutHelpOverlayProps } from './components/ShortcutHe
 
 export { RadioGroup } from './RadioGroup.js';
 export type { RadioGroupOption, RadioGroupOptions } from './RadioGroup.js';
+
+export { Rating } from './Rating.js';
+export type { RatingOptions } from './Rating.js';
 export { ThemeSwitcher } from './ThemeSwitcher.js';
 export type { ThemeSwitcherOptions } from './ThemeSwitcher.js';
 
@@ -168,3 +182,6 @@ export { TreeSelect } from './TreeSelect.js';
 export type { TreeSelectNode, TreeSelectOptions } from './TreeSelect.js';
 export { EmailInput } from './EmailInput.js';
 export type { EmailInputOptions } from './EmailInput.js';
+
+export { QuizPrompt } from './QuizPrompt.js';
+export type { QuizPromptOptions, QuizQuestion, QuizResult } from './QuizPrompt.js';

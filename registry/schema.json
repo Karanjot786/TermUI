@@ -1,0 +1,76 @@
+{
+  "$schema": "https://termui.io/registry/schema.json",
+  "version": "1.0.0",
+  "components": [
+    {
+      "name": "badge",
+      "category": "utility",
+      "description": "Short inline label with colored background for status indicators.",
+      "files": [
+        "registry/components/badge/index.ts"
+      ],
+      "deps": [
+        "@termuijs/core",
+        "@termuijs/widgets"
+      ],
+      "peerDeps": [],
+      "version": "0.1.0"
+    },
+    {
+      "name": "alert",
+      "category": "feedback",
+      "description": "Notification badge with count display positioned at corner locations.",
+      "files": [
+        "registry/components/alert/index.ts"
+      ],
+      "deps": [
+        "@termuijs/core",
+        "@termuijs/widgets"
+      ],
+      "peerDeps": [],
+      "version": "0.1.0"
+    },
+    {
+      "name": "markdown",
+      "category": "data",
+      "description": "Renders a subset of Markdown syntax in the terminal with formatting support.",
+      "files": [
+        "registry/components/markdown/index.ts"
+      ],
+      "deps": [
+        "@termuijs/core",
+        "@termuijs/widgets"
+      ],
+      "peerDeps": [],
+      "version": "0.1.0"
+    },
+    {
+      "name": "chat-thread",
+      "category": "data",
+      "description": "Displays chat messages with role badges and word-wrapped content.",
+      "files": [
+        "registry/components/chat-thread/index.ts"
+      ],
+      "deps": [
+        "@termuijs/core",
+        "@termuijs/widgets"
+      ],
+      "peerDeps": [],
+      "version": "0.1.0"
+    },
+    {
+      "name": "progress",
+      "category": "feedback",
+      "description": "Horizontal progress indicator with customizable fill characters and labels.",
+      "files": [
+        "registry/components/progress/index.ts"
+      ],
+      "deps": [
+        "@termuijs/core",
+        "@termuijs/widgets"
+      ],
+      "peerDeps": [],
+      "version": "0.1.0"
+    }
+  ]
+}

@@ -46,7 +46,7 @@ describe('DirectoryTree', () => {
     it('expands directory and renders children', () => {
         const tree = new DirectoryTree({ tree: sampleTree });
 
-        tree.handleKey('Enter');
+        tree.handleKey('enter');
 
         const output = render(tree);
 
@@ -57,8 +57,8 @@ describe('DirectoryTree', () => {
     it('collapsing directory hides children', () => {
         const tree = new DirectoryTree({ tree: sampleTree });
 
-        tree.handleKey('Enter'); // expand
-        tree.handleKey('Enter'); // collapse
+        tree.handleKey('enter'); // expand
+        tree.handleKey('enter'); // collapse
 
         const output = render(tree);
 
@@ -78,8 +78,8 @@ describe('DirectoryTree', () => {
             },
         });
 
-        tree.handleKey('ArrowDown');
-        tree.handleKey(' ');
+        tree.handleKey('down');
+        tree.handleKey('space');
 
         expect(selectedNode).toBe('readme.md');
         expect(selectedPath).toBe('readme.md');
