@@ -60,7 +60,6 @@ export function applyDelegatedEvents(props: Record<string, unknown>, children: V
     function traverse(nodes: VNode[]) {
         for (const node of nodes) {
             if (isVElement(node)) {
-                let matched = false;
                 for (const delegate of delegates) {
                     if (matchesSelector(node.props, delegate.from)) {
                         const existing = node.props[delegate.propName];
@@ -73,7 +72,6 @@ export function applyDelegatedEvents(props: Record<string, unknown>, children: V
                         } else {
                             node.props[delegate.propName] = delegate.handler;
                         }
-                        matched = true;
                     }
                 }
                 if (node.children) {

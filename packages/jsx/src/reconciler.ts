@@ -267,7 +267,7 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
     // VElement
     if (isVElement(vnode)) {
         let { type, props, children } = vnode;
-        children = children ?? [];
+        children = flattenChildren(children ?? []);
 
         applyDelegatedEvents(props, children);
 
