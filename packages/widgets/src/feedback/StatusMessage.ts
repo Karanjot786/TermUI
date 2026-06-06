@@ -54,11 +54,15 @@ export class StatusMessage extends Widget {
     }
 
     setMessage(message: string): void {
+        if (this._message === message) return;
+
         this._message = message;
         this.markDirty();
     }
 
     setVariant(variant: StatusVariant): void {
+        if (this._variant === variant) return;
+        
         this._variant = variant;
         this.markDirty();
     }

@@ -36,7 +36,10 @@ export class CheckboxGroup extends Widget {
         );
 
         this._options = options.options;
-        this._selected = new Set(options.defaultValues ?? []);
+        const knownValues = new Set(options.options.map(o => o.value));
+        this._selected = new Set(
+            (options.defaultValues ?? []).filter(v => knownValues.has(v)),
+        );
         this.onChange = options.onChange;
     }
 

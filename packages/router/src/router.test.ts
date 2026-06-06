@@ -174,4 +174,33 @@ describe('Router', () => {
             expect(r.isActive('/missing')).toBe(false);
         });
     });
+
+    it('beforeEnter can block navigation', () => {
+        const r = new Router();
+        r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => false });
+        
+        r.push('/admin');
+        
+        expect(r.current).toBeNull();
+    });
+
+    it('beforeEnter can redirect navigation', () => {
+        const r = new Router();
+        r.addRoute('/login', () => 'Login');
+        r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => '/login' });
+        
+        r.push('/admin');
+        
+        expect(r.currentPath).toBe('/login');
+    });
+
+    it('afterEnter executes after navigation', () => {
+        const r = new Router();
+        const spy = vi.fn();
+        r.addRoute('/home', () => 'Home', undefined, { afterEnter: spy });
+        
+        r.push('/home');
+        
+        expect(spy).toHaveBeenCalled();
+    });
 });

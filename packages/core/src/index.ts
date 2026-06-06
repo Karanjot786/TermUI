@@ -31,11 +31,20 @@ export { computeLayout, createLayoutNode } from './layout/LayoutEngine.js';
 export type { LayoutNode } from './layout/LayoutEngine.js';
 export { emptyRect, containsPoint, shrinkRect, intersectRect, unionRect } from './layout/Rect.js';
 export type { Rect, Size } from './layout/Rect.js';
+export { Pos } from './layout/pos.js';
+export { Dim } from './layout/dim.js';
 export {
-    splitRect,
-    length, percentage, ratio, min, max, fill,
-} from './layout/ConstraintLayout.js';
-export type { Constraint } from './layout/ConstraintLayout.js';
+    Constraint,
+    LengthConstraint,
+    PercentageConstraint,
+    MinConstraint,
+    MaxConstraint,
+    FillConstraint,
+    Flex,
+    resolveConstraints,
+    resolveLayoutVariables
+} from './layout/constraint.js';
+export type { ResolvableNode } from './layout/constraint.js';
 
 // ── Events ────────────────────────────────────────────
 export { EventEmitter } from './events/EventEmitter.js';

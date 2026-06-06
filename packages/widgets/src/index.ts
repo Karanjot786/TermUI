@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 // ── Base ──────────────────────────────────────────────
-export { Widget } from './base/Widget.js';
+export { Widget, _resetWidgetIdCounter } from './base/Widget.js';
 export type { WidgetEvents } from './base/Widget.js';
 
 // ── Display Widgets ───────────────────────────────────
@@ -80,6 +80,8 @@ export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
 export { Dock } from './layout/Dock.js';
 export type { DockOptions, DockItem, DockEdge } from './layout/Dock.js';
+export { Divider } from './layout/Divider.js';
+export type { DividerOptions, DividerOrientation } from './layout/Divider.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';

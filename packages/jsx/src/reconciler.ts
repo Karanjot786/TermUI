@@ -225,6 +225,10 @@ function extractStyle(props: Record<string, any>): Partial<Style> {
     if (props.asciiOnly != null) style.asciiOnly = ascii;
     if (props.borderColor != null) style.borderColor = parseColorProp(props.borderColor);
     if (props.gap != null) style.gap = props.gap;
+    if (props.x != null) style.x = props.x;
+    if (props.y != null) style.y = props.y;
+    if (props.groupId != null) style.groupId = props.groupId;
+    if (props.constraints != null) style.constraints = props.constraints;
     return style;
 }
 
