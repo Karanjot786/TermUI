@@ -1,11 +1,79 @@
-import type {
-  SimpleGit,
-  LogResult,
-  DefaultLogFields,
-  CommitResult,
-  PushResult,
-  PullResult,
-} from 'simple-git'
+export interface DefaultLogFields {
+  hash: string
+  date: string
+  message: string
+  author_name: string
+  author_email: string
+}
+
+export interface LogResult<T = DefaultLogFields> {
+  all: T[]
+  latest: T | null
+  total: number
+}
+
+export interface CommitResult {
+  author: null | { name: string; email: string }
+  branch: string
+  commit: string
+  summary: {
+    changes: number
+    insertions: number
+    deletions: number
+  }
+}
+
+export interface PushResult {
+  pushed: Array<{
+    deleted: boolean
+    alreadyUpdated: boolean
+    new: boolean
+    forced: boolean
+    localRef: string
+    remoteRef: string
+  }>
+  repo: string
+  update: null | {
+    head: {
+      local: string
+      remote: string
+    }
+    hash: {
+      from: string
+      to: string
+    }
+  }
+}
+
+export interface PullResult {
+  files: string[]
+  insertions: Record<string, number>
+  deletions: Record<string, number>
+  summary: {
+    changes: number
+    insertions: number
+    deletions: number
+  }
+}
+
+interface SimpleGitClient {
+  status(): Promise<{
+    modified: string[]
+    not_added: string[]
+    staged: string[]
+  }>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  log<T = DefaultLogFields>(options?: any): Promise<LogResult<T>>
+  add(files: string | string[]): Promise<string>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  commit(message: string, options?: any): Promise<CommitResult>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  push(remote?: string, branch?: string, options?: any): Promise<PushResult>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pull(remote?: string, branch?: string, options?: any): Promise<PullResult>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  diff(options?: any): Promise<string>
+}
 
 export interface GitStatusResult {
   modified: string[]
@@ -25,7 +93,7 @@ export interface GitAdapter {
 
 let simpleGitModule: unknown = null
 
-async function getSimpleGit(cwd?: string): Promise<SimpleGit> {
+async function getSimpleGit(cwd?: string): Promise<SimpleGitClient> {
   if (!simpleGitModule) {
     try {
       simpleGitModule = await import('simple-git')
@@ -38,14 +106,15 @@ async function getSimpleGit(cwd?: string): Promise<SimpleGit> {
   }
 
   // Typecast simpleGitModule to any to allow accessing dynamic ESM/CJS exports cleanly.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mod = simpleGitModule as any
   const factory = mod.simpleGit || mod.default || mod
   if (typeof factory !== 'function') {
     throw new Error('Failed to resolve simpleGit factory function from "simple-git" module.')
   }
 
-  // Typecast the factory to a function signature that takes options and returns SimpleGit.
-  const gitFactory = factory as (options?: { baseDir: string }) => SimpleGit
+  // Typecast the factory to a function signature that takes options and returns SimpleGitClient.
+  const gitFactory = factory as (options?: { baseDir: string }) => SimpleGitClient
   return gitFactory(cwd ? { baseDir: cwd } : undefined)
 }
 
