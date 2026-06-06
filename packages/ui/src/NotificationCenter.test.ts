@@ -81,6 +81,8 @@ describe('NotificationCenter', () => {
         expect(renderCenter(center)).toContain('i Before');
 
         center.unmount();
+        expect(renderCenter(center)).not.toContain('i Before');
+
         store.push('After', 'success');
 
         const output = renderCenter(center);

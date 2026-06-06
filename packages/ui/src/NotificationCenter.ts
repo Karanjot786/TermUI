@@ -147,6 +147,7 @@ export class NotificationCenter extends Widget {
     override unmount(): void {
         this._unsub?.();
         this._unsub = undefined;
+        this._current = [];
         super.unmount();
     }
 
