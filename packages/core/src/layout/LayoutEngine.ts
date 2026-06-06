@@ -66,8 +66,8 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
     if (!precomputed) {
         // Calculate this node's dimensions
-        let nodeWidth = resolveSize(style.width as string | number | undefined, availWidth);
-        let nodeHeight = resolveSize(style.height as string | number | undefined, availHeight);
+        let nodeWidth = resolveSize(style.width, availWidth);
+        let nodeHeight = resolveSize(style.height, availHeight);
 
         // Apply constraints
         if (nodeWidth === undefined) nodeWidth = availWidth - margin.left - margin.right;
@@ -110,12 +110,13 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
         
         const results = resolveConstraints(mainAvail, style.constraints, flexJustify);
         
+        let visibleIndex = 0;
         for (let i = 0; i < node.children.length; i++) {
             const child = node.children[i];
-            if (i >= results.length) break; // Ignore extra children
+            if (visibleIndex >= results.length) break; // Ignore extra children
             if (child.style.visible === false) continue;
 
-            const res = results[i];
+            const res = results[visibleIndex];
             const childMargin = normalizeEdges(child.style.margin);
             
             if (isRow) {
@@ -134,6 +135,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
                 };
             }
             layoutNode(child, child.computed.width, child.computed.height, true);
+            visibleIndex++;
         }
         node._dirty = false;
         return;
@@ -165,20 +167,20 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
                 id: child.id,
                 x: s.x,
                 y: s.y,
-                width: s.width as any, // could be number | Dim
-                height: s.height as any,
+                width: typeof s.width === 'string' ? undefined : s.width,
+                height: typeof s.height === 'string' ? undefined : s.height,
                 contentWidth: cw,
                 contentHeight: ch,
                 groupId: s.groupId,
                 computed: { x: 0, y: 0, width: 0, height: 0 },
                 _originalNode: child // keep reference
-            } as ResolvableNode & { _originalNode: LayoutNode };
+            } as ResolvableNode & { _originalNode: LayoutNode }; // we attach _originalNode during resolution to map back later
         });
 
         resolveLayoutVariables(resolvableNodes, innerWidth, innerHeight);
 
         for (const rNode of resolvableNodes) {
-            const child = (rNode as any)._originalNode as LayoutNode;
+            const child = (rNode as ResolvableNode & { _originalNode: LayoutNode })._originalNode; // rNode is guaranteed to have _originalNode because we attached it during mapping
             child.computed = {
                 x: Math.floor(node.computed.x + innerX + rNode.computed.x),
                 y: Math.floor(node.computed.y + innerY + rNode.computed.y),
@@ -214,13 +216,13 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
         let crossSize: number;
 
         if (isRow) {
-            mainSize = resolveSize(child.style.width as string | number | undefined, innerWidth) ?? 0;
-            crossSize = resolveSize(child.style.height as string | number | undefined, innerHeight) ?? innerHeight;
+            mainSize = resolveSize(child.style.width, innerWidth) ?? 0;
+            crossSize = resolveSize(child.style.height, innerHeight) ?? innerHeight;
             mainSize += childMargin.left + childMargin.right;
             crossSize = clampSize(crossSize, child.style.minHeight, child.style.maxHeight);
         } else {
-            mainSize = resolveSize(child.style.height as string | number | undefined, innerHeight) ?? 0;
-            crossSize = resolveSize(child.style.width as string | number | undefined, innerWidth) ?? innerWidth;
+            mainSize = resolveSize(child.style.height, innerHeight) ?? 0;
+            crossSize = resolveSize(child.style.width, innerWidth) ?? innerWidth;
             mainSize += childMargin.top + childMargin.bottom;
             crossSize = clampSize(crossSize, child.style.minWidth, child.style.maxWidth);
         }
@@ -341,7 +343,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
  * Resolve a size value (fixed number or percentage string) to pixels.
  * Returns undefined if the value is not set.
  */
-function resolveSize(value: number | string | undefined, available: number): number | undefined {
+function resolveSize(value: number | string | undefined | Dim, available: number): number | undefined {
     if (value === undefined) return undefined;
     if (typeof value === 'number') return value;
     if (typeof value === 'string' && value.endsWith('%')) {
