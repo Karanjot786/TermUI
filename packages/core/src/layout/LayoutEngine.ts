@@ -50,6 +50,10 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
  * - gap between children
  */
 export function computeLayout(root: LayoutNode, containerWidth: number, containerHeight: number): void {
+    // Check if container dimensions changed since last computation
+    const sizeChanged = !root.computed || 
+        root.computed.width !== containerWidth || 
+        root.computed.height !== containerHeight;
     if (!root._dirty && !hasDirtyChild(root)) {
         return;
     }
