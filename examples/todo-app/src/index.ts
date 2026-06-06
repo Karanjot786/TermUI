@@ -43,7 +43,7 @@ app(caps.unicode ? '✅ Todo App' : '[x] Todo App')
             selectable: true,
             onSelect: (idx: number) => {
                 todos[idx] = todos[idx].startsWith('[x] ')
-                    ? todos[idx].slice(2)
+                    ? todos[idx].slice(4)
                     : `[x] ${todos[idx]}`;
             },
         }),
