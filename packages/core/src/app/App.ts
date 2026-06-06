@@ -268,9 +268,11 @@ export class App {
             return;
         }
 
-        // Compute layout
+        // Compute layout only if something in the tree has layout changes
         const layoutRoot = this._rootWidget.getLayoutNode();
-        computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+        if (layoutRoot._dirty) {
+            computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+        }
 
         // Sync computed rects from layout tree back to widgets
         this._rootWidget.syncLayout?.();

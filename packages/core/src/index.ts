@@ -27,7 +27,7 @@ export { ChordMatcher } from './input/ChordMatcher.js';
 export type { ChordMatcherOptions, Chord } from './input/ChordMatcher.js';
 
 // ── Layout ────────────────────────────────────────────
-export { computeLayout, createLayoutNode } from './layout/LayoutEngine.js';
+export { computeLayout, createLayoutNode, invalidateLayout } from './layout/LayoutEngine.js';
 export type { LayoutNode } from './layout/LayoutEngine.js';
 export { emptyRect, containsPoint, shrinkRect, intersectRect, unionRect } from './layout/Rect.js';
 export type { Rect, Size } from './layout/Rect.js';
@@ -45,7 +45,7 @@ export type { KeyEvent, MouseEvent, ResizeEvent, FocusEvent, EventMap } from './
 export { createKeyEvent } from './events/types.js';
 
 // ── Style ─────────────────────────────────────────────
-export { defaultStyle, mergeStyles, normalizeEdges, styleToCellAttrs } from './style/Style.js';
+export { defaultStyle, mergeStyles, normalizeEdges, styleToCellAttrs, hasLayoutChanges } from './style/Style.js';
 export type { Style, Edges } from './style/Style.js';
 export { getBorderChars, borderSize, BORDER_CHARS } from './style/Border.js';
 export type { BorderStyle, BorderChars } from './style/Border.js';
