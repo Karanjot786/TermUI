@@ -92,6 +92,11 @@ export abstract class Widget {
         this._style = mergeStyles(defaultStyle(), style);
     }
 
+    /** Check if this widget is currently active (focused) */
+    isActive(): boolean {
+        return this.isFocused;
+    }
+
     /** Get the current style */
     get style(): Style { return this._style; }
 
