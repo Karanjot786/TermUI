@@ -94,6 +94,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
                 }
                 timeoutId = setTimeout(timerExpired, wait);
             } else {
+                clearTimeout(timeoutId!);
                 timeoutId = setTimeout(timerExpired, wait);
             }
         } else if (timeoutId === null && trailing) {
