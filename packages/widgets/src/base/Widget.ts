@@ -109,7 +109,6 @@ export abstract class Widget {
     addChild(child: Widget): void {
         child.parent = this;
         this._children.push(child);
-        this.markDirty(); // ADD THIS LINE to mark dirty when adding a child
     }
 
     /** Remove a child widget */
@@ -118,7 +117,6 @@ export abstract class Widget {
         if (idx >= 0) {
             this._children.splice(idx, 1);
             child.parent = null;
-            this.markDirty();
         }
     }
 
@@ -128,7 +126,6 @@ export abstract class Widget {
             child.parent = null;
         }
         this._children = [];
-        this.markDirty();
     }
 
     /** Get all children */
