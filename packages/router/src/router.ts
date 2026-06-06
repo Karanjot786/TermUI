@@ -63,6 +63,7 @@ export class Router {
     private _history: string[] = [];
     private _currentMatch: RouteMatch | null = null;
     private _maxHistory: number;
+    private _isCleared: boolean = false;
     readonly events = new EventEmitter<RouterEvents>();
 
     constructor(options: RouterOptions = {}) {
@@ -124,6 +125,7 @@ export class Router {
             return;
         }
 
+        this._isCleared = false;
         this._history.push(path);
 
         // Prevent unbounded history growth
@@ -156,6 +158,7 @@ export class Router {
             return;
         }
 
+        this._isCleared = false;
         if (this._history.length > 0) {
             this._history[this._history.length - 1] = path;
         } else {
@@ -180,6 +183,7 @@ export class Router {
             return;
         }
 
+        this._isCleared = false;
         this._history.pop();
 
         const prevPath = this._history[this._history.length - 1];
@@ -207,6 +211,7 @@ export class Router {
     /** Clears the router navigation history. */
     clearHistory(): void {
         this._history = ['/'];
+        this._isCleared = true;
     }
 
     /** Current route match */
@@ -226,8 +231,7 @@ export class Router {
 
     /** History stack depth */
     get historyLength(): number {
-        // If the stack contains only our benchmark root placeholder, represent it as length 0
-        if (this._history.length === 1 && this._history[0] === '/') {
+        if (this._isCleared) {
             return 0;
         }
         return this._history.length;
@@ -235,6 +239,9 @@ export class Router {
 
     /** Check if we can go back */
     get canGoBack(): boolean {
+        if (this._isCleared) {
+            return false;
+        }
         return this._history.length > 1;
     }
 
