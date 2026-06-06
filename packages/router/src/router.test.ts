@@ -153,4 +153,36 @@ describe('Router', () => {
 
         expect(r.routes[0]?.component).toBeDefined();
     });
+    it('beforeEnter can block navigation', () => {
+        const r = new Router();
+        // Use the official router API to pass the guard in the options object
+        r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => false });
+        
+        r.push('/admin'); // Trigger the real router
+        
+        // The real router should block it, leaving current as null
+        expect(r.current).toBeNull();
+    });
+
+    it('beforeEnter can redirect navigation', () => {
+        const r = new Router();
+        r.addRoute('/login', () => 'Login');
+        r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => '/login' });
+        
+        r.push('/admin'); // Trigger the real router
+        
+        // The real router should hit the guard and redirect to /login
+        expect(r.currentPath).toBe('/login');
+    });
+
+    it('afterEnter executes after navigation', () => {
+        const r = new Router();
+        const spy = vi.fn();
+        r.addRoute('/home', () => 'Home', undefined, { afterEnter: spy });
+        
+        r.push('/home'); // Trigger the real router
+        
+        // The real router should fire the hook automatically after success
+        expect(spy).toHaveBeenCalled();
+    });
 });
