@@ -7,6 +7,7 @@ vi.mock("@termuijs/jsx", () => ({
     typeof initial === "function" ? initial() : initial,
     vi.fn(),
   ],
+  useRef: (initial: unknown) => ({ current: initial }),
   useEffect: (cb: () => void) => cb(),
   useInterval: vi.fn(),
 }));

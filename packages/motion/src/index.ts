@@ -2,10 +2,19 @@
 // @termuijs/motion — Terminal Animations
 // ─────────────────────────────────────────────────────
 // Spring physics
-export { stepSpring, animateSpring, SPRING_PRESETS } from './spring.js';
-export type { SpringConfig, SpringState } from './spring.js';
+export {
+    stepSpring,
+    animateSpring,
+    SPRING_PRESETS,
+    springPreset,
+} from './spring.js';
+export type {
+    SpringConfig,
+    SpringState,
+    SpringPresetName,
+} from './spring.js';
 // Transitions & easings
-export { transition, fadeIn, fadeOut, slideIn, typewriter, pulse, easings } from './transitions.js';
+export { transition, fadeIn, fadeOut, slideIn, typewriter, pulse, easings, cubicBezier } from './transitions.js';
 export type { TransitionOptions, EasingFn } from './transitions.js';
 // Sequencing
 export { sequence, parallel, repeat } from './sequence.js';
@@ -22,3 +31,8 @@ export { pathAnimation } from './path.js'
 
 // Virtual clock (for testing)
 export type { VirtualClock } from './virtual-clock.js'
+
+// Interpolation
+export { mapRange, interpolate } from './interpolate.js';
+export type { InterpolateOptions } from './interpolate.js';
+

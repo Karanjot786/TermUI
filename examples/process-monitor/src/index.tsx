@@ -10,7 +10,7 @@ declare module '@termuijs/jsx' {
                 children?: any;
                 key?: string | number;
                 title?: string;
-                borderColor?: any;
+                borderColor?: string;
                 flexGrow?: number;
                 flexShrink?: number;
                 width?: number | string;
@@ -30,7 +30,7 @@ declare module '@termuijs/jsx/jsx-runtime' {
                 children?: any;
                 key?: string | number;
                 title?: string;
-                borderColor?: any;
+                borderColor?: string;
                 flexGrow?: number;
                 flexShrink?: number;
                 width?: number | string;

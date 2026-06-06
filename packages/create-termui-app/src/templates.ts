@@ -19,7 +19,8 @@ export interface ProjectConfig {
     | 'cli-wrapper'
     | 'cli-tool'
     | 'file-manager'
-    | 'ai-assistant';
+    | 'ai-assistant'
+    | 'form-wizard';
     theme: string;
     features: {
         router: boolean;
@@ -102,7 +103,10 @@ export default defineConfig({
         case 'file-manager':
             files.push(...generateFileManagerTemplate(config));
             break;
+        case 'form-wizard':
+            files.push(...generateFormWizardTemplate(config));
             break;
+
         default:
             files.push(...generateEmptyTemplate(config));
     }
@@ -113,6 +117,7 @@ export default defineConfig({
 function createPackageJson(config: ProjectConfig): string {
     const isFileManager = config.template === 'file-manager';
     const isAiAssistant = config.template === 'ai-assistant';
+    const isRestClient = config.template === 'rest-client';
     return JSON.stringify({
         name: config.name,
         version: '0.1.0',
@@ -131,13 +136,14 @@ function createPackageJson(config: ProjectConfig): string {
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
             }
-            : isFileManager
+            : isFileManager || isRestClient
             ? {
                 '@termuijs/core': 'latest',
                 '@termuijs/widgets': 'latest',
                 '@termuijs/ui': 'latest',
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
+                ...(isRestClient ? { '@termuijs/data': 'latest' } : {}),
             }
             : {
                 '@termuijs/core': 'latest',
@@ -159,6 +165,79 @@ function createPackageJson(config: ProjectConfig): string {
             bun: '>=1.3.0',
         },
     }, null, 2) + '\n';
+}
+
+function generateFormWizardTemplate(
+    config: ProjectConfig
+): GeneratedFile[] {
+    return [
+        {
+            path: 'src/index.tsx',
+            content: `/** @jsxImportSource @termuijs/jsx */
+import { render, useState } from '@termuijs/jsx';
+import { Wizard } from '@termuijs/ui';
+import { TextInput, Spinner } from '@termuijs/widgets';
+
+function App() {
+    const [name, setName] = useState('');
+    const [theme, setTheme] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleComplete = async () => {
+        setSubmitting(true);
+
+        const data = {
+            name,
+            theme,
+        };
+
+        console.log(JSON.stringify(data, null, 2));
+
+        setTimeout(() => {
+            setSubmitting(false);
+        }, 1000);
+    };
+
+    return (
+        <box flexDirection="column" padding={1}>
+            <text bold>Form Wizard</text>
+
+            <Wizard
+                steps={['Info', 'Preferences', 'Confirm']}
+                onComplete={handleComplete}
+            >
+                <box flexDirection="column">
+                    <text>Name</text>
+                    <TextInput
+                        value={name}
+                        onChange={setName}
+                    />
+                </box>
+
+                <box flexDirection="column">
+                    <text>Theme</text>
+                    <TextInput
+                        value={theme}
+                        onChange={setTheme}
+                    />
+                </box>
+
+                <box flexDirection="column">
+                    <text>Confirm Details</text>
+                    <text>Name: {name}</text>
+                    <text>Theme: {theme}</text>
+                </box>
+            </Wizard>
+
+            {submitting && <Spinner />}
+        </box>
+    );
+}
+
+render(<App />, { title: '${config.name}' });
+`,
+        },
+    ];
 }
 
 function generateEmptyTemplate(config: ProjectConfig): GeneratedFile[] {
@@ -957,6 +1036,55 @@ function App() {
                 </box>
             )}>
                 <AiAssistant />
+            </ErrorBoundary>
+        </AutoThemeProvider>
+    );
+}
+
+render(<App />, { title: '${config.name}' });
+`,
+    }];
+}
+
+function generateRestClientTemplate(config: ProjectConfig): GeneratedFile[] {
+    return [{
+        path: 'src/index.tsx',
+        content: `/** @jsxImportSource @termuijs/jsx */
+import { render, useState, useKeymap, ErrorBoundary } from '@termuijs/jsx';
+import { AutoThemeProvider } from '@termuijs/tss';
+import { useFetch } from '@termuijs/data';
+import { JSONView, Text } from '@termuijs/widgets';
+
+function RestClient() {
+    const result = useFetch<{ id: number; name: string; email: string }>(
+        'https://jsonplaceholder.typicode.com/users/1',
+    );
+
+    useKeymap([
+        { key: 'q', action: () => process.exit(0), description: 'Quit' },
+        { key: 'c', ctrl: true, action: () => process.exit(0), description: 'Quit' },
+    ]);
+
+    return (
+        <box flexDirection="column" padding={1} gap={1}>
+            <text bold>${config.name}</text>
+            {result.loading && <text>Loading...</text>}
+            {result.error && <text color="red">Error: {String(result.error.message)}</text>}
+            {result.data && <jsonview data={result.data} />}
+        </box>
+    );
+}
+
+function App() {
+    return (
+        <AutoThemeProvider>
+            <ErrorBoundary fallback={(err) => (
+                <box border="single" borderColor="red" padding={1}>
+                    <text color="red" bold>Error</text>
+                    <text>{err.message}</text>
+                </box>
+            )}>
+                <RestClient />
             </ErrorBoundary>
         </AutoThemeProvider>
     );

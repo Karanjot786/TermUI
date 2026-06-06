@@ -7,7 +7,7 @@
 //
 // Usage: node scripts/compare-bench.mjs <head.json> <main.json> [--threshold 0.20]
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const args = process.argv.slice(2);
 if (args.length < 2) {
@@ -19,13 +19,38 @@ const [headPath, mainPath] = args;
 const thresholdIdx = args.indexOf('--threshold');
 const threshold = thresholdIdx >= 0 ? parseFloat(args[thresholdIdx + 1]) : 0.20;
 
-if (Number.isNaN(threshold) || !Number.isFinite(threshold) || threshold < 0) {
-    console.error('Threshold must be a non-negative number');
+if (
+    Number.isNaN(threshold) ||
+    !Number.isFinite(threshold) ||
+    threshold < 0 ||
+    threshold > 1
+) {
+    console.error('Threshold must be between 0 and 1');
+    process.exit(2);
+}
+let head, main;
+
+if (!existsSync(headPath)) {
+    console.error(`Benchmark file not found: ${headPath}`);
     process.exit(2);
 }
 
-const head = JSON.parse(readFileSync(headPath, 'utf8'));
-const main = JSON.parse(readFileSync(mainPath, 'utf8'));
+if (!existsSync(mainPath)) {
+    console.error(`Benchmark file not found: ${mainPath}`);
+    process.exit(2);
+}
+
+try {
+    head = JSON.parse(readFileSync(headPath, 'utf8'));
+    main = JSON.parse(readFileSync(mainPath, 'utf8'));
+} catch (e) {
+    console.error(`Error parsing benchmark files: ${e.message}`);
+    const errMarkdown = `<!-- termui-bench-comment -->\n## Render-loop benchmark\n\n❌ **Error:** Failed to parse benchmark results. Check CI logs for details.`;
+    const outPath = process.env.BENCH_COMMENT_OUT ?? 'bench-comment.md';
+    writeFileSync(outPath, errMarkdown + '\n', 'utf8');
+    process.exit(2);
+}
+
 function validateBench(data, name) {
     if (!data || typeof data !== 'object') {
         console.error(`${name}: invalid benchmark file`);
@@ -35,6 +60,38 @@ function validateBench(data, name) {
     if (!Array.isArray(data.results)) {
         console.error(`${name}: missing results array`);
         process.exit(2);
+    }
+
+    for (const [index, result] of data.results.entries()) {
+        if (
+            typeof result.cols !== 'number' ||
+            !Number.isFinite(result.cols)
+        ) {
+            console.error(
+                `${name}: result[${index}] has invalid cols value`
+            );
+            process.exit(2);
+        }
+
+        if (
+            typeof result.rows !== 'number' ||
+            !Number.isFinite(result.rows)
+        ) {
+            console.error(
+                `${name}: result[${index}] has invalid rows value`
+            );
+            process.exit(2);
+        }
+
+        if (
+            typeof result.cellsPerSec !== 'number' ||
+            !Number.isFinite(result.cellsPerSec)
+        ) {
+            console.error(
+                `${name}: result[${index}] has invalid cellsPerSec value`
+            );
+            process.exit(2);
+        }
     }
 }
 

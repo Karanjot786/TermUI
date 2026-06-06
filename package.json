@@ -14,13 +14,14 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "bench": "bun packages/core/src/benchmark/render-loop.ts",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \".\""
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^25.2.3",
     "tsup": "^8.3.0",
-    "turbo": "^2.9.16",
+    "turbo": "^2.9.12",
     "typescript": "^5.7.0",
     "vitest": "^2.1.0"
   },
@@ -36,6 +37,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "commander": "^15.0.0"
+    "commander": "^15.0.0",
+    "dotenv": "^16.0.0"
   }
 }

@@ -11,6 +11,7 @@
   "dependencies": {
     "@termuijs/core": "latest",
     "@termuijs/widgets": "latest",
+    "@termuijs/adapters": "latest",
     "@termuijs/ui": "latest",
     "@termuijs/jsx": "latest",
     "@termuijs/tss": "latest"
