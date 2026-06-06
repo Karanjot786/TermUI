@@ -9,7 +9,9 @@ import { deriveTheme } from './theme/derive.js';
  * Context holding the current ThemeTokens.
  * Default value is systemTheme (detected at module load).
  */
-export const ThemeContext = createContext<ThemeTokens>(systemTheme);
+export const ThemeContext = createContext(
+    deriveTheme({ Normal: { fg: systemTheme.fg, bg: systemTheme.bg } })
+);
 
 export interface AutoThemeProviderProps {
     /** Theme to use in dark mode (default: defaultDark) */
@@ -118,26 +120,28 @@ export const AutoThemeProvider: FC<AutoThemeProviderProps> = (props) => {
     const dark = props.darkTheme ?? defaultDark;
     const light = props.lightTheme ?? defaultLight;
 
-    const [theme, setTheme] = useState<ThemeTokens>(() =>
-        detectDark() ? dark : light
+    const [theme, setTheme] = useState(() =>
+        detectDark()
+            ? deriveTheme({ Normal: { fg: dark.fg, bg: dark.bg } })
+            : deriveTheme({ Normal: { fg: light.fg, bg: light.bg } })
     );
 
     useEffect(() => {
-        void deriveTheme({ Normal: { fg: dark.fg, bg: dark.bg } });
-        void deriveTheme({ Normal: { fg: light.fg, bg: light.bg } });
+        const derivedDark = deriveTheme({ Normal: { fg: dark.fg, bg: dark.bg } });
+        const derivedLight = deriveTheme({ Normal: { fg: light.fg, bg: light.bg } });
 
         let cancelled = false;
 
         const updateTheme = async () => {
             const oscDark = await detectDarkViaOsc();
             if (cancelled || oscDark === undefined) return;
-            setTheme(oscDark ? dark : light);
+            setTheme(oscDark ? derivedDark : derivedLight);
         };
 
         updateTheme();
 
         const handler = () => {
-            setTheme(detectDark() ? dark : light);
+            setTheme(detectDark() ? derivedDark : derivedLight);
         };
 
         if (caps.color) {
@@ -174,6 +178,6 @@ export const AutoThemeProvider: FC<AutoThemeProviderProps> = (props) => {
  * useTheme — read the current ThemeTokens from the nearest AutoThemeProvider.
  * Falls back to systemTheme if no provider is present.
  */
-export function useTheme(): ThemeTokens {
+export function useTheme(): ReturnType<typeof deriveTheme> {
     return useContext(ThemeContext);
 }

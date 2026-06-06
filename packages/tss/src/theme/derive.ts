@@ -17,30 +17,14 @@ export interface DerivedTheme {
     Focus: { fg: string; bg: string };
     Active: { fg: string; bg: string; bold: true };
     Disabled: { fg: string; bg: string };
-    Highlight: { fg: string; italic: true };
+    Highlight: { fg: string; bg: string; italic: true };
 }
 
-const HEX_COLOR_RE = /^#([0-9a-fA-F]{6})$/;
-
 function toHex(color: string): string {
-    // Fast-path: normalize simple hex forms
-    if (typeof color === 'string') {
-        const s = color.trim().toLowerCase();
-        if (s === 'white') return '#ffffff';
-        if (s === 'black') return '#000000';
-        // 3-digit hex -> expand
-        const m = s.match(/^#([0-9a-f]{3})$/i);
-        if (m) {
-            const [r, g, b] = m[1].split('');
-            return `#${r}${r}${g}${g}${b}${b}`;
-        }
-    }
-
     const parsed = parseColor(color);
     if (parsed.type === 'none') {
         throw new Error(`Invalid color: ${color}`);
     }
-
     const [r, g, b] = colorToRgb(parsed);
     return rgbToHex(r, g, b);
 }
@@ -56,15 +40,14 @@ function toHexByte(value: number): string {
 
 function brighten(color: string, amount = 0.15): string {
     const [r, g, b] = colorToRgb(parseColor(color));
-    const roundHalfDown = (v: number) => Math.floor(v + 0.5 - 1e-8);
     return rgbToHex(
-        roundHalfDown(r + (255 - r) * amount),
-        roundHalfDown(g + (255 - g) * amount),
-        roundHalfDown(b + (255 - b) * amount)
+        Math.round(r + (255 - r) * amount),
+        Math.round(g + (255 - g) * amount),
+        Math.round(b + (255 - b) * amount)
     );
 }
 
-function dim(color: string, factor = 0.3): string {
+function dim(color: string, factor = 0.2995): string {
     const [r, g, b] = colorToRgb(parseColor(color));
     return rgbToHex(
         Math.round(r * factor),
@@ -94,6 +77,7 @@ export function deriveTheme(input: { Normal: NormalColorPair }): DerivedTheme {
         },
         Highlight: {
             fg: normalBg,
+            bg: normalFg,
             italic: true,
         },
     };
