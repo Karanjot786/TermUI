@@ -12,7 +12,7 @@ import {
     Spinner,
 } from '@termuijs/widgets';
 import type { Style, Color } from '@termuijs/core';
-import { parseColor } from '@termuijs/core';
+import { parseColor, invalidateLayout } from '@termuijs/core';
 import type { VNode, VElement, FC } from './vnode.js';
 import { isVElement, isVFragment, Fragment, flattenChildren } from './vnode.js';
 import { applyDelegatedEvents } from './event-system.js';
@@ -557,6 +557,8 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         runEffects(fiber);
         fiber.isDirty = false;
 
+        // Invalidate old widget's layout cache before replacing
+        invalidateLayout(instance.widget.getLayoutNode());
         _pruneInstancesForWidget(instance.widget);
 
         instance.widget = vnode;
@@ -588,6 +590,8 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     runEffects(fiber);
     fiber.isDirty = false;
 
+    // Invalidate old widget's layout cache before replacing
+    invalidateLayout(instance.widget.getLayoutNode());
     // Remove old widget and all its descendant instances from the map to prevent memory leak
     _pruneInstancesForWidget(instance.widget);
 

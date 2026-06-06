@@ -72,9 +72,15 @@ export class Gradient extends Widget {
 
         const attrs = styleToCellAttrs(this._style);
 
-        // Without color support: render plain text
+        // Without color support: render plain text with alignment applied
         if (!caps.color) {
-            screen.writeString(x, y, this._text.slice(0, width), attrs);
+            const plainChars = Array.from(this._text).slice(0, width);
+            const plainLen = plainChars.length;
+            let plainOffsetX = 0;
+            if (this._align === 'center') plainOffsetX = Math.floor((width - plainLen) / 2);
+            else if (this._align === 'right') plainOffsetX = width - plainLen;
+            plainOffsetX = Math.max(0, plainOffsetX);
+            screen.writeString(x + plainOffsetX, y, plainChars.join(''), attrs);
             return;
         }
 

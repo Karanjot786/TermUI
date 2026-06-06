@@ -122,6 +122,8 @@ export { Definition } from './data/Definition.js';
 export type { DefinitionPair, DefinitionOptions } from './data/Definition.js';
 export { Hexdump } from './data/Hexdump.js';
 export type { HexdumpOptions } from './data/Hexdump.js';
+export { BulletChart } from './data/BulletChart.js';
+export type { BulletChartOptions, BulletRange } from './data/BulletChart.js';
 
 // ── New Display Widgets ───────────────────────────────
 export { Breadcrumbs } from './display/Breadcrumbs.js';

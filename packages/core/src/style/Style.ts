@@ -134,6 +134,27 @@ export function defaultStyle(): Style {
 }
 
 /**
+ * Set of style property keys that affect layout.
+ * When only non-layout props change, the layout tree can be reused.
+ */
+export const LAYOUT_PROPS: ReadonlySet<keyof Style> = new Set<keyof Style>([
+    'width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
+    'padding', 'margin', 'border',
+    'flexDirection', 'justifyContent', 'alignItems', 'flexGrow', 'flexShrink', 'flexWrap', 'gap',
+    'overflow', 'visible',
+]);
+
+/**
+ * Returns true when any layout-affecting property differs between old and new style.
+ */
+export function hasLayoutChanges(oldStyle: Style, newStyle: Style): boolean {
+    for (const key of LAYOUT_PROPS) {
+        if (oldStyle[key as keyof Style] !== newStyle[key as keyof Style]) return true;
+    }
+    return false;
+}
+
+/**
  * Extract the cell-level style attributes from a Style object.
  * Used when rendering text into the screen buffer.
  */

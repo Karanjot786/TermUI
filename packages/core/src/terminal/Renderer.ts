@@ -120,12 +120,34 @@ export class Renderer {
             this._screen.invalidate();
         }
 
-        const { front, back, cols, rows } = this._screen;
-        let output = beginSyncUpdate;
-        let lastRow = -1;
-        let lastCol = -1;
+        try {
+            const { front, back, cols, rows } = this._screen;
+            let output = beginSyncUpdate;
+            let lastRow = -1;
+            let lastCol = -1;
 
-        if (this._diffRenderer) {
+            if (this._diffRenderer) {
+                for (let r = 0; r < rows; r++) {
+                    if (this._screen.getLine(r) === this._screen.getPreviousLine(r)) continue;
+                    output += moveTo(0, r);
+                    output += this._renderLine(r);
+                }
+
+                output += ansiReset;
+                output += endSyncUpdate;
+
+                const isHookActive = this.hook.isActive;
+                if (isHookActive) this.hook.stop();
+                if (bufferedLogs) this._terminal.write(bufferedLogs);
+                this._terminal.write(output);
+                if (isHookActive) this.hook.start();
+
+                this._screen.saveLines();
+                this._emitStats(start, bufferedLogs, output);
+                this._screen.swap();
+                return;
+            }
+
             for (let r = 0; r < rows; r++) {
                 if (this._screen.getLine(r) === this._screen.getPreviousLine(r)
                     && this._screen.getStyleLine(r) === this._screen.getPreviousStyleLine(r)) continue;
@@ -136,63 +158,30 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
+            // 2. Pause the hook temporarily so our own UI rendering doesn't get buffered
             const isHookActive = this.hook.isActive;
-            if (isHookActive) this.hook.stop();
-            if (bufferedLogs) this._terminal.write(bufferedLogs);
-            this._terminal.write(output);
-            if (isHookActive) this.hook.start();
+            if (isHookActive) {
+                this.hook.stop();
+            }
 
-            this._screen.saveLines();
+            // 3. Print the captured logs FIRST (above the UI)
+            if (bufferedLogs) {
+                this._terminal.write(bufferedLogs);
+            }
+
+            // 4. Print the actual UI diff natively
+            this._terminal.write(output);
+
+            // 5. Resume catching external logs
+            if (isHookActive) {
+                this.hook.start();
+            }
+
             this._emitStats(start, bufferedLogs, output);
             this._screen.swap();
-            return;
+        } catch (err) {
+            console.error('[TermUI] Renderer flush error:', err);
         }
-
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const frontCell = front[r][c];
-                const backCell = back[r][c];
-
-                if (cellsEqual(frontCell, backCell)) continue;
-
-                // Skip continuation cells (second half of wide chars)
-                if (backCell.width === 0) continue;
-
-                // Move cursor only if not already at the right position
-                if (r !== lastRow || c !== lastCol) {
-                    output += moveTo(c, r);
-                }
-
-                output += this._renderCell(backCell);
-                lastRow = r;
-                lastCol = c + (backCell.width === 2 ? 2 : 1);
-            }
-        }
-
-        output += ansiReset;
-        output += endSyncUpdate;
-
-        // 2. Pause the hook temporarily so our own UI rendering doesn't get buffered
-        const isHookActive = this.hook.isActive;
-        if (isHookActive) {
-            this.hook.stop();
-        }
-
-        // 3. Print the captured logs FIRST (above the UI)
-        if (bufferedLogs) {
-            this._terminal.write(bufferedLogs);
-        }
-
-        // 4. Print the actual UI diff natively
-        this._terminal.write(output);
-
-        // 5. Resume catching external logs
-        if (isHookActive) {
-            this.hook.start();
-        }
-
-        this._emitStats(start, bufferedLogs, output);
-        this._screen.swap();
     }
 
     /**

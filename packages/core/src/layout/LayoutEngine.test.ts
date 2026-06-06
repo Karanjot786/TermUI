@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect } from 'vitest';
-import { computeLayout, createLayoutNode } from '../layout/LayoutEngine.js';
+import { computeLayout, createLayoutNode, invalidateLayout } from '../layout/LayoutEngine.js';
 import type { Style } from '../style/Style.js';
 
 function makeNode(id: string, style: Partial<Style> = {}, children: ReturnType<typeof createLayoutNode>[] = []) {
@@ -117,5 +117,70 @@ describe('computeLayout', () => {
         expect(root.children[0].computed.y).toBe(0);
         // The visible 'b' should be at y=5 (after 'a')
         // Note: hidden children are filtered out of layout
+    });
+});
+
+describe('layout cache invalidation', () => {
+    it('clean node skips computation (dirty flag preserved after layout)', () => {
+        const root = makeNode('root', { width: 100, height: 50 });
+        root._dirty = true;
+        computeLayout(root, 100, 50);
+        // After layout, node should be clean
+        expect(root._dirty).toBe(false);
+        expect(root.computed.width).toBe(100);
+
+        // Modifying computed should stick if we skip layout
+        root.computed.width = 999;
+        computeLayout(root, 100, 50);
+        // Since root is clean, layoutNode returns early and width stays 999
+        expect(root.computed.width).toBe(999);
+    });
+
+    it('dirty node recomputes layout', () => {
+        const root = makeNode('root', { width: 100, height: 50 });
+        computeLayout(root, 100, 50);
+        expect(root.computed.width).toBe(100);
+
+        // Mark dirty and change container — should recompute
+        root._dirty = true;
+        computeLayout(root, 200, 100);
+        expect(root.computed.width).toBe(200);
+        expect(root.computed.height).toBe(100);
+    });
+
+    it('invalidateLayout propagates _dirty to all descendants', () => {
+        const childA = makeNode('a');
+        const childB = makeNode('b');
+        const root = makeNode('root', {}, [childA, childB]);
+
+        // Compute once — everything becomes clean
+        computeLayout(root, 80, 24);
+        expect(root._dirty).toBe(false);
+        expect(childA._dirty).toBe(false);
+        expect(childB._dirty).toBe(false);
+
+        // Invalidate only the root — all children should also become dirty
+        invalidateLayout(root);
+        expect(root._dirty).toBe(true);
+        expect(childA._dirty).toBe(true);
+        expect(childB._dirty).toBe(true);
+    });
+
+    it('clean subtree with dirty parent still recomputes parent', () => {
+        const child = makeNode('child', { height: 10 });
+        const parent = makeNode('parent', {}, [child]);
+
+        computeLayout(parent, 80, 24);
+        expect(parent._dirty).toBe(false);
+        expect(child._dirty).toBe(false);
+
+        // Mark only the parent dirty
+        parent._dirty = true;
+        computeLayout(parent, 80, 24);
+        // After layout, all should be clean again
+        expect(parent._dirty).toBe(false);
+        expect(child._dirty).toBe(false);
+        expect(child.computed.y).toBe(0);
+        expect(child.computed.height).toBe(10);
     });
 });
