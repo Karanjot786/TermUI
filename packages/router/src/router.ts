@@ -206,7 +206,7 @@ export class Router {
 
     /** Clears the router navigation history. */
     clearHistory(): void {
-        this._history = [];
+        this._history = ['/'];
     }
 
     /** Current route match */
