@@ -1,4 +1,3 @@
-# Dependencies
 node_modules/
 
 # Build outputs
@@ -16,7 +15,21 @@ node_modules/
 dist/
 build/
 .turbo/
+*.tsbuildinfo
 coverage/
+.DS_Store
+
+website/
+scratch/
+.worktrees/
+
+# Bench artifacts
+bench-head.json
+bench-main.json
+bench-head.txt
+bench-main.txt
+bench-comment.md
+docs/superpowers/
 
 # TypeScript
 *.tsbuildinfo
@@ -24,9 +37,9 @@ coverage/
 # Environment
 .env
 .env.*
-!.env.example
 
 # Logs
+<<<<<<< HEAD
 *.log
 
 # OS
@@ -145,3 +158,6 @@ bench-comment.md
 bun-completions/
 *_logs/
 .stylelintcache
+=======
+*.log
+>>>>>>> 6151e05 (chore: extend gitignore with safe universal ignores)
