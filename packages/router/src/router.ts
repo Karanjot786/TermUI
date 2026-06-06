@@ -56,9 +56,24 @@ export class Router {
     }
 
     /** Register a route */
-    addRoute(path: string, component: () => any, layout?: () => any): void {
+    addRoute(
+        path: string,
+        component: () => any,
+        layout?: () => any,
+        children?: Route[],
+        meta?: Record<string, unknown>,
+        redirect?: RedirectTarget,
+    ): void {
         const { pattern, paramNames } = compilePattern(path);
-        this._routes.push({ path, pattern, paramNames, component, layout });
+
+        this._routes.push({
+            path,
+            pattern,
+            paramNames,
+            component,
+            layout,
+            redirect,
+        });
     }
 
     /** Register multiple routes */
@@ -112,13 +127,13 @@ export class Router {
 
     /** Navigate to a path */
     push(path: string): void {
-        const match = matchRoute(path, this._routes);
+        const finalPath = this.resolveRedirect(path);
+        const match = matchRoute(finalPath, this._routes);
         if (!match) {
             this.events.emit('error', new Error(`No route found for path: ${path}`));
             return;
         }
-        this._history.push(path);
-        // Prevent unbounded history growth
+        this._history.push(finalPath);        // Prevent unbounded history growth
         if (this._history.length > this._maxHistory) {
             this._history = this._history.slice(-this._maxHistory);
         }
@@ -130,15 +145,16 @@ export class Router {
 
     /** Replace current path */
     replace(path: string): void {
-        const match = matchRoute(path, this._routes);
+        const finalPath = this.resolveRedirect(path);
+        const match = matchRoute(finalPath, this._routes);
         if (!match) {
             this.events.emit('error', new Error(`No route found for path: ${path}`));
             return;
         }
         if (this._history.length > 0) {
-            this._history[this._history.length - 1] = path;
+            this._history[this._history.length - 1] = finalPath;
         } else {
-            this._history.push(path);
+            this._history.push(finalPath);
         }
         this._currentMatch = match;
         unmountAll();
