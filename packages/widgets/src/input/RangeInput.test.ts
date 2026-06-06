@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { Screen, caps, createKeyEvent } from "@termuijs/core";
 
 afterEach(() => {
-  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
+
+const key = (name: string) =>
+  createKeyEvent({ key: name, raw: Buffer.alloc(0), ctrl: false, alt: false, shift: false });
 
 describe("RangeInput", () => {
   it("constructs with defaults", async () => {
@@ -42,7 +46,7 @@ describe("RangeInput", () => {
 
     // Active thumb defaults to 0 (lower bound)
     range.setValue([20, 80]);
-    range.handleKey({ key: "right" } as any);
+    range.handleKey(key("right"));
     expect(range.getValue()).toEqual([25, 80]);
   });
 
@@ -52,7 +56,7 @@ describe("RangeInput", () => {
 
     // Active thumb defaults to 0 (lower bound)
     range.setValue([20, 80]);
-    range.handleKey({ key: "left" } as any);
+    range.handleKey(key("left"));
     expect(range.getValue()).toEqual([15, 80]);
   });
 
@@ -61,21 +65,18 @@ describe("RangeInput", () => {
     const range = new RangeInput("Filter", {}, { step: 5 });
 
     range.setValue([20, 80]);
-    range.handleKey({ key: "tab" } as any); // Switches to upper bound
+    range.handleKey(key("tab")); // Switches to upper bound
     
-    range.handleKey({ key: "right" } as any);
+    range.handleKey(key("right"));
     expect(range.getValue()).toEqual([20, 85]);
 
-    range.handleKey({ key: "left" } as any);
+    range.handleKey(key("left"));
     expect(range.getValue()).toEqual([20, 80]);
   });
 
   it("renders ascii mode", async () => {
-    vi.stubEnv("NO_UNICODE", "1");
-    vi.stubEnv("TERM", "");
-    vi.resetModules();
+    vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
 
-    const { Screen } = await import("@termuijs/core");
     const { RangeInput } = await import("./RangeInput.js");
 
     const range = new RangeInput("Filter");
@@ -95,11 +96,8 @@ describe("RangeInput", () => {
   });
 
   it("renders unicode mode", async () => {
-    vi.stubEnv("NO_UNICODE", "");
-    vi.stubEnv("TERM", "");
-    vi.resetModules();
+    vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
 
-    const { Screen } = await import("@termuijs/core");
     const { RangeInput } = await import("./RangeInput.js");
 
     const range = new RangeInput("Filter");

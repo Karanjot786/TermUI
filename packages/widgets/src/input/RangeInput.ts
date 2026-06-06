@@ -28,15 +28,16 @@ export class RangeInput extends Widget {
   private _showValue: boolean;
 
   constructor(
-    label: string,
+    label?: string,
     style: Partial<Style> = {},
     opts: RangeInputOptions = {}
   ) {
     super(style);
 
-    this._label = label;
+    this._label = label ?? "";
     this._min = opts.min ?? 0;
     this._max = opts.max ?? 100;
+    this._value = [this._min, this._max];
     this._step = opts.step ?? 1;
     this._color = opts.color ?? { type: "named", name: "cyan" };
     this._showValue = opts.showValue ?? true;
@@ -71,7 +72,7 @@ export class RangeInput extends Widget {
         this.markDirty();
         break;
       case "right": {
-        const newValue = [...this._value] as [number, number];
+        const newValue: [number, number] = [this._value[0], this._value[1]];
         newValue[this._activeThumb] += this._step;
         
         // Prevent active thumb from crossing the other
@@ -85,7 +86,7 @@ export class RangeInput extends Widget {
         break;
       }
       case "left": {
-        const newValue = [...this._value] as [number, number];
+        const newValue: [number, number] = [this._value[0], this._value[1]];
         newValue[this._activeThumb] -= this._step;
         
         // Prevent active thumb from crossing the other
