@@ -1,0 +1,20 @@
+{
+  "name": "@termuijs/example-markdown-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+  "start": "bun src/index.tsx",
+  "dev": "bun --watch src/index.tsx",
+  "build": "echo 'no build needed'",
+  "typecheck": "tsc --noEmit"
+},
+  "dependencies": {
+    "@termuijs/core": "workspace:*",
+    "@termuijs/widgets": "workspace:*",
+    "@termuijs/ui": "workspace:*"
+  },
+  "devDependencies": {
+  "typescript": "^5.9.3"
+}
+}

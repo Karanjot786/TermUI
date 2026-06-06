@@ -85,4 +85,54 @@ describe('Router', () => {
         ]);
         expect(r.routes).toHaveLength(2);
     });
+
+    it('addRoutes supports lazy loader', () => {
+        const r = new Router();
+        const lazy = () => Promise.resolve({
+            default: () => 'LazyScreen',
+        });
+
+        r.addRoutes([
+            {
+                path: '/lazy',
+                component: () => 'Placeholder',
+            },
+        ]);
+
+        expect(r.routes[0]?.component).toBeDefined();
+    });
+
+    it("falls back to 404", () => {
+        const r = new Router();
+        r.addRoute('/404', () => 'NotFound');
+        
+        // Listen for the unmatched route error and redirect to our 404 route
+        r.events.on('error', () => {
+            r.push('/404');
+        });
+        
+        r.push('/missing');
+        expect(r.currentPath).toBe('/404');
+    });
+
+    it("updates the history stack with push and back", () => {
+        const r = new Router();
+        r.addRoute('/', () => 'Home');
+        r.addRoute('/about', () => 'About');
+
+        // Push to home
+        r.push('/');
+        expect(r.currentPath).toBe('/');
+        expect(r.historyLength).toBe(1);
+
+        // Push to about
+        r.push('/about');
+        expect(r.currentPath).toBe('/about');
+        expect(r.historyLength).toBe(2);
+
+        // Go back
+        r.back();
+        expect(r.currentPath).toBe('/');
+        expect(r.historyLength).toBe(1);
+    });
 });

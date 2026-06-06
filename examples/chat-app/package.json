@@ -1,0 +1,25 @@
+{
+    "name": "@termuijs/example-chat-app",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Streaming Chat UI example app",
+    "type": "module",
+    "scripts": {
+        "start": "bun src/index.tsx",
+        "dev": "bun --watch src/index.tsx",
+        "typecheck": "tsc --noEmit",
+        "build": "echo 'no build needed'"
+    },
+    "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/jsx": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.3"
+    },
+    "engines": {
+        "bun": ">=1.3.0"
+    }
+}

@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { Box } from './Box.js';
-import { Screen } from '@termuijs/core';
+import { Screen, mergeBorders } from '@termuijs/core';
 
 describe('Box', () => {
     it('renders border characters for single border', () => {
@@ -45,4 +45,78 @@ describe('Box', () => {
     it('creates empty box without errors', () => {
         expect(() => new Box()).not.toThrow();
     });
+    it('supports adjacent box border docking', () => {
+    const left = new Box({ border: 'single' });
+    const right = new Box({ border: 'single' });
+
+    const screen = new Screen(20, 10);
+
+    left.updateRect({
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 5,
+    });
+
+    right.updateRect({
+        x: 9,
+        y: 0,
+        width: 10,
+        height: 5,
+    });
+
+    left.render(screen);
+    right.render(screen);
+
+    mergeBorders(screen);
+
+    expect(screen.back[2][9].char).not.toBe(' ');
+});
+    
+it('supports a 2x2 box grid layout with merged borders', () => {
+    const topLeft = new Box({ border: 'single' });
+    const topRight = new Box({ border: 'single' });
+    const bottomLeft = new Box({ border: 'single' });
+    const bottomRight = new Box({ border: 'single' });
+
+    const screen = new Screen(20, 10);
+
+    topLeft.updateRect({
+        x: 0,
+        y: 0,
+        width: 10,
+        height: 5,
+    });
+
+    topRight.updateRect({
+        x: 9,
+        y: 0,
+        width: 10,
+        height: 5,
+    });
+
+    bottomLeft.updateRect({
+        x: 0,
+        y: 4,
+        width: 10,
+        height: 5,
+    });
+
+    bottomRight.updateRect({
+        x: 9,
+        y: 4,
+        width: 10,
+        height: 5,
+    });
+
+    topLeft.render(screen);
+    topRight.render(screen);
+    bottomLeft.render(screen);
+    bottomRight.render(screen);
+
+    mergeBorders(screen);
+
+    // Center intersection of the 2x2 grid
+    expect(screen.back[4][9].char).toBe('┼');
+  });
 });

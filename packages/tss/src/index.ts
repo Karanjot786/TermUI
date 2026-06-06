@@ -11,20 +11,21 @@ export { parse } from './parser.js';
 export type { TSSStylesheet, TSSTheme, TSSSelector, TSSProperty, TSSValue, TSSRule } from './parser.js';
 
 // Theme Engine
-export { ThemeEngine } from './engine.js';
+export { ThemeEngine, compile, compileRules } from './engine.js';
 export type { ThemeVariables, ResolvedRule } from './engine.js';
 
 // Built-in Themes
 export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThemes } from './themes.js';
 
 // Design Tokens
-export { systemTheme, defaultDark, defaultLight, detectDark, tokensToTSS } from './tokens.js';
+export { systemTheme, defaultDark, defaultLight, detectDark, tokensToTSS, loadThemeFromFile } from './tokens.js';
 export type { ThemeTokens } from './tokens.js';
+export { adaptive, type AdaptiveColor } from './adaptive.js';
 
 // Named ThemeTokens
 export {
   draculaTheme, nordTheme, catppuccinTheme, monokaiTheme,
-  solarizedTheme, tokyoNightTheme, oneDarkTheme,
+  solarizedTheme, solarizedLightTheme, tokyoNightTheme, oneDarkTheme, highContrastTheme,
   NAMED_THEMES, getNamedTheme,
 } from './named-themes.js';
 
@@ -35,3 +36,5 @@ export type { WatcherOptions } from './watcher.js';
 // AutoThemeProvider
 export { AutoThemeProvider, ThemeContext, useTheme } from './AutoThemeProvider.js';
 export type { AutoThemeProviderProps } from './AutoThemeProvider.js';
+export * from './media.js';
+export * from './importer.js';

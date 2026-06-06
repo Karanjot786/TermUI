@@ -131,7 +131,7 @@ describe('DiffView', () => {
             const view = makeDiffView(lines, 40, 5);
 
             expect((view as any)._scrollOffset).toBe(0);
-            view.handleKey('ArrowDown');
+            view.handleKey('down');
             expect((view as any)._scrollOffset).toBe(1);
         });
 
@@ -154,7 +154,7 @@ describe('DiffView', () => {
             // height=5 > lines=3, so maxOffset=0
             const view = makeDiffView(lines, 40, 5);
 
-            view.handleKey('ArrowDown');
+            view.handleKey('down');
             expect((view as any)._scrollOffset).toBe(0);
         });
     });
@@ -167,11 +167,11 @@ describe('DiffView', () => {
             }));
             const view = makeDiffView(lines, 40, 5);
 
-            view.handleKey('ArrowDown');
-            view.handleKey('ArrowDown');
+            view.handleKey('down');
+            view.handleKey('down');
             expect((view as any)._scrollOffset).toBe(2);
 
-            view.handleKey('ArrowUp');
+            view.handleKey('up');
             expect((view as any)._scrollOffset).toBe(1);
         });
 
@@ -193,7 +193,7 @@ describe('DiffView', () => {
             const view = makeDiffView(lines, 40, 5);
 
             expect((view as any)._scrollOffset).toBe(0);
-            view.handleKey('ArrowUp');
+            view.handleKey('up');
             expect((view as any)._scrollOffset).toBe(0);
         });
     });
@@ -207,7 +207,7 @@ describe('DiffView', () => {
             // height=5, lines=10, maxOffset=5
             const view = makeDiffView(lines, 40, 5);
 
-            view.handleKey('End');
+            view.handleKey('end');
             expect((view as any)._scrollOffset).toBe(5);
         });
 
@@ -218,8 +218,8 @@ describe('DiffView', () => {
             }));
             const view = makeDiffView(lines, 40, 5);
 
-            view.handleKey('End');
-            view.handleKey('Home');
+            view.handleKey('end');
+            view.handleKey('home');
             expect((view as any)._scrollOffset).toBe(0);
         });
     });
@@ -232,7 +232,7 @@ describe('DiffView', () => {
             }));
             const view = makeDiffView(lines, 40, 5);
 
-            view.handleKey('End');
+            view.handleKey('end');
             expect((view as any)._scrollOffset).toBe(5);
 
             const newLines: DiffLine[] = [
@@ -281,7 +281,7 @@ describe('DiffView', () => {
             }));
             const view = makeDiffView(lines, 40, 5);
 
-            view.handleKey('PageDown');
+            view.handleKey('pagedown');
             expect((view as any)._scrollOffset).toBe(5);
         });
 
@@ -292,9 +292,9 @@ describe('DiffView', () => {
             }));
             const view = makeDiffView(lines, 40, 5);
 
-            view.handleKey('PageDown');
-            view.handleKey('PageDown');
-            view.handleKey('PageUp');
+            view.handleKey('pagedown');
+            view.handleKey('pagedown');
+            view.handleKey('pageup');
             expect((view as any)._scrollOffset).toBe(5);
         });
     });

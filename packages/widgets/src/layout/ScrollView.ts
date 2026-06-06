@@ -32,6 +32,8 @@ export class ScrollView extends Widget {
 
     /** Set the total content height (in rows) */
     setContentHeight(h: number): void {
+        if (this._contentHeight === h) return;
+
         this._contentHeight = h;
         this._clampOffset();
         this.markDirty();
@@ -49,9 +51,14 @@ export class ScrollView extends Widget {
 
     /** Scroll to absolute offset */
     scrollTo(offset: number): void {
+        const previousOffset = this._scrollOffset;
+    
         this._scrollOffset = offset;
         this._clampOffset();
-        this.markDirty();
+    
+        if (previousOffset !== this._scrollOffset) {
+            this.markDirty();
+        }
     }
 
     private _clampOffset(): void {
@@ -61,12 +68,12 @@ export class ScrollView extends Widget {
     }
 
     /** Handle keyboard navigation */
-    onKey(event: KeyEvent): void {
+    handleKey(event: KeyEvent): void {
         switch (event.key) {
-            case 'ArrowUp':   this.scrollBy(-1); break;
-            case 'ArrowDown': this.scrollBy(1); break;
-            case 'PageUp':    this.scrollBy(-Math.max(1, this._rect.height - 1)); break;
-            case 'PageDown':  this.scrollBy(Math.max(1, this._rect.height - 1)); break;
+            case 'up':       this.scrollBy(-1); break;
+            case 'down':     this.scrollBy(1); break;
+            case 'pageup':   this.scrollBy(-Math.max(1, this._rect.height - 1)); break;
+            case 'pagedown': this.scrollBy(Math.max(1, this._rect.height - 1)); break;
         }
     }
 

@@ -13,12 +13,16 @@ import { computeLayout, type LayoutNode } from '../layout/LayoutEngine.js';
 import type { EventMap } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
+import { mergeBorders } from '../renderer/border-merge.js';
+import { renderInlineToTerminal } from '../inline-viewport.js';
 
 export interface AppOptions extends TerminalOptions {
     /** Frames per second for the render loop */
     fps?: number;
     /** Use alternate screen (full-screen mode). Default: true */
     fullscreen?: boolean;
+    /** Merge adjacent borders into junction characters */
+    dockBorders?: boolean;
     /** Screen mode: 'alternate' = alt screen (default), 'main' = render to main screen, 'inline' = render N rows at cursor */
     screenMode?: 'alternate' | 'main' | 'inline';
     /** Number of rows to render in inline mode (only used when screenMode='inline') */
@@ -31,6 +35,7 @@ export interface AppOptions extends TerminalOptions {
     skipFallback?: boolean;
     /** Title to set on the terminal window */
     title?: string;
+    diffRenderer?: boolean;
 }
 
 /**
@@ -86,6 +91,8 @@ export class App {
             fullscreen: true,
             mouse: false,
             fps: 30,
+            dockBorders: false,
+            diffRenderer: true,
             // Default screenMode: if fullscreen explicitly disabled, treat as 'main', otherwise 'alternate'
             screenMode: options.fullscreen === false ? 'main' : 'alternate',
             inlineRows: 0,
@@ -94,7 +101,7 @@ export class App {
 
         this.terminal = new Terminal(options);
         this.screen = new Screen(this.terminal.cols, this.terminal.rows);
-        this.renderer = new Renderer(this.terminal, this.screen, this._options.fps);
+        this.renderer = new Renderer(this.terminal, this.screen, this._options.fps, this._options.diffRenderer);
         this.input = new InputParser(this.terminal.stdin);
         this.focus = new FocusManager();
         this.events = new EventEmitter();
@@ -209,7 +216,7 @@ export class App {
     /**
      * Stop the application and restore terminal state.
      */
-    unmount(): void {
+    unmount(exitCode: number = 0): void {
         if (!this._mounted) return;
         this._mounted = false;
 
@@ -228,6 +235,11 @@ export class App {
         this.input.stop();
         this.terminal.restore();
         this.events.removeAll();
+
+        if (this._exitResolve) {
+            this._exitResolve(exitCode);
+            this._exitResolve = null;
+        }
     }
 
     /**
@@ -279,7 +291,10 @@ export class App {
         // Clear dirty flags now that we've rendered — future requestRender()
         // calls will skip layout until markDirty() is called again.
         this._rootWidget.clearDirty?.();
-
+        // Merge adjacent borders into junction characters for a cleaner look
+        if (this._options.dockBorders) {
+           mergeBorders(this.screen);
+        }
         // Composite overlay layers on top of the base rendering
         this.layers.composite(this.screen);
 
@@ -288,27 +303,17 @@ export class App {
         // is preserved. It also emits any registered `insertBefore` lines
         // above the live UI.
         if (this._options.screenMode === 'inline') {
-            // Lazy import to avoid circular deps in tests
             // Render any insertBefore lines first
             for (const item of this._insertBefore) {
                 this.terminal.write(item.text + '\n');
             }
             // Render bottom N rows as plain text
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const mod = require('../inline-viewport.js');
-                const renderInlineToTerminal = mod.renderInlineToTerminal ?? mod.default?.renderInlineToTerminal;
-                if (typeof renderInlineToTerminal === 'function') {
-                    // Ensure we pass an object with a `write` method. Support Terminal instance
-                    // or raw stdout-like streams used in tests.
-                    const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
-                        ? (this.terminal as any)
-                        : { write: (s: string) => (this.terminal as any).stdout.write(s) };
-                    renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
-                }
-            } catch (e) {
-                // Fallback: write nothing
-            }
+            // Ensure we pass an object with a `write` method. Support Terminal instance
+            // or raw stdout-like streams used in tests.
+            const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
+                ? (this.terminal as any)
+                : { write: (s: string) => (this.terminal as any).stdout.write(s) };
+            renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
             return;
         }
 
@@ -319,7 +324,7 @@ export class App {
      * Exit the app (convenience method).
      */
     exit(code = 0): void {
-        this.unmount();
+        this.unmount(code);
         if (this._exitResolve) {
             this._exitResolve(code);
             this._exitResolve = null;

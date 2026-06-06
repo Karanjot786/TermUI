@@ -87,3 +87,88 @@ describe('FocusManager', () => {
         expect(fm.isFocused('b')).toBe(true);
     });
 });
+
+describe('FocusManager Spatial Navigation', () => {
+    it('right move picks the nearest right neighbor', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('a', 0, true));
+        fm.register(makeWidget('b', 1, true));
+        
+        fm.setRect('a', { x: 0, y: 0, width: 4, height: 1 });
+        fm.setRect('b', { x: 10, y: 0, width: 4, height: 1 });
+        
+        fm.focusWidget('a');
+        expect(fm.focusRight()).toBe(true);
+        expect(fm.currentId).toBe('b');
+    });
+
+    it('down move picks the nearest below neighbor', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('top', 0, true));
+        fm.register(makeWidget('bottom', 1, true));
+        
+        fm.setRect('top', { x: 0, y: 0, width: 10, height: 2 });
+        fm.setRect('bottom', { x: 0, y: 5, width: 10, height: 2 });
+        
+        fm.focusWidget('top');
+        expect(fm.focusDown()).toBe(true);
+        expect(fm.currentId).toBe('bottom');
+    });
+
+    it('up move picks the nearest above neighbor', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('bottom', 0, true));
+        fm.register(makeWidget('top', 1, true));
+        
+        fm.setRect('bottom', { x: 0, y: 5, width: 10, height: 2 });
+        fm.setRect('top', { x: 0, y: 0, width: 10, height: 2 });
+        
+        fm.focusWidget('bottom');
+        expect(fm.focusUp()).toBe(true);
+        expect(fm.currentId).toBe('top');
+    });
+
+    it('left move picks the nearest left neighbor', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('right', 0, true));
+        fm.register(makeWidget('left', 1, true));
+        
+        fm.setRect('right', { x: 10, y: 0, width: 4, height: 1 });
+        fm.setRect('left', { x: 0, y: 0, width: 4, height: 1 });
+        
+        fm.focusWidget('right');
+        expect(fm.focusLeft()).toBe(true);
+        expect(fm.currentId).toBe('left');
+    });
+
+    it('no candidate in a direction returns false', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('lonely', 0, true));
+        fm.setRect('lonely', { x: 5, y: 5, width: 5, height: 5 });
+        
+        fm.focusWidget('lonely');
+        
+        expect(fm.focusUp()).toBe(false);
+        expect(fm.focusDown()).toBe(false);
+        expect(fm.focusLeft()).toBe(false);
+        expect(fm.focusRight()).toBe(false);
+        expect(fm.currentId).toBe('lonely');
+    });
+
+    it('a closer widget wins over a farther one on the same axis', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('start', 0, true));
+        fm.register(makeWidget('close', 1, true));
+        fm.register(makeWidget('far', 2, true));
+        
+        fm.setRect('start', { x: 0, y: 0, width: 2, height: 2 });
+        fm.setRect('close', { x: 5, y: 0, width: 2, height: 2 }); // dx=5
+        fm.setRect('far', { x: 15, y: 0, width: 2, height: 2 });  // dx=15
+        
+        fm.focusWidget('start');
+        
+        expect(fm.focusRight()).toBe(true);
+        // It should pick the closer one
+        expect(fm.currentId).toBe('close');
+    });
+});
