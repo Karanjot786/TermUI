@@ -19,7 +19,7 @@ export class Select extends Widget {
     focusable = true;
 
     constructor(options: SelectOption[], config: SelectOptions = {}, style?: Partial<Style>) {
-        super(mergeStyles(defaultStyle(), { height: 1 }, style));
+        super(mergeStyles(mergeStyles(defaultStyle(), { height: 1 }), style ?? {}));
         this._options = options;
         this._placeholder = config.placeholder ?? 'Select...';
         this._activeColor = config.activeColor ?? { type: 'named', name: 'cyan' };
