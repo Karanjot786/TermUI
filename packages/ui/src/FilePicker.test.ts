@@ -149,19 +149,18 @@ describe('FilePicker', () => {
         });
 
         it('selectedEntry is undefined when the list is empty (root with no children)', async () => {
-            mockDir([]);
+            // Mock both calls: construction + any subsequent reload
             readdirSync.mockReturnValue([] as any);
-            // Simulate root: dirname(root) === root
-            // Use the platform root so there is no '..' entry
+            statSync.mockReturnValue({ isDirectory: () => false } as any);
+            // Use the platform root so dirname(root) === root, which suppresses the '..' entry
             const root = nodePath.parse(process.cwd()).root;
 
             const { FilePicker } = await import('./FilePicker.js');
             const picker = new FilePicker({ startPath: root });
 
-            // Root has no '..' entry; if there are no files either, entries is empty
-            if (picker.entries.length === 0) {
-                expect(picker.selectedEntry).toBeUndefined();
-            }
+            // Root with an empty directory produces zero entries
+            expect(picker.entries.length).toBe(0);
+            expect(picker.selectedEntry).toBeUndefined();
         });
     });
 
@@ -742,9 +741,9 @@ describe('FilePicker', () => {
             const picker = new FilePicker({ startPath: '/project' });
 
             picker.selectNext();
-            picker.selectNext(); // cursor = 2
+            picker.selectNext(); // cursor = 2 → 'src' (alpha order: ['..', 'lib', 'src'])
 
-            picker.confirm(); // navigate into 'lib'
+            picker.confirm(); // navigate into 'src'
             expect(picker.cursorIndex).toBe(0);
         });
 
