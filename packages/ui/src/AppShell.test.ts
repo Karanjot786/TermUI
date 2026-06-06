@@ -122,13 +122,13 @@ describe('AppShell', () => {
         shell.render(firstScreen);
         expect(firstScreen.back[1][0].char).toBe('A');
 
-        shell.handleKey({ key: 'ArrowDown', ctrl: false, alt: false } as any);
+        shell.handleKey({ key: 'down', ctrl: false, alt: false } as any);
 
         const secondScreen = new Screen(20, 6);
         shell.render(secondScreen);
         expect(secondScreen.back[1][0].char).toBe('B');
 
-        shell.handleKey({ key: 'ArrowUp', ctrl: false, alt: false } as any);
+        shell.handleKey({ key: 'up', ctrl: false, alt: false } as any);
 
         const thirdScreen = new Screen(20, 6);
         shell.render(thirdScreen);

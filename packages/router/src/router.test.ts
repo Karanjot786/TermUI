@@ -91,12 +91,14 @@ describe('Router', () => {
         const lazy = () => Promise.resolve({
             default: () => 'LazyScreen',
         });
+
         r.addRoutes([
             {
                 path: '/lazy',
                 component: () => 'Placeholder',
             },
         ]);
+
         expect(r.routes[0]?.component).toBeDefined();
     });
 
