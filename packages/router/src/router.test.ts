@@ -164,4 +164,31 @@ describe('Router', () => {
         
         expect(spy).toHaveBeenCalled();
     });
+
+    it('initialPath sets current match once a matching route is registered', () => {
+        const r = new Router({ initialPath: '/dashboard' });
+        r.addRoute('/dashboard', () => 'DashboardScreen');
+
+        expect(r.current).not.toBeNull();
+        expect(r.currentPath).toBe('/dashboard');
+        expect(r.current?.route.path).toBe('/dashboard');
+    });
+
+    it('initialPath emits navigate when a matching route is registered', () => {
+        const navFn = vi.fn();
+        const r = new Router({ initialPath: '/home' });
+        r.events.on('navigate', navFn);
+        r.addRoute('/home', () => 'Home');
+
+        expect(navFn).toHaveBeenCalledOnce();
+        expect(navFn.mock.calls[0][0].match.route.path).toBe('/home');
+    });
+
+    it('initialPath resolves route params when a matching route is registered', () => {
+        const r = new Router({ initialPath: '/user/42' });
+        r.addRoute('/user/[id]', () => 'UserScreen');
+
+        expect(r.current).not.toBeNull();
+        expect(r.params.id).toBe('42');
+    });
 });
