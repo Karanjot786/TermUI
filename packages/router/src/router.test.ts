@@ -191,4 +191,15 @@ describe('Router', () => {
         expect(r.current).not.toBeNull();
         expect(r.params.id).toBe('42');
     });
+
+    it('initialPath with no matching route never sets current or emits navigate', () => {
+        const navFn = vi.fn();
+        const r = new Router({ initialPath: '/never' });
+        r.events.on('navigate', navFn);
+        r.addRoute('/dashboard', () => 'Dashboard');
+        r.addRoute('/settings', () => 'Settings');
+
+        expect(r.current).toBeNull();
+        expect(navFn).not.toHaveBeenCalled();
+    });
 });

@@ -50,7 +50,6 @@ export class Router {
 
         if (options.initialPath) {
             this._pendingInitialPath = options.initialPath;
-            this._applyInitialPathIfPending();
         }
     }
 
