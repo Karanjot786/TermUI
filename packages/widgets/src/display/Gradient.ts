@@ -2,7 +2,7 @@
 // @termuijs/widgets — Gradient widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, caps, parseColor } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, caps, parseColor, shouldUseColor } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface GradientOptions {
@@ -73,7 +73,7 @@ export class Gradient extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         // Without color support: render plain text with alignment applied
-        if (!caps.color) {
+        if (!shouldUseColor()) {
             const plainChars = Array.from(this._text).slice(0, width);
             const plainLen = plainChars.length;
             let plainOffsetX = 0;
