@@ -602,8 +602,6 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     instance.widget = newWidget;
     instance.lastVNode = vnode;
 
-    newWidget.markDirty();
-
     // Re-register with new widget
     _instanceMap.set(newWidget, instance);
 
