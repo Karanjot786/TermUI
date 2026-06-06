@@ -93,4 +93,31 @@ describe('tail', () => {
         appendAndWatch('line1\nline2\nline3\n', stream);
         expect(stream.lines).toEqual(['line1', 'line2', 'line3']);
     });
+
+    it('resets partial buffer on file truncation', () => {
+        fileContent = '\n\n\n\n\n';
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+
+        const stream = tail('/tmp/test.log', { initialLines: 100 });
+
+        // Write a partial line with no newline
+        appendAndWatch('incomplete', stream);
+        expect(stream.lines).toEqual([]);
+
+        // Simulate file truncation — curr.size < fileSize
+        // Set fileContent to new truncated content
+        const prevSize = fileContent.length;
+        fileContent = 'new content\n';
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+        watchCallback!(stats(fileContent.length), stats(prevSize));
+
+        // Truncation resets partialLine and loads new content via readFileSync
+        expect(stream.lines).toEqual(['new content']);
+
+        // Next append must NOT prepend old partial fragment
+        appendAndWatch('fresh line\n', stream);
+        expect(stream.lines).toEqual(['new content', 'fresh line']);
+    });
 });
