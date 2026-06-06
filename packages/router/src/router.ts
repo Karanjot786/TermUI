@@ -3,31 +3,55 @@
 // ─────────────────────────────────────────────────────
 
 import { EventEmitter } from '@termuijs/core';
-import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
+import {
+    createElement,
+    ErrorBoundary,
+    unmountAll,
+    type VNode,
+} from '@termuijs/jsx';
 
 import {
     type Route,
     type RouteMatch,
     type RouteParams,
     type RedirectTarget,
+    type RouteMeta,
     matchRoute,
     compilePattern,
 } from './route.js';
 
-import { type Route, type RouteMatch, type RouteParams, type RouteMeta, matchRoute, compilePattern } from './route.js';
 import { RouterContext } from './hooks.js';
 
+// ─────────────────────────────────────────────────────
+// Error UI
+// ─────────────────────────────────────────────────────
 
 function defaultErrorScreen(err: Error): VNode {
     return {
         type: 'box',
-        props: { border: 'single', borderColor: 'red', padding: 1 },
+        props: {
+            border: 'single',
+            borderColor: 'red',
+            padding: 1,
+        },
         children: [
-            { type: 'text', props: { color: 'red', bold: true }, children: ['Router Error'] },
-            { type: 'text', props: {}, children: [err.message] },
+            {
+                type: 'text',
+                props: { color: 'red', bold: true },
+                children: ['Router Error'],
+            },
+            {
+                type: 'text',
+                props: {},
+                children: [err.message],
+            },
         ],
     } as any;
 }
+
+// ─────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────
 
 export interface NavigateEvent {
     match: RouteMatch;
@@ -41,11 +65,13 @@ export interface RouterEvents {
 }
 
 export interface RouterOptions {
-    /** Initial path */
     initialPath?: string;
-    /** Maximum history entries (default: 100) */
     maxHistory?: number;
 }
+
+// ─────────────────────────────────────────────────────
+// Router
+// ─────────────────────────────────────────────────────
 
 export class Router {
     private _routes: Route[] = [];
@@ -64,45 +90,21 @@ export class Router {
         }
     }
 
-    /** Register a route */
-    addRoute(
-        path: string,
-        component: () => any,
-        layout?: () => any,
-        children?: Route[],
-        meta?: Record<string, unknown>,
-        redirect?: RedirectTarget,
-    ): void {
-
-        options?: {
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        },
-    ): void;
+    // ─────────────────────────────────────────────────────
+    // Add Route (FIXED)
+    // ─────────────────────────────────────────────────────
 
     addRoute(
         path: string,
         component: () => any,
         layout?: () => any,
-        children?: Route[],
-        meta?: RouteMeta,
-        options?: {
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        },
-    ): void;
-
-    addRoute(
-        path: string,
-        component: () => any,
-        layout?: () => any,
-        childrenOrOptions?: Route[] | {
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        },
+        childrenOrOptions?:
+            | Route[]
+            | {
+                lazy?: () => Promise<any>;
+                beforeEnter?: (to: string) => boolean | string;
+                afterEnter?: (to: string) => void;
+            },
         meta?: RouteMeta,
         options?: {
             lazy?: () => Promise<any>;
@@ -110,12 +112,9 @@ export class Router {
             afterEnter?: (to: string) => void;
         },
     ): void {
-        let children: Route[] | undefined = undefined;
-        let finalOptions: {
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        } | undefined = options;
+        let children: Route[] | undefined;
+
+        let finalOptions = options;
 
         if (Array.isArray(childrenOrOptions)) {
             children = childrenOrOptions;
@@ -123,15 +122,7 @@ export class Router {
             finalOptions = childrenOrOptions;
         }
 
-        let finalMeta = meta ?? {};
-        if (options === undefined && meta && typeof meta === 'object' && ('lazy' in meta || 'beforeEnter' in meta || 'afterEnter' in meta)) {
-            finalOptions = meta as any;
-            const strippedMeta = { ...meta };
-            delete (strippedMeta as any).lazy;
-            delete (strippedMeta as any).beforeEnter;
-            delete (strippedMeta as any).afterEnter;
-            finalMeta = strippedMeta;
-        }
+        const finalMeta = meta ?? {};
 
         const { pattern, paramNames } = compilePattern(path);
 
@@ -141,8 +132,6 @@ export class Router {
             paramNames,
             component,
             layout,
-            redirect,
-
             children,
             meta: finalMeta,
             lazy: finalOptions?.lazy,
@@ -151,7 +140,10 @@ export class Router {
         });
     }
 
-    /** Register multiple routes */
+    // ─────────────────────────────────────────────────────
+    // Multiple Routes
+    // ─────────────────────────────────────────────────────
+
     addRoutes(
         routes: Array<{
             path: string;
@@ -172,9 +164,13 @@ export class Router {
             });
         }
     }
+
+    // ─────────────────────────────────────────────────────
+    // Redirect Resolver
+    // ─────────────────────────────────────────────────────
+
     private resolveRedirect(path: string): string {
         const visited = new Set<string>();
-
         let currentPath = path;
 
         for (let depth = 0; depth < 10; depth++) {
@@ -183,7 +179,6 @@ export class Router {
                     'error',
                     new Error('Redirect cycle detected'),
                 );
-
                 return currentPath;
             }
 
@@ -209,46 +204,63 @@ export class Router {
         return currentPath;
     }
 
+    // ─────────────────────────────────────────────────────
+    // Screen Wrapper
+    // ─────────────────────────────────────────────────────
+
     private _wrapScreen(match: RouteMatch): VNode {
         let screen = createElement(match.route.component, match.params);
 
         for (let i = match.chain.length - 2; i >= 0; i--) {
             const parent = match.chain[i];
             const Wrapper = parent.layout ?? parent.component;
-            screen = createElement(Wrapper, { ...match.params, outlet: screen });
+
+            screen = createElement(Wrapper, {
+                ...match.params,
+                outlet: screen,
+            });
         }
 
-        const withProvider = createElement(RouterContext.Provider, { value: this }, screen);
+        const withProvider = createElement(
+            RouterContext.Provider,
+            { value: this },
+            screen,
+        );
 
-        return createElement(ErrorBoundary, { fallback: defaultErrorScreen }, withProvider);
+        return createElement(
+            ErrorBoundary,
+            { fallback: defaultErrorScreen },
+            withProvider,
+        );
     }
 
-    /** Navigate to a path */
+    // ─────────────────────────────────────────────────────
+    // NAVIGATION (FIXED)
+    // ─────────────────────────────────────────────────────
+
     push(path: string): void {
         const finalPath = this.resolveRedirect(path);
         const match = matchRoute(finalPath, this._routes);
-        const match = matchRoute(path, this._routes);
 
         if (!match) {
-            this.events.emit('error', new Error(`No route found for path: ${path}`));
+            this.events.emit(
+                'error',
+                new Error(`No route found for path: ${path}`),
+            );
             return;
         }
-        this._history.push(finalPath);        // Prevent unbounded history growth
 
-        // A new push(path) clears the forward stack
-        this._forwardStack = [];
-        const guardResult = match.route.beforeEnter?.(path);
+        const guardResult = match.route.beforeEnter?.(finalPath);
 
-        if (guardResult === false) {
-            return;
-        }
+        if (guardResult === false) return;
 
         if (typeof guardResult === 'string') {
             this.push(guardResult);
             return;
         }
 
-        this._history.push(path);
+        this._history.push(finalPath);
+        this._forwardStack = [];
 
         if (this._history.length > this._maxHistory) {
             this._history = this._history.slice(-this._maxHistory);
@@ -262,25 +274,24 @@ export class Router {
 
         this.events.emit('navigate', { match, screen });
 
-        match.route.afterEnter?.(path);
+        match.route.afterEnter?.(finalPath);
     }
 
-    /** Replace current path */
     replace(path: string): void {
         const finalPath = this.resolveRedirect(path);
         const match = matchRoute(finalPath, this._routes);
-        const match = matchRoute(path, this._routes);
 
         if (!match) {
-            this.events.emit('error', new Error(`No route found for path: ${path}`));
+            this.events.emit(
+                'error',
+                new Error(`No route found for path: ${path}`),
+            );
             return;
         }
 
-        const guardResult = match.route.beforeEnter?.(path);
+        const guardResult = match.route.beforeEnter?.(finalPath);
 
-        if (guardResult === false) {
-            return;
-        }
+        if (guardResult === false) return;
 
         if (typeof guardResult === 'string') {
             this.replace(guardResult);
@@ -301,107 +312,97 @@ export class Router {
 
         this.events.emit('navigate', { match, screen });
 
-        match.route.afterEnter?.(path);
+        match.route.afterEnter?.(finalPath);
     }
 
-    /** Go back in history */
+    // ─────────────────────────────────────────────────────
+    // BACK / FORWARD
+    // ─────────────────────────────────────────────────────
+
     back(): void {
         if (this._history.length <= 1) return;
-        
-        // back() pushes the popped path onto a forward stack
-        const poppedPath = this._history.pop();
-        if (poppedPath) {
-            this._forwardStack.push(poppedPath);
-        }
 
-        const prevPath = this._history[this._history.length - 1];
-        const match = prevPath ? matchRoute(prevPath, this._routes) : null;
+        const popped = this._history.pop();
+        if (popped) this._forwardStack.push(popped);
+
+        const prev = this._history[this._history.length - 1];
+        const match = prev ? matchRoute(prev, this._routes) : null;
 
         this._currentMatch = match;
 
         if (match) {
             unmountAll();
-
             const screen = this._wrapScreen(match);
-
             this.events.emit('back', { match, screen });
         } else {
             this.events.emit('back', null);
         }
     }
 
-    /** Move forward one step if a forward entry exists */
     forward(): void {
-        if (this._forwardStack.length === 0) return;
-
         const nextPath = this._forwardStack.pop();
         if (!nextPath) return;
 
         const match = matchRoute(nextPath, this._routes);
         if (!match) {
-            this.events.emit('error', new Error(`No route found for forward path: ${nextPath}`));
+            this.events.emit(
+                'error',
+                new Error(`No route found for forward path: ${nextPath}`),
+            );
             return;
         }
 
         this._history.push(nextPath);
         this._currentMatch = match;
+
         unmountAll();
+
         const screen = this._wrapScreen(match);
-        // forward() re-navigates to the most recent forward entry and emits navigate
+
         this.events.emit('navigate', { match, screen });
     }
 
-    /** Move delta steps: negative is back, positive is forward */
     go(delta: number): void {
         if (delta === 0) return;
 
         if (delta < 0) {
             const steps = Math.abs(delta);
-            // go(n) past either boundary is a no-op (clamped, no error)
             if (steps >= this._history.length) return;
-            for (let i = 0; i < steps; i++) {
-                this.back();
-            }
+            for (let i = 0; i < steps; i++) this.back();
         } else {
-            // go(n) past either boundary is a no-op (clamped, no error)
             if (delta > this._forwardStack.length) return;
-            for (let i = 0; i < delta; i++) {
-                this.forward();
-            }
+            for (let i = 0; i < delta; i++) this.forward();
         }
     }
 
-    /** Whether a forward entry exists */
+    // ─────────────────────────────────────────────────────
+    // GETTERS
+    // ─────────────────────────────────────────────────────
+
     get canGoForward(): boolean {
         return this._forwardStack.length > 0;
     }
 
-    /** Current route match */
-    get current(): RouteMatch | null {
-        return this._currentMatch;
-    }
-
-    /** Current path */
-    get currentPath(): string {
-        return this._history[this._history.length - 1] ?? '/';
-    }
-
-    /** Current route params */
-    get params(): RouteParams {
-        return this._currentMatch?.params ?? {};
-    }
-
-    /** History stack depth */
-    get historyLength(): number {
-        return this._history.length;
-    }
-
-    /** Check if we can go back */
     get canGoBack(): boolean {
         return this._history.length > 1;
     }
 
-    /** All registered routes */
+    get current(): RouteMatch | null {
+        return this._currentMatch;
+    }
+
+    get currentPath(): string {
+        return this._history[this._history.length - 1] ?? '/';
+    }
+
+    get params(): RouteParams {
+        return this._currentMatch?.params ?? {};
+    }
+
+    get historyLength(): number {
+        return this._history.length;
+    }
+
     get routes(): Route[] {
         return [...this._routes];
     }
