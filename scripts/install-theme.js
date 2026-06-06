@@ -10,7 +10,6 @@ import { execFileSync } from 'node:child_process';
  * Allows: lowercase letters, numbers, hyphens, underscores
  * @throws Error if invalid
  */
-function validateThemeName(name) {
   const VALID_THEME_RE = /^[a-z0-9_-]+$/;
   const ALLOWED_THEMES = new Set([
     'dark',
@@ -18,6 +17,7 @@ function validateThemeName(name) {
     'solarized',
     'dracula',
   ]);
+function validateThemeName(name) {
 
   if (!name || name.length === 0) {
     throw new Error('Theme name cannot be empty');
