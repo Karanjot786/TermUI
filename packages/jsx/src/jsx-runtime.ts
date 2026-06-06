@@ -82,6 +82,33 @@ export namespace JSX {
             border?: string;
             borderColor?: string;
         };
+        card: {
+            children?: any;
+            key?: string | number;
+            title?: string;
+            borderColor?: string;
+            flexGrow?: number;
+            flexShrink?: number;
+            width?: number | string;
+            height?: number | string;
+            padding?: number;
+            margin?: number;
+            border?: string;
+        };
+        center: {
+            children?: any;
+            key?: string | number;
+            horizontal?: boolean;
+            vertical?: boolean;
+            flexGrow?: number;
+            flexShrink?: number;
+            width?: number | string;
+            height?: number | string;
+            padding?: number;
+            margin?: number;
+            border?: string;
+            borderColor?: string;
+        };
         spacer: {
             key?: string | number;
             grow?: number;

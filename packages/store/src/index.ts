@@ -16,3 +16,9 @@ export type {
     StoreOptions,
     PersistOptions,
 } from './store.js';
+
+export { slices } from './slices.js';
+export type { SliceDef } from './slices.js';
+
+export { createHistoryStore } from './history.js'
+export type { TemporalHistory, TemporalStoreActions } from './history.js'

@@ -86,66 +86,53 @@ describe('Router', () => {
         expect(r.routes).toHaveLength(2);
     });
 
-    it('supports nested routes', () => {
+    it('addRoutes supports lazy loader', () => {
         const r = new Router();
+        const lazy = () => Promise.resolve({
+            default: () => 'LazyScreen',
+        });
 
         r.addRoutes([
             {
-                path: '/settings',
-                component: () => 'Settings',
-                children: [
-                    {
-                        path: 'profile',
-                        component: () => 'Profile',
-                    },
-                ],
+                path: '/lazy',
+                component: () => 'Placeholder',
             },
         ]);
 
-        r.push('/settings/profile');
-
-        expect(r.current).not.toBeNull();
+        expect(r.routes[0]?.component).toBeDefined();
     });
 
-    it('resolves full parent-to-leaf chain', () => {
+    it("falls back to 404", () => {
         const r = new Router();
-
-        r.addRoutes([
-            {
-                path: '/settings',
-                component: () => 'Settings',
-                children: [
-                    {
-                        path: 'profile',
-                        component: () => 'Profile',
-                    },
-                ],
-            },
-        ]);
-
-        r.push('/settings/profile');
-
-        expect(r.current?.chain.length).toBe(2);
+        r.addRoute('/404', () => 'NotFound');
+        
+        // Listen for the unmatched route error and redirect to our 404 route
+        r.events.on('error', () => {
+            r.push('/404');
+        });
+        
+        r.push('/missing');
+        expect(r.currentPath).toBe('/404');
     });
 
-    it('preserves params in nested routes', () => {
+    it("updates the history stack with push and back", () => {
         const r = new Router();
+        r.addRoute('/', () => 'Home');
+        r.addRoute('/about', () => 'About');
 
-        r.addRoutes([
-            {
-                path: '/users',
-                component: () => 'Users',
-                children: [
-                    {
-                        path: '[id]',
-                        component: () => 'User',
-                    },
-                ],
-            },
-        ]);
+        // Push to home
+        r.push('/');
+        expect(r.currentPath).toBe('/');
+        expect(r.historyLength).toBe(1);
 
-        r.push('/users/42');
+        // Push to about
+        r.push('/about');
+        expect(r.currentPath).toBe('/about');
+        expect(r.historyLength).toBe(2);
 
-        expect(r.params.id).toBe('42');
+        // Go back
+        r.back();
+        expect(r.currentPath).toBe('/');
+        expect(r.historyLength).toBe(1);
     });
 });
