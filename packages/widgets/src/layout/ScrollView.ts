@@ -32,6 +32,8 @@ export class ScrollView extends Widget {
 
     /** Set the total content height (in rows) */
     setContentHeight(h: number): void {
+        if (this._contentHeight === h) return;
+
         this._contentHeight = h;
         this._clampOffset();
         this.markDirty();
@@ -49,9 +51,14 @@ export class ScrollView extends Widget {
 
     /** Scroll to absolute offset */
     scrollTo(offset: number): void {
+        const previousOffset = this._scrollOffset;
+    
         this._scrollOffset = offset;
         this._clampOffset();
-        this.markDirty();
+    
+        if (previousOffset !== this._scrollOffset) {
+            this.markDirty();
+        }
     }
 
     private _clampOffset(): void {

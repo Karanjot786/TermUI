@@ -151,4 +151,13 @@ describe('ScrollView', () => {
         sv.handleKey(key('pageup'));
         expect(sv.scrollOffset).toBe(6);
     });
+
+    it('does not mark dirty when content height is unchanged', () => {
+        const view = new ScrollView({}, { contentHeight: 10 });
+    
+        view.clearDirty();
+        view.setContentHeight(10);
+    
+        expect(view.isDirty).toBe(false);
+    });
 });

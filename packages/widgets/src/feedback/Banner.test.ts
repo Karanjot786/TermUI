@@ -245,4 +245,22 @@ describe('Banner', () => {
         banner.setVariant('success');
         expect(spy).toHaveBeenCalledTimes(3);
     });
+
+    it('does not mark dirty when title is unchanged', () => {
+        const banner = new Banner({}, { title: 'Hello' });
+    
+        banner.clearDirty();
+        banner.setTitle('Hello');
+    
+        expect(banner.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when body is unchanged', () => {
+        const banner = new Banner({}, { body: 'World' });
+    
+        banner.clearDirty();
+        banner.setBody('World');
+    
+        expect(banner.isDirty).toBe(false);
+    });
 });

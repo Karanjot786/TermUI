@@ -91,22 +91,54 @@ export class CommandPalette extends Widget {
 
     // ─── Private helpers ────────────────────────────────
 
+    
+    /** Compute a fuzzy-match score for a single text against a query. */
+    private _fuzzyScore(text: string, query: string): number {
+    text = text.toLowerCase();
+    query = query.toLowerCase();
+
+    if (text === query) return 1000;
+
+    if (text.includes(query)) {
+        return 500 - text.indexOf(query);
+    }
+
+    let score = 0;
+    let qi = 0;
+
+    for (let i = 0; i < text.length && qi < query.length; i++) {
+        if (text[i] === query[qi]) {
+            score += 10;
+            qi++;
+        }
+    }
+
+    return qi === query.length ? score : -1;
+}
+    
     /** Filter commands based on current query (case-insensitive substring). */
     private _filter(): void {
-        const q = this._query.toLowerCase();
-        if (q === '') {
-            this._filtered = [...this._commands];
-        } else {
-            this._filtered = this._commands.filter(
-                (cmd) =>
-                    cmd.label.toLowerCase().includes(q) ||
-                    cmd.id.toLowerCase().includes(q),
-            );
-        }
-        // Clamp selection to new filtered length
-        const max = Math.max(0, this._filtered.length - 1);
-        this._selectedIndex = Math.min(this._selectedIndex, max);
+    const q = this._query.toLowerCase();
+
+    if (q === '') {
+        this._filtered = [...this._commands];
+    } else {
+        this._filtered = this._commands
+            .map((cmd) => ({
+                cmd,
+                score: Math.max(
+                    this._fuzzyScore(cmd.label, q),
+                    this._fuzzyScore(cmd.id, q),
+                ),
+            }))
+            .filter((item) => item.score >= 0)
+            .sort((a, b) => b.score - a.score)
+            .map((item) => item.cmd);
     }
+
+    const max = Math.max(0, this._filtered.length - 1);
+    this._selectedIndex = Math.min(this._selectedIndex, max);
+}
 
     private _executeSelected(): void {
         const cmd = this._filtered[this._selectedIndex];
