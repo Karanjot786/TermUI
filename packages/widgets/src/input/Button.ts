@@ -50,14 +50,19 @@ export class Button extends Widget {
         this._disabled = opts.disabled ?? false;
         this._onPress = opts.onPress;
         this._color = opts.color;
+        this.focusable = true;
     }
 
     setLabel(label: string): void {
+        if (this._label === label) return;
+
         this._label = label;
         this.markDirty();
     }
 
     setDisabled(disabled: boolean): void {
+        if (this._disabled === disabled) return;
+        
         this._disabled = disabled;
         this.markDirty();
     }
@@ -76,6 +81,10 @@ export class Button extends Widget {
 
         const bg = this._color ?? BG_COLORS[this._variant];
         const fg = FG_COLORS[this._variant];
+        // Focus indicator: use accent color when focused
+        const borderFg = this.isFocused
+            ? { type: 'named' as const, name: 'cyan' as const }
+            : fg;
 
         // Choose border characters based on unicode support
         const tl = caps.unicode ? '┌' : '+';
@@ -94,44 +103,44 @@ export class Button extends Widget {
 
         // ── Row 0: top border ──
         if (height >= 1) {
-            screen.setCell(x, y, { char: tl, fg, bg });
+            screen.setCell(x, y, { char: tl, fg: borderFg, bg });
             for (let c = 1; c <= innerWidth; c++) {
-                screen.setCell(x + c, y, { char: hz, fg, bg });
+                screen.setCell(x + c, y, { char: hz, fg: borderFg, bg });
             }
             if (innerWidth + 1 < width) {
-                screen.setCell(x + innerWidth + 1, y, { char: tr, fg, bg });
+                screen.setCell(x + innerWidth + 1, y, { char: tr, fg: borderFg, bg });
             }
         }
 
         // ── Row 1: content row ──
         if (height >= 2) {
-            screen.setCell(x, y + 1, { char: vt, fg, bg });
+            screen.setCell(x, y + 1, { char: vt, fg: borderFg, bg });
             
             // Center the text in the available width
             const startX = x + 1;
             const textStartX = startX + Math.floor((innerWidth - textWidth) / 2);
             
             // Write the centered label
-            screen.writeString(textStartX, y + 1, padded, { fg, bg });
+            screen.writeString(textStartX, y + 1, padded, { fg: borderFg, bg });
             
             // Fill remaining space with background
             for (let c = textStartX + textWidth; c < startX + innerWidth; c++) {
-                screen.setCell(c, y + 1, { char: ' ', fg, bg });
+                screen.setCell(c, y + 1, { char: ' ', fg: borderFg, bg });
             }
             
             if (innerWidth + 1 < width) {
-                screen.setCell(x + innerWidth + 1, y + 1, { char: vt, fg, bg });
+                screen.setCell(x + innerWidth + 1, y + 1, { char: vt, fg: borderFg, bg });
             }
         }
 
         // ── Row 2: bottom border ──
         if (height >= 3) {
-            screen.setCell(x, y + 2, { char: bl, fg, bg });
+            screen.setCell(x, y + 2, { char: bl, fg: borderFg, bg });
             for (let c = 1; c <= innerWidth; c++) {
-                screen.setCell(x + c, y + 2, { char: hz, fg, bg });
+                screen.setCell(x + c, y + 2, { char: hz, fg: borderFg, bg });
             }
             if (innerWidth + 1 < width) {
-                screen.setCell(x + innerWidth + 1, y + 2, { char: br, fg, bg });
+                screen.setCell(x + innerWidth + 1, y + 2, { char: br, fg: borderFg, bg });
             }
         }
     }

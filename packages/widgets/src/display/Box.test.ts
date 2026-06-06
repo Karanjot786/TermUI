@@ -7,6 +7,35 @@ import { Box } from './Box.js';
 import { Screen, mergeBorders } from '@termuijs/core';
 
 describe('Box', () => {
+        it('isEmpty returns true when no children', () => {
+        const box = new Box();
+        expect(box.isEmpty()).toBe(true);
+    });
+
+    it('isEmpty returns false when children are added', () => {
+        const box = new Box();
+        const child = new Box();
+        box.addChild(child);
+        expect(box.isEmpty()).toBe(false);
+    });
+
+    it('isEmpty returns true after all children are removed', () => {
+        const box = new Box();
+        const child = new Box();
+        box.addChild(child);
+        expect(box.isEmpty()).toBe(false);
+        box.removeChild(child);
+        expect(box.isEmpty()).toBe(true);
+    });
+
+    it('isEmpty returns true after clearChildren', () => {
+        const box = new Box();
+        box.addChild(new Box());
+        box.addChild(new Box());
+        expect(box.isEmpty()).toBe(false);
+        box.clearChildren();
+        expect(box.isEmpty()).toBe(true);
+    });
     it('renders border characters for single border', () => {
         const box = new Box({ border: 'single', width: 5, height: 3 });
         const screen = new Screen(10, 5);

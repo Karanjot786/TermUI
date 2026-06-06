@@ -90,12 +90,14 @@ export { getCurrentApp } from './runtime.js';
 export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
 
 // ── Internal — used by @termuijs/testing ──
-export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber } from './hooks.js';
+export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber, resetHooksGlobals, registerCleanup } from './hooks.js';
 
 // ── Convenience alias ──
 /** h() — shorthand for createElement */
 export { createElement as h } from './createElement.js';
+export { useMount } from './hooks/useMount.js';
 export { usePrevious } from './hooks/usePrevious.js';
+export { useLatest } from './hooks/useLatest.js';
 export { useFirstRender } from './hooks/useFirstRender.js';
 export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
 export { useHover } from './hooks/useHover.js';

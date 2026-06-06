@@ -93,6 +93,11 @@ export abstract class Widget {
         this._style = mergeStyles(defaultStyle(), style);
     }
 
+    /** Check if this widget is currently active (focused) */
+    isActive(): boolean {
+        return this.isFocused;
+    }
+
     /** Get the current style */
     get style(): Style { return this._style; }
 
@@ -140,7 +145,12 @@ export abstract class Widget {
             .filter(c => c.style.visible !== false)
             .map(c => c.getLayoutNode());
 
-        this._layoutNode = createLayoutNode(this.id, this._style, childNodes);
+        if (this._layoutNode) {
+            this._layoutNode.style = this._style;
+            this._layoutNode.children = childNodes;
+        } else {
+            this._layoutNode = createLayoutNode(this.id, this._style, childNodes);
+        }
         return this._layoutNode;
     }
 
@@ -211,6 +221,9 @@ export abstract class Widget {
     markDirty(): void {
         if (this._dirty) return; // Already dirty
         this._dirty = true;
+        if (this._layoutNode) {
+            this._layoutNode._dirty = true;
+        }
         this.parent?.markDirty();
     }
 

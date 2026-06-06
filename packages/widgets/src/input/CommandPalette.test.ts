@@ -299,4 +299,100 @@ describe('CommandPalette', () => {
             expect(palette.isDirty).toBe(true);
         });
     });
+    describe('fuzzy search', () => {
+        it('matches non-contiguous characters', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette({ commands: cmds });
+
+            'of'.split('').forEach((ch) => palette.handleKey(ch));
+
+            palette.handleKey('enter');
+
+            expect(cmds[0].action).toHaveBeenCalledTimes(1);
+        });
+
+        it('is case-insensitive', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette({ commands: cmds });
+
+            'OF'.split('').forEach((ch) => palette.handleKey(ch));
+
+            palette.handleKey('enter');
+
+            expect(cmds[0].action).toHaveBeenCalledTimes(1);
+        });
+
+        it('returns no matches when characters are missing', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette({ commands: cmds });
+
+            'xyz'.split('').forEach((ch) => palette.handleKey(ch));
+
+            palette.handleKey('enter');
+
+            cmds.forEach((cmd) =>
+                expect(cmd.action).not.toHaveBeenCalled()
+            );
+        });
+        it('ranks exact matches above substring matches above fuzzy matches', () => {
+    const cmds: Command[] = [
+        {
+            id: 'fuzzy',
+            label: 'Some Article Variety Example',
+            action: vi.fn(),
+        },
+        {
+            id: 'substring',
+            label: 'Save File',
+            action: vi.fn(),
+        },
+        {
+            id: 'exact',
+            label: 'save',
+            action: vi.fn(),
+        },
+    ];
+
+    const palette = new CommandPalette({ commands: cmds });
+
+    'save'.split('').forEach((ch) => palette.handleKey(ch));
+
+    palette.handleKey('enter');
+
+    expect(cmds[2].action).toHaveBeenCalledTimes(1);
+    expect(cmds[0].action).not.toHaveBeenCalled();
+    expect(cmds[1].action).not.toHaveBeenCalled();
 });
+
+it('selects the highest scoring command when multiple matches exist', () => {
+    const cmds: Command[] = [
+        {
+            id: 'save-file',
+            label: 'Save File',
+            action: vi.fn(),
+        },
+        {
+            id: 'save-all',
+            label: 'save',
+            action: vi.fn(),
+        },
+        {
+            id: 'save-project',
+            label: 'Save Project',
+            action: vi.fn(),
+        },
+    ];
+
+    const palette = new CommandPalette({ commands: cmds });
+
+    'save'.split('').forEach((ch) => palette.handleKey(ch));
+
+    palette.handleKey('enter');
+
+    expect(cmds[1].action).toHaveBeenCalledTimes(1);
+    expect(cmds[0].action).not.toHaveBeenCalled();
+    expect(cmds[2].action).not.toHaveBeenCalled();
+});
+    });
+});
+

@@ -312,6 +312,24 @@ export class Router {
         }
     }
 
+    /**
+     * Checks if a given path matches the currently active route pattern.
+     */
+    isActive(path: string): boolean {
+        // Return fast if string paths match exactly
+        if (this.currentPath === path) {
+            return true;
+        }
+
+        // Parse target path to see if it targets the currently active dynamic pattern configuration
+        const targetMatch = matchRoute(path, this._routes);
+        if (!targetMatch || !this._currentMatch) {
+            return false;
+        }
+
+        return targetMatch.route.path === this._currentMatch.route.path;
+    }
+
     /** Whether a forward entry exists */
     get canGoForward(): boolean {
         return this._forwardStack.length > 0;

@@ -47,16 +47,22 @@ export class Banner extends Widget {
     }
 
     setTitle(title: string): void {
+        if (this._title === title) return;
+
         this._title = title;
         this.markDirty();
     }
 
     setBody(body: string): void {
+        if (this._body === body) return;
+
         this._body = body;
         this.markDirty();
     }
 
     setVariant(variant: StatusVariant): void {
+        if (this._variant === variant) return;
+        
         this._variant = variant;
         this.markDirty();
     }
