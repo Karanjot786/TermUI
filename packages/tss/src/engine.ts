@@ -6,6 +6,48 @@ import { tokenize } from './tokenizer.js';
 import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValue } from './parser.js';
 import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
 
+export function compile(source: string): string {
+    const tokens = tokenize(source);
+    const ast = parse(tokens);
+    let output: string[] = [];
+
+    function serializeSelector(sel: TSSSelector): string {
+        let s = sel.widget === '*' ? '' : sel.widget;
+        if (sel.className) s += '.' + sel.className;
+        if (sel.pseudo) s += ':' + sel.pseudo;
+        return s || '*';
+    }
+
+    function processRule(rule: TSSRule, parentSelStr: string) {
+        const selStr = serializeSelector(rule.selector);
+        const fullSelStr = parentSelStr ? `${parentSelStr} ${selStr}` : selStr;
+        
+        if (rule.properties.length > 0) {
+            let block = `${fullSelStr} {`;
+            for (const prop of rule.properties) {
+                let valStr = '';
+                if (prop.value.kind === 'var') valStr = `var(${prop.value.name})`;
+                else valStr = String(prop.value.value);
+                block += ` ${prop.name}: ${valStr};`;
+            }
+            block += ` }`;
+            output.push(block);
+        }
+
+        if (rule.nested) {
+            for (const child of rule.nested) {
+                processRule(child, fullSelStr);
+            }
+        }
+    }
+
+    for (const rule of ast.rules) {
+        processRule(rule, '');
+    }
+
+    return output.join('\n');
+}
+
 export interface ThemeVariables {
     [key: string]: string;
 }
@@ -18,6 +60,8 @@ export interface ResolvedRule {
 export class ThemeEngine {
     private _stylesheet: TSSStylesheet | null = null;
     private _activeTheme: string = 'default';
+    private _themeVariables: ThemeVariables = {};
+    private _overrides: ThemeVariables = {};
     private _variables: ThemeVariables = {};
     private _resolvedRules: ResolvedRule[] = [];
     private _listeners: Set<() => void> = new Set();
@@ -31,12 +75,15 @@ export class ThemeEngine {
 
     /** Load multiple .tss sources (merged) */
     loadAll(sources: string[]): void {
-        const merged: TSSStylesheet = { themes: [], rules: [] };
+        const merged: TSSStylesheet = { themes: [], rules: [], mixins: new Map() };
         for (const src of sources) {
             const tokens = tokenize(src);
             const ast = parse(tokens);
             merged.themes.push(...ast.themes);
             merged.rules.push(...ast.rules);
+            for (const [name, props] of ast.mixins) {
+                merged.mixins.set(name, props);
+            }
         }
         this._stylesheet = merged;
         this._applyTheme();
@@ -78,31 +125,64 @@ export class ThemeEngine {
         return this._variables[name];
     }
 
+    /** Override a theme variable at runtime and re-resolve rules */
+    setVariable(name: string, value: string): void {
+        this._overrides[name] = value;
+        this._rebuildVariablesAndRules();
+    }
+
+    /** Remove a runtime override, falling back to the theme value */
+    clearVariable(name: string): void {
+        delete this._overrides[name];
+        this._rebuildVariablesAndRules();
+    }
+
     // ── Internal ──
 
     private _applyTheme(): void {
         if (!this._stylesheet) return;
         // Find active theme and merge variables
-        this._variables = {};
+        this._themeVariables = {};
         // Default theme first
         const defaultTheme = this._stylesheet.themes.find(t => t.name === 'default');
-        if (defaultTheme) Object.assign(this._variables, defaultTheme.variables);
+        if (defaultTheme) Object.assign(this._themeVariables, defaultTheme.variables);
         // Then active theme on top
         if (this._activeTheme !== 'default') {
             const active = this._stylesheet.themes.find(t => t.name === this._activeTheme);
-            if (active) Object.assign(this._variables, active.variables);
+            if (active) Object.assign(this._themeVariables, active.variables);
         }
-        // Resolve rules
-        this._resolvedRules = this._stylesheet.rules.map(rule => ({
+
+        // Runtime overrides are cleared when a new theme is applied or re-applied.
+        this._overrides = {};
+
+        this._rebuildVariablesAndRules();
+    }
+
+    private _rebuildVariablesAndRules(): void {
+        this._variables = { ...this._themeVariables, ...this._overrides };
+
+        // Resolve top-level rules — expand mixin includes at compile time.
+        // ThemeEngine's selector matching is flat; nested rules are skipped here.
+        this._resolvedRules = this._stylesheet?.rules.map(rule => ({
             selector: rule.selector,
             properties: this._resolveProperties(rule),
-        }));
-        // Notify listeners
+        })) ?? [];
+
         for (const fn of this._listeners) fn();
     }
 
     private _resolveProperties(rule: TSSRule): Record<string, string> {
         const result: Record<string, string> = {};
+        // Expand included mixins first
+        for (const mixinName of rule.includes) {
+            const mixinProps = this._stylesheet?.mixins.get(mixinName);
+            if (mixinProps) {
+                for (const prop of mixinProps) {
+                    result[prop.name] = this._resolveValue(prop.value);
+                }
+            }
+        }
+        // Own properties applied on top — override mixin properties if same name
         for (const prop of rule.properties) {
             result[prop.name] = this._resolveValue(prop.value);
         }
@@ -122,11 +202,8 @@ export class ThemeEngine {
     }
 
     private _matchesSelector(sel: TSSSelector, widgetType: string, className?: string, pseudo?: string): boolean {
-        // Widget type match (* = universal)
         if (sel.widget !== '*' && sel.widget.toLowerCase() !== widgetType.toLowerCase()) return false;
-        // Class name match
         if (sel.className && sel.className !== className) return false;
-        // Pseudo-class match
         if (sel.pseudo && sel.pseudo !== pseudo) return false;
         return true;
     }
@@ -146,7 +223,6 @@ export class ThemeEngine {
                     style.border = val as BorderStyle;
                     break;
                 case 'border-color':
-                    // Border color applied via fg on border chars
                     style.fg = this._parseColor(val);
                     break;
                 case 'bold':
@@ -194,4 +270,11 @@ export class ThemeEngine {
             return undefined;
         }
     }
+}
+
+/** Compile a TSS source string and return resolved rules with mixins expanded */
+export function compileRules(source: string): ResolvedRule[] {
+    const engine = new ThemeEngine();
+    engine.load(source);
+    return engine.rules;
 }

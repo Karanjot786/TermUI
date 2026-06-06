@@ -70,7 +70,9 @@ export class Form extends Widget {
             screen.writeString(x, y + row, `${f.label}${f.required ? ' *' : ''}:`.slice(0, width), { ...attrs, fg: err ? this._errorColor : this._labelColor, bold: active }); row++;
             if (row >= height) break;
             const display = val || (f.placeholder ?? '');
-            screen.writeString(x, y + row, `${active ? '❯ ' : '  '}${display}`.slice(0, width), { ...attrs, fg: active ? this._activeColor : attrs.fg, dim: !val && !!f.placeholder }); row++;
+            const msg = err ? `  - ${err}` : '';
+            const displayText = `${active ? '❯ ' : '  '}${display}${msg}`;
+            screen.writeString(x, y + row, displayText.slice(0, width), { ...attrs, fg: active ? this._activeColor : attrs.fg, dim: !val && !!f.placeholder }); row++;
         }
         if (row < height) {
             const isSub = this._activeField >= this._fields.length;

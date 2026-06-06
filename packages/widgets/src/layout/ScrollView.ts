@@ -61,12 +61,12 @@ export class ScrollView extends Widget {
     }
 
     /** Handle keyboard navigation */
-    onKey(event: KeyEvent): void {
+    handleKey(event: KeyEvent): void {
         switch (event.key) {
-            case 'ArrowUp':   this.scrollBy(-1); break;
-            case 'ArrowDown': this.scrollBy(1); break;
-            case 'PageUp':    this.scrollBy(-Math.max(1, this._rect.height - 1)); break;
-            case 'PageDown':  this.scrollBy(Math.max(1, this._rect.height - 1)); break;
+            case 'up':       this.scrollBy(-1); break;
+            case 'down':     this.scrollBy(1); break;
+            case 'pageup':   this.scrollBy(-Math.max(1, this._rect.height - 1)); break;
+            case 'pagedown': this.scrollBy(Math.max(1, this._rect.height - 1)); break;
         }
     }
 

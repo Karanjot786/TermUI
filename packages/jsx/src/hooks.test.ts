@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { timerPoolUnsubscribeAll } from '@termuijs/motion';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
-    useState, useEffect, useRef, useCallback,
+    useState, useEffect, useRef, useId, useCallback,
     useAsync, useInterval, useInsertBefore, setRequestRender, setInsertBefore, runEffects, destroyFiber,
     type Fiber, type AsyncState,
 } from './hooks.js';
@@ -255,5 +255,45 @@ describe('useInsertBefore', () => {
 
         expect(insertBefore).toHaveBeenCalledOnce();
         expect(insertBefore).toHaveBeenCalledWith('HEADER LINE');
+    });
+});
+describe('useId', () => {
+    it('returns a string id', () => {
+        const fiber = createFiber();
+
+        setCurrentFiber(fiber);
+        const id = useId();
+        clearCurrentFiber();
+
+        expect(typeof id).toBe('string');
+    });
+
+    it('returns the same id across re-renders', () => {
+        const fiber = createFiber();
+
+        setCurrentFiber(fiber);
+        const id1 = useId();
+        clearCurrentFiber();
+
+        setCurrentFiber(fiber);
+        const id2 = useId();
+        clearCurrentFiber();
+
+        expect(id1).toBe(id2);
+    });
+
+    it('returns different ids for different fibers', () => {
+        const fiberA = createFiber();
+        const fiberB = createFiber();
+
+        setCurrentFiber(fiberA);
+        const idA = useId();
+        clearCurrentFiber();
+
+        setCurrentFiber(fiberB);
+        const idB = useId();
+        clearCurrentFiber();
+
+        expect(idA).not.toBe(idB);
     });
 });

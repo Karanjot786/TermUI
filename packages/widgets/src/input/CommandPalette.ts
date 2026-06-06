@@ -133,21 +133,21 @@ export class CommandPalette extends Widget {
 
     handleKey(key: string): void {
         switch (key) {
-            case 'Escape':
+            case 'escape':
                 this._options.onClose?.();
                 break;
-            case 'Enter':
+            case 'enter':
                 this._executeSelected();
                 break;
-            case 'ArrowUp':
+            case 'up':
             case 'k':
                 this._moveUp();
                 break;
-            case 'ArrowDown':
+            case 'down':
             case 'j':
                 this._moveDown();
                 break;
-            case 'Backspace':
+            case 'backspace':
                 this._query = this._query.slice(0, -1);
                 this._filter();
                 break;
