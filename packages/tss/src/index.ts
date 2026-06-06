@@ -34,6 +34,10 @@ export {
   NAMED_THEMES, getNamedTheme,
 } from './named-themes.js';
 
+// Theme utilities
+export { deriveTheme } from './theme/derive.js';
+export type { DerivedTheme, NormalColorPair } from './theme/derive.js';
+
 // Hot-Reload Watcher
 export { TSSWatcher } from './watcher.js';
 export type { WatcherOptions } from './watcher.js';
