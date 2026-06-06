@@ -1,3 +1,5 @@
+import { createRequire } from 'node:module'
+
 export interface DefaultLogFields {
   hash: string
   date: string
@@ -96,7 +98,8 @@ let simpleGitModule: unknown = null
 async function getSimpleGit(cwd?: string): Promise<SimpleGitClient> {
   if (!simpleGitModule) {
     try {
-      simpleGitModule = await import('simple-git')
+      const require = createRequire(import.meta.url)
+      simpleGitModule = require('simple-git')
     } catch {
       throw new Error(
         'The "simple-git" package is required to use the Git adapter. ' +
