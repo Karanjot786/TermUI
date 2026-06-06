@@ -10,6 +10,7 @@ export interface LogViewOptions {
     highlight?: Record<string, Color>;
     /** Auto-scroll to bottom */
     autoScroll?: boolean;
+    maxLines?: number;
 }
 
 /**
@@ -22,6 +23,7 @@ export class LogView extends Widget {
     private _scrollOffset = 0;
     private _highlight: Record<string, Color>;
     private _autoScroll: boolean;
+    private _maxLines?: number;
 
     constructor(style: Partial<Style> = {}, opts: LogViewOptions = {}) {
         super(style);
@@ -32,6 +34,7 @@ export class LogView extends Widget {
             DEBUG: { type: 'named', name: 'brightBlack' },
         };
         this._autoScroll = opts.autoScroll ?? true;
+        this._maxLines = opts.maxLines;
     }
 
     setLines(lines: string[]): void {
@@ -77,8 +80,20 @@ export class LogView extends Widget {
         const { x, y, width, height } = rect;
         if (width <= 0 || height <= 0) return;
 
+        
         const attrs = styleToCellAttrs(this._style);
-        const visibleLines = this._lines.slice(this._scrollOffset, this._scrollOffset + height);
+
+        // Apply maxLines filter first
+    const baseLines =
+        this._maxLines && this._maxLines > 0
+            ? this._lines.slice(-this._maxLines)
+            : this._lines;
+           
+            // Then apply scroll
+    const visibleLines = baseLines.slice(
+        this._scrollOffset,
+        this._scrollOffset + height,
+    );
 
         for (let i = 0; i < Math.min(visibleLines.length, height); i++) {
             const line = truncate(visibleLines[i], width);
