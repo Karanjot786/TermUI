@@ -9,6 +9,8 @@
         "dotenv": "^16.0.0",
       },
       "devDependencies": {
+        "@termuijs/jsx": "^0.1.5",
+        "@termuijs/widgets": "^0.1.5",
         "@types/bun": "latest",
         "@types/node": "^25.2.3",
         "tsup": "^8.3.0",

@@ -226,3 +226,4 @@ export type {
     ProgressProps,
     ProgressTask,
 } from './feedback/Progress.js';
+export * from './display/Highlight.js';
