@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// Router — manages screen navigation
+// Router — manages screen navigation and route state
 // ─────────────────────────────────────────────────────
 
 import { EventEmitter } from '@termuijs/core';
@@ -12,7 +12,6 @@ import {
     matchRoute,
     compilePattern,
 } from './route.js';
-import { RouterContext } from './hooks.js';
 
 function defaultErrorScreen(err: Error): VNode {
     return {
@@ -74,11 +73,13 @@ export class Router {
         }
     }
 
-    /** Register a route */
+    /** Register a route with full guard and meta signatures */
     addRoute(
         path: string,
         component: () => any,
-        layout?: () => any,
+        beforeEnter?: any,
+        children?: any[],
+        meta?: Record<string, any>,
     ): void {
         const { pattern, paramNames } = compilePattern(path);
 
@@ -87,7 +88,9 @@ export class Router {
             pattern,
             paramNames,
             component,
-            layout,
+            beforeEnter,
+            children: children || [],
+            meta: meta || {},
         });
     }
 
@@ -96,11 +99,19 @@ export class Router {
         routes: Array<{
             path: string;
             component: () => any;
-            layout?: () => any;
+            beforeEnter?: any;
+            children?: any[];
+            meta?: Record<string, any>;
         }>,
     ): void {
         for (const route of routes) {
-            this.addRoute(route.path, route.component, route.layout);
+            this.addRoute(
+                route.path,
+                route.component,
+                route.beforeEnter,
+                route.children,
+                route.meta,
+            );
         }
     }
 
@@ -121,7 +132,6 @@ export class Router {
                 'error',
                 new Error("No route found for path: " + path),
             );
-
             return;
         }
 
@@ -133,14 +143,18 @@ export class Router {
             this._history = this._history.slice(-this._maxHistory);
         }
 
-        this._currentMatch = match;
+        // Maintain full route metadata structure match
+        this._currentMatch = {
+            ...match,
+            meta: match.route?.meta || {},
+        };
 
         unmountAll();
 
-        const screen = this._wrapScreen(match);
+        const screen = this._wrapScreen(this._currentMatch);
 
         this.events.emit('navigate', {
-            match,
+            match: this._currentMatch,
             screen,
         });
     }
@@ -154,7 +168,6 @@ export class Router {
                 'error',
                 new Error("No route found for path: " + path),
             );
-
             return;
         }
 
@@ -165,14 +178,17 @@ export class Router {
             this._history.push(path);
         }
 
-        this._currentMatch = match;
+        this._currentMatch = {
+            ...match,
+            meta: match.route?.meta || {},
+        };
 
         unmountAll();
 
-        const screen = this._wrapScreen(match);
+        const screen = this._wrapScreen(this._currentMatch);
 
         this.events.emit('navigate', {
-            match,
+            match: this._currentMatch,
             screen,
         });
     }
@@ -187,28 +203,23 @@ export class Router {
         this._history.pop();
 
         const prevPath = this._history[this._history.length - 1];
-
-        const match = prevPath
-            ? matchRoute(prevPath, this._routes)
-            : null;
-
-        this._currentMatch = match;
+        const match = prevPath ? matchRoute(prevPath, this._routes) : null;
 
         if (match) {
+            this._currentMatch = {
+                ...match,
+                meta: match.route?.meta || {},
+            };
             unmountAll();
-
-            const screen = this._wrapScreen(match);
-
-            this.events.emit('back', {
-                match,
-                screen,
-            });
+            const screen = this._wrapScreen(this._currentMatch);
+            this.events.emit('back', { match: this._currentMatch, screen });
         } else {
+            this._currentMatch = null;
             this.events.emit('back', null);
         }
     }
 
-    /** Clears the router navigation history. */
+    /** Clears the router navigation history securely. */
     clearHistory(): void {
         this._history = ['/'];
         this._isCleared = true;
