@@ -42,6 +42,20 @@ export function _resetWidgetIdCounter(): void {
 /**
  * Base class for all TermUI widgets.
  *
+ * CONSTRUCTOR SIGNATURE CONVENTION:
+ * - Simple display widgets: (content?, style?: Partial<Style>, opts?: SpecificOptions)
+ * - Data widgets:           (data, style?: Partial<Style>, opts?: SpecificOptions)
+ * - Compound UI widgets:    (options: SpecificOptions, style?: Partial<Style>)
+ *
+ * FOCUSABLE PATTERN:
+ * Set `focusable = true` as a class field initializer, OR in the constructor
+ * body after calling `super()`. Do NOT set it inside `_renderSelf()`.
+ *
+ * STYLE MERGE PATTERN:
+ * All widgets should call `super(mergeStyles(defaultStyle(), { ...defaults }, style))`
+ * to produce consistent base styles. For widgets that accept `style` as the
+ * second parameter, pass it directly through to `super()`.
+ *
  * Provides:
  * - Unique ID generation
  * - Style management and merging
