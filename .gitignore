@@ -1,18 +1,26 @@
+# Dependencies
 node_modules/
+
+# Build outputs
 dist/
 .turbo/
-*.tsbuildinfo
 coverage/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS
 .DS_Store
 
-website/
-scratch/
-.worktrees/
-
-# Bench artifacts
-bench-head.json
-bench-main.json
-bench-head.txt
-bench-main.txt
+# Bench artifacts (only if generated)
+bench-*.json
+bench-*.txt
 bench-comment.md
-docs/superpowers/
