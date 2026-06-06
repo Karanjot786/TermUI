@@ -5,9 +5,14 @@
 // ─────────────────────────────────────────────────────
 
 import { Widget } from '@termuijs/widgets';
-import { useState, useEffect } from '@termuijs/jsx';
+import { useState, useEffect, registerCleanup } from '@termuijs/jsx';
 import { caps, type Screen } from '@termuijs/core';
 import type { Color } from '@termuijs/core';
+
+// Auto-register cleanup for test isolation
+registerCleanup(() => {
+    NotificationStore.getInstance().reset();
+});
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -58,6 +63,11 @@ export class NotificationStore {
             this._notifications = [];
             this._emit();
         }
+    }
+
+    reset(): void {
+        this._notifications = [];
+        this._subs.clear();
     }
 
     subscribe(fn: (notifications: Notification[]) => void): () => void {
@@ -147,6 +157,7 @@ export class NotificationCenter extends Widget {
     override unmount(): void {
         this._unsub?.();
         this._unsub = undefined;
+        this._current = [];
         super.unmount();
     }
 

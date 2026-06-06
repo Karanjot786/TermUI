@@ -135,4 +135,72 @@ describe('Router', () => {
         expect(r.currentPath).toBe('/');
         expect(r.historyLength).toBe(1);
     });
+
+    describe('isActive()', () => {
+        it('returns true when path matches current route exactly', () => {
+            const r = new Router();
+            r.addRoute('/home', () => 'Home');
+            r.push('/home');
+            expect(r.isActive('/home')).toBe(true);
+        });
+
+        it('returns false after navigating away from a path', () => {
+            const r = new Router();
+            r.addRoute('/home', () => 'Home');
+            r.addRoute('/about', () => 'About');
+            r.push('/home');
+            r.push('/about');
+            expect(r.isActive('/home')).toBe(false);
+            expect(r.isActive('/about')).toBe(true);
+        });
+
+        it('returns true for a different parameter value on the same dynamic pattern', () => {
+            const r = new Router();
+            r.addRoute('/user/[id]', () => 'UserScreen');
+            r.push('/user/42');
+            expect(r.isActive('/user/99')).toBe(true);
+        });
+
+        it('returns false before any navigation', () => {
+            const r = new Router();
+            r.addRoute('/home', () => 'Home');
+            expect(r.isActive('/home')).toBe(false);
+        });
+
+        it('returns false for an unregistered path', () => {
+            const r = new Router();
+            r.addRoute('/home', () => 'Home');
+            r.push('/home');
+            expect(r.isActive('/missing')).toBe(false);
+        });
+    });
+
+    it('beforeEnter can block navigation', () => {
+        const r = new Router();
+        r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => false });
+        
+        r.push('/admin');
+        
+        expect(r.current).toBeNull();
+    });
+
+    it('beforeEnter can redirect navigation', () => {
+        const r = new Router();
+        r.addRoute('/login', () => 'Login');
+        r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => '/login' });
+        
+        r.push('/admin');
+        
+        expect(r.currentPath).toBe('/login');
+    });
+
+    it('afterEnter executes after navigation', () => {
+        const r = new Router();
+        const spy = vi.fn();
+        r.addRoute('/home', () => 'Home', undefined, { afterEnter: spy });
+        
+        r.push('/home');
+        
+        expect(spy).toHaveBeenCalled();
+    });
 });

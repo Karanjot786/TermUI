@@ -114,6 +114,14 @@ export class Screen {
     private _cols: number;
     private _rows: number;
     private _previousLines: string[] = [];
+    private _lastRenderedHeight = 0;
+
+     get lastRenderedHeight(): number {
+     return this._lastRenderedHeight;
+     }
+     set lastRenderedHeight(value: number) {
+     this._lastRenderedHeight = value;
+     }
     private _previousStyleLines: string[] = [];
     front: Cell[][];
     back: Cell[][];

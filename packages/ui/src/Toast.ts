@@ -4,7 +4,13 @@ import { type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '
 
 export type ToastType = 'info' | 'success' | 'warning' | 'error';
 export interface ToastMessage { text: string; type: ToastType; expireAt: number; }
-export interface ToastOptions { position?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left'; durationMs?: number; maxVisible?: number; }
+export interface ToastOptions {
+    position?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left';
+    durationMs?: number;
+    maxVisible?: number;
+    /** Enable screen reader announcements (default: true) */
+    announce?: boolean;
+}
 
 const ICONS_UNICODE: Record<ToastType, string> = { info: 'ℹ', success: '✓', warning: '⚠', error: '✗' };
 const ICONS_ASCII: Record<ToastType, string> = { info: 'i', success: '+', warning: '!', error: 'x' };
@@ -15,20 +21,37 @@ export class Toast extends Widget {
     private _position: string;
     private _durationMs: number;
     private _maxVisible: number;
+    private _announce: boolean;
 
     constructor(options: ToastOptions = {}) {
         super(mergeStyles(defaultStyle(), {}));
         this._position = options.position ?? 'top-right';
         this._durationMs = options.durationMs ?? 3000;
         this._maxVisible = options.maxVisible ?? 5;
+        this._announce = options.announce ?? true;
     }
 
-    push(text: string, type: ToastType = 'info'): void { this._messages.push({ text, type, expireAt: Date.now() + this._durationMs }); this.markDirty(); }
+        push(text: string, type: ToastType = 'info'): void {
+        this._messages.push({ text, type, expireAt: Date.now() + this._durationMs });
+        this.markDirty();
+        if (this._announce) {
+            this._announceToScreenReader(text, type);
+        }
+    }
     info(text: string): void { this.push(text, 'info'); }
     success(text: string): void { this.push(text, 'success'); }
     warning(text: string): void { this.push(text, 'warning'); }
     error(text: string): void { this.push(text, 'error'); }
 
+    private _announceToScreenReader(text: string, _type: ToastType): void {
+        try {
+            const announcement = `[${text}]`;
+            const oscSequence = `\x1b]777;notify;TermUI;${announcement}\x07`;
+            process.stderr.write(oscSequence);
+        } catch {
+            // Silently fail if stderr is not writable
+        }
+    }
     protected _renderSelf(screen: Screen): void {
         const now = Date.now();
         this._messages = this._messages.filter(m => m.expireAt > now);

@@ -185,3 +185,8 @@ export type { EmailInputOptions } from './EmailInput.js';
 
 export { QuizPrompt } from './QuizPrompt.js';
 export type { QuizPromptOptions, QuizQuestion, QuizResult } from './QuizPrompt.js';
+
+export { SurveyPrompt } from './SurveyPrompt.js';
+export type { SurveyPromptOptions, SurveyQuestion } from './SurveyPrompt.js';
+
+
