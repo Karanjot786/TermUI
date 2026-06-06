@@ -44,6 +44,8 @@ export type { ButtonOptions, ButtonVariant } from './input/Button.js';
 
 export { Slider } from "./input/Slider.js";
 export type { SliderOptions } from "./input/Slider.js";
+export { RangeInput } from "./input/RangeInput.js";
+export type { RangeInputOptions } from "./input/RangeInput.js";
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
