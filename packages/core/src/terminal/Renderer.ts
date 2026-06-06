@@ -123,14 +123,11 @@ export class Renderer {
         try {
             const { front, back, cols, rows } = this._screen;
             let output = beginSyncUpdate;
-            let lastRow = -1;
-            let lastCol = -1;
 
             if (this._diffRenderer) {
+                this._lastStyleFingerprint = null;
                 for (let r = 0; r < rows; r++) {
-                    if (this._screen.getLine(r) === this._screen.getPreviousLine(r)) continue;
-                    output += moveTo(0, r);
-                    output += this._renderLine(r);
+                    output += this._renderDiffLine(r, front, back, cols);
                 }
 
                 output += ansiReset;
@@ -184,31 +181,94 @@ export class Renderer {
         }
     }
 
+    /** Style fingerprint of the last rendered cell (to suppress redundant ANSI reset/apply). */
+    private _lastStyleFingerprint: string | null = null;
+
+    /** Build a stable style fingerprint string for a cell (avoids allocation-heavy object comparison). */
+    private _styleFingerprint(cell: Cell): string {
+        const fg = cell.fg;
+        const bg = cell.bg;
+        let fgKey: string;
+        switch (fg.type) {
+            case 'none': fgKey = 'n'; break;
+            case 'named': fgKey = `N:${fg.name}`; break;
+            case 'ansi256': fgKey = `A:${fg.code}`; break;
+            case 'rgb': fgKey = `R:${fg.r},${fg.g},${fg.b}`; break;
+            case 'hex': fgKey = `H:${fg.hex}`; break;
+            default: fgKey = 'n';
+        }
+        let bgKey: string;
+        switch (bg.type) {
+            case 'none': bgKey = 'n'; break;
+            case 'named': bgKey = `N:${bg.name}`; break;
+            case 'ansi256': bgKey = `A:${bg.code}`; break;
+            case 'rgb': bgKey = `R:${bg.r},${bg.g},${bg.b}`; break;
+            case 'hex': bgKey = `H:${bg.hex}`; break;
+            default: bgKey = 'n';
+        }
+        return `${cell.bold ? 'B' : ''}${cell.dim ? 'D' : ''}${cell.italic ? 'I' : ''}${cell.underline ? 'U' : ''}${cell.strikethrough ? 'S' : ''}${cell.inverse ? 'V' : ''}|${fgKey}|${bgKey}`;
+    }
+
     /**
      * Generate the ANSI escape sequence to render a single cell.
+     * Skips ansiReset + re-apply when the adjacent cell has identical style.
      */
     private _renderCell(cell: Cell): string {
         let seq = '';
+        const fp = this._styleFingerprint(cell);
 
-        // Reset before applying new attributes
-        seq += ansiReset;
+        if (fp !== this._lastStyleFingerprint) {
+            seq += ansiReset;
+            if (cell.bold) seq += '\x1b[1m';
+            if (cell.dim) seq += '\x1b[2m';
+            if (cell.italic) seq += '\x1b[3m';
+            if (cell.underline) seq += '\x1b[4m';
+            if (cell.strikethrough) seq += '\x1b[9m';
+            if (cell.inverse) seq += '\x1b[7m';
+            seq += colorToAnsiFg(cell.fg, this._colorDepth);
+            seq += colorToAnsiBg(cell.bg, this._colorDepth);
+            this._lastStyleFingerprint = fp;
+        }
 
-        // Apply text decorations
-        if (cell.bold) seq += '\x1b[1m';
-        if (cell.dim) seq += '\x1b[2m';
-        if (cell.italic) seq += '\x1b[3m';
-        if (cell.underline) seq += '\x1b[4m';
-        if (cell.strikethrough) seq += '\x1b[9m';
-        if (cell.inverse) seq += '\x1b[7m';
-
-        // Apply colors
-        seq += colorToAnsiFg(cell.fg, this._colorDepth);
-        seq += colorToAnsiBg(cell.bg, this._colorDepth);
-
-        // Write the character
         seq += cell.char || ' ';
-
         return seq;
+    }
+
+    /**
+     * Render only the changed spans within a single row (cell-level granularity).
+     * Uses moveTo to position the cursor at the start of each changed span.
+     */
+    private _renderDiffLine(row: number, front: Cell[][], back: Cell[][], cols: number): string {
+        let output = '';
+        let spanStart = -1;
+
+        for (let c = 0; c < cols; c++) {
+            const changed = !cellsEqual(front[row][c], back[row][c]);
+            if (changed && spanStart === -1) {
+                spanStart = c; // start a new changed span
+            } else if (!changed && spanStart !== -1) {
+                // flush the span
+                output += moveTo(spanStart, row);
+                for (let sc = spanStart; sc < c; sc++) {
+                    const cell = back[row][sc];
+                    if (cell.width === 0) continue;
+                    output += this._renderCell(cell);
+                }
+                spanStart = -1;
+            }
+        }
+
+        // flush trailing span
+        if (spanStart !== -1) {
+            output += moveTo(spanStart, row);
+            for (let sc = spanStart; sc < cols; sc++) {
+                const cell = back[row][sc];
+                if (cell.width === 0) continue;
+                output += this._renderCell(cell);
+            }
+        }
+
+        return output;
     }
 
     private _renderLine(row: number): string {

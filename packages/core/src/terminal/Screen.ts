@@ -354,11 +354,13 @@ export class Screen {
 
     /**
      * Clear the front buffer (marks everything as "needs redraw").
+     * Mutates cells in-place to avoid GC pressure from object allocation.
      */
     invalidate(): void {
         for (let r = 0; r < this._rows; r++) {
             for (let c = 0; c < this._cols; c++) {
-                this.front[r][c] = { ...emptyCell(), char: '\0' }; // force diff
+                resetCell(this.front[r][c]);
+                this.front[r][c].char = '\0'; // force diff
             }
         }
     }
