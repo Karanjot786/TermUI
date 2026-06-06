@@ -1,6 +1,7 @@
 import {
     type Screen,
     type Style,
+    type KeyEvent,
     styleToCellAttrs,
     caps,
 } from '@termuijs/core';
@@ -89,8 +90,8 @@ export class Carousel extends Widget {
         this.markDirty();
     }
 
-    handleKey(key: string): void {
-        switch (key) {
+    handleKey(event: KeyEvent): void {
+        switch (event.key) {
             case 'left':
             case 'h':
                 this.prev();
