@@ -24,6 +24,13 @@
 
 > 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
 
+## Available Scripts
+
+- `dev` → Runs the development server
+- `build` → Builds the project for production
+- `test` → Runs test cases (if available)
+- `lint` → Runs code linter to check errors and style issues
+
 ## What is TermUI?
 
 TermUI is a TypeScript framework for building terminal apps. You get a layout engine, JSX support, React-style hooks, focus management, global state, theming, animations, routing, real-time data, error boundaries, and a hot-reload dev server. No curses bindings. No C extensions. Pure TypeScript.

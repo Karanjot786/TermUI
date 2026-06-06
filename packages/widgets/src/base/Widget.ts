@@ -70,6 +70,9 @@ export abstract class Widget {
     /** Reference to the layout node (set during getLayoutNode) */
     private _layoutNode: LayoutNode | null = null;
 
+    /** Error from last render call, null if no error */
+    protected _renderError: Error | null = null;
+
     /** Whether this widget can receive focus */
     focusable = false;
 
@@ -91,6 +94,11 @@ export abstract class Widget {
     constructor(style: Partial<Style> = {}) {
         this.id = `widget_${++_widgetIdCounter}`;
         this._style = mergeStyles(defaultStyle(), style);
+    }
+
+    /** Check if this widget is currently active (focused) */
+    isActive(): boolean {
+        return this.isFocused;
     }
 
     /** Get the current style */
@@ -140,7 +148,12 @@ export abstract class Widget {
             .filter(c => c.style.visible !== false)
             .map(c => c.getLayoutNode());
 
-        this._layoutNode = createLayoutNode(this.id, this._style, childNodes);
+        if (this._layoutNode) {
+            this._layoutNode.style = this._style;
+            this._layoutNode.children = childNodes;
+        } else {
+            this._layoutNode = createLayoutNode(this.id, this._style, childNodes);
+        }
         return this._layoutNode;
     }
 
@@ -174,8 +187,27 @@ export abstract class Widget {
             screen.pushClip(this._rect);
         }
 
-        // Render own content
-        this._renderSelf(screen);
+        // Render own content with error isolation
+        try {
+            this._renderSelf(screen);
+            this._renderError = null;
+            this._dirty = false;
+        } catch (err) {
+            this._renderError = err instanceof Error ? err : new Error(String(err));
+            // Keep widget dirty so it will be retried on the next frame
+            this._dirty = true;
+            // Visual fallback in dev mode — show a red placeholder with widget name
+            if (process.env.NODE_ENV !== 'production') {
+                const { x, y, width } = this._rect;
+                if (width > 2) {
+                    const label = `Error: ${this.constructor.name}`;
+                    const truncated = label.slice(0, Math.max(3, width - 2));
+                    screen.writeString(x + 1, y, truncated, {
+                        fg: { type: 'named', name: 'red' },
+                    });
+                }
+            }
+        }
 
         // Render border
         this._renderBorder(screen);
@@ -211,21 +243,36 @@ export abstract class Widget {
     markDirty(): void {
         if (this._dirty) return; // Already dirty
         this._dirty = true;
+        if (this._layoutNode) {
+            this._layoutNode._dirty = true;
+        }
         this.parent?.markDirty();
     }
 
     /**
      * Clear the dirty flag after rendering.
+     * Widgets with a render error stay dirty so they are retried on the next frame.
      */
     clearDirty(): void {
+        if (this._renderError) {
+            this._dirty = true;
+            return;
+        }
         this._dirty = false;
         for (const child of this._children) {
             child.clearDirty();
+            // If child remains dirty due to render error, keep ancestor dirty too
+            if (child._dirty) {
+                this._dirty = true;
+            }
         }
     }
 
     /** Check if this widget (or any child) needs re-rendering */
     get isDirty(): boolean { return this._dirty; }
+
+    /** Get the last render error, if any */
+    get renderError(): Error | null { return this._renderError; }
 
     /**
      * Render the border around this widget, including focus ring if focused.

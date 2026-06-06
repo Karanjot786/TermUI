@@ -42,11 +42,15 @@ export class Callout extends Widget {
     }
 
     setMessage(message: string): void {
+        if (message === this._message) return;
+
         this._message = message;
         this.markDirty();
     }
 
     setVariant(variant: CalloutVariant): void {
+        if (variant === this._variant) return;
+        
         this._variant = variant;
         this.markDirty();
     }
