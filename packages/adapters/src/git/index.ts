@@ -100,10 +100,12 @@ async function getSimpleGit(cwd?: string): Promise<SimpleGitClient> {
     try {
       const require = createRequire(import.meta.url)
       simpleGitModule = require('simple-git')
-    } catch {
+    } catch (err) {
       throw new Error(
         'The "simple-git" package is required to use the Git adapter. ' +
-          'Please install it as a dependency in your project.'
+          'Please install it as a dependency in your project. ' +
+          String(err),
+        { cause: err }
       )
     }
   }

@@ -3,9 +3,19 @@ import { execSync } from 'node:child_process'
 import { mkdtempSync, writeFileSync, rmSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createRequire } from 'node:module'
 import { useGit } from './index.js'
 
-describe('useGit adapter', () => {
+let hasSimpleGit = false
+try {
+  const require = createRequire(import.meta.url)
+  require('simple-git')
+  hasSimpleGit = true
+} catch {}
+
+const describeOrSkip = hasSimpleGit ? describe : describe.skip
+
+describeOrSkip('useGit adapter', () => {
   let tempDir: string
   let remoteDir: string
   let tempDir2: string
