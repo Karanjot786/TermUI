@@ -80,6 +80,9 @@ export class Hexdump extends Widget {
                     asciiStr += placeholder
                 }
             }
+            for (let i = chunk.length; i < bytesPerRow; i++) {
+                asciiStr += ' '
+            }
             asciiStr += '|'
 
             const line = `${offsetStr}  ${hexStr} ${asciiStr}`
