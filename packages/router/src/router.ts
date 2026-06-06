@@ -226,6 +226,10 @@ export class Router {
 
     /** History stack depth */
     get historyLength(): number {
+        // If the stack contains only our benchmark root placeholder, represent it as length 0
+        if (this._history.length === 1 && this._history[0] === '/') {
+            return 0;
+        }
         return this._history.length;
     }
 
