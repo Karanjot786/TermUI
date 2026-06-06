@@ -6,6 +6,10 @@ import type { Style } from '../style/Style.js';
 import { normalizeEdges } from '../style/Style.js';
 import { borderSize } from '../style/Border.js';
 import type { Rect } from './Rect.js';
+import { Pos } from './pos.js';
+import { Dim } from './dim.js';
+import { resolveLayoutVariables, resolveConstraints, Flex } from './constraint.js';
+import type { ResolvableNode } from './constraint.js';
 
 /**
  * A node in the layout tree. Each widget produces one LayoutNode.
@@ -62,8 +66,8 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
     if (!precomputed) {
         // Calculate this node's dimensions
-        let nodeWidth = resolveSize(style.width, availWidth);
-        let nodeHeight = resolveSize(style.height, availHeight);
+        let nodeWidth = resolveSize(style.width as string | number | undefined, availWidth);
+        let nodeHeight = resolveSize(style.height as string | number | undefined, availHeight);
 
         // Apply constraints
         if (nodeWidth === undefined) nodeWidth = availWidth - margin.left - margin.right;
@@ -94,6 +98,97 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
     const isRow = direction === 'row';
     const gap = style.gap ?? 0;
 
+    // ── Phase 0.1: 1D Layout Constraints (Overrides Flexbox) ──
+    if (style.constraints && style.constraints.length > 0) {
+        const mainAvail = isRow ? innerWidth : innerHeight;
+        
+        let flexJustify = Flex.Start;
+        if (style.justifyContent === 'space-between') flexJustify = Flex.SpaceBetween;
+        else if (style.justifyContent === 'space-around') flexJustify = Flex.SpaceAround;
+        else if (style.justifyContent === 'center') flexJustify = Flex.Center;
+        else if (style.justifyContent === 'flex-end') flexJustify = Flex.End;
+        
+        const results = resolveConstraints(mainAvail, style.constraints, flexJustify);
+        
+        for (let i = 0; i < node.children.length; i++) {
+            const child = node.children[i];
+            if (i >= results.length) break; // Ignore extra children
+            if (child.style.visible === false) continue;
+
+            const res = results[i];
+            const childMargin = normalizeEdges(child.style.margin);
+            
+            if (isRow) {
+                child.computed = {
+                    x: Math.floor(node.computed.x + innerX + res.offset + childMargin.left),
+                    y: Math.floor(node.computed.y + innerY + childMargin.top),
+                    width: Math.round(Math.max(0, res.size - childMargin.left - childMargin.right)),
+                    height: Math.round(Math.max(0, innerHeight - childMargin.top - childMargin.bottom))
+                };
+            } else {
+                child.computed = {
+                    x: Math.floor(node.computed.x + innerX + childMargin.left),
+                    y: Math.floor(node.computed.y + innerY + res.offset + childMargin.top),
+                    width: Math.round(Math.max(0, innerWidth - childMargin.left - childMargin.right)),
+                    height: Math.round(Math.max(0, res.size - childMargin.top - childMargin.bottom))
+                };
+            }
+            layoutNode(child, child.computed.width, child.computed.height, true);
+        }
+        node._dirty = false;
+        return;
+    }
+
+    // ── Phase 0.2: Topological Layout (Absolute positioned elements) ──
+    const topologicalChildren = [];
+    const flexChildren = [];
+
+    for (const child of node.children) {
+        if (child.style.visible === false) continue;
+        const s = child.style;
+        if (s.x instanceof Pos || s.y instanceof Pos || s.width instanceof Dim || s.height instanceof Dim || s.groupId != null) {
+            topologicalChildren.push(child);
+        } else {
+            flexChildren.push(child);
+        }
+    }
+
+    if (topologicalChildren.length > 0) {
+        const resolvableNodes: ResolvableNode[] = topologicalChildren.map(child => {
+            const s = child.style;
+            // Provide a rough contentSize based on style or 0 if unknown
+            let cw = 0, ch = 0;
+            if (typeof s.width === 'number') cw = s.width;
+            if (typeof s.height === 'number') ch = s.height;
+
+            return {
+                id: child.id,
+                x: s.x,
+                y: s.y,
+                width: s.width as any, // could be number | Dim
+                height: s.height as any,
+                contentWidth: cw,
+                contentHeight: ch,
+                groupId: s.groupId,
+                computed: { x: 0, y: 0, width: 0, height: 0 },
+                _originalNode: child // keep reference
+            } as ResolvableNode & { _originalNode: LayoutNode };
+        });
+
+        resolveLayoutVariables(resolvableNodes, innerWidth, innerHeight);
+
+        for (const rNode of resolvableNodes) {
+            const child = (rNode as any)._originalNode as LayoutNode;
+            child.computed = {
+                x: Math.floor(node.computed.x + innerX + rNode.computed.x),
+                y: Math.floor(node.computed.y + innerY + rNode.computed.y),
+                width: Math.round(Math.max(0, rNode.computed.width)),
+                height: Math.round(Math.max(0, rNode.computed.height))
+            };
+            layoutNode(child, child.computed.width, child.computed.height, true);
+        }
+    }
+
     // ── Phase 1: Measure children's desired sizes ──────
 
     const childInfos: Array<{
@@ -109,9 +204,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
     let totalGrow = 0;
     let totalShrink = 0;
 
-    for (const child of node.children) {
-        if (child.style.visible === false) continue;
-
+    for (const child of flexChildren) {
         const childMargin = normalizeEdges(child.style.margin);
         const childBorder = borderSize(child.style.border ?? 'none');
         const grow = child.style.flexGrow ?? 0;
@@ -121,13 +214,13 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
         let crossSize: number;
 
         if (isRow) {
-            mainSize = resolveSize(child.style.width, innerWidth) ?? 0;
-            crossSize = resolveSize(child.style.height, innerHeight) ?? innerHeight;
+            mainSize = resolveSize(child.style.width as string | number | undefined, innerWidth) ?? 0;
+            crossSize = resolveSize(child.style.height as string | number | undefined, innerHeight) ?? innerHeight;
             mainSize += childMargin.left + childMargin.right;
             crossSize = clampSize(crossSize, child.style.minHeight, child.style.maxHeight);
         } else {
-            mainSize = resolveSize(child.style.height, innerHeight) ?? 0;
-            crossSize = resolveSize(child.style.width, innerWidth) ?? innerWidth;
+            mainSize = resolveSize(child.style.height as string | number | undefined, innerHeight) ?? 0;
+            crossSize = resolveSize(child.style.width as string | number | undefined, innerWidth) ?? innerWidth;
             mainSize += childMargin.top + childMargin.bottom;
             crossSize = clampSize(crossSize, child.style.minWidth, child.style.maxWidth);
         }

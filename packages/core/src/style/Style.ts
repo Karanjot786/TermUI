@@ -4,6 +4,9 @@
 
 import type { Color } from './Color.js';
 import type { BorderStyle } from './Border.js';
+import type { Pos } from '../layout/pos.js';
+import type { Dim } from '../layout/dim.js';
+import type { Constraint } from '../layout/constraint.js';
 
 /**
  * Edge values (padding, margin) — top, right, bottom, left.
@@ -39,12 +42,20 @@ export interface Style {
     borderColor?: Color;
 
     // ── Dimensions ──────────
-    width?: number | string;    // number = fixed chars, string = '50%'
-    height?: number | string;
+    width?: number | string | Dim;    // number = fixed chars, string = '50%', Dim = Dimension constraint
+    height?: number | string | Dim;
     minWidth?: number;
     minHeight?: number;
     maxWidth?: number;
     maxHeight?: number;
+    
+    // ── Positional Constraints ─
+    x?: number | Pos;
+    y?: number | Pos;
+    groupId?: string;
+    
+    // ── 1D Layout Constraints ──
+    constraints?: Constraint[];
 
     // ── Flex Layout ─────────
     flexDirection?: 'row' | 'column';
