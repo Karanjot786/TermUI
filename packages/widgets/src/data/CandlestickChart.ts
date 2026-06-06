@@ -57,11 +57,17 @@ export class CandlestickChart extends Widget {
 
         const attrs = styleToCellAttrs(this._style);
 
-        const maxHigh = Math.max(...this._candles.map(c => c.high));
-        const minLow = Math.min(...this._candles.map(c => c.low));
-        const priceRange = maxHigh - minLow || 1;
-
         const candleCount = Math.min(this._candles.length, width);
+        const visibleCandles = this._candles.slice(0, candleCount);
+
+        let maxHigh = 0;
+        let minLow = 0;
+        if (visibleCandles.length > 0) {
+            maxHigh = Math.max(...visibleCandles.map(c => c.high));
+            minLow = Math.min(...visibleCandles.map(c => c.low));
+        }
+
+        const priceRange = maxHigh - minLow || 1;
 
         for (let i = 0; i < candleCount; i++) {
             const candle = this._candles[i];

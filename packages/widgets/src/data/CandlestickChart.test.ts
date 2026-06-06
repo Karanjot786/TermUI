@@ -25,10 +25,8 @@ describe('CandlestickChart', () => {
     });
 
     it('renders a single bullish candle with body and wick characters', async () => {
-        vi.stubEnv('NO_UNICODE', '');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
+        const { Screen, caps } = await import('@termuijs/core');
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const { CandlestickChart } = await import('./CandlestickChart.js');
 
         const chart = new CandlestickChart({ width: 10, height: 10 });
@@ -51,10 +49,8 @@ describe('CandlestickChart', () => {
     });
 
     it('renders bearish candle (close < open)', async () => {
-        vi.stubEnv('NO_UNICODE', '');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
+        const { Screen, caps } = await import('@termuijs/core');
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const { CandlestickChart } = await import('./CandlestickChart.js');
 
         const chart = new CandlestickChart({ width: 10, height: 10 });
@@ -83,10 +79,8 @@ describe('CandlestickChart', () => {
     });
 
     it('uses ASCII fallback when caps.unicode is false', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
+        const { Screen, caps } = await import('@termuijs/core');
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const { CandlestickChart } = await import('./CandlestickChart.js');
 
         const chart = new CandlestickChart({ width: 5, height: 5 });
@@ -109,10 +103,8 @@ describe('CandlestickChart', () => {
     });
 
     it('renders multiple candles limited by width', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
+        const { Screen, caps } = await import('@termuijs/core');
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const { CandlestickChart } = await import('./CandlestickChart.js');
 
         const chart = new CandlestickChart({ width: 3, height: 10 });
@@ -139,10 +131,8 @@ describe('CandlestickChart', () => {
     });
 
     it('applies correct fg color for bullish vs bearish candles', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
+        const { Screen, caps } = await import('@termuijs/core');
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const { CandlestickChart } = await import('./CandlestickChart.js');
 
         const chart = new CandlestickChart({ width: 2, height: 10 });
