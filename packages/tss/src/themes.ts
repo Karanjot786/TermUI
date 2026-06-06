@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// Built-in Themes — 6 curated terminal color palettes
+// Built-in Themes — 10 curated terminal color palettes
 // ─────────────────────────────────────────────────────
 
 export const BUILTIN_THEMES: Record<string, string> = {
@@ -109,6 +109,33 @@ Text:focused {
 }
 `,
 
+    gruvbox: `
+@theme gruvbox {
+    --primary: #458588;
+    --secondary: #b16286;
+    --bg: #282828;
+    --surface: #3c3836;
+    --text: #ebdbb2;
+    --text-muted: #928374;
+    --accent: #98971a;
+    --error: #cc241d;
+    --warning: #d79921;
+    --success: #98971a;
+    --border: round;
+    --border-color: #504945;
+    --border-focus: #458588;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
+}
+`,
+
     catppuccin: `
 @theme catppuccin {
     --primary: #cba6f7;
@@ -160,6 +187,119 @@ Gauge {
 Table {
     border: var(--border);
     header-color: var(--secondary);
+}
+`,
+
+    "tokyo-night": `
+@theme tokyo-night {
+    --primary: #7aa2f7;
+    --secondary: #bb9af7;
+    --bg: #1a1b26;
+    --surface: #1f2335;
+    --text: #a9b1d6;
+    --text-muted: #565f89;
+    --accent: #9ece6a;
+    --error: #f7768e;
+    --warning: #e0af68;
+    --success: #9ece6a;
+    --border: round;
+    --border-color: #3b3d57;
+    --border-focus: #7aa2f7;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
+}
+`,
+
+    solarizedLight: `
+@theme solarizedLight {
+    --primary: #268bd2;
+    --secondary: #2aa198;
+    --bg: #fdf6e3;
+    --surface: #eee8d5;
+    --text: #657b83;
+    --text-muted: #93a1a1;
+    --accent: #859900;
+    --error: #dc322f;
+    --warning: #b58900;
+    --success: #859900;
+    --border: single;
+    --border-color: #93a1a1;
+    --border-focus: #268bd2;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
+}
+`,
+
+    highContrast: `
+@theme highContrast {
+    --primary: #00ffff;
+    --secondary: #ff00ff;
+    --bg: #000000;
+    --surface: #1a1a1a;
+    --text: #ffffff;
+    --text-muted: #b3b3b3;
+    --accent: #00ffff;
+    --error: #ff5555;
+    --warning: #ffff00;
+    --success: #00ff00;
+    --border: double;
+    --border-color: #ffffff;
+    --border-focus: #00ffff;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    border-color: var(--border-color);
+    header-color: var(--primary);
+}
+
+Box:focused {
+    border-color: var(--border-focus);
+}
+`,
+
+    everforest: `
+@theme everforest {
+    --primary: #a7c080;
+    --secondary: #7fbbb3;
+    --bg: #2d353b;
+    --surface: #343f44;
+    --text: #d3c6aa;
+    --text-muted: #859289;
+    --accent: #7fbbb3;
+    --error: #e67e80;
+    --warning: #dbbc7f;
+    --success: #a7c080;
+    --border: round;
+    --border-color: #859289;
+    --border-focus: #a7c080;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--primary);
 }
 `,
 };

@@ -187,9 +187,9 @@ describe('JSONView — nested objects (collapsible)', () => {
         const view = makeView(data);
         // Expand all the way down
         view.expand(); // a
-        view.handleKey('ArrowDown'); // move into a's child b
+        view.handleKey('down'); // move into a's child b
         view.expand(); // b
-        view.handleKey('ArrowDown'); // move into b's child c
+        view.handleKey('down'); // move into b's child c
         view.expand(); // c
 
         const visibleNodes: Array<{ node: TreeNode }> = (view as any)._visibleNodes;

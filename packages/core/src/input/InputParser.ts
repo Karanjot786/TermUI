@@ -2,15 +2,23 @@
 // @termuijs/core — Input Parser
 // ─────────────────────────────────────────────────────
 
+import { Buffer } from 'node:buffer';
 import type { KeyEvent, MouseEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './KeyMap.js';
 import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 
+export interface CursorPosition {
+    row: number;
+    col: number;
+}
+
 interface InputEvents {
     key: KeyEvent;
     mouse: MouseEvent;
+    focuschange: boolean;
+    paste: string;
 }
 
 /**
@@ -22,7 +30,14 @@ export class InputParser {
     private _stdin: NodeJS.ReadStream;
     private _handler: ((data: Buffer) => void) | null = null;
     private _escapeTimeout: ReturnType<typeof setTimeout> | null = null;
-    private _escapeBuffer = '';
+    private _escapeBuffer: Buffer = Buffer.alloc(0);
+    private _isPasting = false;
+    private _pasteBuffer = '';
+    private _cursorRequests: Array<{
+        resolve: (position: CursorPosition) => void;
+        reject: (error: Error) => void;
+        timeout: ReturnType<typeof setTimeout>;
+    }> = [];
 
     constructor(stdin: NodeJS.ReadStream) {
         this._stdin = stdin;
@@ -36,6 +51,29 @@ export class InputParser {
     /** Subscribe to mouse events */
     onMouse(handler: (event: MouseEvent) => void): () => void {
         return this._events.on('mouse', handler);
+    }
+
+    /** Subscribe to terminal focus-in (true) / focus-out (false) reports. */
+    onFocusChange(handler: (focused: boolean) => void): () => void {
+        return this._events.on('focuschange', handler);
+    }
+
+    onPaste(handler: (text: string) => void): () => void {
+        return this._events.on('paste', handler);
+    }
+
+    requestCursorPosition(timeoutMs = 200): Promise<CursorPosition> {
+        return new Promise<CursorPosition>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                const idx = this._cursorRequests.findIndex((item) => item.reject === reject);
+                if (idx !== -1) {
+                    this._cursorRequests.splice(idx, 1);
+                }
+                reject(new Error('Cursor position request timed out'));
+            }, timeoutMs);
+
+            this._cursorRequests.push({ resolve, reject, timeout });
+        });
     }
 
     /** Start listening for input */
@@ -59,7 +97,7 @@ export class InputParser {
             clearTimeout(this._escapeTimeout);
             this._escapeTimeout = null;
         }
-        this._escapeBuffer = '';
+        this._escapeBuffer = Buffer.alloc(0);
     }
 
     /**
@@ -67,10 +105,20 @@ export class InputParser {
      */
     private _processInput(data: Buffer): void {
         const str = data.toString('utf8');
+        const PASTE_START = '\x1b[200~';
+        const PASTE_END = '\x1b[201~';
 
+        if (str.includes(PASTE_START) && str.includes(PASTE_END)) {
+            const pastedText = str
+                .replace(PASTE_START, '')
+                .replace(PASTE_END, '');
+
+            this._events.emit('paste', pastedText);
+            return;
+        }
         // If we're collecting an escape sequence
-        if (this._escapeBuffer) {
-            this._escapeBuffer += str;
+        if (this._escapeBuffer.length > 0) {
+            this._escapeBuffer = Buffer.concat([this._escapeBuffer, data]);
             if (this._escapeTimeout) {
                 clearTimeout(this._escapeTimeout);
                 this._escapeTimeout = null;
@@ -82,32 +130,31 @@ export class InputParser {
         // Check if this starts an escape sequence
         if (str.startsWith('\x1b') && str.length === 1) {
             // Lone ESC — wait a bit to see if more bytes follow
-            this._escapeBuffer = str;
+            this._escapeBuffer = data;
             this._escapeTimeout = setTimeout(() => {
                 // Timeout — it was a standalone Escape key
                 this._events.emit('key', createKeyEvent({
                     key: 'escape',
-                    raw: Buffer.from(this._escapeBuffer),
+                    raw: this._escapeBuffer,
                     ctrl: false,
                     alt: false,
                     shift: false,
                 }));
-                this._escapeBuffer = '';
+                this._escapeBuffer = Buffer.alloc(0);
                 this._escapeTimeout = null;
             }, 50); // 50ms debounce for escape sequences
             return;
         }
 
         if (str.startsWith('\x1b')) {
-            this._escapeBuffer = str;
+            this._escapeBuffer = data;
             this._tryParseEscape(data);
             return;
         }
 
-        // Process each byte for non-escape input
-        for (let i = 0; i < str.length; i++) {
-            const ch = str[i];
-            const code = str.charCodeAt(i);
+        // Process each code point for non-escape input
+        for (const ch of str) {
+            const code = ch.codePointAt(0)!;
             const raw = Buffer.from(ch, 'utf8');
 
             // Ctrl+key (0x01-0x1A, excluding tab/enter/backspace)
@@ -153,14 +200,14 @@ export class InputParser {
      * Try to parse buffered escape sequence.
      */
     private _tryParseEscape(rawData: Buffer): void {
-        const seq = this._escapeBuffer;
+        const seq = this._escapeBuffer.toString('utf8');
 
         // Check for mouse event first
         if (isMouseSequence(seq)) {
             const mouseEvt = parseMouseEvent(seq);
             if (mouseEvt) {
                 this._events.emit('mouse', mouseEvt);
-                this._escapeBuffer = '';
+                this._escapeBuffer = Buffer.alloc(0);
                 return;
             }
             // Might be incomplete mouse sequence — wait for more data
@@ -170,11 +217,40 @@ export class InputParser {
                     this._escapeTimeout = null;
                 }
                 this._escapeTimeout = setTimeout(() => {
-                    this._escapeBuffer = '';
+                    this._escapeBuffer = Buffer.alloc(0);
                     this._escapeTimeout = null;
                 }, 100);
                 return;
             }
+        }
+
+        // Cursor position report
+        const cursorMatch = seq.match(/^\x1b\[(\d+);(\d+)R$/);
+        if (cursorMatch) {
+            const row = parseInt(cursorMatch[1], 10);
+            const col = parseInt(cursorMatch[2], 10);
+            const position = { row, col };
+
+            for (const request of this._cursorRequests) {
+                clearTimeout(request.timeout);
+                request.resolve(position);
+            }
+            this._cursorRequests = [];
+            this._escapeBuffer = Buffer.alloc(0);
+            return;
+        }
+
+        // Focus tracking sequences
+        if (seq === '\x1b[I') {
+            this._events.emit('focuschange', true);
+            this._escapeBuffer = Buffer.alloc(0);
+            return;
+        }
+
+        if (seq === '\x1b[O') {
+            this._events.emit('focuschange', false);
+            this._escapeBuffer = Buffer.alloc(0);
+            return;
         }
 
         // Check known escape sequences
@@ -192,7 +268,7 @@ export class InputParser {
                 alt: isAlt,
                 shift: isShift,
             }));
-            this._escapeBuffer = '';
+            this._escapeBuffer = Buffer.alloc(0);
             return;
         }
 
@@ -206,13 +282,13 @@ export class InputParser {
                 alt: true,
                 shift: ch !== ch.toLowerCase() && ch === ch.toUpperCase(),
             }));
-            this._escapeBuffer = '';
+            this._escapeBuffer = Buffer.alloc(0);
             return;
         }
 
         // If the sequence is getting too long, give up
         if (seq.length > 20) {
-            this._escapeBuffer = '';
+            this._escapeBuffer = Buffer.alloc(0);
             return;
         }
 
@@ -223,7 +299,7 @@ export class InputParser {
         }
         this._escapeTimeout = setTimeout(() => {
             // Timeout — emit as unknown escape and clear
-            this._escapeBuffer = '';
+            this._escapeBuffer = Buffer.alloc(0);
             this._escapeTimeout = null;
         }, 100);
     }

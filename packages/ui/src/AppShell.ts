@@ -64,10 +64,10 @@ export class AppShell extends Widget {
 
     handleKey(event: KeyEvent): void {
         switch (event.key) {
-            case 'ArrowUp':
+            case 'up':
                 this.scrollUp();
                 break;
-            case 'ArrowDown':
+            case 'down':
                 this.scrollDown();
                 break;
         }

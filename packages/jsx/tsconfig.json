@@ -11,7 +11,9 @@
         "skipLibCheck": true,
         "jsx": "react",
         "jsxFactory": "createElement",
-        "jsxFragmentFactory": "Fragment"
+        "jsxFragmentFactory": "Fragment",
+        "types": ["node"],
+        "forceConsistentCasingInFileNames": true
     },
     "include": [
         "src"

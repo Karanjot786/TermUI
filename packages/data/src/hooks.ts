@@ -2,7 +2,7 @@
 // @termuijs/data — Reactive hooks for system metrics
 // ─────────────────────────────────────────────────────
 
-import { useState, useEffect, useInterval } from '@termuijs/jsx';
+import { useState, useEffect, useInterval, useRef, useCallback } from '@termuijs/jsx';
 import { cpu } from './cpu.js';
 import { memory } from './memory.js';
 import { disk } from './disk.js';
@@ -14,6 +14,8 @@ import type { ProcessInfo } from './processes.js';
 import { system } from './system.js';
 import { http } from './http.js';
 import type { HealthResult, Endpoint } from './http.js';
+
+import { getCache, setCache, isFresh, fetchShared } from './cache.js';
 
 // ── CPU ──────────────────────────────────────────────
 
@@ -221,8 +223,348 @@ export function useHttpHealth(
             controller.abort();
             clearInterval(id);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [endpointKey, intervalMs]);
 
     return results;
+}
+
+
+// WebSocket
+
+export type WebSocketState = 'connecting' | 'open' | 'closed' | 'error'
+
+export interface UseWebSocketReturn {
+    message: string | null;
+    state: WebSocketState;
+    send: (data: Parameters<WebSocket['send']>[0]) => void;
+}
+
+/**
+ * useWebSocket — reactive WebSocket connection hook.
+ *
+ * Connects to the provided `url` and returns the latest text message,
+ * the connection `state`, and a `send` function to transmit data.
+ *
+ * The hook automatically attempts to reconnect on close using
+ * exponential backoff (capped at ~10s) and resets retries on open.
+ * It cleans up the socket and any pending reconnect timers on unmount.
+ *
+ * @param url - WebSocket URL to connect to (e.g. `wss://example.com/socket`).
+ */
+export function useWebSocket(url: string): UseWebSocketReturn {
+    const [message, setMessage] = useState<string | null>(null)
+    const [state, setState] = useState<WebSocketState>('connecting')
+
+    const socketRef = useRef<WebSocket | null>(null)
+    const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const retryCountRef = useRef(0)
+
+    useEffect(() => {
+        let isMounted = true;
+
+        function connect() {
+            const socket = new WebSocket(url);
+            socketRef.current = socket;
+            setState('connecting')
+
+            socket.onopen = () => {
+                if (!isMounted) return;
+                setState('open');
+                retryCountRef.current = 0;
+            }
+
+            socket.onmessage = (e) => {
+                if (!isMounted) return;
+                setMessage(e.data)
+            }
+
+            socket.onclose = () => {
+                if (!isMounted) return;
+                setState('closed')
+
+                const timeout = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
+                retryCountRef.current += 1;
+
+                reconnectTimeoutRef.current = setTimeout(() => {
+                    connect();
+                }, timeout)
+            }
+
+            socket.onerror = () => {
+                if (!isMounted) return;
+                setState('error')
+
+            }
+        }
+
+        connect();
+
+        return () => {
+            isMounted = false;
+            if (reconnectTimeoutRef.current) {
+                clearTimeout(reconnectTimeoutRef.current)
+            }
+            if (socketRef.current) {
+                socketRef.current.close();
+            }
+        }
+    }, [url])
+
+    const send = useCallback((data: Parameters<WebSocket['send']>[0]) => {
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send(data)
+        } else {
+            console.warn("Websocket is not connected.")
+        }
+    }, [])
+
+    return { message, state, send }
+}
+
+// ── Fetch ────────────────────────────────────────────
+
+export interface UseFetchOptions {
+    staleTime?: number;
+
+    /** Max retry attempts after the first failure. Default 0. */
+    retry?: number;
+
+    /** Base backoff in ms. Delay = retryDelay * 2 ** attempt */
+    retryDelay?: number;
+}
+
+export interface UseFetchResult<T> {
+    data: T | null;
+    error: Error | null;
+    loading: boolean;
+}
+
+/**
+ * useFetch — reactive fetch hook with caching.
+ *
+ * @param url - The URL to fetch.
+ * @param options - Options including `staleTime` in milliseconds.
+ */
+export function useFetch<T = any>(url: string, options?: UseFetchOptions): UseFetchResult<T> {
+    const staleTime = options?.staleTime ?? 0;
+    const retry = options?.retry ?? 0;
+    const retryDelay = options?.retryDelay ?? 300;
+    const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const [data, setData] = useState<T | null>(() => {
+        if (isFresh(url)) {
+            return getCache<T>(url)?.data ?? null;
+        }
+        return null;
+    });
+
+    const [error, setError] = useState<Error | null>(null);
+    const [loading, setLoading] = useState<boolean>(() => !isFresh(url));
+
+    useEffect(() => {
+        let isMounted = true;
+
+        /**
+         * Clear any pending retry timer.
+         * Used to cancel scheduled retry attempts during cleanup or when a
+         * request succeeds to avoid leaking timers.
+         */
+        const clearRetryTimer = () => {
+            if (retryTimerRef.current !== null) {
+                clearTimeout(retryTimerRef.current);
+                retryTimerRef.current = null;
+            }
+        };
+
+        if (isFresh(url)) {
+            const entry = getCache<T>(url);
+            if (entry) {
+                if (isMounted) {
+                    clearRetryTimer();
+                    setData(entry.data);
+                    setError(null);
+                    setLoading(false);
+                }
+                return () => {
+                    isMounted = false;
+                    clearRetryTimer();
+                };
+            }
+        }
+
+        setLoading(true);
+
+        /**
+         * Attempt the fetch and, on failure, schedule a retry using
+         * exponential backoff. `attempt` is zero-based and controls the
+         * backoff multiplier `retryDelay * 2 ** attempt`.
+         */
+        const fetchWithRetry = (attempt: number) => {
+            fetchShared<T>(url, () => fetch(url)
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+                    return res.json() as Promise<T>;
+                })
+            )
+            .then(json => {
+                if (!isMounted) return;
+                clearRetryTimer();
+                setCache(url, json, staleTime);
+                setData(json);
+                setError(null);
+                setLoading(false);
+            })
+            .catch(err => {
+                if (!isMounted) return;
+
+                if (attempt < retry) {
+                    clearRetryTimer();
+                    retryTimerRef.current = setTimeout(() => {
+                        retryTimerRef.current = null;
+
+                        if (!isMounted) return;
+
+                        fetchWithRetry(attempt + 1);
+                    }, retryDelay * 2 ** attempt);
+                    return;
+                }
+
+                clearRetryTimer();
+                setError(err instanceof Error ? err : new Error(String(err)));
+                setLoading(false);
+            });
+        };
+
+        fetchWithRetry(0);
+
+        return () => {
+            isMounted = false;
+            clearRetryTimer();
+        };
+    }, [url, staleTime, retry, retryDelay]);
+
+    return { data, error, loading };
+}
+
+// ── Infinite Query ────────────────────────────────────
+
+export interface InfiniteQueryOptions<T, P> {
+    /** Called with a page param; resolves to one page of data. */
+    queryFn: (pageParam: P) => Promise<T>;
+    /** Param used for the very first page fetch. */
+    initialPageParam: P;
+    /**
+     * Given the last fetched page and all pages so far, return the param
+     * for the next page, or `undefined` to signal no more pages.
+     */
+    getNextPageParam: (lastPage: T, allPages: T[]) => P | undefined;
+}
+
+export interface UseInfiniteQueryResult<T> {
+    pages: T[];
+    error: Error | null;
+    loading: boolean;
+    hasNextPage: boolean;
+    fetchNextPage: () => void;
+}
+
+/**
+ * useInfiniteQuery — paged fetch hook.
+ *
+ * Fetches the first page on mount using `initialPageParam`.
+ * Subsequent pages are appended by calling `fetchNextPage()`.
+ * `hasNextPage` becomes false when `getNextPageParam` returns `undefined`.
+ */
+export function useInfiniteQuery<T, P = number>(
+    options: InfiniteQueryOptions<T, P>,
+): UseInfiniteQueryResult<T> {
+    const { queryFn, initialPageParam, getNextPageParam } = options;
+
+    const [pages, setPages] = useState<T[]>([]);
+    const [error, setError] = useState<Error | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+
+    // Per-run AbortController for the initial-page effect.
+    // Each effect run creates a fresh controller and aborts the previous one on
+    // cleanup, so stale promise callbacks see `signal.aborted === true` and bail.
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    // Generation counter for fetchNextPage: incremented when the main effect
+    // re-runs (queryFn / initialPageParam changed), so any in-flight
+    // fetchNextPage response belonging to the old generation is discarded.
+    const generationRef = useRef(0);
+
+    // Guard against rapid double-clicks or fast-scrolling triggering duplicate fetches.
+    const loadingRef = useRef(false);
+
+    // Fetch the first page on mount (re-runs if queryFn / initialPageParam change).
+    useEffect(() => {
+        // Abort any previous in-flight fetch from the last effect run.
+        abortControllerRef.current?.abort();
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        // Invalidate any in-flight fetchNextPage from the old generation.
+        generationRef.current += 1;
+
+        setLoading(true);
+        loadingRef.current = true;
+
+        queryFn(initialPageParam)
+            .then(page => {
+                if (controller.signal.aborted) return;
+                setPages([page]);
+                setError(null);
+                setLoading(false);
+                loadingRef.current = false;
+            })
+            .catch(err => {
+                if (controller.signal.aborted) return;
+                setError(err instanceof Error ? err : new Error(String(err)));
+                setLoading(false);
+                loadingRef.current = false;
+            });
+
+        return () => {
+            generationRef.current += 1;
+            controller.abort();
+        };
+    }, [queryFn, initialPageParam]);
+
+    // Derive next param and hasNextPage from current pages snapshot.
+    const nextParam = pages.length > 0
+        ? getNextPageParam(pages[pages.length - 1], pages)
+        : undefined;
+
+    const hasNextPage = nextParam !== undefined;
+
+    const fetchNextPage = useCallback(() => {
+        // No-op while a fetch is in flight or when there is no next page.
+        if (loadingRef.current || nextParam === undefined) return;
+
+        loadingRef.current = true;
+
+        // Capture the current generation; if the main effect re-runs before
+        // this promise settles, the generation will have changed and we skip.
+        const myGeneration = generationRef.current;
+
+        setLoading(true);
+        queryFn(nextParam)
+            .then(page => {
+                if (myGeneration !== generationRef.current) return;
+                loadingRef.current = false;
+                setPages(prev => [...prev, page]);
+                setError(null);
+                setLoading(false);
+            })
+            .catch(err => {
+                if (myGeneration !== generationRef.current) return;
+                loadingRef.current = false;
+                setError(err instanceof Error ? err : new Error(String(err)));
+                setLoading(false);
+            });
+    }, [nextParam, queryFn]);
+
+    return { pages, error, loading, hasNextPage, fetchNextPage };
 }

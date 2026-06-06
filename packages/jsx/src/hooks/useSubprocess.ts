@@ -11,7 +11,10 @@ function spawnProcess(cmd: string[]): Promise<number> {
             stdio: 'inherit',
         });
 
-        proc.on('close', (code) => resolve(code ?? 0));
+        proc.on('close', (code: number | null) => {
+            resolve(code ?? 0);
+        });
+
         proc.on('error', reject);
     });
 }
