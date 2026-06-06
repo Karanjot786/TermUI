@@ -50,10 +50,19 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
  * - gap between children
  */
 export function computeLayout(root: LayoutNode, containerWidth: number, containerHeight: number): void {
+    if (!root._dirty && !hasDirtyChild(root)) {
+        return;
+    }
     root.computed = { x: 0, y: 0, width: containerWidth, height: containerHeight };
     layoutNode(root, containerWidth, containerHeight);
 }
-
+function hasDirtyChild(node: LayoutNode): boolean {
+    if (node._dirty) return true;
+    for (const child of node.children) {
+        if (hasDirtyChild(child)) return true;
+    }
+    return false;
+}
 function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, precomputed = false): void {
     const style = node.style;
     const padding = normalizeEdges(style.padding);

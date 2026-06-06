@@ -139,8 +139,9 @@ export abstract class Widget {
         const childNodes = this._children
             .filter(c => c.style.visible !== false)
             .map(c => c.getLayoutNode());
-
+        const isDirty = this._dirty;
         this._layoutNode = createLayoutNode(this.id, this._style, childNodes);
+        this._layoutNode._dirty = isDirty;
         return this._layoutNode;
     }
 
