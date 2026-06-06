@@ -12,6 +12,12 @@ import { execFileSync } from 'node:child_process';
  */
 function validateThemeName(name) {
   const VALID_THEME_RE = /^[a-z0-9_-]+$/;
+  const ALLOWED_THEMES = new Set([
+    'dark',
+    'light',
+    'solarized',
+    'dracula',
+  ]);
 
   if (!name || name.length === 0) {
     throw new Error('Theme name cannot be empty');
@@ -25,6 +31,9 @@ function validateThemeName(name) {
     throw new Error(
       'Invalid theme name. Only lowercase letters, numbers, hyphens and underscores are allowed.'
     );
+  }
+  if (!ALLOWED_THEMES.has(name)) {
+    throw new Error(`Unsupported theme: ${name}`);
   }
 }
 
