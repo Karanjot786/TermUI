@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 // ── Base ──────────────────────────────────────────────
-export { Widget } from './base/Widget.js';
+export { Widget, _resetWidgetIdCounter } from './base/Widget.js';
 export type { WidgetEvents } from './base/Widget.js';
 
 // ── Display Widgets ───────────────────────────────────
