@@ -81,3 +81,5 @@ export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';
 export * as ansi from './utils/ansi.js';
 export { writeClipboard, readClipboard } from './utils/ansi.js';
+export { debounce } from './utils/debounce.js';
+export type { DebounceOptions } from './utils/debounce.js';
