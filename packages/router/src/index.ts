@@ -6,30 +6,27 @@ export { Router } from './router.js';
 export type { RouterOptions, RouterEvents, NavigateEvent } from './router.js';
 
 export { compilePattern, matchRoute } from './route.js';
+
 export type {
     Route,
     RouteMatch,
     RouteParams,
-
     RedirectTarget,
-} from './route.js';
-
     LazyLoader,
     BeforeEnterGuard,
     AfterEnterGuard,
     RouteMeta,
 } from './route.js';
 
-
 export { scanRoutes } from './scanner.js';
 export type { ScannedRoute } from './scanner.js';
 
-// Animated Route Transitions Interface Exports
+// Animated Route Transitions
 export { RouteTransitionManager } from './transitions.js';
 export type { RouteTransitionEvents, TransitionManagerOptions } from './transitions.js';
 
-// Validation Engine Support
+// Validation Engine
 export * from './validation.js';
 
-// Upstream Hooks
+// Hooks
 export { useParams, useNavigate, useRouteMeta } from './hooks.js';
