@@ -50,7 +50,8 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
  * - gap between children
  */
 export function computeLayout(root: LayoutNode, containerWidth: number, containerHeight: number): void {
-    if (!root._dirty && !hasDirtyChild(root)) {
+    const sizeChanged = root.computed.width !== containerWidth || root.computed.height !== containerHeight;
+    if (!sizeChanged && !root._dirty && !hasDirtyChild(root)) {
         return;
     }
     root.computed = { x: 0, y: 0, width: containerWidth, height: containerHeight };
