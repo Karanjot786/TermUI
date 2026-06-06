@@ -266,7 +266,7 @@ function FeedReaderApp() {
   const title = caps.unicode ? '📰 Hacker News Front Page' : 'Hacker News Front Page';
 
   useKeymap([
-    { key: 'q', action: () => globalThis.process.exit(0) },
+    { key: 'q', action: () => (globalThis as any).process?.exit?.(0) },
     {
       key: 'up',
       action: () => {

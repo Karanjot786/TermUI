@@ -39,7 +39,7 @@
     "dotenv": "^16.0.0",
     "typescript": "^5.7.0",
     "tsup": "^8.3.0",
-    "zod": "^3.0.0"
+    "zod": "^4.4.3"
   },
   "peerDependencies": {
     "@octokit/rest": "^21.0.0",

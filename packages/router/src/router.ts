@@ -186,7 +186,7 @@ export class Router {
 
             const match = matchRoute(currentPath, this._routes);
 
-            if (!match || !match.route.redirect) {
+            if (!match || typeof match.route.redirect === 'undefined') {
                 return currentPath;
             }
 

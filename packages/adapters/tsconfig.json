@@ -3,8 +3,10 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "ignoreDeprecations": "6.0"
+    "declaration": true,
+    "declarationMap": true
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts", "dist"]
+  "include": ["src"],
+  "exclude": ["dist", "node_modules"]
 }
+
