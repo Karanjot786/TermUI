@@ -40,11 +40,16 @@ function defaultErrorScreen(err: Error): VNode {
     } as any;
 }
 
-export interface RouterEvents {
-    navigate: { match: RouteMatch; screen: VNode };
-    back: { match: RouteMatch; screen: VNode } | null;
+export type NavigateEvent = {
+    match: RouteMatch;
+    screen: VNode;
+};
+
+export type RouterEvents = {
+    navigate: NavigateEvent;
+    back: NavigateEvent | null;
     error: Error;
-}
+};
 
 export interface RouterOptions {
     /** Initial path */
