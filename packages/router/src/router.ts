@@ -74,7 +74,7 @@ export class Router {
         }
     }
 
-    /** Register a route with full guard and meta signatures */
+    /** Register a route with full guard extraction signatures */
     addRoute(
         path: string,
         component: () => any,
@@ -84,14 +84,18 @@ export class Router {
     ): void {
         const { pattern, paramNames } = compilePattern(path);
 
+        // Extract beforeEnter if it was passed inside the options/meta object block
+        const { beforeEnter: beforeEnterFromMeta, ...metaWithoutBeforeEnter } = meta || {};
+        const finalBeforeEnter = beforeEnter || beforeEnterFromMeta;
+
         this._routes.push({
             path,
             pattern,
             paramNames,
             component,
-            beforeEnter,
+            beforeEnter: finalBeforeEnter,
             children: children || [],
-            meta: meta || {},
+            meta: metaWithoutBeforeEnter || {},
         });
     }
 
@@ -117,7 +121,6 @@ export class Router {
     }
 
     private _wrapScreen(match: RouteMatch): VNode {
-        // Wrap the component with RouterContext.Provider so hooks can read the active router state
         return createElement(
             RouterContext.Provider,
             { value: this },
@@ -144,12 +147,10 @@ export class Router {
         this._isCleared = false;
         this._history.push(path);
 
-        // Prevent unbounded history growth
         if (this._history.length > this._maxHistory) {
             this._history = this._history.slice(-this._maxHistory);
         }
 
-        // Maintain full route metadata structure match
         this._currentMatch = {
             ...match,
             meta: match.route?.meta || {},
