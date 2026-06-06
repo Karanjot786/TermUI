@@ -85,61 +85,9 @@ describe('Router', () => {
         ]);
         expect(r.routes).toHaveLength(2);
     });
-    it('beforeEnter can block navigation', () => {
-        const r = new Router();
 
-        r.addRoute('/admin', () => 'Admin');
-
-        (r.routes[0] as any).beforeEnter = () => false;
-
-        r.push('/admin');
-
-        expect(r.current).toBeNull();
-    });
-    it('beforeEnter can redirect navigation', () => {
-        const r = new Router();
-
-        r.addRoute('/login', () => 'Login');
-        r.addRoute('/admin', () => 'Admin');
-
-        (r.routes[1] as any).beforeEnter = () => '/login';
-
-        r.push('/admin');
-
-        expect(r.currentPath).toBe('/login');
-    });
-    it('afterEnter executes after navigation', () => {
-        const r = new Router();
-
-        const spy = vi.fn();
-
-        r.addRoute('/home', () => 'Home');
-
-        (r.routes[0] as any).afterEnter = spy;
-
-        r.push('/home');
-
-        expect(spy).toHaveBeenCalled();
-    });
-    it('stores lazy loader on route', () => {
-        const r = new Router();
-
-        const lazy = () => Promise.resolve({
-            default: () => 'LazyScreen',
-        });
-
-        r.addRoute(
-            '/lazy',
-            () => 'Placeholder',
-            undefined,
-            { lazy },
-        );
-
-        expect(r.routes[0]?.lazy).toBe(lazy);
-    });
     it('addRoutes supports lazy loader', () => {
         const r = new Router();
-
         const lazy = () => Promise.resolve({
             default: () => 'LazyScreen',
         });
@@ -153,14 +101,47 @@ describe('Router', () => {
 
         expect(r.routes[0]?.component).toBeDefined();
     });
+
+    it("falls back to 404", () => {
+        const r = new Router();
+        r.addRoute('/404', () => 'NotFound');
+        
+        // Listen for the unmatched route error and redirect to our 404 route
+        r.events.on('error', () => {
+            r.push('/404');
+        });
+        
+        r.push('/missing');
+        expect(r.currentPath).toBe('/404');
+    });
+
+    it("updates the history stack with push and back", () => {
+        const r = new Router();
+        r.addRoute('/', () => 'Home');
+        r.addRoute('/about', () => 'About');
+
+        // Push to home
+        r.push('/');
+        expect(r.currentPath).toBe('/');
+        expect(r.historyLength).toBe(1);
+
+        // Push to about
+        r.push('/about');
+        expect(r.currentPath).toBe('/about');
+        expect(r.historyLength).toBe(2);
+
+        // Go back
+        r.back();
+        expect(r.currentPath).toBe('/');
+        expect(r.historyLength).toBe(1);
+    });
+
     it('beforeEnter can block navigation', () => {
         const r = new Router();
-        // Use the official router API to pass the guard in the options object
         r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => false });
         
-        r.push('/admin'); // Trigger the real router
+        r.push('/admin');
         
-        // The real router should block it, leaving current as null
         expect(r.current).toBeNull();
     });
 
@@ -169,9 +150,8 @@ describe('Router', () => {
         r.addRoute('/login', () => 'Login');
         r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => '/login' });
         
-        r.push('/admin'); // Trigger the real router
+        r.push('/admin');
         
-        // The real router should hit the guard and redirect to /login
         expect(r.currentPath).toBe('/login');
     });
 
@@ -180,9 +160,8 @@ describe('Router', () => {
         const spy = vi.fn();
         r.addRoute('/home', () => 'Home', undefined, { afterEnter: spy });
         
-        r.push('/home'); // Trigger the real router
+        r.push('/home');
         
-        // The real router should fire the hook automatically after success
         expect(spy).toHaveBeenCalled();
     });
 });

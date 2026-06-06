@@ -122,6 +122,9 @@ export { Hexdump } from './data/Hexdump.js';
 export type { HexdumpOptions } from './data/Hexdump.js';
 
 // ── New Display Widgets ───────────────────────────────
+export { Breadcrumbs } from './display/Breadcrumbs.js';
+export type { BreadcrumbsOptions } from './display/Breadcrumbs.js';
+
 export { BigText } from './display/BigText.js';
 export type { BigTextOptions } from './display/BigText.js';
 export { Gradient } from './display/Gradient.js';
