@@ -486,4 +486,15 @@ MIT
 ### 🎯 Goal
 Improve onboarding experience for new contributors and users by making README more structured, readable, and professional.
 */
+## Contributing Setup Guide
 
+### Prerequisites
+- Node.js (mention version from package.json if available)
+- npm / yarn / pnpm (as used in project)
+
+### Installation
+
+```bash
+git clone https://github.com/YOUR_USERNAME/REPO_NAME.git
+cd REPO_NAME
+npm install
