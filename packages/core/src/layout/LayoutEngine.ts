@@ -64,13 +64,6 @@ export function invalidateLayout(node: LayoutNode): void {
     }
 }
 
-export function invalidateLayout(node: LayoutNode): void {
-    node._dirty = true;
-    for (const child of node.children) {
-        invalidateLayout(child);
-    }
-}
-
 function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, precomputed = false): void {
     if (!node._dirty) return;
 

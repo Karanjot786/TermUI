@@ -129,7 +129,7 @@ export const LAYOUT_PROPS: ReadonlySet<keyof Style> = new Set<keyof Style>([
     'width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
     'padding', 'margin', 'border',
     'flexDirection', 'justifyContent', 'alignItems', 'flexGrow', 'flexShrink', 'flexWrap', 'gap',
-    'overflow',
+    'overflow', 'visible',
 ]);
 
 /**
