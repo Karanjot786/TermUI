@@ -1,20 +1,18 @@
 {
     "compilerOptions": {
         "target": "ES2022",
-        "module": "NodeNext",
-        "moduleResolution": "NodeNext",
         "lib": [
-            "ES2022"
+            "ES2022",
+            "DOM"
         ],
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
         "strict": true,
-        "esModuleInterop": true,
         "skipLibCheck": true,
-        "forceConsistentCasingInFileNames": true,
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "declaration": true,
-        "declarationMap": true,
-        "sourceMap": true,
-        "outDir": "./dist",
+        "noEmit": true,
+        "types": [
+            "node"
+        ],
+        "jsx": "react-jsx"
     }
 }

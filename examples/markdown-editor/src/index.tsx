@@ -51,5 +51,4 @@ app.events.on('key', (event) => {
     app.requestRender();
 });
 
-const exitCode = await app.mount();
-process.exit(exitCode);
+await app.mount();
