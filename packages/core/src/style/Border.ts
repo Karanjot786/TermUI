@@ -65,15 +65,35 @@ export const BORDER_CHARS: Record<Exclude<BorderStyle, 'none' | 'custom'>, Borde
     },
 };
 
+export const ASCII_BORDER_CHARS: BorderChars = {
+    topLeft: '+',
+    top: '-',
+    topRight: '+',
+    right: '|',
+    bottomRight: '+',
+    bottom: '-',
+    bottomLeft: '+',
+    left: '|',
+};
+
 /**
  * Get the border characters for a given style.
  */
-export function getBorderChars(style: BorderStyle, customChars?: Partial<BorderChars>): BorderChars | null {
+export function getBorderChars(
+    style: BorderStyle,
+    customChars?: Partial<BorderChars>,
+    asciiOnly = false,
+): BorderChars | null {
+
     if (style === 'none') return null;
+
+    if (asciiOnly) return ASCII_BORDER_CHARS;
+
     if (style === 'custom') {
         const base = BORDER_CHARS.single;
         return { ...base, ...customChars };
     }
+
     return BORDER_CHARS[style];
 }
 

@@ -1,0 +1,64 @@
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Screen, caps } from '@termuijs/core';
+import { EmptyState } from './EmptyState.js';
+
+afterEach(() => {
+    vi.restoreAllMocks();
+});
+
+function row(screen: Screen, y: number): string {
+    return screen.back[y].map((c: { char: string }) => c.char).join('');
+}
+
+describe('EmptyState', () => {
+    it('renders icon + title centered', () => {
+        const es = new EmptyState('No items');
+        es.updateRect({ x: 0, y: 0, width: 30, height: 5 });
+        const screen = new Screen(30, 5);
+        es.render(screen);
+
+        const iconRow = 1;
+        const titleRow = 2;
+        expect(row(screen, iconRow).trim()).toBe('📭');
+        expect(row(screen, titleRow).trim()).toBe('No items');
+    });
+
+    it('renders description when provided', () => {
+        const es = new EmptyState('No results', {}, { description: 'Try a different search' });
+        es.updateRect({ x: 0, y: 0, width: 40, height: 6 });
+        const screen = new Screen(40, 6);
+        es.render(screen);
+
+        const descRow = 3;
+        expect(row(screen, descRow).trim()).toContain('Try a different search');
+    });
+
+    it('setTitle updates text', () => {
+        const es = new EmptyState('Old title');
+        es.setTitle('New title');
+        es.updateRect({ x: 0, y: 0, width: 30, height: 5 });
+        const screen = new Screen(30, 5);
+        es.render(screen);
+
+        const titleRow = 2;
+        expect(row(screen, titleRow).trim()).toContain('New title');
+        expect(row(screen, titleRow).trim()).not.toContain('Old title');
+    });
+
+    it('handles very narrow width gracefully', () => {
+        const es = new EmptyState('Wide title', {}, { description: 'desc' });
+        es.updateRect({ x: 0, y: 0, width: 3, height: 5 });
+        const screen = new Screen(3, 5);
+        expect(() => es.render(screen)).not.toThrow();
+    });
+
+    it('renders hint when provided', () => {
+        const es = new EmptyState('No data', {}, { hint: 'Press F5 to refresh' });
+        es.updateRect({ x: 0, y: 0, width: 40, height: 7 });
+        const screen = new Screen(40, 7);
+        es.render(screen);
+
+        const hintRow = 6;
+        expect(row(screen, hintRow).trim()).toContain('Press F5 to refresh');
+    });
+});
