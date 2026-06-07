@@ -64,6 +64,17 @@ export interface TestInstance {
     queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null;
 
     /**
+     * Find all widgets whose text content includes the given string.
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByText(text: string): Widget[];
+    /**
+     * Find all widgets of a specific type (by constructor).
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[];
+
+    /**
      * Simulate a key press event. This dispatches to useInput handlers.
      */
     fireKey(
@@ -348,6 +359,18 @@ export function render(
         queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null {
             const matches = walkWidgets(container, (w) => w instanceof type) as T[];
             return matches.length > 0 ? matches[0] : null;
+        },
+
+        queryAllByText(text: string): Widget[] {
+            return walkWidgets(container, (w) => {
+                if (w instanceof Text) {
+                    return getTextContent(w).includes(text);
+                }
+                return false;
+            });
+        },
+        queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
+            return walkWidgets(container, (w) => w instanceof type) as T[];
         },
 
         fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
