@@ -362,15 +362,10 @@ export function render(
         },
 
         queryAllByText(text: string): Widget[] {
-            return walkWidgets(container, (w) => {
-                if (w instanceof Text) {
-                    return getTextContent(w).includes(text);
-                }
-                return false;
-            });
+            return instance.getAllByText(text);
         },
         queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
-            return walkWidgets(container, (w) => w instanceof type) as T[];
+            return instance.getAllByType(type);
         },
 
         fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
