@@ -2,7 +2,7 @@
 // @termuijs/widgets — ScrollView widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, type KeyEvent } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, type KeyEvent, normalizeNavigationKey } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { ScrollAcceleration } from './scroll-acceleration.js';
 
@@ -89,7 +89,7 @@ export class ScrollView extends Widget {
 }
     /** Handle keyboard navigation */
     handleKey(event: KeyEvent): void {
-        switch (event.key) {
+        switch (normalizeNavigationKey(event.key)) {
             case 'up':       this.scrollBy(-this.getScrollDelta(1)); break;
             case 'down':     this.scrollBy(this.getScrollDelta(1)); break;
             case 'pageup':   this.scrollBy(-this.getScrollDelta(Math.max(1, this._rect.height - 1))); break;

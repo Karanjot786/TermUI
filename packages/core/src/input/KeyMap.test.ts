@@ -2,8 +2,9 @@
 // @termuijs/core — Tests for KeyMap constants
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
-import { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './KeyMap.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS, normalizeNavigationKey } from './KeyMap.js';
+import { caps } from '../terminal/env-caps.js';
 
 describe('KeyMap constants', () => {
     it('ESCAPE_SEQUENCES contains correct mappings', () => {
@@ -62,5 +63,43 @@ describe('KeyMap constants', () => {
         expect(SPECIAL_KEYS[0x0D]).toBe('enter');
         expect(SPECIAL_KEYS[0x0A]).toBe('enter');
         expect(SPECIAL_KEYS[0x20]).toBe('space');
+    });
+});
+
+describe('normalizeNavigationKey', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('returns unmodified keys by default', () => {
+        vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('default');
+
+        expect(normalizeNavigationKey('up')).toBe('up');
+        expect(normalizeNavigationKey('j')).toBe('j');
+        expect(normalizeNavigationKey('ctrl+n')).toBe('ctrl+n');
+    });
+
+    it('maps vim keys to directions when in vim mode', () => {
+        vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
+
+        expect(normalizeNavigationKey('k')).toBe('up');
+        expect(normalizeNavigationKey('j')).toBe('down');
+        expect(normalizeNavigationKey('h')).toBe('left');
+        expect(normalizeNavigationKey('l')).toBe('right');
+
+        // Unrelated keys should remain unchanged
+        expect(normalizeNavigationKey('enter')).toBe('enter');
+        expect(normalizeNavigationKey('up')).toBe('up');
+    });
+
+    it('maps emacs keys to directions when in emacs mode', () => {
+        vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('emacs');
+
+        expect(normalizeNavigationKey('ctrl+p')).toBe('up');
+        expect(normalizeNavigationKey('ctrl+n')).toBe('down');
+
+        // Unrelated keys should remain unchanged
+        expect(normalizeNavigationKey('j')).toBe('j');
+        expect(normalizeNavigationKey('up')).toBe('up');
     });
 });

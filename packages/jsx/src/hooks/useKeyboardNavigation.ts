@@ -15,6 +15,7 @@
 // ─────────────────────────────────────────────────────
 
 import { useState, useInput } from '../hooks.js';
+import { normalizeNavigationKey } from '@termuijs/core';
 
 export interface KeyboardNavigationOptions {
     /** Total number of items in the list */
@@ -86,7 +87,7 @@ export function useKeyboardNavigation({
             });
         };
 
-        switch (key) {
+        switch (normalizeNavigationKey(key)) {
             case 'up':
                 move(-1);
                 break;

@@ -19,7 +19,7 @@ export { mergeBorders } from './renderer/border-merge.js';
 
 // ── Input ─────────────────────────────────────────────
 export { InputParser } from './input/InputParser.js';
-export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './input/KeyMap.js';
+export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS, normalizeNavigationKey } from './input/KeyMap.js';
 export { parseMouseEvent, isMouseSequence } from './input/MouseParser.js';
 export { MouseGestures } from './input/MouseGestures.js';
 export type { MouseGesturesOptions } from './input/MouseGestures.js';

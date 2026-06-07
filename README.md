@@ -200,7 +200,7 @@ import { ErrorBoundary } from '@termuijs/jsx'
 
 ### Capability flags
 
-TermUI checks the terminal environment before rendering unicode or animations. Set environment variables to get ASCII output in CI or reduced-motion output for accessibility.
+TermUI checks the terminal environment before rendering unicode or animations. Set environment variables to get ASCII output in CI or reduced-motion output for accessibility. You can also configure standard keyboard navigation schemes.
 
 ```bash
 NO_UNICODE=1  # ASCII fallbacks for all widgets
@@ -208,10 +208,17 @@ NO_MOTION=1   # Skip all animations; static output
 NO_COLOR=1    # Disable ANSI color sequences
 ```
 
+Configure global navigation modes (`default` arrow keys, `vim` j/k/h/l, or `emacs` ctrl+n/p):
+```bash
+TERMUI_KEYBINDINGS=vim
+TERMUI_KEYBINDINGS=emacs
+```
+
 ```typescript
 import { caps } from '@termuijs/core'
 
 const bullet = caps.unicode ? '●' : '*'
+console.log(caps.keybindingMode) // 'default', 'vim', or 'emacs'
 ```
 
 ### Notifications

@@ -2,9 +2,9 @@
 // @termuijs/widgets — Tests for ScrollView widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, afterEach } from "vitest";
-import { ScrollView } from "./ScrollView.js";
-import { Screen, type KeyEvent } from "@termuijs/core";
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { ScrollView } from './ScrollView.js';
+import { Screen, caps, type KeyEvent } from '@termuijs/core';
 
 const key = (k: string): KeyEvent => ({
     key: k,
@@ -203,5 +203,36 @@ describe("ScrollView", () => {
         view.setContentHeight(10);
     
         expect(view.isDirty).toBe(false);
+    });
+
+    describe('keybindingMode integration', () => {
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it('down scrolls down by 1 in vim mode using j', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
+            const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+            sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+            sv.handleKey(key('j'));
+            expect(sv.scrollOffset).toBe(1);
+        });
+
+        it('up scrolls up by 1 in emacs mode using ctrl+p', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('emacs');
+            const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+            sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+            sv.scrollBy(5);
+            sv.handleKey(key('ctrl+p'));
+            expect(sv.scrollOffset).toBe(4);
+        });
+
+        it('j does not scroll down in default mode', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('default');
+            const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+            sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+            sv.handleKey(key('j'));
+            expect(sv.scrollOffset).toBe(0);
+        });
     });
 });
