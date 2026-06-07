@@ -133,13 +133,12 @@ export class Renderer {
                 output += ansiReset;
                 output += endSyncUpdate;
 
-                const isHookActive = this.hook.isActive;
                 try {
-                    if (isHookActive) this.hook.stop();
+                    RenderHook.suspendAll();
                     if (bufferedLogs) this._terminal.write(bufferedLogs);
                     this._terminal.write(output);
                 } finally {
-                    if (isHookActive) this.hook.start();
+                    RenderHook.resumeAll();
                 }
 
                 this._screen.saveLines();
@@ -158,21 +157,15 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
-            const isHookActive = this.hook.isActive;
             try {
-                if (isHookActive) {
-                    this.hook.stop();
-                }
-
+                RenderHook.suspendAll();
                 if (bufferedLogs) {
                     this._terminal.write(bufferedLogs);
                 }
 
                 this._terminal.write(output);
             } finally {
-                if (isHookActive) {
-                    this.hook.start();
-                }
+                RenderHook.resumeAll();
             }
 
             this._emitStats(start, bufferedLogs, output);

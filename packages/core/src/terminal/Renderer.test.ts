@@ -2,10 +2,11 @@
 // @termuijs/core — Tests for Screen diff helpers used by diffRenderer
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Screen } from './Screen.js';
 import { Terminal } from './Terminal.js';
 import { Renderer, type FrameStats } from './Renderer.js';
+import { RenderHook } from '../renderer/render-hook.js';
 
 describe('Screen.getLine', () => {
     it('returns empty string for out-of-range rows', () => {
@@ -103,6 +104,7 @@ describe('Renderer profiling hooks', () => {
 
     afterEach(() => {
         terminal.restore();
+        RenderHook.globalRestore();
     });
 
     it('onFrame fires once per flush', () => {
@@ -193,5 +195,28 @@ describe('Renderer profiling hooks', () => {
         renderer.renderNow();
         expect(stats).toBeDefined();
         expect(stats!.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('RenderHook resumes after _terminal.write() throws during flush', () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const hook = new RenderHook();
+        hook.start();
+        process.stdout.write('before flush');
+
+        const originalWrite = terminal.write.bind(terminal);
+        vi.spyOn(terminal, 'write').mockImplementation(() => {
+            throw new Error('write error');
+        });
+
+        const renderer = new Renderer(terminal, screen);
+        screen.setCell(0, 0, { char: 'x' });
+
+        renderer.renderNow();
+
+        vi.restoreAllMocks();
+
+        process.stdout.write('after flush');
+        expect(hook.flush()).toBe('before flushafter flush');
     });
 });
