@@ -208,10 +208,8 @@ describe('App', () => {
             expect(fakeStdout.writes).toContain('HEADER LINE');
 
             // Verify back buffer was written
-            // @ts-ignore
-            expect((app as any).screen.back[2][0].char).toBe('X');
-            // @ts-ignore
-            expect((app as any).screen.back[3][0].char).toBe('Y');
+            expect(app.screen.back[2][0].char).toBe('X');
+            expect(app.screen.back[3][0].char).toBe('Y');
 
             // Inline output verified via back buffer above; scrollback write is implementation detail
 
