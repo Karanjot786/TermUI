@@ -506,9 +506,10 @@ function renderComponent(
  * already handles orphaned fibers after each reconcile pass. This function
  * only prevents _instanceMap from retaining dead widget references.
  */
-function _pruneInstancesForWidget(widget: Widget): void {
+/** @internal exposed for testing */
+export function _pruneInstancesForWidget(widget: Widget): void {
     _instanceMap.delete(widget);
-    const children = (widget as any)._children ?? (widget as any).children ?? [];
+    const children = (widget as any)._children ?? (widget as any).children ?? []; // cast required: Widget._children/children are protected, not part of public API
     if (Array.isArray(children)) {
         for (const child of children) {
             if (child && typeof child === 'object') {
