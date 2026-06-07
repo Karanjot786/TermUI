@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 export class RenderHook {
-    private _originalWrite: typeof process.stdout.write | null = null;
+    private static _originalWrite: typeof process.stdout.write | null = null;
     private _buffer: string[] = [];
     private _isActive = false;
 
@@ -16,7 +16,9 @@ export class RenderHook {
     start(): void {
         if (this._isActive) return;
         this._isActive = true;
-        this._originalWrite = process.stdout.write;
+        if (RenderHook._originalWrite === null) {
+            RenderHook._originalWrite = process.stdout.write;
+        }
 
         process.stdout.write = (
             chunk: any,
@@ -26,21 +28,27 @@ export class RenderHook {
             const text = Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
             this._buffer.push(text);
 
-            // Handle Node stream callback variations
             const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb;
             if (typeof callback === 'function') {
                 callback();
             }
-            return true; 
+            return true;
         };
     }
 
     /** Restore original stdout behavior */
     stop(): void {
-        if (!this._isActive || !this._originalWrite) return;
-        process.stdout.write = this._originalWrite;
-        this._originalWrite = null;
+        if (!this._isActive || !RenderHook._originalWrite) return;
+        process.stdout.write = RenderHook._originalWrite;
         this._isActive = false;
+    }
+
+    /** Restore stdout globally regardless of which instance hijacked it */
+    static globalRestore(): void {
+        if (RenderHook._originalWrite) {
+            process.stdout.write = RenderHook._originalWrite;
+            RenderHook._originalWrite = null;
+        }
     }
 
     /** Retrieve and clear the buffered logs */
@@ -53,8 +61,8 @@ export class RenderHook {
 
     /** Write directly to the terminal, bypassing the buffer */
     writeRaw(text: string): void {
-        if (this._originalWrite) {
-            this._originalWrite.call(process.stdout, text);
+        if (RenderHook._originalWrite) {
+            RenderHook._originalWrite.call(process.stdout, text);
         } else {
             process.stdout.write(text);
         }

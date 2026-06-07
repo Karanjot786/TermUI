@@ -74,6 +74,8 @@ export class App {
     private _unsubKey: (() => void) | null = null;
     private _unsubMouse: (() => void) | null = null;
     private _unsubPaste: (() => void) | null = null;
+    private _unsubSigInt: (() => void) | null = null;
+    private _unsubSigTerm: (() => void) | null = null;
     private _widgetById = new Map<string, any>();
     private _consecutiveRenderFailures = 0;
     private static readonly MAX_RENDER_FAILURES = 5;
@@ -196,6 +198,14 @@ export class App {
             this.events.emit('paste', text);
         });
 
+        // Handle signals to ensure hook cleanup on forced exit
+        const onSigInt = (): void => { this.exit(130); };
+        const onSigTerm = (): void => { this.exit(143); };
+        process.on('SIGINT', onSigInt);
+        process.on('SIGTERM', onSigTerm);
+        this._unsubSigInt = () => process.off('SIGINT', onSigInt);
+        this._unsubSigTerm = () => process.off('SIGTERM', onSigTerm);
+
         // Start render loop — tick drives requestRender() so dirty widgets
         // (motion, timers) get redrawn without a separate setInterval.
         this.renderer.start(() => this.requestRender());
@@ -224,6 +234,10 @@ export class App {
         this._rootWidget.unmount?.();
         this.events.emit('unmount', undefined as any);
 
+        this._unsubSigInt?.();
+        this._unsubSigInt = null;
+        this._unsubSigTerm?.();
+        this._unsubSigTerm = null;
         this._unsubKey?.();
         this._unsubKey = null;
         this._unsubMouse?.();
