@@ -52,6 +52,112 @@ examples/            Working example apps
 
 API docs for each package live on https://www.termui.io. Edit those pages in [TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
 
+## First time here? Start here.
+
+Welcome! If this is your first time contributing to TermUI, follow these steps in order.
+
+### 1. Check your Bun version
+
+TermUI uses **Bun 1.3 or newer**. Check yours:
+
+```bash
+bun --version
+```
+
+If it is older than 1.3, update it:
+
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+
+### 2. Fork and clone
+
+Fork the repo on GitHub first. Then clone **your fork** (not the original):
+
+```bash
+git clone https://github.com/<your-username>/TermUI.git
+cd TermUI
+```
+
+### 3. Install and build
+
+```bash
+bun install
+bun run build
+```
+
+Build order matters in a monorepo. Always run `bun run build` from the root — it builds all 14 packages in the correct dependency order automatically.
+
+### 4. Run the tests
+
+```bash
+bun run test
+```
+
+All 598 tests should pass before you make any changes. If any test fails before you touch anything, open an issue and report it.
+
+### 5. Create your branch
+
+Never work on `main` directly. Create a branch:
+
+```bash
+git checkout -b feat/your-feature-name
+# or
+git checkout -b fix/your-bug-name
+```
+
+Branch naming format: `type/short-description`. Example: `fix/empty-list-crash`.
+
+### 6. Make your changes and verify
+
+After your changes, always run all three checks:
+
+```bash
+bun run build && bun run test && bun run typecheck
+```
+
+All three must pass before you open a PR.
+
+---
+
+## Common setup errors
+
+### `bun: command not found`
+Bun is not installed. Install it:
+```bash
+curl -fsSL https://bun.sh/install | bash
+```
+Then restart your terminal.
+
+### Build fails with "package not found"
+Always run `bun install` from the **root** of the repo, not inside a package folder.
+
+### Tests fail before any changes
+This usually means a missing build step. Run:
+```bash
+bun run build
+bun run test
+```
+If tests still fail, comment on the issue and tag `@Karanjot786`.
+
+### TypeScript errors after adding a widget
+Make sure you exported your new widget from the package's `index.ts`. Every new export must be registered there.
+
+---
+
+## PR checklist for first-timers
+
+Before you open your PR, go through this list:
+
+- [ ] I starred the repo ⭐
+- [ ] I claimed the issue before starting work
+- [ ] My branch name follows `type/short-description` format
+- [ ] I ran `bun run build && bun run test && bun run typecheck` — all pass
+- [ ] I added a test for my change
+- [ ] My PR title follows `type(scope): short description` format
+- [ ] I linked the issue in my PR body with `Closes #N`
+- [ ] I filled every section of the PR template
+
 ## Before you write code
 
 1. **Check existing issues.** Someone might already work on it.
