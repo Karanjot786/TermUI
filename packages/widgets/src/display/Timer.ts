@@ -43,7 +43,7 @@ export class Timer extends Widget {
      * Assign a function to this property to receive the event.
      *
      * @example
-     * timer.onComplete = () => { /* done */ };
+     * timer.onComplete = () => {};
      */
     onComplete: (() => void) | undefined;
 
