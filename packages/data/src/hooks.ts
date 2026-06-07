@@ -264,6 +264,7 @@ export function useWebSocket(url: string): UseWebSocketReturn {
     useEffect(() => {
         let isMounted = true;
         const thisGeneration = ++generationRef.current;
+        retryCountRef.current = 0;
 
         function connect() {
             if (socketRef.current) {
@@ -295,6 +296,11 @@ export function useWebSocket(url: string): UseWebSocketReturn {
             socket.onclose = () => {
                 if (!isMounted || thisGeneration !== generationRef.current) return;
                 setState('closed')
+
+                if (reconnectTimeoutRef.current) {
+                    clearTimeout(reconnectTimeoutRef.current);
+                    reconnectTimeoutRef.current = null;
+                }
 
                 const timeout = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
                 retryCountRef.current += 1;
