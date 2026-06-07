@@ -1,6 +1,3 @@
-import React from 'react';
-import { Text } from '@termuijs/core';
-
 export interface HighlightStyle {
   backgroundColor?: string;
   color?: string;
@@ -13,11 +10,11 @@ export interface HighlightProps {
   style?: HighlightStyle;
 }
 
-export const Highlight: React.FC<HighlightProps> = ({ 
+export const Highlight = ({ 
   children, 
   query, 
   style = { backgroundColor: 'yellow', color: 'black' } 
-}) => {
+}: HighlightProps) => {
   if (!query) return <>{children}</>;
 
   const searchPattern = query instanceof RegExp ? query.source : query.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
@@ -32,9 +29,9 @@ export const Highlight: React.FC<HighlightProps> = ({
 
   return (
     <>
-      {parts.map((part, i) =>
+      {parts.map((part: string, i: number) =>
         isMatch(part) ? (
-          <Text key={i} {...style}>{part}</Text>
+          <text key={i} {...style}>{part}</text>
         ) : (
           part
         )
