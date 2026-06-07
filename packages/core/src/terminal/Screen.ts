@@ -4,6 +4,7 @@
 
 import type { Color } from '../style/Color.js';
 import { stringWidth } from '../utils/unicode.js';
+import { stripAnsiControl } from '../utils/ansi.js';
 import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
@@ -216,6 +217,9 @@ export class Screen {
         }
 
         const existing = this.back[row][col];
+        if (cell.char !== undefined) {
+          cell = { ...cell, char: stripAnsiControl(cell.char) };
+        }
         Object.assign(existing, cell);
     }
 
@@ -233,8 +237,10 @@ export class Screen {
         col = Math.floor(col);
         if (!(row >= 0 && row < this._rows)) return;
 
+        // Strip ANSI control sequences from user-supplied content to prevent escape injection
+        const safeStr = stripAnsiControl(str);
         let x = col;
-        for (const char of str) {
+        for (const char of safeStr) {
             if (x >= this._cols) break;
 
             let finalChar = char;
