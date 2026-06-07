@@ -14,6 +14,7 @@ import type { EventMap } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
 import { mergeBorders } from '../renderer/border-merge.js';
+import { renderInlineToTerminal } from '../inline-viewport.js';
 
 export interface AppOptions extends TerminalOptions {
     /** Frames per second for the render loop */
@@ -80,7 +81,10 @@ export class App {
     private _exitResolve: ((code: number) => void) | null = null;
     private _unsubKey: (() => void) | null = null;
     private _unsubMouse: (() => void) | null = null;
+    private _unsubPaste: (() => void) | null = null;
     private _widgetById = new Map<string, any>();
+    private _consecutiveRenderFailures = 0;
+    private static readonly MAX_RENDER_FAILURES = 5;
     // Lines to insert before inline viewport output. Each entry: { id: symbol, text: string }
     private _insertBefore: Array<{ id: symbol; text: string }> = [];
 
@@ -194,6 +198,11 @@ export class App {
             this.events.emit('mouse', event);
         });
 
+        // Forward paste events
+        this._unsubPaste = this.input.onPaste((text) => {
+            this.events.emit('paste', text);
+        });
+
         // Start render loop — tick drives requestRender() so dirty widgets
         // (motion, timers) get redrawn without a separate setInterval.
         this.renderer.start(() => this.requestRender());
@@ -215,7 +224,7 @@ export class App {
     /**
      * Stop the application and restore terminal state.
      */
-    unmount(): void {
+    unmount(exitCode: number = 0): void {
         if (!this._mounted) return;
         this._mounted = false;
 
@@ -226,6 +235,8 @@ export class App {
         this._unsubKey = null;
         this._unsubMouse?.();
         this._unsubMouse = null;
+        this._unsubPaste?.();
+        this._unsubPaste = null;
 
         // Stop the stdout interceptor to restore native console.log behavior
         this.renderer.hook.stop();
@@ -234,6 +245,11 @@ export class App {
         this.input.stop();
         this.terminal.restore();
         this.events.removeAll();
+
+        if (this._exitResolve) {
+            this._exitResolve(exitCode);
+            this._exitResolve = null;
+        }
     }
 
     /**
@@ -268,56 +284,61 @@ export class App {
             return;
         }
 
-        // Compute layout
-        const layoutRoot = this._rootWidget.getLayoutNode();
-        computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+        try {
+            // Compute layout only if something in the tree has layout changes
+            const layoutRoot = this._rootWidget.getLayoutNode();
+            if (layoutRoot._dirty) {
+                computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+            }
 
-        // Sync computed rects from layout tree back to widgets
-        this._rootWidget.syncLayout?.();
+            // Sync computed rects from layout tree back to widgets
+            this._rootWidget.syncLayout?.();
 
-        // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
-        this._buildWidgetMap(this._rootWidget);
+            // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
+            this._buildWidgetMap(this._rootWidget);
 
-        // Clear the back buffer and render widgets into it
-        this.screen.clear();
-        this._rootWidget.render(this.screen);
+            // Clear the back buffer and render widgets into it
+            this.screen.clear();
+            this._rootWidget.render(this.screen);
 
-        // Clear dirty flags now that we've rendered — future requestRender()
-        // calls will skip layout until markDirty() is called again.
-        this._rootWidget.clearDirty?.();
-        // Merge adjacent borders into junction characters for a cleaner look
-        if (this._options.dockBorders) {
-           mergeBorders(this.screen);
+            // Clear dirty flags now that we've rendered — future requestRender()
+            // calls will skip layout until markDirty() is called again.
+            this._rootWidget.clearDirty?.();
+            // Merge adjacent borders into junction characters for a cleaner look
+            if (this._options.dockBorders) {
+               mergeBorders(this.screen);
+            }
+            // Composite overlay layers on top of the base rendering
+            this.layers.composite(this.screen);
+
+            this._consecutiveRenderFailures = 0;
+        } catch (err) {
+            this._consecutiveRenderFailures++;
+            console.error('[TermUI] Render cycle error:', err);
+            if (this._consecutiveRenderFailures >= App.MAX_RENDER_FAILURES) {
+                console.error('[TermUI] Too many consecutive render failures — exiting');
+                this.exit(1);
+                return;
+            }
+            return;
         }
-        // Composite overlay layers on top of the base rendering
-        this.layers.composite(this.screen);
 
         // Inline rendering bypasses the differential renderer and writes
         // the bottom N rows directly into the main buffer so scrollback
         // is preserved. It also emits any registered `insertBefore` lines
         // above the live UI.
         if (this._options.screenMode === 'inline') {
-            // Lazy import to avoid circular deps in tests
             // Render any insertBefore lines first
             for (const item of this._insertBefore) {
                 this.terminal.write(item.text + '\n');
             }
             // Render bottom N rows as plain text
-            try {
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const mod = require('../inline-viewport.js');
-                const renderInlineToTerminal = mod.renderInlineToTerminal ?? mod.default?.renderInlineToTerminal;
-                if (typeof renderInlineToTerminal === 'function') {
-                    // Ensure we pass an object with a `write` method. Support Terminal instance
-                    // or raw stdout-like streams used in tests.
-                    const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
-                        ? (this.terminal as any)
-                        : { write: (s: string) => (this.terminal as any).stdout.write(s) };
-                    renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
-                }
-            } catch (e) {
-                // Fallback: write nothing
-            }
+            // Ensure we pass an object with a `write` method. Support Terminal instance
+            // or raw stdout-like streams used in tests.
+            const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
+                ? (this.terminal as any)
+                : { write: (s: string) => (this.terminal as any).stdout.write(s) };
+            renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
             return;
         }
 
@@ -328,11 +349,25 @@ export class App {
      * Exit the app (convenience method).
      */
     exit(code = 0): void {
-        this.unmount();
+        this.unmount(code);
         if (this._exitResolve) {
             this._exitResolve(code);
             this._exitResolve = null;
         }
+    }
+
+    /**
+     * Read from the system clipboard.
+     */
+    readClipboard(): Promise<string> {
+        return this.terminal.readClipboard();
+    }
+
+    /**
+     * Write to the system clipboard.
+     */
+    writeClipboard(text: string): void {
+        this.terminal.writeClipboard(text);
     }
 
     /**

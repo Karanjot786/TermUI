@@ -115,6 +115,15 @@ export class Screen {
     private _cols: number;
     private _rows: number;
     private _previousLines: string[] = [];
+    private _lastRenderedHeight = 0;
+
+     get lastRenderedHeight(): number {
+     return this._lastRenderedHeight;
+     }
+     set lastRenderedHeight(value: number) {
+     this._lastRenderedHeight = value;
+     }
+    private _previousStyleLines: string[] = [];
     front: Cell[][];
     back: Cell[][];
 
@@ -140,16 +149,53 @@ export class Screen {
             .join('');
     }
 
+    /**
+     * Serialize the style attributes of a back-buffer row into a
+     * fingerprint string. When the characters are identical but the
+     * styles differ (color, bold, italic, etc.), this fingerprint
+     * changes, allowing the diff renderer to detect style-only updates.
+     */
+    getStyleLine(row: number): string {
+        if (row < 0 || row >= this._rows) return '';
+        let hash = 0;
+        for (const cell of this.back[row]) {
+            if (cell.width === 0) continue;
+            const fg = cell.fg.type;
+            const bg = cell.bg.type;
+            const bits =
+                (cell.bold ? 1 : 0) |
+                (cell.italic ? 2 : 0) |
+                (cell.underline ? 4 : 0) |
+                (cell.dim ? 8 : 0) |
+                (cell.strikethrough ? 16 : 0) |
+                (cell.inverse ? 32 : 0);
+            const seed = fg.charCodeAt(0) * 65536 + bg.charCodeAt(0) * 4096 + bits;
+            hash = ((hash << 7) - hash + seed) | 0;
+            if (cell.link) {
+                for (let i = 0; i < cell.link.length; i++)
+                    hash = ((hash << 5) - hash + cell.link.charCodeAt(i)) | 0;
+            }
+        }
+        return String(hash);
+    }
+
     /** Return the saved line string for the given row (empty before first saveLines call). */
     getPreviousLine(row: number): string {
         return this._previousLines[row] ?? '';
     }
 
+    /** Return the saved style fingerprint for the given row. */
+    getPreviousStyleLine(row: number): string {
+        return this._previousStyleLines[row] ?? '';
+    }
+
     /** Snapshot the current back-buffer line strings for use by diffRenderer. */
     saveLines(): void {
         this._previousLines = [];
+        this._previousStyleLines = [];
         for (let r = 0; r < this._rows; r++) {
             this._previousLines.push(this.getLine(r));
+            this._previousStyleLines.push(this.getStyleLine(r));
         }
     }
 
@@ -309,15 +355,18 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+        this._previousLines = [];
     }
 
     /**
      * Clear the front buffer (marks everything as "needs redraw").
+     * Mutates cells in-place to avoid GC pressure from object allocation.
      */
     invalidate(): void {
         for (let r = 0; r < this._rows; r++) {
             for (let c = 0; c < this._cols; c++) {
-                this.front[r][c] = { ...emptyCell(), char: '\0' }; // force diff
+                resetCell(this.front[r][c]);
+                this.front[r][c].char = '\0'; // force diff
             }
         }
     }

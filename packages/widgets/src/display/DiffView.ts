@@ -121,34 +121,34 @@ export class DiffView extends Widget {
         const maxOffset = Math.max(0, this._lines.length - visibleHeight);
 
         switch (key) {
-            case 'ArrowUp':
+            case 'up':
             case 'k':
                 this._scrollOffset = Math.max(0, this._scrollOffset - 1);
                 this.markDirty();
                 break;
 
-            case 'ArrowDown':
+            case 'down':
             case 'j':
                 this._scrollOffset = Math.min(maxOffset, this._scrollOffset + 1);
                 this.markDirty();
                 break;
 
-            case 'PageUp':
+            case 'pageup':
                 this._scrollOffset = Math.max(0, this._scrollOffset - visibleHeight);
                 this.markDirty();
                 break;
 
-            case 'PageDown':
+            case 'pagedown':
                 this._scrollOffset = Math.min(maxOffset, this._scrollOffset + visibleHeight);
                 this.markDirty();
                 break;
 
-            case 'Home':
+            case 'home':
                 this._scrollOffset = 0;
                 this.markDirty();
                 break;
 
-            case 'End':
+            case 'end':
                 this._scrollOffset = maxOffset;
                 this.markDirty();
                 break;

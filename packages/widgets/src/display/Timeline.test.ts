@@ -107,11 +107,10 @@ describe('Timeline', () => {
         widget.setItems([
             { title: 'New', status: 'pending' },
         ]);
+        expect(widget.isDirty).toBe(true);
 
         const nextScreen = new Screen(40, 20);
         widget.render(nextScreen);
-
-        expect(widget.isDirty).toBe(true);
         expect(rowText(nextScreen, 0)).toContain('New');
     });
 

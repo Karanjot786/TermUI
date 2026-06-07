@@ -61,4 +61,49 @@ describe('EmptyState', () => {
         const hintRow = 6;
         expect(row(screen, hintRow).trim()).toContain('Press F5 to refresh');
     });
+
+    it('setTitle marks widget dirty', () => {
+        const es = new EmptyState('Old title');
+    
+        es.clearDirty();
+        es.setTitle('New title');
+    
+        expect(es.isDirty).toBe(true);
+    });
+    
+    it('setDescription marks widget dirty', () => {
+        const es = new EmptyState(
+            'Title',
+            {},
+            { description: 'Old description' },
+        );
+    
+        es.clearDirty();
+        es.setDescription('New description');
+    
+        expect(es.isDirty).toBe(true);
+    });
+    
+    it('does not mark dirty when title is unchanged', () => {
+        const es = new EmptyState('Same title');
+    
+        es.clearDirty();
+        es.setTitle('Same title');
+    
+        expect(es.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when description is unchanged', () => {
+        const es = new EmptyState(
+            'Title',
+            {},
+            { description: 'Same description' },
+        );
+    
+        es.clearDirty();
+        es.setDescription('Same description');
+    
+        expect(es.isDirty).toBe(false);
+    });
+    
 });

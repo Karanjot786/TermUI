@@ -12,9 +12,10 @@ import {
     Spinner,
 } from '@termuijs/widgets';
 import type { Style, Color } from '@termuijs/core';
-import { parseColor } from '@termuijs/core';
+import { parseColor, invalidateLayout } from '@termuijs/core';
 import type { VNode, VElement, FC } from './vnode.js';
 import { isVElement, isVFragment, Fragment, flattenChildren } from './vnode.js';
+import { applyDelegatedEvents } from './event-system.js';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
     runEffects, runLayoutEffects, destroyFiber, type Fiber,
@@ -104,40 +105,40 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
 
         case 'progressbar': {
             return new ProgressBar(style, {
-                value:       typeof props.value === 'number' ? props.value : 0,
-                fillChar:    props.fillChar,
-                emptyChar:   props.emptyChar,
-                fillColor:   props.fillColor ? parseColorProp(props.fillColor) : undefined,
-                showLabel:   props.showLabel !== false,
+                value: typeof props.value === 'number' ? props.value : 0,
+                fillChar: props.fillChar,
+                emptyChar: props.emptyChar,
+                fillColor: props.fillColor ? parseColorProp(props.fillColor) : undefined,
+                showLabel: props.showLabel !== false,
                 labelFormat: props.labelFormat,
             });
         }
 
         case 'spinner': {
             return new Spinner(style, {
-                preset:      props.preset ?? props.spinner,
-                label:       props.label,
-                color:       props.color ? parseColorProp(props.color) : undefined,
-                active:      props.active !== false,
-                doneText:    props.doneText,
-                interval:    props.interval,
+                preset: props.preset ?? props.spinner,
+                label: props.label,
+                color: props.color ? parseColorProp(props.color) : undefined,
+                active: props.active !== false,
+                doneText: props.doneText,
+                interval: props.interval,
             });
         }
 
         case 'grid': {
             return new Grid({ ...style }, {
                 columns: props.columns ?? 12,
-                gap:     props.gap,
-                rowGap:  props.rowGap,
-                colGap:  props.colGap,
+                gap: props.gap,
+                rowGap: props.rowGap,
+                colGap: props.colGap,
             });
         }
 
         case 'skeleton': {
             return new Skeleton({ ...style }, {
-                variant:    props.variant,
+                variant: props.variant,
                 intervalMs: props.intervalMs,
-                chars:      props.chars,
+                chars: props.chars,
             });
         }
 
@@ -147,21 +148,21 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
                 .join('') || props.message || '';
             return new StatusMessage(content, { height: 1, ...style }, {
                 variant: props.variant,
-                icon:    props.icon,
+                icon: props.icon,
             });
         }
 
         case 'banner': {
             return new Banner({ ...style }, {
                 variant: props.variant,
-                title:   props.title,
-                body:    props.body,
+                title: props.title,
+                body: props.body,
             });
         }
 
         case 'card': {
             return new Card({ ...style }, {
-                title:       props.title,
+                title: props.title,
                 borderColor: props.borderColor ? parseColorProp(props.borderColor) : undefined,
             });
         }
@@ -169,8 +170,8 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
         case 'keyvalue': {
             const pairs = props.pairs ?? props.data ?? {};
             return new KeyValue(pairs, { ...style }, {
-                separator:  props.separator,
-                keyColor:   props.keyColor   ? parseColorProp(props.keyColor)   : undefined,
+                separator: props.separator,
+                keyColor: props.keyColor ? parseColorProp(props.keyColor) : undefined,
                 valueColor: props.valueColor ? parseColorProp(props.valueColor) : undefined,
             });
         }
@@ -178,7 +179,7 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
         case 'center': {
             return new Center({ ...style }, {
                 horizontal: props.horizontal !== false,
-                vertical:   props.vertical !== false,
+                vertical: props.vertical !== false,
             });
         }
 
@@ -192,10 +193,10 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
         case 'sidebar': {
             const items = props.items ?? [];
             return new Sidebar(items, { ...style }, {
-                collapsed:      props.collapsed,
+                collapsed: props.collapsed,
                 collapsedWidth: props.collapsedWidth,
-                activeColor:    props.activeColor ? parseColorProp(props.activeColor) : undefined,
-                badgeColor:     props.badgeColor  ? parseColorProp(props.badgeColor)  : undefined,
+                activeColor: props.activeColor ? parseColorProp(props.activeColor) : undefined,
+                badgeColor: props.badgeColor ? parseColorProp(props.badgeColor) : undefined,
             });
         }
 
@@ -216,8 +217,18 @@ function extractStyle(props: Record<string, any>): Partial<Style> {
     if (props.padding != null) style.padding = props.padding;
     if (props.margin != null) style.margin = props.margin;
     if (props.border != null) style.border = props.border;
+    const ascii =
+        typeof props.asciiOnly === 'string'
+            ? props.asciiOnly.toLowerCase() === 'true'
+            : !!props.asciiOnly;
+
+    if (props.asciiOnly != null) style.asciiOnly = ascii;
     if (props.borderColor != null) style.borderColor = parseColorProp(props.borderColor);
     if (props.gap != null) style.gap = props.gap;
+    if (props.x != null) style.x = props.x;
+    if (props.y != null) style.y = props.y;
+    if (props.groupId != null) style.groupId = props.groupId;
+    if (props.constraints != null) style.constraints = props.constraints;
     return style;
 }
 
@@ -260,7 +271,9 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
     // VElement
     if (isVElement(vnode)) {
         let { type, props, children } = vnode;
-        children = children ?? [];
+        children = flattenChildren(children ?? []);
+
+        applyDelegatedEvents(props, children);
 
         // Map uppercase widget classes to their lowercase intrinsic tags
         const t = type as any;
@@ -488,15 +501,19 @@ function renderComponent(
 }
 
 /**
- * Recursively remove _instanceMap entries for a widget and all its descendants.
- * This prevents stale child instances from accumulating across re-renders.
+ * Recursively remove stale _instanceMap entries for a widget and all its
+ * descendants. Fibers are NOT destroyed here — cleanupStaleChildFibers
+ * already handles orphaned fibers after each reconcile pass. This function
+ * only prevents _instanceMap from retaining dead widget references.
  */
 function _pruneInstancesForWidget(widget: Widget): void {
     _instanceMap.delete(widget);
     const children = (widget as any)._children ?? (widget as any).children ?? [];
     if (Array.isArray(children)) {
         for (const child of children) {
-            _pruneInstancesForWidget(child);
+            if (child && typeof child === 'object') {
+                _pruneInstancesForWidget(child);
+            }
         }
     }
 }
@@ -544,6 +561,8 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         runEffects(fiber);
         fiber.isDirty = false;
 
+        // Invalidate old widget's layout cache before replacing
+        invalidateLayout(instance.widget.getLayoutNode());
         _pruneInstancesForWidget(instance.widget);
 
         instance.widget = vnode;
@@ -575,6 +594,8 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     runEffects(fiber);
     fiber.isDirty = false;
 
+    // Invalidate old widget's layout cache before replacing
+    invalidateLayout(instance.widget.getLayoutNode());
     // Remove old widget and all its descendant instances from the map to prevent memory leak
     _pruneInstancesForWidget(instance.widget);
 

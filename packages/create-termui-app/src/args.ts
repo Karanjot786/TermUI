@@ -3,6 +3,11 @@ export interface CliArgs {
     template?: string;
     theme?: string;
     yes: boolean;
+    dir?: string;
+
+    command?: string;
+    component?: string;
+    dryRun?: boolean;
 }
 
 const TEMPLATE_KEYS = [
@@ -12,6 +17,7 @@ const TEMPLATE_KEYS = [
     "cli-wrapper",
     "cli-tool",
     "file-manager",
+    "form-wizard",
 ] as const;
 
 function getValue(
@@ -34,7 +40,37 @@ function getValue(
 export function parseArgs(argv: string[]): CliArgs {
     const args: CliArgs = {
         yes: false,
+        dryRun: false,
     };
+
+    if (argv[0] === "add") {
+        const positional: string[] = [];
+
+        for (let index = 1; index < argv.length; index++) {
+            const value = argv[index];
+
+            if (value === "--dir") {
+                index++;
+                continue;
+            }
+
+            if (!value.startsWith("-")) {
+                positional.push(value);
+            }
+        }
+
+        args.command = "add";
+        args.component = positional[0];
+        args.dryRun = argv.includes("--dry-run");
+        args.yes = argv.includes("--yes");
+
+        const dirValue = getValue(argv, "--dir");
+        if (dirValue) {
+            args.dir = dirValue;
+        }
+
+        return args;
+    }
 
     // positional (first non-flag)
     const positional = argv.find(a => !a.startsWith("-"));

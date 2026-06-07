@@ -49,4 +49,27 @@ describe('Callout', () => {
         const output = render(callout);
         expect(output).toBe('\u2139');
     });
+
+    it('does not mark dirty when message is unchanged', () => {
+        const callout = new Callout('hello');
+    
+        callout.clearDirty();
+        callout.setMessage('hello');
+    
+        expect(callout.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when variant is unchanged', () => {
+        const callout = new Callout(
+            'hello',
+            {},
+            { variant: 'info' },
+        );
+    
+        callout.clearDirty();
+        callout.setVariant('info');
+    
+        expect(callout.isDirty).toBe(false);
+    });
+
 });

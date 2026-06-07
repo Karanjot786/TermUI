@@ -2,6 +2,7 @@
 // @termuijs/core — Unicode string width utilities
 // ─────────────────────────────────────────────────────
 
+
 /**
  * Check if a code point is a CJK (East Asian Wide/Fullwidth) character.
  * These characters occupy 2 terminal columns.

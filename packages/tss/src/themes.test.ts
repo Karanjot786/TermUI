@@ -18,7 +18,8 @@ describe('Built-in Themes', () => {
         expect(names).toContain('highContrast');
         expect(names).toContain('gruvbox');
         expect(names).toContain('tokyo-night');
-        expect(names).toHaveLength(10);
+        expect(names).toContain('everforest');
+        expect(names).toHaveLength(11);
     });
 
     it('tokyo-night theme contains expected palette values', () => {
@@ -92,5 +93,14 @@ describe('Built-in Themes', () => {
         expect(src).toContain('--text: #657b83');
         expect(src).toContain('--primary: #268bd2');
         expect(src).toContain('--border-focus: #268bd2');
+    });
+
+    it('everforest theme exposes correct Everforest base hex colors', () => {
+        const src = getBuiltinTheme('everforest');
+        expect(src).toBeDefined();
+        expect(src).toContain('@theme everforest');
+        expect(src).toContain('#a7c080');
+        expect(src).toContain('#2d353b');
+        expect(src).toContain('#e67e80');
     });
 });
