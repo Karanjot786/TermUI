@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
+const ALLOWED_EXTENSIONS = ['.tss', '.json', '.yaml', '.yml'];
+
 /**
  * Resolves and inlines @import statements in TSS strings.
  * Syntax supported: @import "path/to/file.tss"; or @import 'path/to/file.tss';
@@ -17,7 +19,19 @@ export function resolveImports(source: string, basePath: string, visited = new S
         const importPath = singleQuotePath || doubleQuotePath;
         if (!importPath) return match;
 
-        const fullPath = resolve(dirname(basePath), importPath);
+        const baseDir = dirname(basePath);
+        const fullPath = resolve(baseDir, importPath);
+
+        // Path traversal protection: reject any path that escapes the base directory
+        if (!fullPath.startsWith(baseDir) && !fullPath.startsWith(resolve(baseDir, '.'))) {
+            return `/* Error: Path traversal blocked: ${importPath} */`;
+        }
+
+        // Only allow known theme file extensions
+        const ext = fullPath.toLowerCase().slice(fullPath.lastIndexOf('.'));
+        if (!ALLOWED_EXTENSIONS.includes(ext)) {
+            return `/* Error: Unsupported import extension: ${importPath} */`;
+        }
 
         // Edge case: Prevent infinite loops from circular dependencies
         if (visited.has(fullPath)) {
