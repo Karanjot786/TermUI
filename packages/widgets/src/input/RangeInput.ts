@@ -59,6 +59,10 @@ export class RangeInput extends Widget {
       lower = upper;
     }
 
+    if (this._value[0] === lower && this._value[1] === upper) {
+      return;
+    }
+
     this._value = [lower, upper];
     this.markDirty();
     this._onChange?.(this._value);
