@@ -44,6 +44,7 @@ export class Badge extends Widget {
     constructor(text: string, styleOrOpts?: Partial<Style> | BadgeOptions, optsOrStyle?: BadgeOptions | Partial<Style>) {
         // Detect old deprecated signature: Badge(text, opts, style)
         if (styleOrOpts && 'variant' in styleOrOpts) {
+            console.warn('Badge(text, opts, style) is deprecated. Use Badge(text, style, opts) instead.');
             const opts = styleOrOpts as BadgeOptions;
             const style = optsOrStyle as Partial<Style> | undefined;
             super(style ?? {});

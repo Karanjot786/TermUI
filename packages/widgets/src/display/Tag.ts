@@ -40,6 +40,7 @@ export class Tag extends Widget {
     constructor(text: string, opts: TagOptions, style?: Partial<Style>);
     constructor(text: string, styleOrOpts?: Partial<Style> | TagOptions, optsOrStyle?: TagOptions | Partial<Style>) {
         if (styleOrOpts && 'variant' in styleOrOpts) {
+            console.warn('Tag(text, opts, style) is deprecated. Use Tag(text, style, opts) instead.');
             const opts = styleOrOpts as TagOptions;
             const style = optsOrStyle as Partial<Style> | undefined;
             super(style ?? {});
