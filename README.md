@@ -4,7 +4,6 @@
   <p align="center">Build terminal applications in TypeScript.</p>
 </p>
 
-
 <p align="center">
   <a href="https://www.termui.io/docs/getting-started/installation"><img src="https://img.shields.io/badge/docs-termui.io-00ff88?style=flat" alt="Documentation"></a>
   <a href="https://www.npmjs.com/package/@termuijs/core"><img src="https://img.shields.io/npm/v/@termuijs/core.svg" alt="npm version"></a>
@@ -446,7 +445,6 @@ bun run typecheck  # Type-check all packages
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for local setup, build commands, testing, and contributor workflow.
 
-
 ## Requirements
 
 - [Bun](https://bun.sh) 1.3.0 or newer for development
@@ -478,15 +476,3 @@ Want to join this list? Check the [open issues](https://github.com/Karanjot786/T
 ## License
 
 MIT
-
-## Troubleshooting
-
-### Build Cache and Dependency Synchronization Issues
-If you encounter runtime rendering issues or stale execution logs while working with cross-package scripts inside this monorepo ecosystem, clear your local project configurations and refresh your setups completely by running:
-
-```bash
-bun run clean
-bun install
-```
-
-
