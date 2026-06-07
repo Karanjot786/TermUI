@@ -1,21 +1,39 @@
-import { h } from '@termuijs/jsx';
-import { Text } from './Text.js';
+import React from 'react';
+import { Text } from '@termuijs/core';
+
+export interface HighlightStyle {
+  backgroundColor?: string;
+  color?: string;
+  bold?: boolean;
+}
 
 export interface HighlightProps {
   children: string;
   query: string | RegExp;
-  style?: any;
+  style?: HighlightStyle;
 }
 
-export const Highlight = ({ children, query, style = { backgroundColor: 'yellow', color: 'black' } }: HighlightProps) => {
+export const Highlight: React.FC<HighlightProps> = ({ 
+  children, 
+  query, 
+  style = { backgroundColor: 'yellow', color: 'black' } 
+}) => {
   if (!query) return <>{children}</>;
 
-  const parts = children.split(new RegExp(`(${query})`, 'gi'));
+  const searchPattern = query instanceof RegExp ? query.source : query.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+  const flags = query instanceof RegExp ? query.flags : 'gi';
+  
+  const parts = children.split(new RegExp(`(${searchPattern})`, flags));
+
+  const isMatch = (part: string) =>
+    typeof query === 'string'
+      ? part.toLowerCase() === query.toLowerCase()
+      : new RegExp(`^${query.source}$`, query.flags).test(part);
 
   return (
     <>
       {parts.map((part, i) =>
-        part.toLowerCase() === (typeof query === 'string' ? query.toLowerCase() : '') ? (
+        isMatch(part) ? (
           <Text key={i} {...style}>{part}</Text>
         ) : (
           part
