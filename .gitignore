@@ -1,3 +1,6 @@
+node_modules/
+
+# Build outputs
 # ==========================================
 # TermUI Workspace Git Ignore Configuration
 # ==========================================
@@ -14,6 +17,38 @@ build/
 .turbo/
 *.tsbuildinfo
 coverage/
+.DS_Store
+
+website/
+scratch/
+.worktrees/
+
+# Bench artifacts
+bench-head.json
+bench-main.json
+bench-head.txt
+bench-main.txt
+bench-comment.md
+docs/superpowers/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+
+# Logs
+<<<<<<< HEAD
+*.log
+
+# OS
+.DS_Store
+
+# Bench artifacts (only if generated)
+bench-*.json
+bench-*.txt
+bench-comment.md
 .nyc_output/
 
 # --- Logs & Diagnostic Dumps ---
@@ -134,3 +169,6 @@ docs/superpowers/
 bun-completions/
 *_logs/
 .stylelintcache
+=======
+*.log
+>>>>>>> 6151e05 (chore: extend gitignore with safe universal ignores)
