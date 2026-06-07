@@ -3,150 +3,192 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
-import { DataGrid } from './DataGrid.js';
+import { Screen, caps, createKeyEvent } from '@termuijs/core';
+import { DataGrid, type DataGridColumn } from './DataGrid.js';
 
 afterEach(() => {
     vi.restoreAllMocks();
 });
 
-const COLUMNS = [
-    { key: 'name', header: 'Name', width: 10, sortable: true },
-    { key: 'age',  header: 'Age',  width: 5,  sortable: true },
+const COLUMNS: DataGridColumn[] = [
+    { key: 'name', header: 'Name', width: 10 },
+    { key: 'age', header: 'Age', width: 5 },
 ];
 
 const ROWS = [
     { name: 'Alice', age: 30 },
-    { name: 'Bob',   age: 25 },
+    { name: 'Bob', age: 25 },
     { name: 'Carol', age: 35 },
 ];
 
+const gridText = (screen: Screen): string =>
+    screen.back.map(r => r.map(c => c.char).join('')).join('\n');
+
+const keyOf = (key: string): ReturnType<typeof createKeyEvent> =>
+    createKeyEvent({ key, raw: Buffer.from(key), ctrl: false, alt: false, shift: false });
+
 describe('DataGrid', () => {
-    it('renders header row', async () => {
-        const { Screen } = await import('@termuijs/core');
-        const { DataGrid } = await import('./DataGrid.js');
-
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
-        grid.updateRect({ x: 0, y: 0, width: 40, height: 10 });
-        const screen = new Screen(40, 10);
+    it('renders the same as Table by default — header and data rows', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        grid.updateRect({ x: 0, y: 0, width: 30, height: 8 });
+        const screen = new Screen(30, 8);
         grid.render(screen);
 
-        const row1 = screen.back[1].map((c: { char: string }) => c.char).join('');
-        expect(row1).toContain('Name');
-        expect(row1).toContain('Age');
+        const text = gridText(screen);
+        expect(text).toContain('Name');
+        expect(text).toContain('Age');
+        expect(text).toContain('Alice');
+        expect(text).toContain('Bob');
+        expect(text).toContain('Carol');
     });
 
-    it('renders data rows', async () => {
-        const { Screen } = await import('@termuijs/core');
-        const { DataGrid } = await import('./DataGrid.js');
+    it('s key cycles sort: none → asc → desc → none', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        expect(grid.sortDirection).toBe('none');
+        expect(grid.sortKey).toBeNull();
 
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
-        grid.updateRect({ x: 0, y: 0, width: 40, height: 10 });
-        const screen = new Screen(40, 10);
-        grid.render(screen);
-
-        const allText = screen.back.map((r: { char: string }[]) => r.map(c => c.char).join('')).join('\n');
-        expect(allText).toContain('Alice');
-        expect(allText).toContain('Bob');
-    });
-
-    it('selectNext and selectPrev move selected row', async () => {
-        const { DataGrid } = await import('./DataGrid.js');
-
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
-        expect(grid.selectedRow).toBe(0);
-        grid.selectNext();
-        expect(grid.selectedRow).toBe(1);
-        grid.selectPrev();
-        expect(grid.selectedRow).toBe(0);
-    });
-
-    it('selectNext does not go past last row', async () => {
-        const { DataGrid } = await import('./DataGrid.js');
-
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
-        grid.selectNext(); grid.selectNext(); grid.selectNext();
-        expect(grid.selectedRow).toBe(2);
-    });
-
-    it('selectLeft and selectRight move selected column', async () => {
-        const { DataGrid } = await import('./DataGrid.js');
-
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
-        expect(grid.selectedCol).toBe(0);
-        grid.selectRight();
-        expect(grid.selectedCol).toBe(1);
-        grid.selectLeft();
-        expect(grid.selectedCol).toBe(0);
-    });
-
-    it('toggleSort cycles asc → desc → none', async () => {
-        const { DataGrid } = await import('./DataGrid.js');
-
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
-        grid.toggleSort();
-        expect(grid.sortKey).toBe('name');
+        grid.handleKey(keyOf('s'));
         expect(grid.sortDirection).toBe('asc');
-        grid.toggleSort();
+        expect(grid.sortKey).toBe('name');
+
+        grid.handleKey(keyOf('s'));
         expect(grid.sortDirection).toBe('desc');
-        grid.toggleSort();
+
+        grid.handleKey(keyOf('s'));
         expect(grid.sortDirection).toBe('none');
         expect(grid.sortKey).toBeNull();
     });
 
-    it('onSort callback fires with correct args', async () => {
-        const { DataGrid } = await import('./DataGrid.js');
+    it('sort changes the visible row order', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        grid.updateRect({ x: 0, y: 0, width: 30, height: 8 });
+        const before = (() => {
+            const s = new Screen(30, 8);
+            grid.render(s);
+            return gridText(s);
+        })();
+        expect(before.indexOf('Alice')).toBeLessThan(before.indexOf('Bob'));
 
+        grid.handleKey(keyOf('s')); // asc by name: Alice, Bob, Carol (already)
+        grid.handleKey(keyOf('s')); // desc by name: Carol, Bob, Alice
+        const s2 = new Screen(30, 8);
+        grid.render(s2);
+        const after = gridText(s2);
+        expect(after.indexOf('Carol')).toBeLessThan(after.indexOf('Bob'));
+        expect(after.indexOf('Bob')).toBeLessThan(after.indexOf('Alice'));
+    });
+
+    it('renders a sort indicator in the header when a column is sorted', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        grid.updateRect({ x: 0, y: 0, width: 30, height: 8 });
+        grid.handleKey(keyOf('s'));
+
+        const screen = new Screen(30, 8);
+        grid.render(screen);
+        const text = gridText(screen);
+        expect(text).toContain('\u25B2'); // ▲ for asc
+    });
+
+    it('uses ASCII sort indicator when unicode is off', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const grid = new DataGrid(COLUMNS, ROWS);
+        grid.updateRect({ x: 0, y: 0, width: 30, height: 8 });
+        grid.handleKey(keyOf('s'));
+
+        const screen = new Screen(30, 8);
+        grid.render(screen);
+        const text = gridText(screen);
+        expect(text).toContain('^');
+        expect(text).not.toContain('\u25B2');
+    });
+
+    it('typing after / opens filter and narrows visible rows', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        grid.updateRect({ x: 0, y: 0, width: 30, height: 8 });
+        grid.handleKey(keyOf('/'));
+        expect(grid.filterOpen).toBe(true);
+
+        grid.handleKey(keyOf('b'));
+        expect(grid.filter).toBe('b');
+
+        const screen = new Screen(30, 8);
+        grid.render(screen);
+        const text = gridText(screen);
+        expect(text).toContain('Bob');
+        expect(text).not.toContain('Alice');
+        expect(text).not.toContain('Carol');
+    });
+
+    it('Escape closes the filter and clears the narrowed rows', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        grid.updateRect({ x: 0, y: 0, width: 30, height: 8 });
+        grid.handleKey(keyOf('/'));
+        grid.handleKey(keyOf('c'));
+        grid.handleKey(keyOf('a'));
+        expect(grid.filter).toBe('ca');
+
+        grid.handleKey(keyOf('escape'));
+        expect(grid.filterOpen).toBe(false);
+        expect(grid.filter).toBe('');
+
+        const screen = new Screen(30, 8);
+        grid.render(screen);
+        const text = gridText(screen);
+        expect(text).toContain('Alice');
+        expect(text).toContain('Bob');
+        expect(text).toContain('Carol');
+    });
+
+    it('calls onSort callback with key and direction', () => {
         const onSort = vi.fn();
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS, onSort });
-        grid.toggleSort();
+        const grid = new DataGrid(COLUMNS, ROWS, {}, { onSort });
+        grid.handleKey(keyOf('s'));
         expect(onSort).toHaveBeenCalledWith('name', 'asc');
     });
 
-    it('shows (no data) when rows are empty', async () => {
-        const { Screen } = await import('@termuijs/core');
-        const { DataGrid } = await import('./DataGrid.js');
+    it('renders the filter row with the current filter text', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        grid.updateRect({ x: 0, y: 0, width: 30, height: 8 });
+        grid.handleKey(keyOf('/'));
+        grid.handleKey(keyOf('b'));
 
-        const grid = new DataGrid({ columns: COLUMNS, rows: [] });
-        grid.updateRect({ x: 0, y: 0, width: 40, height: 10 });
-        const screen = new Screen(40, 10);
+        const screen = new Screen(30, 8);
         grid.render(screen);
-
-        const allText = screen.back.map((r: { char: string }[]) => r.map(c => c.char).join('')).join('\n');
-        expect(allText).toContain('no data');
+        const text = gridText(screen);
+        const firstLine = text.split('\n')[0] ?? '';
+        expect(firstLine).toContain('/b');
     });
 
-    it('uses ASCII separator when unicode is off', () => {
-        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
-        grid.updateRect({ x: 0, y: 0, width: 40, height: 10 });
-        const screen = new Screen(40, 10);
-        grid.render(screen);
-        const allText = screen.back.map((r: { char: string }[]) => r.map(c => c.char).join('')).join('\n');
-        expect(allText).toContain('|');
+    it('left and right keys move the selected column', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        expect(grid.selectedColumn).toBe(0);
+
+        grid.handleKey(keyOf('right'));
+        expect(grid.selectedColumn).toBe(1);
+
+        grid.handleKey(keyOf('right'));
+        expect(grid.selectedColumn).toBe(1); // clamped at last column
+
+        grid.handleKey(keyOf('left'));
+        expect(grid.selectedColumn).toBe(0);
+
+        grid.handleKey(keyOf('left'));
+        expect(grid.selectedColumn).toBe(0); // clamped at first column
     });
 
-    it('setRows updates data and clamps selection', async () => {
-        const { DataGrid } = await import('./DataGrid.js');
+    it('sorts the column under the selection, not always column 0', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        grid.handleKey(keyOf('right')); // select 'age' column
+        grid.handleKey(keyOf('s'));
 
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
-        grid.selectNext(); grid.selectNext();
-        expect(grid.selectedRow).toBe(2);
-        grid.setRows([{ name: 'Zara', age: 20 }]);
-        expect(grid.selectedRow).toBe(0);
+        expect(grid.sortKey).toBe('age');
+        expect(grid.sortDirection).toBe('asc');
     });
 
-    it('handleKey routes arrow keys correctly', async () => {
-        const { DataGrid } = await import('./DataGrid.js');
-
-        const grid = new DataGrid({ columns: COLUMNS, rows: ROWS });
-        grid.handleKey({ key: 'down' } as never);
-        expect(grid.selectedRow).toBe(1);
-        grid.handleKey({ key: 'up' } as never);
-        expect(grid.selectedRow).toBe(0);
-        grid.handleKey({ key: 'right' } as never);
-        expect(grid.selectedCol).toBe(1);
-        grid.handleKey({ key: 'left' } as never);
-        expect(grid.selectedCol).toBe(0);
+    it('shift+s also cycles sort (case-insensitive key handling)', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+        grid.handleKey(keyOf('S'));
+        expect(grid.sortDirection).toBe('asc');
+        expect(grid.sortKey).toBe('name');
     });
 });

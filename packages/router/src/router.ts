@@ -42,14 +42,14 @@ export class Router {
     private _forwardStack: string[] = [];
     private _currentMatch: RouteMatch | null = null;
     private _maxHistory: number;
-
+    private _pendingInitialPath: string | null = null;
     readonly events = new EventEmitter<RouterEvents>();
 
     constructor(options: RouterOptions = {}) {
         this._maxHistory = options.maxHistory ?? 100;
 
         if (options.initialPath) {
-            this._history.push(options.initialPath);
+            this._pendingInitialPath = options.initialPath;
         }
     }
 
@@ -131,6 +131,7 @@ export class Router {
             beforeEnter: finalOptions?.beforeEnter,
             afterEnter: finalOptions?.afterEnter,
         });
+        this._applyInitialPathIfPending();
     }
 
     /** Register multiple routes */
@@ -171,6 +172,10 @@ export class Router {
 
     /** Navigate to a path */
     push(path: string): void {
+        this._navigateTo(path);
+    }
+
+    private _navigateTo(path: string): void {
         const match = matchRoute(path, this._routes);
 
         if (!match) {
@@ -206,6 +211,15 @@ export class Router {
         this.events.emit('navigate', { match, screen });
 
         match.route.afterEnter?.(path);
+    }
+
+    private _applyInitialPathIfPending(): void {
+        if (!this._pendingInitialPath || this._routes.length === 0) return;
+        const path = this._pendingInitialPath;
+        const match = matchRoute(path, this._routes);
+        if (!match) return;
+        this._pendingInitialPath = null;
+        this._navigateTo(path);
     }
 
     /** Replace current path */

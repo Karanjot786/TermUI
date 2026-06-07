@@ -1,168 +1,172 @@
+import { Widget } from '../base/Widget.js';
 import {
-  type Screen,
-  type Style,
-  type Color,
-  type KeyEvent,
-  styleToCellAttrs,
-  stringWidth,
-  caps,
-} from "@termuijs/core";
-import { Widget } from "../base/Widget.js";
+    type Screen,
+    type Style,
+    type Color,
+    type KeyEvent,
+    styleToCellAttrs,
+    caps,
+    stringWidth,
+} from '@termuijs/core';
 
 export interface RangeInputOptions {
-  min?: number;
-  max?: number;
-  step?: number;
-  color?: Color;
-  showValue?: boolean;
-  onChange?: (value: [number, number]) => void;
+    min?: number;
+    max?: number;
+    step?: number;
+    color?: Color;
+    showValue?: boolean;
+    onChange?: (low: number, high: number) => void;
 }
 
 export class RangeInput extends Widget {
-  private _label: string;
-  private _value: [number, number] = [0, 100];
-  private _activeThumb: 0 | 1 = 0;
-  private _min: number;
-  private _max: number;
-  private _step: number;
-  private _color: Color;
-  private _showValue: boolean;
-  private _onChange?: (value: [number, number]) => void;
+    private _label: string;
+    private _min: number;
+    private _max: number;
+    private _step: number;
+    private _color: Color;
+    private _showValue: boolean;
+    private _activeHandle: 'low' | 'high';
+    private _low: number;
+    private _high: number;
+    private _onChange?: (low: number, high: number) => void;
 
-  constructor(
-    label?: string,
-    style: Partial<Style> = {},
-    opts: RangeInputOptions = {}
-  ) {
-    super(style);
+    constructor(
+        label: string,
+        style: Partial<Style> = {},
+        opts: RangeInputOptions = {},
+    ) {
+        super(style);
 
-    this._label = label ?? "";
-    this._min = opts.min ?? 0;
-    this._max = opts.max ?? 100;
-    this._value = [this._min, this._max];
-    this._step = opts.step ?? 1;
-    this._color = opts.color ?? { type: "named", name: "cyan" };
-    this._showValue = opts.showValue ?? true;
-    this._onChange = opts.onChange;
-  }
+        this._label = label;
+        this._min = opts.min ?? 0;
+        this._max = opts.max ?? 100;
+        this._step = opts.step ?? 1;
+        this._color = opts.color ?? { type: 'named', name: 'cyan' };
+        this._showValue = opts.showValue ?? true;
+        this._low = this._min;
+        this._high = this._max;
+        this._activeHandle = 'low';
+        this._onChange = opts.onChange;
 
-  getValue(): [number, number] {
-    return [this._value[0], this._value[1]];
-  }
-
-  setValue(value: [number, number]): void {
-    let lower = Math.max(this._min, Math.min(this._max, value[0]));
-    let upper = Math.max(this._min, Math.min(this._max, value[1]));
-
-    if (lower > upper) {
-      // Enforce lower <= upper
-      lower = upper;
+        this.focusable = true;
     }
 
-    if (this._value[0] === lower && this._value[1] === upper) {
-      return;
+    getLow(): number {
+        return this._low;
     }
 
-    this._value = [lower, upper];
-    this.markDirty();
-    this._onChange?.(this._value);
-  }
+    getHigh(): number {
+        return this._high;
+    }
 
-  setLabel(label: string): void {
-    this._label = label;
-    this.markDirty();
-  }
-
-  handleKey(event: KeyEvent): void {
-    switch (event.key) {
-      case "tab":
-        this._activeThumb = this._activeThumb === 0 ? 1 : 0;
+    setLow(value: number): void {
+        const clamped = Math.max(this._min, Math.min(value, this._high));
+        if (clamped === this._low) return;
+        this._low = clamped;
         this.markDirty();
-        break;
-      case "right": {
-        const newValue: [number, number] = [this._value[0], this._value[1]];
-        newValue[this._activeThumb] += this._step;
-        // let setValue() handle all boundary enforcement
-        this.setValue(newValue);
-        break;
-      }
-      case "left": {
-        const newValue: [number, number] = [this._value[0], this._value[1]];
-        newValue[this._activeThumb] -= this._step;
-        // let setValue() handle all boundary enforcement
-        this.setValue(newValue);
-        break;
-      }
-    }
-  }
-
-  protected _renderSelf(screen: Screen): void {
-    const rect = this._getContentRect();
-    const { x, y, width, height } = rect;
-
-    if (width <= 0 || height <= 0) return;
-
-    const attrs = styleToCellAttrs(this._style);
-
-    const leftArrow = caps.unicode ? "◄" : "<";
-    const rightArrow = caps.unicode ? "►" : ">";
-
-    const activeIndicator = this._activeThumb === 0 ? leftArrow : rightArrow;
-    
-    const valueStr = this._showValue ? ` [${this._value[0]}, ${this._value[1]}]` : "";
-    const prefix = `${this._label} ${activeIndicator} `;
-    const suffix = `${valueStr}`;
-
-    const prefixWidth = stringWidth(prefix);
-    const suffixWidth = stringWidth(suffix);
-
-    const trackWidth = Math.max(
-      0,
-      width - prefixWidth - suffixWidth
-    );
-
-    const rangeSize = Math.max(1, this._max - this._min);
-    
-    const ratioStart = (this._value[0] - this._min) / rangeSize;
-    const ratioEnd = (this._value[1] - this._min) / rangeSize;
-
-    const maxTrackIndex = Math.max(0, trackWidth - 1);
-    const trackStart = Math.min(maxTrackIndex, Math.round(maxTrackIndex * ratioStart));
-    const trackEnd = Math.min(maxTrackIndex, Math.round(maxTrackIndex * ratioEnd));
-
-    screen.writeString(x, y, prefix, {
-      ...attrs,
-      bold: true,
-      fg: this._color // Highlight prefix to show it's active
-    });
-
-    const trackX = x + prefixWidth;
-
-    for (let i = 0; i < trackWidth; i++) {
-      const isFilled = i >= trackStart && i <= trackEnd;
-      const isThumb = i === trackStart || i === trackEnd;
-      const isActiveThumb = (this._activeThumb === 0 && i === trackStart) || (this._activeThumb === 1 && i === trackEnd);
-
-      const filledChar = caps.unicode ? "█" : "#";
-      const emptyChar = caps.unicode ? "░" : "-";
-      
-      let charToRender = isFilled ? filledChar : emptyChar;
-      
-      if (isThumb) {
-        charToRender = caps.unicode ? "█" : "O"; // Thumbs are always distinct
-      }
-
-      screen.setCell(trackX + i, y, {
-        char: charToRender,
-        fg: isFilled
-              ? (isActiveThumb ? { type: "named", name: "white" } : this._color)
-              : { type: "named", name: "brightBlack" },
-      });
+        this._onChange?.(this._low, this._high);
     }
 
-    screen.writeString(trackX + trackWidth, y, suffix, {
-      ...attrs,
-      bold: true,
-    });
-  }
+    setHigh(value: number): void {
+        const clamped = Math.min(this._max, Math.max(value, this._low));
+        if (clamped === this._high) return;
+        this._high = clamped;
+        this.markDirty();
+        this._onChange?.(this._low, this._high);
+    }
+
+    setRange(low: number, high: number): void {
+        const newLow = Math.max(this._min, Math.min(low, high));
+        const newHigh = Math.min(this._max, Math.max(low, high));
+        if (newLow === this._low && newHigh === this._high) return;
+        this._low = newLow;
+        this._high = newHigh;
+        this.markDirty();
+        this._onChange?.(this._low, this._high);
+    }
+
+    handleKey(event: KeyEvent): void {
+        if (event.key === 'tab') {
+            this._activeHandle =
+                this._activeHandle === 'low' ? 'high' : 'low';
+            this.markDirty();
+            return;
+        }
+
+        if (this._activeHandle === 'low') {
+            if (event.key === 'right') this.setLow(this._low + this._step);
+            if (event.key === 'left') this.setLow(this._low - this._step);
+        } else {
+            if (event.key === 'right') this.setHigh(this._high + this._step);
+            if (event.key === 'left') this.setHigh(this._high - this._step);
+        }
+    }
+
+    protected _renderSelf(screen: Screen): void {
+        const rect = this._getContentRect();
+        const { x, y, width, height } = rect;
+        if (width <= 0 || height <= 0) return;
+
+        const attrs = styleToCellAttrs(this._style);
+
+        // Layout: "Label  ◄ [track] ►  low – high"
+        const labelStr = this._label + '  ';
+        const leftCap = caps.unicode ? '◄ ' : '< ';
+        const rightCap = caps.unicode ? ' ►' : ' >';
+        const valueStr = this._showValue
+            ? `  ${this._low} – ${this._high}`
+            : '';
+
+        const labelWidth = stringWidth(labelStr);
+        const leftCapWidth = stringWidth(leftCap);
+        const rightCapWidth = stringWidth(rightCap);
+        const valueWidth = stringWidth(valueStr);
+
+        const trackWidth = Math.max(
+            0,
+            width - labelWidth - leftCapWidth - rightCapWidth - valueWidth,
+        );
+
+        // Render label
+        screen.writeString(x, y, labelStr, { ...attrs, bold: true });
+
+        // Render left cap
+        screen.writeString(x + labelWidth, y, leftCap, attrs);
+
+        // Render track (3 zones: before low, between low–high, after high)
+        const range = this._max - this._min || 1;
+        const lowCell = Math.round(trackWidth * (this._low - this._min) / range);
+        const highCell = Math.round(trackWidth * (this._high - this._min) / range);
+        const trackX = x + labelWidth + leftCapWidth;
+
+        for (let i = 0; i < trackWidth; i++) {
+            const inRange = i >= lowCell && i < highCell;
+            const isActiveLow = i === lowCell && this._activeHandle === 'low';
+            const isActiveHigh = i === highCell - 1 && this._activeHandle === 'high';
+
+            const char = inRange
+                ? (caps.unicode ? '█' : '#')
+                : (caps.unicode ? '░' : '-');
+
+            screen.setCell(trackX + i, y, {
+                char,
+                fg: (isActiveLow || isActiveHigh)
+                    ? { type: 'named', name: 'yellow' }
+                    : inRange
+                        ? this._color
+                        : { type: 'named', name: 'brightBlack' },
+            });
+        }
+
+        // Render right cap
+        screen.writeString(trackX + trackWidth, y, rightCap, attrs);
+
+        // Render value
+        if (this._showValue) {
+            screen.writeString(trackX + trackWidth + rightCapWidth, y, valueStr, {
+                ...attrs,
+                bold: true,
+            });
+        }
+    }
 }
