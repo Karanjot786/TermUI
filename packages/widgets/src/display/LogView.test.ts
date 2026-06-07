@@ -153,39 +153,62 @@ describe('LogView', () => {
     expect(rows[1]).toContain('Line 4');
   });
 
-  it('appendLine() beyond maxLines trims oldest entries', () => {
+  it('appendLine() beyond maxLines trims oldest entries from rendered output', () => {
+    const screen = new Screen(20, 3);
     const log = new LogView({ width: 20, height: 3 }, { maxLines: 3, autoScroll: false });
+    log.updateRect({ x: 0, y: 0, width: 20, height: 3 });
     log.appendLine('line 1');
     log.appendLine('line 2');
     log.appendLine('line 3');
     log.appendLine('line 4');
+    log.render(screen);
 
-    const lines = (log as { _lines: string[] })._lines; // private buffer; no public getter
-    expect(lines).toEqual(['line 2', 'line 3', 'line 4']);
+    const rows = [screenRow(screen, 0), screenRow(screen, 1), screenRow(screen, 2)];
+    expect(rows.some(r => r.includes('line 1'))).toBe(false);
+    expect(rows.some(r => r.includes('line 2'))).toBe(true);
+    expect(rows.some(r => r.includes('line 3'))).toBe(true);
+    expect(rows.some(r => r.includes('line 4'))).toBe(true);
   });
 
-  it('_lines.length never exceeds maxLines', () => {
-    const log = new LogView({ width: 20, height: 3 }, { maxLines: 5 });
+  it('renders only the most recent maxLines lines after many appends', () => {
+    const screen = new Screen(20, 5);
+    const log = new LogView({ width: 20, height: 5 }, { maxLines: 5 });
+    log.updateRect({ x: 0, y: 0, width: 20, height: 5 });
     for (let i = 0; i < 20; i++) {
       log.appendLine(`line ${i}`);
     }
+    log.render(screen);
 
-    const lines = (log as { _lines: string[] })._lines; // private buffer; no public getter
-    expect(lines.length).toBe(5);
-    expect(lines[0]).toBe('line 15');
-    expect(lines[4]).toBe('line 19');
+    const rows = [0, 1, 2, 3, 4].map(i => screenRow(screen, i));
+    expect(rows.some(r => r.includes('line 0'))).toBe(false);
+    expect(rows.some(r => r.includes('line 14'))).toBe(false);
+    expect(rows.some(r => r.includes('line 15'))).toBe(true);
+    expect(rows.some(r => r.includes('line 19'))).toBe(true);
   });
 
-  it('allows unbounded growth when maxLines is 0 or not set', () => {
-    const defaultLog = new LogView({ width: 20, height: 3 });
-    const explicitLog = new LogView({ width: 20, height: 3 }, { maxLines: 0 });
+  it('allows all lines to render when maxLines is 0 or not set', () => {
+    const defaultLog = new LogView({ width: 20, height: 10 });
+    const explicitLog = new LogView({ width: 20, height: 10 }, { maxLines: 0 });
+    defaultLog.updateRect({ x: 0, y: 0, width: 20, height: 10 });
+    explicitLog.updateRect({ x: 0, y: 0, width: 20, height: 10 });
 
     for (let i = 0; i < 10; i++) {
       defaultLog.appendLine(`default ${i}`);
       explicitLog.appendLine(`explicit ${i}`);
     }
 
-    expect((defaultLog as { _lines: string[] })._lines.length).toBe(10); // private buffer; no public getter
-    expect((explicitLog as { _lines: string[] })._lines.length).toBe(10); // private buffer; no public getter
+    const defaultScreen = new Screen(20, 10);
+    defaultLog.render(defaultScreen);
+    const defaultRows = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => screenRow(defaultScreen, i));
+    for (let i = 0; i < 10; i++) {
+      expect(defaultRows.some(r => r.includes(`default ${i}`))).toBe(true);
+    }
+
+    const explicitScreen = new Screen(20, 10);
+    explicitLog.render(explicitScreen);
+    const explicitRows = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => screenRow(explicitScreen, i));
+    for (let i = 0; i < 10; i++) {
+      expect(explicitRows.some(r => r.includes(`explicit ${i}`))).toBe(true);
+    }
   });
 });

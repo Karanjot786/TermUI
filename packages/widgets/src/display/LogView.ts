@@ -49,7 +49,9 @@ export class LogView extends Widget {
     appendLine(line: string): void {
         this._lines.push(line);
         if (this._maxLines > 0 && this._lines.length > this._maxLines) {
-            this._lines.splice(0, this._lines.length - this._maxLines);
+            const trimmed = this._lines.length - this._maxLines;
+            this._lines.splice(0, trimmed);
+            this._scrollOffset = Math.max(0, this._scrollOffset - trimmed);
         }
         this._scrollOffset = Math.min(this._scrollOffset, Math.max(0, this._lines.length - 1));
         if (this._autoScroll) {
