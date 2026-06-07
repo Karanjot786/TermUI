@@ -66,6 +66,8 @@ export { StatusIndicator } from './data/StatusIndicator.js';
 export type { StatusIndicatorOptions } from './data/StatusIndicator.js';
 export { BarChart } from './data/BarChart.js';
 export type { Bar, BarGroup, BarChartDirection, BarChartOptions } from './data/BarChart.js';
+export { GanttChart } from './data/GanttChart.js';
+export type { GanttChartOptions, GanttTask } from './data/GanttChart.js';
 
 // ── Layout Widgets ────────────────────────────────────
 export { Grid } from './layout/Grid.js';
