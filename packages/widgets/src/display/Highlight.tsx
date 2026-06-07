@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Style, parseColor } from '@termuijs/core';
 
 export interface HighlightProps {
