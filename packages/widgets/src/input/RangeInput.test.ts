@@ -74,6 +74,18 @@ describe("RangeInput", () => {
     expect(range.getValue()).toEqual([20, 80]);
   });
 
+  it("fires onChange callback", async () => {
+    const { RangeInput } = await import("./RangeInput.js");
+    const onChange = vi.fn();
+    const range = new RangeInput("Filter", {}, { step: 5, onChange });
+
+    range.setValue([20, 80]);
+    expect(onChange).toHaveBeenCalledWith([20, 80]);
+
+    range.handleKey(key("right"));
+    expect(onChange).toHaveBeenCalledWith([25, 80]);
+  });
+
   it("renders ascii mode", async () => {
     vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
 

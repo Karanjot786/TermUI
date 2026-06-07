@@ -15,6 +15,7 @@ export interface RangeInputOptions {
   step?: number;
   color?: Color;
   showValue?: boolean;
+  onChange?: (value: [number, number]) => void;
 }
 
 export class RangeInput extends Widget {
@@ -26,6 +27,7 @@ export class RangeInput extends Widget {
   private _step: number;
   private _color: Color;
   private _showValue: boolean;
+  private _onChange?: (value: [number, number]) => void;
 
   constructor(
     label?: string,
@@ -41,6 +43,7 @@ export class RangeInput extends Widget {
     this._step = opts.step ?? 1;
     this._color = opts.color ?? { type: "named", name: "cyan" };
     this._showValue = opts.showValue ?? true;
+    this._onChange = opts.onChange;
   }
 
   getValue(): [number, number] {
@@ -52,12 +55,13 @@ export class RangeInput extends Widget {
     let upper = Math.max(this._min, Math.min(this._max, value[1]));
 
     if (lower > upper) {
-        // Enforce lower <= upper
-        lower = upper;
+      // Enforce lower <= upper
+      lower = upper;
     }
 
     this._value = [lower, upper];
     this.markDirty();
+    this._onChange?.(this._value);
   }
 
   setLabel(label: string): void {
@@ -74,28 +78,14 @@ export class RangeInput extends Widget {
       case "right": {
         const newValue: [number, number] = [this._value[0], this._value[1]];
         newValue[this._activeThumb] += this._step;
-        
-        // Prevent active thumb from crossing the other
-        if (this._activeThumb === 0 && newValue[0] > newValue[1]) {
-            newValue[0] = newValue[1];
-        } else if (this._activeThumb === 1 && newValue[1] > this._max) {
-            newValue[1] = this._max;
-        }
-
+        // let setValue() handle all boundary enforcement
         this.setValue(newValue);
         break;
       }
       case "left": {
         const newValue: [number, number] = [this._value[0], this._value[1]];
         newValue[this._activeThumb] -= this._step;
-        
-        // Prevent active thumb from crossing the other
-        if (this._activeThumb === 1 && newValue[1] < newValue[0]) {
-            newValue[1] = newValue[0];
-        } else if (this._activeThumb === 0 && newValue[0] < this._min) {
-            newValue[0] = this._min;
-        }
-
+        // let setValue() handle all boundary enforcement
         this.setValue(newValue);
         break;
       }
@@ -155,7 +145,7 @@ export class RangeInput extends Widget {
       let charToRender = isFilled ? filledChar : emptyChar;
       
       if (isThumb) {
-          charToRender = caps.unicode ? "█" : "O"; // Thumbs are always distinct
+        charToRender = caps.unicode ? "█" : "O"; // Thumbs are always distinct
       }
 
       screen.setCell(trackX + i, y, {
