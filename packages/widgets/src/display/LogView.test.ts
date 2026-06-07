@@ -152,4 +152,40 @@ describe('LogView', () => {
     expect(rows[0]).toContain('Line 3');
     expect(rows[1]).toContain('Line 4');
   });
+
+  it('appendLine() beyond maxLines trims oldest entries', () => {
+    const log = new LogView({ width: 20, height: 3 }, { maxLines: 3, autoScroll: false });
+    log.appendLine('line 1');
+    log.appendLine('line 2');
+    log.appendLine('line 3');
+    log.appendLine('line 4');
+
+    const lines = (log as { _lines: string[] })._lines; // private buffer; no public getter
+    expect(lines).toEqual(['line 2', 'line 3', 'line 4']);
+  });
+
+  it('_lines.length never exceeds maxLines', () => {
+    const log = new LogView({ width: 20, height: 3 }, { maxLines: 5 });
+    for (let i = 0; i < 20; i++) {
+      log.appendLine(`line ${i}`);
+    }
+
+    const lines = (log as { _lines: string[] })._lines; // private buffer; no public getter
+    expect(lines.length).toBe(5);
+    expect(lines[0]).toBe('line 15');
+    expect(lines[4]).toBe('line 19');
+  });
+
+  it('allows unbounded growth when maxLines is 0 or not set', () => {
+    const defaultLog = new LogView({ width: 20, height: 3 });
+    const explicitLog = new LogView({ width: 20, height: 3 }, { maxLines: 0 });
+
+    for (let i = 0; i < 10; i++) {
+      defaultLog.appendLine(`default ${i}`);
+      explicitLog.appendLine(`explicit ${i}`);
+    }
+
+    expect((defaultLog as { _lines: string[] })._lines.length).toBe(10); // private buffer; no public getter
+    expect((explicitLog as { _lines: string[] })._lines.length).toBe(10); // private buffer; no public getter
+  });
 });
