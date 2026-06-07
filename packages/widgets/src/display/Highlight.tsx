@@ -15,7 +15,7 @@ export const Highlight = ({
   query, 
   style = { backgroundColor: 'yellow', color: 'black' } 
 }: HighlightProps) => {
-  if (!query) return <>{children}</>;
+  if (!query) return children;
 
   const searchPattern = query instanceof RegExp ? query.source : query.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
   const flags = query instanceof RegExp ? query.flags : 'gi';
@@ -27,15 +27,12 @@ export const Highlight = ({
       ? part.toLowerCase() === query.toLowerCase()
       : new RegExp(`^${query.source}$`, query.flags).test(part);
 
-  return (
-    <>
-      {parts.map((part: string, i: number) =>
-        isMatch(part) ? (
-          <text key={i} {...style}>{part}</text>
-        ) : (
-          part
-        )
-      )}
-    </>
-  );
+  // Return the mapped array directly without wrapping it in an empty fragment
+  return parts.map((part: string, i: number) =>
+    isMatch(part) ? (
+      <text key={i} {...style}>{part}</text>
+    ) : (
+      part
+    )
+  ) as any;
 };
