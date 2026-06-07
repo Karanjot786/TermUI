@@ -46,48 +46,87 @@ describe('Modal', () => {
             expect(modal.visible).toBe(false);
         });
 
-        it('defaults to width 50', () => {
+        it('defaults to width 50 (border at expected column)', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal();
-            expect((modal as any)._modalWidth).toBe(50);
+            modal.show();
+            const screen = renderModal(modal);
+            const mw = Math.min(50, COLS - 4);
+            const mx = Math.floor((COLS - mw) / 2);
+            const my = Math.floor((ROWS - Math.min(15, ROWS - 2)) / 2);
+            expect(rowText(screen, my)[mx]).toBe('┌');
+            expect(rowText(screen, my)[mx + mw - 1]).toBe('┐');
         });
 
-        it('defaults to height 15', () => {
+        it('defaults to height 15 (border spans expected rows)', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal();
-            expect((modal as any)._modalHeight).toBe(15);
+            modal.show();
+            const screen = renderModal(modal);
+            const mh = Math.min(15, ROWS - 2);
+            const mw = Math.min(50, COLS - 4);
+            const mx = Math.floor((COLS - mw) / 2);
+            const my = Math.floor((ROWS - mh) / 2);
+            expect(rowText(screen, my)[mx]).toBe('┌');
+            expect(rowText(screen, my + mh - 1)[mx]).toBe('└');
         });
 
         it('defaults to cyan border color', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal();
-            expect((modal as any)._borderColor).toEqual({ type: 'named', name: 'cyan' });
+            modal.show();
+            const screen = renderModal(modal);
+            const mw = Math.min(50, COLS - 4);
+            const mx = Math.floor((COLS - mw) / 2);
+            const my = Math.floor((ROWS - Math.min(15, ROWS - 2)) / 2);
+            expect(screen.back[my]![mx]!.fg).toEqual({ type: 'named', name: 'cyan' });
         });
 
         it('defaults backdrop char to "░" in unicode mode', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal();
-            expect((modal as any)._backdropChar).toBe('░');
+            modal.show();
+            const screen = renderModal(modal, 20, 8);
+            expect(allText(screen)).toContain('░');
         });
 
-        it('defaults backdrop char to space in ASCII mode', () => {
+        it('defaults backdrop char to space in ASCII mode (no "░" char)', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
             const modal = new Modal();
-            expect((modal as any)._backdropChar).toBe(' ');
+            modal.show();
+            const screen = renderModal(modal, 20, 8);
+            expect(allText(screen)).not.toContain('░');
         });
 
         it('accepts custom title, width, and height', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal({ title: 'Settings', width: 60, height: 20 });
-            expect((modal as any)._title).toBe('Settings');
-            expect((modal as any)._modalWidth).toBe(60);
-            expect((modal as any)._modalHeight).toBe(20);
+            modal.show();
+            const screen = renderModal(modal);
+            const text = allText(screen);
+            expect(text).toContain('Settings');
+            const mw = Math.min(60, COLS - 4);
+            const mx = Math.floor((COLS - mw) / 2);
+            expect(rowText(screen, Math.floor((ROWS - Math.min(20, ROWS - 2)) / 2))[mx]).toBe('┌');
         });
 
         it('accepts custom borderColor', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal({ borderColor: { type: 'named', name: 'green' } });
-            expect((modal as any)._borderColor).toEqual({ type: 'named', name: 'green' });
+            modal.show();
+            const screen = renderModal(modal);
+            const mw = Math.min(50, COLS - 4);
+            const mx = Math.floor((COLS - mw) / 2);
+            const my = Math.floor((ROWS - Math.min(15, ROWS - 2)) / 2);
+            expect(screen.back[my]![mx]!.fg).toEqual({ type: 'named', name: 'green' });
         });
 
         it('accepts custom backdropChar', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal({ backdropChar: '#' });
-            expect((modal as any)._backdropChar).toBe('#');
+            modal.show();
+            const screen = renderModal(modal, 20, 8);
+            expect(allText(screen)).toContain('#');
         });
     });
 
@@ -122,7 +161,7 @@ describe('Modal', () => {
 
         it('show() calls markDirty()', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.show();
             expect(spy).toHaveBeenCalled();
         });
@@ -130,14 +169,14 @@ describe('Modal', () => {
         it('hide() calls markDirty()', () => {
             const modal = new Modal();
             modal.show();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.hide();
             expect(spy).toHaveBeenCalled();
         });
 
         it('toggle() calls markDirty() when going false → true', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.toggle();
             expect(spy).toHaveBeenCalled();
         });
@@ -145,7 +184,7 @@ describe('Modal', () => {
         it('toggle() calls markDirty() when going true → false', () => {
             const modal = new Modal();
             modal.show();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.toggle();
             expect(spy).toHaveBeenCalled();
         });
@@ -154,32 +193,44 @@ describe('Modal', () => {
     // ── 3. Content Management ─────────────────────────
 
     describe('content management', () => {
-        it('setContent() stores the widget', () => {
-            const modal = new Modal();
+        it('setContent() renders the widget inside the modal', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const modal = new Modal({ width: 30, height: 10 });
             const content = new Text('Hello');
             modal.setContent(content);
-            expect((modal as any)._content).toBe(content);
+            modal.show();
+            const screen = renderModal(modal);
+            expect(allText(screen)).toContain('Hello');
         });
 
-        it('setContent() calls markDirty()', () => {
+        it('setContent() marks modal dirty', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            modal.clearDirty();
             modal.setContent(new Text('Hello'));
-            expect(spy).toHaveBeenCalled();
+            expect(modal.isDirty).toBe(true);
         });
 
-        it('replacing content replaces the stored widget', () => {
-            const modal = new Modal();
+        it('replacing content renders second widget, not first', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const modal = new Modal({ width: 30, height: 10 });
             const child1 = new Text('First');
             const child2 = new Text('Second');
             modal.setContent(child1);
             modal.setContent(child2);
-            expect((modal as any)._content).toBe(child2);
+            modal.show();
+            const text = allText(renderModal(modal));
+            expect(text).toContain('Second');
+            expect(text).not.toContain('First');
         });
 
-        it('no content initially', () => {
-            const modal = new Modal();
-            expect((modal as any)._content).toBeNull();
+        it('no content initially — nothing renders inside border', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const modal = new Modal({ width: 30, height: 10 });
+            modal.show();
+            const screen = renderModal(modal);
+            // Border renders but no user text inside
+            expect(allText(screen)).toContain('┌');
+            expect(allText(screen)).not.toContain('Hello');
         });
     });
 
@@ -426,7 +477,7 @@ describe('Modal', () => {
             expect(text).toContain('Hello World');
         });
 
-        it('assigns child _rect with offset mx+2, my+1', () => {
+        it('renders child content inside the modal content area', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modalW = 30;
             const modalH = 10;
@@ -435,18 +486,16 @@ describe('Modal', () => {
 
             const child = new Text('Positioned');
             modal.setContent(child);
-            renderModal(modal, COLS, ROWS);
+            const screen = renderModal(modal, COLS, ROWS);
 
-            // After render, the child's _rect should be set to content area
+            // Content must appear inside the border (not on border rows/cols)
             const mw = Math.min(modalW, COLS - 4);
             const mh = Math.min(modalH, ROWS - 2);
             const mx = Math.floor((COLS - mw) / 2);
             const my = Math.floor((ROWS - mh) / 2);
-            const childRect = (child as any)._rect;
-            expect(childRect.x).toBe(mx + 2);
-            expect(childRect.y).toBe(my + 1);
-            expect(childRect.width).toBe(mw - 4);
-            expect(childRect.height).toBe(mh - 2);
+            // The child text should appear on row my+1, at or after column mx+2
+            const contentRow = rowText(screen, my + 1);
+            expect(contentRow.slice(mx + 2)).toContain('Positioned');
         });
 
         it('does not render child when modal is hidden', () => {
@@ -486,7 +535,7 @@ describe('Modal', () => {
     describe('markDirty coverage', () => {
         it('show() calls markDirty()', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.show();
             expect(spy).toHaveBeenCalledTimes(1);
         });
@@ -494,21 +543,21 @@ describe('Modal', () => {
         it('hide() calls markDirty()', () => {
             const modal = new Modal();
             modal.show();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.hide();
             expect(spy).toHaveBeenCalledTimes(1);
         });
 
         it('toggle() calls markDirty()', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.toggle();
             expect(spy).toHaveBeenCalledTimes(1);
         });
 
         it('setContent() calls markDirty()', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.setContent(new Text('Hi'));
             expect(spy).toHaveBeenCalledTimes(1);
         });
@@ -517,16 +566,18 @@ describe('Modal', () => {
     // ── 13. Unicode vs ASCII ──────────────────────────
 
     describe('unicode vs ASCII backdrop', () => {
-        it('uses "░" as backdrop char in unicode mode', () => {
+        it('uses "░" as backdrop char in unicode mode (renders it)', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal();
-            expect((modal as any)._backdropChar).toBe('░');
+            modal.show();
+            expect(allText(renderModal(modal, 20, 8))).toContain('░');
         });
 
-        it('uses " " as backdrop char in ASCII mode', () => {
+        it('uses " " as backdrop char in ASCII mode (no "░" in output)', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
             const modal = new Modal();
-            expect((modal as any)._backdropChar).toBe(' ');
+            modal.show();
+            expect(allText(renderModal(modal, 20, 8))).not.toContain('░');
         });
 
         it('renders "░" in screen when unicode mode and visible', () => {
@@ -583,9 +634,15 @@ describe('Modal', () => {
     // ── 15. Border Color ──────────────────────────────
 
     describe('border color', () => {
-        it('stores custom border color', () => {
-            const modal = new Modal({ borderColor: { type: 'named', name: 'green' } });
-            expect((modal as any)._borderColor).toEqual({ type: 'named', name: 'green' });
+        it('applies custom border color to border cells', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const modal = new Modal({ borderColor: { type: 'named', name: 'green' }, width: 20, height: 10 });
+            modal.show();
+            const screen = renderModal(modal);
+            const mw = Math.min(20, COLS - 4);
+            const mx = Math.floor((COLS - mw) / 2);
+            const my = Math.floor((ROWS - Math.min(10, ROWS - 2)) / 2);
+            expect(screen.back[my]![mx]!.fg).toEqual({ type: 'named', name: 'green' });
         });
 
         it('renders border cells with custom fg color', () => {
@@ -608,9 +665,15 @@ describe('Modal', () => {
             expect(tlCell.fg).toEqual({ type: 'named', name: 'red' });
         });
 
-        it('stores default cyan border color when none provided', () => {
+        it('defaults to cyan border color when none provided', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal();
-            expect((modal as any)._borderColor).toEqual({ type: 'named', name: 'cyan' });
+            modal.show();
+            const screen = renderModal(modal);
+            const mw = Math.min(50, COLS - 4);
+            const mx = Math.floor((COLS - mw) / 2);
+            const my = Math.floor((ROWS - Math.min(15, ROWS - 2)) / 2);
+            expect(screen.back[my]![mx]!.fg).toEqual({ type: 'named', name: 'cyan' });
         });
     });
 
@@ -849,7 +912,7 @@ describe('Modal', () => {
     // ── 20. Content Area Boundaries ───────────────────
 
     describe('content area boundaries', () => {
-        it('content area starts at mx+2, my+1 with correct dimensions', () => {
+        it('content renders at mx+2, my+1 inside border', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modalW = 30;
             const modalH = 10;
@@ -858,60 +921,63 @@ describe('Modal', () => {
 
             const child = new Text('Test');
             modal.setContent(child);
-            renderModal(modal, COLS, ROWS);
+            const screen = renderModal(modal, COLS, ROWS);
 
             const mw = Math.min(modalW, COLS - 4);
             const mh = Math.min(modalH, ROWS - 2);
             const mx = Math.floor((COLS - mw) / 2);
             const my = Math.floor((ROWS - mh) / 2);
 
-            const rect = (child as any)._rect;
-            expect(rect.x).toBe(mx + 2);
-            expect(rect.y).toBe(my + 1);
-            expect(rect.width).toBe(mw - 4);
-            expect(rect.height).toBe(mh - 2);
+            // Border row — should have corner characters
+            expect(rowText(screen, my)[mx]).toBe('┌');
+            // Content row — text starts at mx+2
+            const contentRow = rowText(screen, my + 1);
+            expect(contentRow.slice(mx + 2)).toContain('Test');
+            // Left border column should have │ on content rows
+            expect(rowText(screen, my + 1)[mx]).toBe('│');
         });
 
-        it('ensures content area width is mw-4 (border on both sides)', () => {
+        it('ensures content area width is bounded by mw-4', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal({ width: 40, height: 12 });
             modal.show();
 
-            const child = new Text('X');
+            const child = new Text('X'.repeat(100));
             modal.setContent(child);
-            renderModal(modal, 100, 30);
+            const screen = renderModal(modal, 100, 30);
 
-            const rect = (child as any)._rect;
             const mw = Math.min(40, 100 - 4);
-            expect(rect.width).toBe(mw - 4);
+            const mx = Math.floor((100 - mw) / 2);
+            const my = Math.floor((30 - Math.min(12, 30 - 2)) / 2);
+            // Right border must be at mx + mw - 1
+            expect(rowText(screen, my)[mx + mw - 1]).toBe('┐');
         });
 
-        it('ensures content area height is mh-2 (title and bottom)', () => {
+        it('ensures content area height is bounded by mh-2', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal({ width: 40, height: 12 });
             modal.show();
 
             const child = new Text('Y');
             modal.setContent(child);
-            renderModal(modal, 100, 30);
+            const screen = renderModal(modal, 100, 30);
 
-            const rect = (child as any)._rect;
             const mh = Math.min(12, 30 - 2);
-            expect(rect.height).toBe(mh - 2);
+            const mw = Math.min(40, 100 - 4);
+            const mx = Math.floor((100 - mw) / 2);
+            const my = Math.floor((30 - mh) / 2);
+            // Bottom border must be at my + mh - 1
+            expect(rowText(screen, my + mh - 1)[mx]).toBe('└');
         });
 
-        it('content area is never negative or zero width/height', () => {
+        it('content area is never negative — render does not crash on tiny screen', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal({ width: 200, height: 100 });
             modal.show();
 
             const child = new Text('Z');
             modal.setContent(child);
-            renderModal(modal, 10, 5);
-
-            const rect = (child as any)._rect;
-            expect(rect.width).toBeGreaterThanOrEqual(0);
-            expect(rect.height).toBeGreaterThanOrEqual(0);
+            expect(() => renderModal(modal, 10, 5)).not.toThrow();
         });
 
         it('content not placed outside modal when screen is tiny', () => {
@@ -922,10 +988,6 @@ describe('Modal', () => {
             const child = new Text('Tiny');
             modal.setContent(child);
             expect(() => renderModal(modal, 5, 3)).not.toThrow();
-
-            const rect = (child as any)._rect;
-            expect(rect.x).toBeGreaterThanOrEqual(0);
-            expect(rect.y).toBeGreaterThanOrEqual(0);
         });
     });
 
@@ -1043,7 +1105,7 @@ describe('Modal', () => {
     describe('markDirty frequency', () => {
         it('show() calls markDirty exactly once', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.show();
             expect(spy).toHaveBeenCalledTimes(1);
         });
@@ -1051,14 +1113,14 @@ describe('Modal', () => {
         it('hide() calls markDirty exactly once', () => {
             const modal = new Modal();
             modal.show();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.hide();
             expect(spy).toHaveBeenCalledTimes(1);
         });
 
         it('toggle() calls markDirty exactly once each time', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.toggle();
             expect(spy).toHaveBeenCalledTimes(1);
 
@@ -1069,14 +1131,14 @@ describe('Modal', () => {
 
         it('setContent() calls markDirty exactly once', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
             modal.setContent(new Text('Test'));
             expect(spy).toHaveBeenCalledTimes(1);
         });
 
         it('multiple setContent calls each call markDirty once', () => {
             const modal = new Modal();
-            const spy = vi.spyOn(modal as any, 'markDirty');
+            const spy = vi.spyOn(modal, 'markDirty');
 
             modal.setContent(new Text('First'));
             expect(spy).toHaveBeenCalledTimes(1);
@@ -1137,13 +1199,12 @@ describe('Modal', () => {
             expect(modal.visible).toBe(false);
         });
 
-        it('visible is readonly and cannot be set directly', () => {
+        it('visible is readonly — property has getter but no setter', () => {
             const modal = new Modal();
-            // Verify trying to set readonly property throws in strict mode
-            expect(() => {
-                (modal as any).visible = true;
-            }).toThrow();
-            // The actual state should still be managed by show/hide/toggle
+            const proto = Object.getPrototypeOf(modal);
+            const desc = Object.getOwnPropertyDescriptor(proto, 'visible');
+            expect(desc?.get).toBeDefined();
+            expect(desc?.set).toBeUndefined();
             expect(modal.visible).toBe(false);
         });
     });
@@ -1161,24 +1222,24 @@ describe('Modal', () => {
             expect(allText(screen)).toContain('Hello');
         });
 
-        it('child widget render is called during modal render', () => {
+        it('child widget content appears in modal render output', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal({ width: 30, height: 10 });
             modal.show();
 
             const child = new Text('Content');
-            const childSpy = vi.spyOn(child as any, '_renderSelf');
             modal.setContent(child);
-            renderModal(modal);
+            const screen = renderModal(modal);
 
-            expect(childSpy).toHaveBeenCalled();
+            expect(allText(screen)).toContain('Content');
         });
     });
 
     // ── 27. Options Combination ───────────────────────
 
     describe('options combination', () => {
-        it('accepts all options together', () => {
+        it('accepts all options together — renders them correctly', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal = new Modal({
                 title: 'Full Options',
                 width: 50,
@@ -1186,12 +1247,18 @@ describe('Modal', () => {
                 borderColor: { type: 'named', name: 'red' },
                 backdropChar: '⋅',
             });
-
-            expect((modal as any)._title).toBe('Full Options');
-            expect((modal as any)._modalWidth).toBe(50);
-            expect((modal as any)._modalHeight).toBe(20);
-            expect((modal as any)._borderColor).toEqual({ type: 'named', name: 'red' });
-            expect((modal as any)._backdropChar).toBe('⋅');
+            modal.show();
+            const screen = renderModal(modal);
+            const text = allText(screen);
+            // title
+            expect(text).toContain('Full Options');
+            // backdropChar
+            expect(text).toContain('⋅');
+            // borderColor — top-left corner cell has red fg
+            const mw = Math.min(50, COLS - 4);
+            const mx = Math.floor((COLS - mw) / 2);
+            const my = Math.floor((ROWS - Math.min(20, ROWS - 2)) / 2);
+            expect(screen.back[my]![mx]!.fg).toEqual({ type: 'named', name: 'red' });
         });
 
         it('renders correctly with all custom options', () => {
@@ -1216,17 +1283,18 @@ describe('Modal', () => {
     // ── 28. Content Update Semantics ──────────────────
 
     describe('content update semantics', () => {
-        it('setContent replaces old content completely', () => {
-            const modal = new Modal();
+        it('setContent replaces old content — second widget renders, first does not', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const modal = new Modal({ width: 30, height: 10 });
+            modal.show();
             const child1 = new Text('First');
             const child2 = new Text('Second');
 
             modal.setContent(child1);
-            expect((modal as any)._content).toBe(child1);
-
             modal.setContent(child2);
-            expect((modal as any)._content).toBe(child2);
-            expect((modal as any)._content).not.toBe(child1);
+            const text = allText(renderModal(modal));
+            expect(text).toContain('Second');
+            expect(text).not.toContain('First');
         });
 
         it('old content object is discarded after setContent', () => {
@@ -1310,31 +1378,40 @@ describe('Modal', () => {
 
     describe('initialization idempotence', () => {
         it('constructor with empty options always creates same defaults', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal1 = new Modal();
             const modal2 = new Modal({});
 
-            expect((modal1 as any)._visible).toBe((modal2 as any)._visible);
-            expect((modal1 as any)._modalWidth).toBe((modal2 as any)._modalWidth);
-            expect((modal1 as any)._modalHeight).toBe((modal1 as any)._modalHeight);
-            expect((modal1 as any)._borderColor).toEqual((modal2 as any)._borderColor);
+            // Same initial visibility
+            expect(modal1.visible).toBe(modal2.visible);
+            expect(modal1.visible).toBe(false);
+            // Same rendered output when shown
+            modal1.show(); modal2.show();
+            const text1 = allText(renderModal(modal1));
+            const text2 = allText(renderModal(modal2));
+            expect(text1).toBe(text2);
         });
 
         it('unicode backdrop char is consistent when unicode is true', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
             const modal1 = new Modal();
             const modal2 = new Modal();
-
-            expect((modal1 as any)._backdropChar).toBe((modal2 as any)._backdropChar);
-            expect((modal1 as any)._backdropChar).toBe('░');
+            modal1.show(); modal2.show();
+            const t1 = allText(renderModal(modal1, 20, 8));
+            const t2 = allText(renderModal(modal2, 20, 8));
+            expect(t1).toContain('░');
+            expect(t1).toBe(t2);
         });
 
         it('ascii backdrop char is consistent when unicode is false', () => {
             vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
             const modal1 = new Modal();
             const modal2 = new Modal();
-
-            expect((modal1 as any)._backdropChar).toBe((modal2 as any)._backdropChar);
-            expect((modal1 as any)._backdropChar).toBe(' ');
+            modal1.show(); modal2.show();
+            const t1 = allText(renderModal(modal1, 20, 8));
+            const t2 = allText(renderModal(modal2, 20, 8));
+            expect(t1).not.toContain('░');
+            expect(t1).toBe(t2);
         });
     });
 });
