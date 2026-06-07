@@ -78,7 +78,7 @@ export class App {
     private static readonly MAX_RENDER_FAILURES = 5;
     // Lines to insert before inline viewport output. Each entry: { id: symbol, text: string }
     private _insertBefore: Array<{ id: symbol; text: string }> = [];
-    
+
     // Core fix patch: Track if a paint task has been queued for the next event loop tick
     private _isRenderPending = false;
 
@@ -253,13 +253,14 @@ export class App {
 
     /**
      * Request a re-render on the next frame.
-     * Patched to batch rapid structural updates via setImmediate micro-task scheduling.
+     * Batches rapid structural updates via setImmediate scheduling so that
+     * multiple synchronous state mutations collapse into a single render frame.
      */
     requestRender(): void {
         if (!this._mounted) return;
 
-        // If a layout computation is already scheduled for execution on this tick,
-        // intercept and bundle any concurrent incoming hook dispatches.
+        // If a render is already queued for this tick, bail out — it will
+        // pick up all dirty state when it eventually runs.
         if (this._isRenderPending) return;
 
         // Skip full layout pass if widget tree reports nothing has changed.
@@ -270,7 +271,8 @@ export class App {
         this._isRenderPending = true;
 
         // Defer rendering to the end of the current macro-task poll pool.
-        // This guarantees that multiple state updates called synchronously end up in a single render frame.
+        // This guarantees that multiple state updates called synchronously
+        // collapse into a single render frame.
         setImmediate(() => {
             if (!this._mounted) {
                 this._isRenderPending = false;
@@ -278,7 +280,6 @@ export class App {
             }
 
             try {
-                // Double check dirty flag before processing heavy grid steps
                 if (this._rootWidget.isDirty !== false) {
                     // Compute layout
                     const layoutRoot = this._rootWidget.getLayoutNode();
@@ -294,14 +295,11 @@ export class App {
                     this.screen.clear();
                     this._rootWidget.render(this.screen);
 
-                    // Clear dirty flags now that we've rendered — future requestRender()
-                    // calls will skip layout until markDirty() is called again.
-                    this._rootWidget.clearDirty?.();
-                    
                     // Merge adjacent borders into junction characters for a cleaner look
                     if (this._options.dockBorders) {
                         mergeBorders(this.screen);
                     }
+
                     // Composite overlay layers on top of the base rendering
                     this.layers.composite(this.screen);
 
@@ -321,16 +319,19 @@ export class App {
                                     : { write: (s: string) => (this.terminal as any).stdout.write(s) };
                                 renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
                             }
-                        } catch (e) {
+                        } catch (_e) {
                             // Fallback: write nothing
                         }
-                        return;
+                    } else {
+                        this.renderer.requestFrame();
                     }
 
-                    this.renderer.requestFrame();
+                    // Clear dirty flags now that rendering is complete — future
+                    // requestRender() calls will skip layout until markDirty() fires again.
+                    this._rootWidget.clearDirty?.();
                 }
             } finally {
-                // Unlock the queue flag so subsequent application frames can schedule updates
+                // Unlock the queue flag so subsequent frames can be scheduled
                 this._isRenderPending = false;
             }
         });
