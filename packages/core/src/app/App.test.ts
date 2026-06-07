@@ -32,7 +32,7 @@ function createMockRootWidget(): RootWidget {
 
 describe('App', () => {
     describe('unmount()', () => {
-        it('mount() promise resolves when unmount() is called directly', async () => {
+        it('mount() resolves when unmount() is called directly', async () => {
             const root = createMockRootWidget();
             const fakeStdout: any = { // minimal stdout stub — full NodeJS.WriteStream type not required here
                 writes: '',
@@ -58,12 +58,8 @@ describe('App', () => {
 
             app.unmount();
 
-            const result = await Promise.race([
-                mountPromise.then(() => 'resolved'),
-                new Promise<string>((r) => setTimeout(() => r('timeout'), 500)),
-            ]);
-
-            expect(result).toBe('resolved');
+            const code = await mountPromise;
+            expect(code).toBe(0);
         });
     });
 
