@@ -1,5 +1,9 @@
-import { describe, it, expect } from "vitest";
-import { Screen, HORIZONTAL_BAR_SYMBOLS } from "@termuijs/core";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { Screen, HORIZONTAL_BAR_SYMBOLS, caps } from "@termuijs/core";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("GanttChart", () => {
   it("constructs with empty tasks", async () => {
@@ -53,5 +57,22 @@ describe("GanttChart", () => {
     expect(row0).toContain("LongTask");
     // Since start is 0, offset is 50. dur is 100.
     expect(row0).toContain(HORIZONTAL_BAR_SYMBOLS[8]);
+  });
+
+  it("uses ASCII fallback when caps.unicode is false", async () => {
+    const { GanttChart } = await import("./GanttChart.js");
+    vi.spyOn(caps, "unicode", "get").mockReturnValue(false);
+
+    const chart = new GanttChart([
+      { label: "A", start: 10, duration: 5 }
+    ]);
+    
+    chart.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+    const screen = new Screen(40, 10);
+    chart.render(screen);
+
+    const row0 = screen.back[0].map(c => c.char).join("");
+    expect(row0).toContain("="); // ASCII fallback full block
+    expect(row0).not.toContain(HORIZONTAL_BAR_SYMBOLS[8]);
   });
 });

@@ -5,6 +5,7 @@ import {
   styleToCellAttrs,
   stringWidth,
   HORIZONTAL_BAR_SYMBOLS,
+  caps,
 } from "@termuijs/core";
 import { Widget } from "../base/Widget.js";
 
@@ -134,7 +135,10 @@ export class GanttChart extends Widget {
         for (let col = 0; col < barAreaWidth - startColInt; col++) {
           if (remainingSubCells <= 0) break;
           const level = Math.min(remainingSubCells, 8);
-          const symbol = HORIZONTAL_BAR_SYMBOLS[level] ?? " ";
+          let symbol = HORIZONTAL_BAR_SYMBOLS[level] ?? " ";
+          if (!caps.unicode && level > 0) {
+            symbol = level === 8 ? "=" : "-";
+          }
           screen.setCell(barStartX + col, cellY, { char: symbol, fg: color });
           remainingSubCells -= 8;
         }
