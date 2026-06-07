@@ -58,7 +58,11 @@ describe('ThemeWatcher', () => {
         // a change for the same basename. They should produce two onChange events.
         const emitters = [new EventEmitter(), new EventEmitter()];
         let callCount = 0;
-        vi.mocked(watch).mockImplementation(() => emitters[callCount++] as any);
+        vi.mocked(watch).mockImplementation(
+            // EventEmitter provides the on/emit behavior needed for this test,
+            // but watch() is typed to return FSWatcher.
+            () => emitters[callCount++] as any
+        );
 
         const watcher = new ThemeWatcher({ watchDirs: ['./themes', './more-themes'] });
         const changeSpy = vi.fn();
