@@ -55,6 +55,7 @@ export class Terminal {
     private _uncaughtExceptionHandler: ((err: Error) => void) | null = null;
     private _unhandledRejectionHandler: (() => void) | null = null;
     private _restored = false;
+    private _restoring = false;
 
     // Stream write queue state to prevent interleaving backpressure fragmentation
     private _writeQueue: string[] = [];
@@ -92,7 +93,8 @@ export class Terminal {
                     this._lastDispatchedCols = this._cols;
                     this._lastDispatchedRows = this._rows;
 
-                    for (const handler of this._resizeHandlers) {
+                    const handlers = [...this._resizeHandlers];
+                    for (const handler of handlers) {
                         handler(this._cols, this._rows);
                     }
                 }
@@ -270,8 +272,8 @@ export class Terminal {
      * Called automatically on SIGINT, SIGTERM, process exit.
      */
     restore(): void {
-        if (this._restored) return; // Prevent double-restore
-        this._restored = true;
+        if (this._restored || this._restoring) return;
+        this._restoring = true;
 
         if (this._resizeTimer) {
             clearTimeout(this._resizeTimer);
@@ -300,12 +302,24 @@ export class Terminal {
             this.stdout.off('resize', this._resizeHandler);
         }
 
-        this.disableBracketedPaste();
-        this.disableMouse();
-        this.exitAltScreen();
-        this.exitRawMode();
-        this.showCursor();
-        this.write(ansi.reset);
+        // Capture direct stdout.write to bypass any RenderHook hijack
+        const directWrite = this.stdout.write.bind(this.stdout);
+        const savedWrite = this.write;
+        this.write = (s: string) => { directWrite(s); };
+
+        try {
+            this.disableBracketedPaste();
+            this.disableMouse();
+            this.exitAltScreen();
+            this.exitRawMode();
+            this.showCursor();
+            this.write(ansi.reset);
+        } finally {
+            this.write = savedWrite;
+        }
+
+        this._restored = true;
+        this._restoring = false;
     }
 
     /**
@@ -317,7 +331,8 @@ export class Terminal {
 
     private _setupCleanup(): void {
         const runCleanupHandlers = () => {
-            for (const handler of this._cleanupHandlers) {
+            const handlers = [...this._cleanupHandlers];
+            for (const handler of handlers) {
                 try { handler(); } catch { /* swallow */ }
             }
             this.restore();
