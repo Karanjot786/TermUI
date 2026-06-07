@@ -508,18 +508,23 @@ describe('KeyboardShortcuts — setBindings()', () => {
         expect(output).toContain('[Esc]');
     });
 
-    it('calls markDirty() after setBindings()', () => {
+    it('marks dirty after setBindings()', () => {
         const widget = new KeyboardShortcuts([], { columns: 1 });
-        const spy = vi.spyOn(widget as any, 'markDirty');
+        render(widget); // clears dirty after initial render
+        widget.clearDirty();
         widget.setBindings([{ key: 'x', description: 'Exit' }]);
-        expect(spy).toHaveBeenCalled();
+        expect(widget.isDirty).toBe(true);
     });
 
-    it('calls markDirty() exactly once per setBindings() call', () => {
+    it('is dirty after each setBindings() call', () => {
         const widget = new KeyboardShortcuts([], { columns: 1 });
-        const spy = vi.spyOn(widget as any, 'markDirty');
+        widget.clearDirty();
         widget.setBindings([{ key: 'a', description: 'A' }]);
-        expect(spy).toHaveBeenCalledTimes(1);
+        expect(widget.isDirty).toBe(true);
+
+        widget.clearDirty();
+        widget.setBindings([{ key: 'b', description: 'B' }]);
+        expect(widget.isDirty).toBe(true);
     });
 });
 
@@ -710,34 +715,35 @@ describe('KeyboardShortcuts — Truncation & Overflow', () => {
 // ─────────────────────────────────────────────────────
 
 describe('KeyboardShortcuts — Dirty State', () => {
-    it('markDirty is called by setBindings()', () => {
+    it('is dirty after setBindings()', () => {
         const widget = new KeyboardShortcuts([], { columns: 1 });
-        const spy = vi.spyOn(widget as any, 'markDirty');
+        widget.clearDirty();
         widget.setBindings([{ key: 'a', description: 'Alpha' }]);
-        expect(spy).toHaveBeenCalled();
+        expect(widget.isDirty).toBe(true);
     });
 
-    it('markDirty is not called during rendering', () => {
+    it('is not dirty immediately after rendering', () => {
         const widget = new KeyboardShortcuts(
             [{ key: 'q', description: 'Quit' }],
             { columns: 1 },
         );
         const screen = new Screen(80, 24);
         widget.updateRect({ x: 0, y: 0, width: 80, height: 24 });
-        const spy = vi.spyOn(widget as any, 'markDirty');
+        widget.clearDirty();
         widget.render(screen);
-        expect(spy).not.toHaveBeenCalled();
+        expect(widget.isDirty).toBe(false);
     });
 
-    it('each setBindings() call triggers exactly one markDirty', () => {
+    it('is dirty after each successive setBindings() call', () => {
         const widget = new KeyboardShortcuts([], { columns: 1 });
-        const spy = vi.spyOn(widget as any, 'markDirty');
 
+        widget.clearDirty();
         widget.setBindings([{ key: 'a', description: 'Alpha' }]);
-        expect(spy).toHaveBeenCalledTimes(1);
+        expect(widget.isDirty).toBe(true);
 
+        widget.clearDirty();
         widget.setBindings([{ key: 'b', description: 'Beta' }]);
-        expect(spy).toHaveBeenCalledTimes(2);
+        expect(widget.isDirty).toBe(true);
     });
 });
 
