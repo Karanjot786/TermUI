@@ -264,7 +264,7 @@ export class Screen {
 
         const existing = this.back[row][col];
         if (cell.char !== undefined) {
-          cell = { ...cell, char: stripAnsiControl(cell.char) };
+            cell = { ...cell, char: stripAnsiControl(cell.char) };
         }
         Object.assign(existing, cell);
     }
