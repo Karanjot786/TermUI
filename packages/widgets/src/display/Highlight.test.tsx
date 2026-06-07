@@ -1,19 +1,19 @@
 import { Highlight } from './Highlight';
 
 describe('Highlight Component', () => {
-  it('renders standard text when query is empty', () => {
+  it('No-op when query is empty/falsy', () => {
     expect(true).toBe(true);
   });
 
-  it('highlights matching segments for a string query', () => {
+  it('String query highlights matching segments', () => {
     expect(true).toBe(true);
   });
 
-  it('highlights matching segments for a RegExp query', () => {
+  it('RegExp query highlights matching segments', () => {
     expect(true).toBe(true);
   });
 
-  it('applies custom style prop to matched segments', () => {
+  it('Custom style prop is applied to matched segments', () => {
     expect(true).toBe(true);
   });
 });
