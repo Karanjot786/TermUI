@@ -50,8 +50,8 @@ export class NumberInput extends Widget {
     /** The numeric value, or null if the field is empty / invalid. */
     get numericValue(): number | null {
         if (this._raw === '' || this._raw === '-') return null;
-        const n = parseFloat(this._raw);
-        return isNaN(n) ? null : n;
+        if (!/^-?(?:\d+\.?\d*|\.\d+)$/.test(this._raw)) return null;
+        return Number(this._raw);
     }
 
     /** Raw text string (what the user typed). */
