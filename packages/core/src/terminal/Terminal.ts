@@ -314,12 +314,11 @@ export class Terminal {
             this.exitRawMode();
             this.showCursor();
             this.write(ansi.reset);
+            this._restored = true;
         } finally {
             this.write = savedWrite;
+            this._restoring = false;
         }
-
-        this._restored = true;
-        this._restoring = false;
     }
 
     /**
