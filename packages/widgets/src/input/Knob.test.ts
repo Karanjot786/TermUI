@@ -18,7 +18,7 @@ describe("Knob", () => {
   it("handles key bindings to increment and decrement", async () => {
     const { Knob } = await import("./Knob.js");
     const onChange = vi.fn();
-    const knob = new Knob({}, { min: 0, max: 100, step: 10, onChange });
+    const knob = new Knob("", {}, { min: 0, max: 100, step: 10, onChange });
 
     knob.handleKey(key("up"));
     expect(knob.value).toBe(10);
@@ -36,7 +36,7 @@ describe("Knob", () => {
 
   it("clamps to min and max", async () => {
     const { Knob } = await import("./Knob.js");
-    const knob = new Knob({}, { min: 0, max: 10, step: 8 });
+    const knob = new Knob("", {}, { min: 0, max: 10, step: 8 });
 
     knob.handleKey(key("up"));
     expect(knob.value).toBe(8);
@@ -53,7 +53,7 @@ describe("Knob", () => {
     vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
 
     const { Knob } = await import("./Knob.js");
-    const knob = new Knob({}, { min: 0, max: 100, showValue: true });
+    const knob = new Knob("", {}, { min: 0, max: 100, showValue: true });
     
     knob.setValue(50);
     
@@ -77,7 +77,7 @@ describe("Knob", () => {
     vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
 
     const { Knob } = await import("./Knob.js");
-    const knob = new Knob({}, { min: 0, max: 100, showValue: true });
+    const knob = new Knob("", {}, { min: 0, max: 100, showValue: true });
     
     knob.setValue(50);
     

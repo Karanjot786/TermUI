@@ -19,6 +19,7 @@ export interface KnobOptions {
 }
 
 export class Knob extends Widget {
+  private _label: string;
   private _value: number;
   private _min: number;
   private _max: number;
@@ -28,16 +29,26 @@ export class Knob extends Widget {
   private _onChange?: (value: number) => void;
 
   constructor(
+    label?: string,
     style: Partial<Style> = {},
     opts: KnobOptions = {}
   ) {
     super(style);
 
     this.focusable = true;
+    this._label = label ?? "";
     this._min = opts.min ?? 0;
-    this._max = opts.max ?? 100;
+    
+    // Validate max to ensure min <= max
+    const maxVal = opts.max ?? 100;
+    this._max = maxVal >= this._min ? maxVal : this._min;
+    
     this._value = this._min;
-    this._step = opts.step ?? 1;
+    
+    // Validate step to ensure it is positive
+    const stepVal = opts.step ?? 1;
+    this._step = stepVal > 0 ? stepVal : 1;
+    
     this._color = opts.color ?? { type: "named", name: "cyan" };
     this._showValue = opts.showValue ?? true;
     this._onChange = opts.onChange;
