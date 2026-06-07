@@ -95,7 +95,7 @@ describe('LinearPrompt — constructor & initialization', () => {
         const prompt = new LinearPrompt(basicOptions, { question: 'Choose:' });
         // We can indirectly verify by checking the style attached to the widget
         // (height is passed to mergeStyles in the constructor)
-        expect((prompt as any).style.height).toBe(basicOptions.length + 2);
+        expect(prompt.style.height).toBe(basicOptions.length + 2);
     });
 
     it('initializes safely with an empty options array', () => {
@@ -104,7 +104,7 @@ describe('LinearPrompt — constructor & initialization', () => {
 
     it('initialises height to 2 when options array is empty', () => {
         const prompt = new LinearPrompt([], { question: 'Choose:' });
-        expect((prompt as any).style.height).toBe(2);
+        expect(prompt.style.height).toBe(2);
     });
 });
 
@@ -165,7 +165,7 @@ describe('LinearPrompt — selectNext()', () => {
 
     it('calls markDirty() when selection changes', () => {
         const prompt = new LinearPrompt(basicOptions, { question: 'Q' });
-        (prompt as any)._dirty = false;
+        prompt.clearDirty();
         prompt.selectNext();
         expect(prompt.isDirty).toBe(true);
     });
@@ -201,7 +201,7 @@ describe('LinearPrompt — selectPrev()', () => {
     it('calls markDirty() when selection changes', () => {
         const prompt = new LinearPrompt(basicOptions, { question: 'Q' });
         prompt.selectNext(); // move to 1
-        (prompt as any)._dirty = false;
+        prompt.clearDirty();
         prompt.selectPrev(); // move back to 0
         expect(prompt.isDirty).toBe(true);
     });
@@ -363,7 +363,7 @@ describe('LinearPrompt — confirm()', () => {
 
     it('calls markDirty() on successful confirmation', () => {
         const prompt = new LinearPrompt(basicOptions, { question: 'Q' });
-        (prompt as any)._dirty = false;
+        prompt.clearDirty();
         prompt.confirm();
         expect(prompt.isDirty).toBe(true);
     });
