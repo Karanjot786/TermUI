@@ -40,6 +40,8 @@ export class Tag extends Widget {
 
     /** Update the tag text. */
     setText(text: string): void {
+        if (text === this._text) return;
+
         this._text = text;
         this.markDirty();
     }
@@ -51,6 +53,8 @@ export class Tag extends Widget {
 
     /** Update the tag variant. */
     setVariant(variant: TagVariant): void {
+        if (variant === this._variant) return;
+
         this._variant = variant;
         this.markDirty();
     }

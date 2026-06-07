@@ -117,6 +117,9 @@ export type { FilePickerOptions, FileEntry } from './FilePicker.js';
 export { DatePicker } from './DatePicker.js';
 export type { DatePickerOptions } from './DatePicker.js';
 
+export { TimePicker } from './TimePicker.js';
+export type { TimePickerOptions } from './TimePicker.js';
+
 export { DateRangePicker } from './DateRangePicker.js';
 export type { DateRange, DateRangePickerOptions } from './DateRangePicker.js';
 
@@ -196,4 +199,5 @@ export type {
 export { SurveyPrompt } from './SurveyPrompt.js';
 export type { SurveyPromptOptions, SurveyQuestion } from './SurveyPrompt.js';
 
-
+export { Breadcrumb } from './Breadcrumb.js';
+export type { BreadcrumbItem, BreadcrumbOptions } from './Breadcrumb.js';

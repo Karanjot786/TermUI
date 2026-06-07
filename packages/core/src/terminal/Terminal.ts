@@ -197,6 +197,22 @@ export class Terminal {
         this.stdout.write(data);
     }
 
+    // ── Clipboard ───────────────────────────────────────
+
+    /**
+     * Read text from the system clipboard via OSC 52.
+     */
+    readClipboard(): Promise<string> {
+        return ansi.readClipboard(this.stdin, this.stdout);
+    }
+
+    /**
+     * Write text to the system clipboard via OSC 52.
+     */
+    writeClipboard(text: string): void {
+        ansi.writeClipboard(text, this.stdout);
+    }
+
     // ── Resize ──────────────────────────────────────────
 
     onResize(handler: (cols: number, rows: number) => void): () => void {

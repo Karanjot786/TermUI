@@ -26,6 +26,7 @@
 
 ## Available Scripts
 
+- `clean` → Clears build cache and node_modules
 - `dev` → Runs the development server
 - `build` → Builds the project for production
 - `test` → Runs test cases (if available)

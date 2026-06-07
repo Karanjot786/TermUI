@@ -2,7 +2,7 @@
 // @termuijs/widgets — Skeleton loading placeholder widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, caps, prefersReducedMotion } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { timerPoolSubscribe } from '@termuijs/motion';
 
@@ -46,7 +46,7 @@ export class Skeleton extends Widget {
         this._chars = options.chars ?? defaultChars;
 
         // Only animate when motion is enabled
-        if (caps.motion) {
+        if (!prefersReducedMotion()) {
             this._unsub = timerPoolSubscribe(this._intervalMs, () => {
                 this._frame = 1 - this._frame;
                 if (this._variant === 'shimmer') {

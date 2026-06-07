@@ -100,10 +100,12 @@ describe('Tag', () => {
     });
 
     // ── 4. Setters call markDirty ────────────────────────────────────────
+
     it('setText marks widget dirty', () => {
         const tag = new Tag('old');
         tag.clearDirty();
         tag.setText('new');
+
         expect(tag.isDirty).toBe(true);
         expect(tag.getText()).toBe('new');
     });
@@ -112,8 +114,27 @@ describe('Tag', () => {
         const tag = new Tag('ok');
         tag.clearDirty();
         tag.setVariant('error');
+
         expect(tag.isDirty).toBe(true);
         expect(tag.getVariant()).toBe('error');
+    });
+
+    it('does not mark dirty when text is unchanged', () => {
+        const tag = new Tag('Hello');
+
+        tag.clearDirty();
+        tag.setText('Hello');
+
+        expect(tag.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when variant is unchanged', () => {
+        const tag = new Tag('Hello', { variant: 'success' });
+
+        tag.clearDirty();
+        tag.setVariant('success');
+
+        expect(tag.isDirty).toBe(false);
     });
 
     // ── 5. Edge cases ────────────────────────────────────────────────────
@@ -124,4 +145,5 @@ describe('Tag', () => {
     it('handles zero-size rect without error', () => {
         expect(() => renderTag('test', {}, {}, 0, 0)).not.toThrow();
     });
+
 });

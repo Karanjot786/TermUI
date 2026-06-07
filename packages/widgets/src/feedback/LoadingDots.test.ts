@@ -59,6 +59,37 @@ describe('LoadingDots', () => {
         expect(row).toContain('Done   ');
     });
 
+    it('tick marks widget dirty', () => {
+        const ld = new LoadingDots({}, { label: 'Loading' });
+
+        ld.clearDirty();
+        ld.tick();
+
+        expect(ld.isDirty).toBe(true);
+    });
+
+    it('setLabel marks widget dirty', () => {
+        const ld = new LoadingDots({}, { label: 'Loading' });
+
+        ld.clearDirty();
+        ld.setLabel('Done');
+
+        expect(ld.isDirty).toBe(true);
+    });
+
+    it('tick updates rendered output after mutation', () => {
+        const screen = new Screen(20, 1);
+        const ld = new LoadingDots({}, { label: 'Loading', maxDots: 3 });
+
+        ld.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+
+        ld.tick();
+        ld.render(screen);
+
+        const row = screen.back[0].map(c => c.char).join('');
+        expect(row).toContain('Loading·');
+    });
+
     it('ASCII fallback dot renders when caps.unicode is false', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const screen = new Screen(20, 1);
@@ -69,4 +100,23 @@ describe('LoadingDots', () => {
         const row = screen.back[0].map(c => c.char).join('');
         expect(row).toContain('Thinking.  ');
     });
+
+    it('setLabel marks widget dirty', () => {
+        const ld = new LoadingDots({}, { label: 'Loading' });
+    
+        ld.clearDirty();
+        ld.setLabel('Updated');
+    
+        expect(ld.isDirty).toBe(true);
+    });
+    
+    it('does not mark dirty when label is unchanged', () => {
+        const ld = new LoadingDots({}, { label: 'Loading' });
+    
+        ld.clearDirty();
+        ld.setLabel('Loading');
+    
+        expect(ld.isDirty).toBe(false);
+    });
+    
 });
