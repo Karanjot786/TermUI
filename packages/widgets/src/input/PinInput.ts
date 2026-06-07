@@ -22,6 +22,12 @@ export class PinInput extends Widget {
   private _onChange?: (value: string) => void;
   private _onComplete?: (value: string) => void;
 
+  /**
+   * Creates a new PinInput widget.
+   *
+   * @param style Partial style properties for the widget.
+   * @param opts Configuration options for the PinInput.
+   */
   constructor(
     style: Partial<Style> = {},
     opts: PinInputOptions = {}
@@ -40,6 +46,10 @@ export class PinInput extends Widget {
 
   get value(): string {
     return this._value.join("");
+  }
+
+  private get _isFull(): boolean {
+    return this._value.every((v) => v !== "");
   }
 
   handleKey(event: KeyEvent): void {
@@ -82,11 +92,11 @@ export class PinInput extends Widget {
       this._onChange?.(currentVal);
 
       // Advance cursor or trigger complete
-      if (this._cursorPos < this._length - 1) {
-        this._cursorPos++;
-      } else if (currentVal.length === this._length) {
-        this._onComplete?.(currentVal);
-      }
+        this._cursorPos = Math.min(this._length - 1, this._cursorPos + 1);
+        
+        if (this._isFull) {
+          this._onComplete?.(this.value);
+        }
     }
   }
 
@@ -114,7 +124,7 @@ export class PinInput extends Widget {
           displayChar = this._masked ? (caps.unicode ? "•" : "*") : charVal;
       }
 
-      const blockStr = `[ ${displayChar} ]`;
+        const blockStr = `[ ${displayChar} ]`;
 
       // Apply inverse colors for the focused block
       const blockAttrs = {

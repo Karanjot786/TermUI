@@ -90,9 +90,7 @@ describe("PinInput", () => {
     const screen = new Screen(40, 1);
     pin.render(screen);
 
-    const rendered = screen.back[0]
-      .map((c: { char: string }) => c.char)
-      .join("");
+    const rendered = Array.from({ length: 40 }, (_, i) => screen.getCell(i, 0)?.char ?? " ").join("");
 
     expect(rendered).toContain("[ 1 ]");
     expect(rendered).toContain("[ 2 ]");
@@ -110,9 +108,7 @@ describe("PinInput", () => {
     const screen = new Screen(40, 1);
     pin.render(screen);
 
-    const rendered = screen.back[0]
-      .map((c: { char: string }) => c.char)
-      .join("");
+    const rendered = Array.from({ length: 40 }, (_, i) => screen.getCell(i, 0)?.char ?? " ").join("");
 
     expect(rendered).toContain("[ • ]");
     expect(rendered).not.toContain("[ 1 ]");
