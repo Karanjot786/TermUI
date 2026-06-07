@@ -3,6 +3,7 @@ import {
   type Style,
   type KeyEvent,
   styleToCellAttrs,
+  caps,
 } from "@termuijs/core";
 import { Widget } from "../base/Widget.js";
 
@@ -28,7 +29,7 @@ export class PinInput extends Widget {
     super(style);
     this.focusable = true;
 
-    this._length = opts.length ?? 4;
+    this._length = Math.max(1, Math.floor(opts.length ?? 4));
     this._masked = opts.masked ?? false;
     this._onChange = opts.onChange;
     this._onComplete = opts.onComplete;
@@ -101,7 +102,7 @@ export class PinInput extends Widget {
 
     for (let i = 0; i < this._length; i++) {
       // Check if this block would render out of bounds
-      if (currentX + 3 > x + width) {
+      if (currentX + 5 > x + width) {
           break; // Stop rendering if it exceeds width
       }
 
@@ -110,7 +111,7 @@ export class PinInput extends Widget {
       let displayChar = " ";
 
       if (charVal !== "") {
-          displayChar = this._masked ? "•" : charVal;
+          displayChar = this._masked ? (caps.unicode ? "•" : "*") : charVal;
       }
 
       const blockStr = `[ ${displayChar} ]`;
