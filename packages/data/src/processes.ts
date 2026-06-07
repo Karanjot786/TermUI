@@ -18,8 +18,13 @@ const PROCESS_CACHE_MS = 2000;
 
 function parsePs(): ProcessInfo[] {
     try {
-        // Works on macOS and Linux
-        const output = execFileSync('ps', ['aux', '--sort=-%cpu'], { encoding: 'utf-8', timeout: 3000 });
+        // Linux supports --sort=-%cpu; macOS does not — fall back to -r (sort by CPU)
+        let output: string;
+        try {
+            output = execFileSync('ps', ['aux', '--sort=-%cpu'], { encoding: 'utf-8', timeout: 3000 });
+        } catch {
+            output = execFileSync('ps', ['aux', '-r'], { encoding: 'utf-8', timeout: 3000 });
+        }
         const lines = output.trim().split('\n').slice(1); // skip header
 
         return lines.slice(0, 50).map(line => {
