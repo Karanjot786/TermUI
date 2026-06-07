@@ -1,5 +1,6 @@
-// @ts-nocheck
-import { Style, parseColor } from '@termuijs/core';
+import { type Style, parseColor, stringWidth } from '@termuijs/core';
+
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&');
 
 export interface HighlightProps {
   children: string;
@@ -12,23 +13,34 @@ export const Highlight = ({
   query,
   style = { bg: parseColor('yellow'), fg: parseColor('black') }
 }: HighlightProps) => {
-  if (!query) return children as any;
+  if (!query) {
+    return (
+      <box flexDirection="row">
+        <text width={stringWidth(children)} height={1}>{children}</text>
+      </box>
+    );
+  }
 
-  const searchPattern = query instanceof RegExp ? query.source : query.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
-  const flags = query instanceof RegExp ? query.flags : 'gi';
+  const pattern = query instanceof RegExp ? query.source : escapeRegExp(query);
+  const baseFlags = query instanceof RegExp ? query.flags : 'i';
+  const splitFlags = baseFlags.includes('g') ? baseFlags : `${baseFlags}g`;
+  const splitRegex = new RegExp(`(${pattern})`, splitFlags);
+  const exactMatchRegex = new RegExp(`^(?:${pattern})$`, baseFlags.replace(/g/g, ''));
 
-  const parts = children.split(new RegExp(`(${searchPattern})`, flags));
+  const parts = children.split(splitRegex);
 
-  const isMatch = (part: string) =>
-    typeof query === 'string'
-      ? part.toLowerCase() === query.toLowerCase()
-      : query.test(part);
-
-  return parts.map((part: string, i: number) =>
-    isMatch(part) ? (
-      <text key={i} {...style}>{part}</text>
-    ) : (
-      part
-    )
-  ) as any;
+  return (
+    <box flexDirection="row">
+      {parts.map((part: string, i: number) => (
+        <text
+          key={i}
+          width={stringWidth(part)}
+          height={1}
+          style={exactMatchRegex.test(part) ? style : undefined}
+        >
+          {part}
+        </text>
+      ))}
+    </box>
+  );
 };
