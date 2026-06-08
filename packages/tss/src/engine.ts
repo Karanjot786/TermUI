@@ -198,11 +198,20 @@ export class ThemeEngine {
             }
             case 'color': return value.value;
             case 'number': return String(value.value);
-            case 'literal': return value.value;
-                if (raw.startsWith("calc(") && raw.endsWith(")")) {
+            case 'literal': {
+                const raw = value.value;
+
+                if (
+                    typeof raw === "string" &&
+                    raw.startsWith("calc(") &&
+                    raw.endsWith(")")
+                ) {
                     const expression = raw.slice(5, -1);
                     return String(evalCalc(expression));
                 }
+
+                return raw;
+            }
         }
     }
 
