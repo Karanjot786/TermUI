@@ -112,7 +112,7 @@ it('keeps state on rerender', () => {
 `fireKey` dispatches to every handler registered via `useInput` or `useKeymap` in the full fiber tree. You don't need to set focus manually for most tests.
 
 ```typescript
-t.fireKey('ctrl+s')     // triggers useKeymap({ 'ctrl+s': save })
+t.fireKey('ctrl+s')     // triggers useKeymap([{ key: 's', ctrl: true, action: save }])
 t.fireKey('enter')      // triggers useInput handlers
 ```
 

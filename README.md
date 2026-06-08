@@ -63,10 +63,10 @@ import { useState, useKeymap, ErrorBoundary } from '@termuijs/jsx'
 function Counter() {
     const [count, setCount] = useState(0)
 
-    useKeymap({
-        '+':      () => setCount((c) => c + 1),
-        'ctrl+c': () => process.exit(0),
-    })
+    useKeymap([
+        { key: '+',      action: () => setCount((c) => c + 1) },
+        { key: 'c', ctrl: true, action: () => process.exit(0) },
+    ])
 
     return (
         <Box border="round" padding={1}>
@@ -111,12 +111,12 @@ Declare key bindings as a map. Cleaner than chained if-statements. Multiple call
 import { useKeymap } from '@termuijs/jsx'
 
 function App() {
-    useKeymap({
-        'ctrl+c': () => process.exit(0),
-        'ctrl+s': () => save(),
-        '/':      () => openSearch(),
-        '?':      () => showHelp(),
-    })
+    useKeymap([
+        { key: 'c', ctrl: true, action: () => process.exit(0) },
+        { key: 's', ctrl: true, action: () => save() },
+        { key: '/',            action: () => openSearch() },
+        { key: '?',            action: () => showHelp() },
+    ])
     return <Box>...</Box>
 }
 ```
@@ -196,12 +196,15 @@ function App() {
 function Dashboard() {
     const { notify } = useNotifications()
 
-    useKeymap({
-        's': async () => {
-            await save()
-            notify('Saved', { type: 'success', duration: 2000 })
+    useKeymap([
+        {
+            key: 's',
+            action: async () => {
+                await save()
+                notify('Saved', { type: 'success', duration: 2000 })
+            },
         },
-    })
+    ])
     return <Box>...</Box>
 }
 ```

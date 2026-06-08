@@ -72,17 +72,17 @@ Declare key bindings as a map. More readable than chained if-statements. All bin
 import { useKeymap } from '@termuijs/jsx'
 
 function App() {
-    useKeymap({
-        'ctrl+c': () => process.exit(0),
-        'q':      () => goBack(),
-        '/':      () => openSearch(),
-        'ctrl+s': () => save(),
-    })
+    useKeymap([
+        { key: 'c', ctrl: true, action: () => process.exit(0) },
+        { key: 'q',            action: () => goBack() },
+        { key: '/',            action: () => openSearch() },
+        { key: 's', ctrl: true, action: () => save() },
+    ])
 
     // Bindings with modifier access
-    useKeymap({
-        'ctrl+k': (e) => console.log('ctrl+k pressed', e),
-    })
+    useKeymap([
+        { key: 'k', ctrl: true, action: (e) => console.log('ctrl+k pressed', e) },
+    ])
 
     return <Box>...</Box>
 }
