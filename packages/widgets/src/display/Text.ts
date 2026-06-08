@@ -25,6 +25,12 @@ export class Text extends Widget {
     private _scrollY: number;
     private _scrollX: number;
 
+    private _safeContent(): string {
+        if (typeof this._content !== 'string') return 'No content available';
+        if (this._content.trim().length === 0) return 'No content available';
+        return this._content;
+    }
+
     constructor(content: string, style: Partial<Style> = {}, props: Partial<TextProps> = {}) {
         super(style);
         this._content = content;
@@ -60,7 +66,8 @@ export class Text extends Widget {
     /** Get the total number of lines after wrapping. */
     getLineCount(): number {
         const contentRect = this._getContentRect();
-        const text = this._wrap ? wordWrap(this._content, contentRect.width) : this._content;
+        const safe = this._safeContent();
+        const text = this._wrap ? wordWrap(safe, contentRect.width) : safe;
         return text.split('\n').length;
     }
 
@@ -72,7 +79,7 @@ export class Text extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         // Word-wrap if enabled
-        let text = this._wrap ? wordWrap(this._content, width) : this._content;
+        let text = this._wrap ? wordWrap(this._safeContent(), width) : this._safeContent();
         const allLines = text.split('\n');
 
         // Apply vertical scroll
