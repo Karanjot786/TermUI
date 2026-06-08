@@ -8,7 +8,8 @@
  */
 export type PseudoClass = 'hover' | 'focus' | 'disabled';
 
-export const SUPPORTED_PSEUDO_CLASSES: ReadonlySet<PseudoClass> = new Set([
+// Typed as ReadonlySet<string> so .has(value) works without assertion
+export const SUPPORTED_PSEUDO_CLASSES: ReadonlySet<string> = new Set<string>([
   'hover',
   'focus',
   'disabled',
@@ -18,7 +19,7 @@ export const SUPPORTED_PSEUDO_CLASSES: ReadonlySet<PseudoClass> = new Set([
  * Returns true if the given string is a valid pseudo-class.
  */
 export function isSupportedPseudo(value: string): value is PseudoClass {
-  return SUPPORTED_PSEUDO_CLASSES.has(value as PseudoClass);
+  return SUPPORTED_PSEUDO_CLASSES.has(value);
 }
 
 /**
