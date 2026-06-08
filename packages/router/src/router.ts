@@ -14,9 +14,7 @@ import {
     compilePattern,
 } from './route.js';
 
-import { type Route, type RouteMatch, type RouteParams, type RouteMeta, matchRoute, compilePattern } from './route.js';
 import { RouterContext } from './hooks.js';
-
 
 function defaultErrorScreen(err: Error): VNode {
     return {
@@ -41,9 +39,7 @@ export interface RouterEvents {
 }
 
 export interface RouterOptions {
-    /** Initial path */
     initialPath?: string;
-    /** Maximum history entries (default: 100) */
     maxHistory?: number;
 }
 
@@ -54,6 +50,7 @@ export class Router {
     private _currentMatch: RouteMatch | null = null;
     private _maxHistory: number;
     private _pendingInitialPath: string | null = null;
+
     readonly events = new EventEmitter<RouterEvents>();
 
     constructor(options: RouterOptions = {}) {
@@ -64,77 +61,18 @@ export class Router {
         }
     }
 
-    /** Register a route */
+    // ─────────────────────────────
+    // Routes
+    // ─────────────────────────────
+
     addRoute(
         path: string,
         component: () => any,
         layout?: () => any,
-
-        children?: Route[],
-        meta?: Record<string, unknown>,
+        _children?: Route[],
+        _meta?: Record<string, unknown>,
         redirect?: RedirectTarget,
     ): void {
-
-        options?: {
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        },
-    ): void;
-
-    addRoute(
-        path: string,
-        component: () => any,
-        layout?: () => any,
-        children?: Route[],
-        meta?: RouteMeta,
-        options?: {
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        },
-    ): void;
-
-    addRoute(
-        path: string,
-        component: () => any,
-        layout?: () => any,
-        childrenOrOptions?: Route[] | {
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        },
-        meta?: RouteMeta,
-        options?: {
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        },
-    ): void {
-        let children: Route[] | undefined = undefined;
-        let finalOptions: {
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        } | undefined = options;
-
-        if (Array.isArray(childrenOrOptions)) {
-            children = childrenOrOptions;
-        } else if (childrenOrOptions && typeof childrenOrOptions === 'object') {
-            finalOptions = childrenOrOptions;
-        }
-
-        let finalMeta = meta ?? {};
-        if (options === undefined && meta && typeof meta === 'object' && ('lazy' in meta || 'beforeEnter' in meta || 'afterEnter' in meta)) {
-            finalOptions = meta as any;
-            const strippedMeta = { ...meta };
-            delete (strippedMeta as any).lazy;
-            delete (strippedMeta as any).beforeEnter;
-            delete (strippedMeta as any).afterEnter;
-            finalMeta = strippedMeta;
-        }
-
-
         const { pattern, paramNames } = compilePattern(path);
 
         this._routes.push({
@@ -143,41 +81,34 @@ export class Router {
             paramNames,
             component,
             layout,
-
             redirect,
         });
     }
 
-    /** Register multiple routes */
-    addRoutes(routes: Array<{
-        path: string;
-        component: () => any;
-        layout?: () => any;
-        redirect?: RedirectTarget;
-    }>): void {
+    addRoutes(
+        routes: Array<{
+            path: string;
+            component: () => any;
+            layout?: () => any;
+            redirect?: RedirectTarget;
+        }>,
+    ): void {
         for (const r of routes) {
-            this.addRoute(
-                r.path,
-                r.component,
-                r.layout,
-                undefined,
-                undefined,
-                r.redirect,
-            );
+            this.addRoute(r.path, r.component, r.layout, undefined, undefined, r.redirect);
         }
     }
+
+    // ─────────────────────────────
+    // Redirects
+    // ─────────────────────────────
+
     private resolveRedirect(path: string): string {
         const visited = new Set<string>();
-
         let currentPath = path;
 
-        for (let depth = 0; depth < 10; depth++) {
+        for (let i = 0; i < 10; i++) {
             if (visited.has(currentPath)) {
-                this.events.emit(
-                    'error',
-                    new Error('Redirect cycle detected'),
-                );
-
+                this.events.emit('error', new Error('Redirect cycle detected'));
                 return currentPath;
             }
 
@@ -195,95 +126,59 @@ export class Router {
                     : match.route.redirect;
         }
 
-        this.events.emit(
-            'error',
-            new Error('Redirect depth exceeded'),
-        );
-
+        this.events.emit('error', new Error('Redirect depth exceeded'));
         return currentPath;
-
-            children,
-            meta: finalMeta,
-            lazy: finalOptions?.lazy,
-            beforeEnter: finalOptions?.beforeEnter,
-            afterEnter: finalOptions?.afterEnter,
-        });
-        this._applyInitialPathIfPending();
     }
 
-    /** Register multiple routes */
-    addRoutes(
-        routes: Array<{
-            path: string;
-            component: () => any;
-            layout?: () => any;
-            children?: Route[];
-            meta?: RouteMeta;
-            lazy?: () => Promise<any>;
-            beforeEnter?: (to: string) => boolean | string;
-            afterEnter?: (to: string) => void;
-        }>,
-    ): void {
-        for (const r of routes) {
-            this.addRoute(r.path, r.component, r.layout, r.children, r.meta, {
-                lazy: r.lazy,
-                beforeEnter: r.beforeEnter,
-                afterEnter: r.afterEnter,
-            });
-        }
+    // ─────────────────────────────
+    // Navigation
+    // ─────────────────────────────
 
-    }
-
-    private _wrapScreen(match: RouteMatch): VNode {
-        let screen = createElement(match.route.component, match.params);
-
-        for (let i = match.chain.length - 2; i >= 0; i--) {
-            const parent = match.chain[i];
-            const Wrapper = parent.layout ?? parent.component;
-            screen = createElement(Wrapper, { ...match.params, outlet: screen });
-        }
-
-        const withProvider = createElement(RouterContext.Provider, { value: this }, screen);
-
-        return createElement(ErrorBoundary, { fallback: defaultErrorScreen }, withProvider);
-    }
-
-    /** Navigate to a path */
     push(path: string): void {
-
         const finalPath = this.resolveRedirect(path);
-        const match = matchRoute(finalPath, this._routes);
-
-        this._navigateTo(path);
+        this._navigateTo(finalPath);
     }
 
-    private _navigateTo(path: string): void {
-        const match = matchRoute(path, this._routes);
+    replace(path: string): void {
+        const finalPath = this.resolveRedirect(path);
 
-
+        const match = matchRoute(finalPath, this._routes);
         if (!match) {
             this.events.emit('error', new Error(`No route found for path: ${finalPath}`));
             return;
         }
 
-        this._history.push(finalPath);        // Prevent unbounded history growth
+        this._history[this._history.length - 1] = finalPath;
 
+        this._currentMatch = match;
+        unmountAll();
 
-        // A new push(path) clears the forward stack
-        this._forwardStack = [];
-        const guardResult = match.route.beforeEnter?.(path);
+        const screen = this._wrapScreen(match);
+        this.events.emit('navigate', { match, screen });
 
-        if (guardResult === false) {
+        match.route.afterEnter?.(finalPath);
+    }
+
+    private _navigateTo(path: string): void {
+        const match = matchRoute(path, this._routes);
+
+        if (!match) {
+            this.events.emit('error', new Error(`No route found for path: ${path}`));
             return;
         }
 
-        if (typeof guardResult === 'string') {
-            this.push(guardResult);
+        this._forwardStack = [];
+
+        const guard = match.route.beforeEnter?.(path);
+
+        if (guard === false) return;
+
+        if (typeof guard === 'string') {
+            this.push(guard);
             return;
         }
 
         this._history.push(path);
-
 
         if (this._history.length > this._maxHistory) {
             this._history = this._history.slice(-this._maxHistory);
@@ -300,173 +195,104 @@ export class Router {
         match.route.afterEnter?.(path);
     }
 
-    private _applyInitialPathIfPending(): void {
-        if (!this._pendingInitialPath || this._routes.length === 0) return;
-        const path = this._pendingInitialPath;
-        const match = matchRoute(path, this._routes);
-        if (!match) return;
-        this._pendingInitialPath = null;
-        this._navigateTo(path);
-    }
+    // ─────────────────────────────
+    // Back / Forward
+    // ─────────────────────────────
 
-    /** Replace current path */
-    replace(path: string): void {
-
-        const finalPath = this.resolveRedirect(path);
-        const match = matchRoute(finalPath, this._routes);
-
-        const match = matchRoute(path, this._routes);
-
-
-        if (!match) {
-            this.events.emit('error', new Error(`No route found for path: ${finalPath}`));
-            return;
-        }
-
-        const guardResult = match.route.beforeEnter?.(path);
-
-        if (guardResult === false) {
-            return;
-        }
-
-        if (typeof guardResult === 'string') {
-            this.replace(guardResult);
-            return;
-        }
-
-        if (this._history.length > 0) {
-            this._history[this._history.length - 1] = finalPath;
-        } else {
-            this._history.push(finalPath);
-        }
-
-        this._currentMatch = match;
-
-        unmountAll();
-
-        const screen = this._wrapScreen(match);
-
-        this.events.emit('navigate', { match, screen });
-
-        match.route.afterEnter?.(path);
-    }
-
-    /** Go back in history */
     back(): void {
         if (this._history.length <= 1) return;
-        
-        // back() pushes the popped path onto a forward stack
-        const poppedPath = this._history.pop();
-        if (poppedPath) {
-            this._forwardStack.push(poppedPath);
-        }
 
-        const prevPath = this._history[this._history.length - 1];
-        const match = prevPath ? matchRoute(prevPath, this._routes) : null;
+        const popped = this._history.pop();
+        if (popped) this._forwardStack.push(popped);
+
+        const prev = this._history[this._history.length - 1];
+        const match = prev ? matchRoute(prev, this._routes) : null;
 
         this._currentMatch = match;
 
         if (match) {
             unmountAll();
-
             const screen = this._wrapScreen(match);
-
             this.events.emit('back', { match, screen });
         } else {
             this.events.emit('back', null);
         }
     }
 
-    /** Move forward one step if a forward entry exists */
     forward(): void {
-        if (this._forwardStack.length === 0) return;
+        const next = this._forwardStack.pop();
+        if (!next) return;
 
-        const nextPath = this._forwardStack.pop();
-        if (!nextPath) return;
-
-        const match = matchRoute(nextPath, this._routes);
+        const match = matchRoute(next, this._routes);
         if (!match) {
-            this.events.emit('error', new Error(`No route found for forward path: ${nextPath}`));
+            this.events.emit('error', new Error(`No route found for forward path: ${next}`));
             return;
         }
 
-        this._history.push(nextPath);
+        this._history.push(next);
         this._currentMatch = match;
+
         unmountAll();
+
         const screen = this._wrapScreen(match);
-        // forward() re-navigates to the most recent forward entry and emits navigate
+
         this.events.emit('navigate', { match, screen });
     }
 
-    /** Move delta steps: negative is back, positive is forward */
-    go(delta: number): void {
-        if (delta === 0) return;
+    // ─────────────────────────────
+    // Helpers
+    // ─────────────────────────────
 
-        if (delta < 0) {
-            const steps = Math.abs(delta);
-            // go(n) past either boundary is a no-op (clamped, no error)
-            if (steps >= this._history.length) return;
-            for (let i = 0; i < steps; i++) {
-                this.back();
-            }
-        } else {
-            // go(n) past either boundary is a no-op (clamped, no error)
-            if (delta > this._forwardStack.length) return;
-            for (let i = 0; i < delta; i++) {
-                this.forward();
-            }
-        }
-    }
+    private _wrapScreen(match: RouteMatch): VNode {
+        let screen = createElement(match.route.component, match.params);
 
-    /**
-     * Checks if a given path matches the currently active route pattern.
-     */
-    isActive(path: string): boolean {
-        // Return fast if string paths match exactly
-        if (this.currentPath === path) {
-            return true;
+        for (let i = match.chain.length - 2; i >= 0; i--) {
+            const parent = match.chain[i];
+            const Wrapper = parent.layout ?? parent.component;
+            screen = createElement(Wrapper, { ...match.params, outlet: screen });
         }
 
-        // Parse target path to see if it targets the currently active dynamic pattern configuration
-        const targetMatch = matchRoute(path, this._routes);
-        if (!targetMatch || !this._currentMatch) {
-            return false;
-        }
+        const withProvider = createElement(
+            RouterContext.Provider,
+            { value: this },
+            screen,
+        );
 
-        return targetMatch.route.path === this._currentMatch.route.path;
+        return createElement(
+            ErrorBoundary,
+            { fallback: defaultErrorScreen },
+            withProvider,
+        );
     }
 
-    /** Whether a forward entry exists */
-    get canGoForward(): boolean {
-        return this._forwardStack.length > 0;
-    }
+    // ─────────────────────────────
+    // State
+    // ─────────────────────────────
 
-    /** Current route match */
-    get current(): RouteMatch | null {
-        return this._currentMatch;
-    }
-
-    /** Current path */
     get currentPath(): string {
         return this._history[this._history.length - 1] ?? '/';
     }
 
-    /** Current route params */
     get params(): RouteParams {
         return this._currentMatch?.params ?? {};
     }
 
-    /** History stack depth */
     get historyLength(): number {
         return this._history.length;
     }
 
-    /** Check if we can go back */
     get canGoBack(): boolean {
         return this._history.length > 1;
     }
 
-    /** All registered routes */
+    get canGoForward(): boolean {
+        return this._forwardStack.length > 0;
+    }
+
+    get current(): RouteMatch | null {
+        return this._currentMatch;
+    }
+
     get routes(): Route[] {
         return [...this._routes];
     }
