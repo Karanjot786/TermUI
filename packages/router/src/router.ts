@@ -77,8 +77,22 @@ export class Router {
     }
 
     /** Register multiple routes */
-    addRoutes(routes: Array<{ path: string; component: () => any; layout?: () => any }>): void {
-        for (const r of routes) this.addRoute(r.path, r.component, r.layout);
+    addRoutes(routes: Array<{
+        path: string;
+        component: () => any;
+        layout?: () => any;
+        redirect?: RedirectTarget;
+    }>): void {
+        for (const r of routes) {
+            this.addRoute(
+                r.path,
+                r.component,
+                r.layout,
+                undefined,
+                undefined,
+                r.redirect,
+            );
+        }
     }
     private resolveRedirect(path: string): string {
         const visited = new Set<string>();
