@@ -376,5 +376,34 @@ describe('App', () => {
             app.exit(0);
             await mountPromise.catch(() => {});
         });
+
+        it('unsubscribes focus handlers on unmount', async () => {
+            const { root, first, second } = createFocusTestRoot();
+            const app = new App(root, createInteractiveTestOptions());
+            const mountPromise = app.mount();
+
+            app.focus.register({ id: first.id, tabIndex: 0, focusable: true });
+            app.focus.register({ id: second.id, tabIndex: 1, focusable: true });
+
+            expect(first.isFocused).toBe(true);
+            expect(second.isFocused).toBe(false);
+
+            app.unmount();
+
+            const rootRenderBefore = root.renderCount;
+            const firstDirtyBefore = first.dirtyCount;
+            const secondDirtyBefore = second.dirtyCount;
+
+            app.focus.focusNext();
+
+            expect(first.isFocused).toBe(true);
+            expect(second.isFocused).toBe(false);
+            expect(first.dirtyCount).toBe(firstDirtyBefore);
+            expect(second.dirtyCount).toBe(secondDirtyBefore);
+            expect(root.renderCount).toBe(rootRenderBefore);
+
+            app.exit(0);
+            await mountPromise.catch(() => {});
+        });
     });
 });

@@ -85,7 +85,9 @@ export class App {
     private _unsubMouse: (() => void) | null = null;
     private _unsubFocus: (() => void) | null = null;
     private _unsubBlur: (() => void) | null = null;
+    // Widgets come from downstream packages, so App narrows this with _isFocusAwareWidget before focus writes.
     private _widgetById = new Map<string, any>();
+    private _pendingFocusState = new Map<string, boolean>();
     // Lines to insert before inline viewport output. Each entry: { id: symbol, text: string }
     private _insertBefore: Array<{ id: symbol; text: string }> = [];
 
@@ -109,9 +111,6 @@ export class App {
         this.focus = new FocusManager();
         this.events = new EventEmitter();
         this.layers = new LayerManager(this.terminal.cols, this.terminal.rows);
-
-        this._unsubFocus = this.focus.on('focus', event => this._handleFocusEvent(event));
-        this._unsubBlur = this.focus.on('blur', event => this._handleFocusEvent(event));
     }
 
     /**
@@ -122,13 +121,6 @@ export class App {
     async mount(): Promise<number> {
         if (this._mounted) return 0;
 
-        if (!this._unsubFocus) {
-            this._unsubFocus = this.focus.on('focus', event => this._handleFocusEvent(event));
-        }
-        if (!this._unsubBlur) {
-            this._unsubBlur = this.focus.on('blur', event => this._handleFocusEvent(event));
-        }
-
         // Check if we should use fallback mode
         if (this._options.forceFallback || (!this._options.skipFallback && shouldUseFallback())) {
             this._renderFallback();
@@ -136,6 +128,16 @@ export class App {
         }
 
         this._mounted = true;
+        // Focus subscriptions are interactive-only; fallback mount returns
+        // without unmount(), so constructor subscriptions would leak there.
+        this._subscribeFocusEvents();
+
+        const focusedId = this.focus.currentId;
+        if (focusedId) {
+            // Focusables may register before mount and auto-focus before the
+            // widget map exists. Replay that state after the first map rebuild.
+            this._pendingFocusState.set(focusedId, true);
+        }
 
         // Start the stdout interceptor right before UI rendering begins
         this.renderer.hook.start();
@@ -406,15 +408,14 @@ export class App {
     private _buildWidgetMap(root: any): void {
         this._widgetById.clear();
         this._walkWidget(root);
+        // Pending focus events are safe to apply once widget IDs are registered.
+        this._applyPendingFocusState();
     }
 
     private _walkWidget(widget: any): void {
         if (!widget) return;
         if (widget.id) {
             this._widgetById.set(widget.id, widget);
-            if (this._isFocusAwareWidget(widget)) {
-                widget.isFocused = this.focus.currentId === widget.id;
-            }
         }
         const children = widget._children ?? widget.children ?? [];
         if (Array.isArray(children)) {
@@ -425,14 +426,24 @@ export class App {
     }
 
     private _handleFocusEvent(event: FocusEvent): void {
-        const changed = this._setWidgetFocused(event.targetId, event.type === 'focus');
+        const focused = event.type === 'focus';
+        const changed = this._setWidgetFocused(event.targetId, focused);
+        if (changed === null) {
+            // The first focus event can arrive before requestRender() builds
+            // _widgetById, so hold it until the next completed map rebuild.
+            this._pendingFocusState.set(event.targetId, focused);
+            return;
+        }
         if (changed) {
             this.requestRender();
         }
     }
 
-    private _setWidgetFocused(id: string, focused: boolean): boolean {
+    private _setWidgetFocused(id: string, focused: boolean): boolean | null {
         const widget = this._widgetById.get(id);
+        if (!widget) {
+            return null;
+        }
         if (!this._isFocusAwareWidget(widget) || widget.isFocused === focused) {
             return false;
         }
@@ -440,6 +451,26 @@ export class App {
         widget.isFocused = focused;
         widget.markDirty?.();
         return true;
+    }
+
+    private _subscribeFocusEvents(): void {
+        if (!this._unsubFocus) {
+            this._unsubFocus = this.focus.on('focus', event => this._handleFocusEvent(event));
+        }
+        if (!this._unsubBlur) {
+            this._unsubBlur = this.focus.on('blur', event => this._handleFocusEvent(event));
+        }
+    }
+
+    private _applyPendingFocusState(): void {
+        for (const [id, focused] of this._pendingFocusState) {
+            // FocusManager emits blur before focus, and both events run before
+            // rendering rebuilds the map, so the old widget is still available.
+            const stateChanged = this._setWidgetFocused(id, focused);
+            if (stateChanged !== null) {
+                this._pendingFocusState.delete(id);
+            }
+        }
     }
 
     private _isFocusAwareWidget(widget: unknown): widget is FocusAwareWidget {
