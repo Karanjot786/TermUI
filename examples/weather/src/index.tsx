@@ -1,8 +1,19 @@
 import { caps } from "@termuijs/core";
 import { app, row, gauge, progressBar, text, status } from "@termuijs/quick";
 
+// Usage: bun run dev -- --lat=<latitude> --lon=<longitude> --city=<name>
+// Example: bun run dev -- --lat=21.25 --lon=81.63 --city=Raipur
+// Default: Purnea (lat=25.6, lon=87.5)
+
+const args = process.argv.slice(2);
+const getArg = (name: string) =>
+  args.find((a: string) => a.startsWith(`--${name}=`))?.split("=")[1];
+
+const lat = getArg("lat") ?? "25.6";
+const lon = getArg("lon") ?? "87.5";
+const city = getArg("city") ?? "Purnea";
 const API =
-  "https://api.open-meteo.com/v1/forecast?latitude=25.6&longitude=87.5&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&timezone=auto";
+  `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&timezone=auto`;
 
 let weather: any = null;
 let lastFetch = 0;
@@ -55,12 +66,12 @@ async function fetchWeather() {
 setInterval(fetchWeather, 5000);
 fetchWeather();
 
-app(caps.unicode ? "🌤 Weather Dashboard • Purnea, India" : "* Weather Dashboard • Purnea, India")
+app(caps.unicode ? `🌤 Weather Dashboard • ${city}, India` : `* Weather Dashboard • ${city}, India`)
   .rows(
     row(
       text(() => {
         const icon = weather ? weatherIcon(weather.current?.weather_code ?? 0) : "⏳";
-        return `${icon} Weather Dashboard • Purnea, India`;
+        return `${icon} Weather Dashboard • ${city}, India`;
       }, { bold: true, color: { type: "named", name: "cyan" } })
     ),
 
