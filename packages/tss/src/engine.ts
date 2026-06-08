@@ -5,6 +5,7 @@
 import { tokenize } from './tokenizer.js';
 import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValue } from './parser.js';
 import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
+import { evalCalc } from "./calc.js";
 
 export function compile(source: string): string {
     const tokens = tokenize(source);
@@ -198,6 +199,10 @@ export class ThemeEngine {
             case 'color': return value.value;
             case 'number': return String(value.value);
             case 'literal': return value.value;
+                if (raw.startsWith("calc(") && raw.endsWith(")")) {
+                    const expression = raw.slice(5, -1);
+                    return String(evalCalc(expression));
+                }
         }
     }
 
