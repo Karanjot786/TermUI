@@ -87,7 +87,7 @@ handleKey(key: string) {
     if (!current) return;
 
     switch (key) {
-        case 'ArrowDown':
+        case 'down':
             this._selectedIndex = Math.min(
                 this._selectedIndex + 1,
                 this._visible.length - 1,
@@ -95,7 +95,7 @@ handleKey(key: string) {
             this.markDirty();
             break;
 
-        case 'ArrowUp':
+        case 'up':
             this._selectedIndex = Math.max(
                 this._selectedIndex - 1,
                 0,
@@ -103,14 +103,14 @@ handleKey(key: string) {
             this.markDirty();
             break;
 
-        case 'ArrowRight':
-        case 'Enter':
+        case 'right':
+        case 'enter':
             if (current.node.type === 'dir') {
                 this._toggle(current.node, current.path);
             }
             break;
 
-        case 'ArrowLeft': {
+        case 'left': {
             const keyPath = current.path.join('/');
             if (
                 current.node.type === 'dir' &&
@@ -121,7 +121,7 @@ handleKey(key: string) {
             break;
         }
 
-        case ' ':
+        case 'space':
             this._select(current.node, current.path);
             break;
     }

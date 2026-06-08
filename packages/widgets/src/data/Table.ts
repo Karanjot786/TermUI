@@ -56,13 +56,13 @@ export interface TableProps {
  * - External state via `state` prop and `useTableState` hook
  */
 export class Table extends Widget {
-    private _columns: TableColumn[];
-    private _rows: TableRow[];
-    private _showHeader: boolean;
-    private _headerColor: Color;
-    private _stripe: boolean;
-    private _stripeColor: Color;
-    private _separator: string;
+    protected _columns: TableColumn[];
+    protected _rows: TableRow[];
+    protected _showHeader: boolean;
+    protected _headerColor: Color;
+    protected _stripe: boolean;
+    protected _stripeColor: Color;
+    protected _separator: string;
     private _state?: TableState;
     private _onStateChange?: (state: TableState) => void;
 
@@ -198,7 +198,7 @@ export class Table extends Widget {
         }
     }
 
-    private _computeColumnWidths(totalWidth: number): number[] {
+    protected _computeColumnWidths(totalWidth: number): number[] {
         const fixedCols = this._columns.filter(c => c.width !== undefined);
         const flexCols = this._columns.filter(c => c.width === undefined);
 
@@ -209,7 +209,7 @@ export class Table extends Widget {
         return this._columns.map(c => c.width ?? flexWidth);
     }
 
-    private _alignText(text: string, width: number, align: 'left' | 'center' | 'right'): string {
+    protected _alignText(text: string, width: number, align: 'left' | 'center' | 'right'): string {
         const truncated = truncate(text, width);
         const textWidth = stringWidth(truncated);
         const pad = Math.max(0, width - textWidth);

@@ -114,9 +114,9 @@ export interface StoreOptions<T> {
 }
 
 export const logger: Middleware<any> = (prevState, update, next) => {
-    console.log('Previous State:', prevState);
+    // console.log is forbidden in TermUI source files.
+    // To debug state changes, write to a file instead.
     const nextState = next(update);
-    console.log('Next State:', nextState);
 };
 
 export interface Computed<U> {
@@ -137,6 +137,11 @@ export interface Store<T> {
     destroy(): void;
     /** Create a memoized selector — subscribers are notified only when the derived value changes */
     computed<U>(selector: Selector<T, U>): Computed<U>;
+    /** Restore state to the value captured at creation */
+    reset(): void;
+    
+    /** Read the state captured at creation */
+    getInitialState(): T;
 }
 
 // ── Store Implementation ──
@@ -314,6 +319,23 @@ export function createStore<T extends object>(
     state = typeof creator === 'function'
         ? (creator as StateCreator<T>)(setState, getState)
         : { ...(creator as any) } as T;
+    
+    // Capture initial state BEFORE persist rehydration
+    const initialState = structuredClone(
+        Object.fromEntries(
+            Object.entries(state).filter(
+                ([, value]) => typeof value !== 'function',
+            ),
+        ),
+    ) as Partial<T>;
+    
+    const getInitialState = (): T => {
+        return structuredClone(initialState) as T;
+    };
+    
+    const reset = (): void => {
+        setState(structuredClone(initialState) as Partial<T>);
+    };
 
     // Rehydrate saved state if persist file exists
     if (persistFilePath) {
@@ -354,7 +376,7 @@ export function createStore<T extends object>(
         };
     };
 
-    const store: Store<T> = { getState, setState, subscribe, destroy, computed };
+    const store: Store<T> = { getState, setState, subscribe, destroy, computed, reset, getInitialState };
 
     // Create the hook function
     function useStore(): T;
@@ -384,6 +406,8 @@ export function createStore<T extends object>(
     (useStore as any).subscribe = subscribe;
     (useStore as any).destroy = destroy;
     (useStore as any).computed = computed;
+    (useStore as any).reset = reset;
+    (useStore as any).getInitialState = getInitialState;
 
     return useStore as UseStore<T>;
 }
@@ -398,4 +422,6 @@ export interface UseStore<T> {
     subscribe(listener: Listener<T>): () => void;
     destroy(): void;
     computed<U>(selector: Selector<T, U>): Computed<U>;
+    reset(): void;
+    getInitialState(): T;
 }

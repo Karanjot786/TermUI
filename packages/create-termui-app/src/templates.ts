@@ -3,6 +3,12 @@
 // ─────────────────────────────────────────────────────
 
 import { getBuiltinTheme } from '@termuijs/tss';
+import { readdirSync, readFileSync } from 'node:fs';
+import { dirname, join, relative, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const TEMPLATES_ROOT = resolve(__dirname, '../templates');
 
 export interface ProjectConfig {
     name: string;
@@ -13,7 +19,8 @@ export interface ProjectConfig {
     | 'cli-wrapper'
     | 'cli-tool'
     | 'file-manager'
-    | 'ai-assistant';
+    | 'ai-assistant'
+    | 'form-wizard';
     theme: string;
     features: {
         router: boolean;
@@ -96,7 +103,10 @@ export default defineConfig({
         case 'file-manager':
             files.push(...generateFileManagerTemplate(config));
             break;
+        case 'form-wizard':
+            files.push(...generateFormWizardTemplate(config));
             break;
+
         default:
             files.push(...generateEmptyTemplate(config));
     }
@@ -107,6 +117,7 @@ export default defineConfig({
 function createPackageJson(config: ProjectConfig): string {
     const isFileManager = config.template === 'file-manager';
     const isAiAssistant = config.template === 'ai-assistant';
+    const isRestClient = config.template === 'rest-client';
     return JSON.stringify({
         name: config.name,
         version: '0.1.0',
@@ -125,13 +136,14 @@ function createPackageJson(config: ProjectConfig): string {
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
             }
-            : isFileManager
+            : isFileManager || isRestClient
             ? {
                 '@termuijs/core': 'latest',
                 '@termuijs/widgets': 'latest',
                 '@termuijs/ui': 'latest',
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
+                ...(isRestClient ? { '@termuijs/data': 'latest' } : {}),
             }
             : {
                 '@termuijs/core': 'latest',
@@ -153,6 +165,79 @@ function createPackageJson(config: ProjectConfig): string {
             bun: '>=1.3.0',
         },
     }, null, 2) + '\n';
+}
+
+function generateFormWizardTemplate(
+    config: ProjectConfig
+): GeneratedFile[] {
+    return [
+        {
+            path: 'src/index.tsx',
+            content: `/** @jsxImportSource @termuijs/jsx */
+import { render, useState } from '@termuijs/jsx';
+import { Wizard } from '@termuijs/ui';
+import { TextInput, Spinner } from '@termuijs/widgets';
+
+function App() {
+    const [name, setName] = useState('');
+    const [theme, setTheme] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleComplete = async () => {
+        setSubmitting(true);
+
+        const data = {
+            name,
+            theme,
+        };
+
+        console.log(JSON.stringify(data, null, 2));
+
+        setTimeout(() => {
+            setSubmitting(false);
+        }, 1000);
+    };
+
+    return (
+        <box flexDirection="column" padding={1}>
+            <text bold>Form Wizard</text>
+
+            <Wizard
+                steps={['Info', 'Preferences', 'Confirm']}
+                onComplete={handleComplete}
+            >
+                <box flexDirection="column">
+                    <text>Name</text>
+                    <TextInput
+                        value={name}
+                        onChange={setName}
+                    />
+                </box>
+
+                <box flexDirection="column">
+                    <text>Theme</text>
+                    <TextInput
+                        value={theme}
+                        onChange={setTheme}
+                    />
+                </box>
+
+                <box flexDirection="column">
+                    <text>Confirm Details</text>
+                    <text>Name: {name}</text>
+                    <text>Theme: {theme}</text>
+                </box>
+            </Wizard>
+
+            {submitting && <Spinner />}
+        </box>
+    );
+}
+
+render(<App />, { title: '${config.name}' });
+`,
+        },
+    ];
 }
 
 function generateEmptyTemplate(config: ProjectConfig): GeneratedFile[] {
@@ -191,113 +276,39 @@ render(<App />, { title: '${config.name}' });
 }
 
 function generateDashboardTemplate(config: ProjectConfig): GeneratedFile[] {
-    return [{
-        path: 'src/index.tsx',
-        content: `/** @jsxImportSource @termuijs/jsx */
-import { render, useState, useEffect, useKeymap, ErrorBoundary } from '@termuijs/jsx';
-import { AutoThemeProvider, useTheme } from '@termuijs/tss';
-${config.features.dataProviders ? "import { useCpu, useMemory, useDisk } from '@termuijs/data';" : ''}
-
-// ── Sample static data (replace with live hooks when dataProviders = true) ──
-${config.features.dataProviders ? '' : `const SAMPLE_PROCS = [
-    { Name: 'node',   PID: 1234, 'CPU%': '5.0',  'MEM%': '2.1' },
-    { Name: 'chrome', PID: 5678, 'CPU%': '12.3', 'MEM%': '8.4' },
-    { Name: 'bash',   PID: 9012, 'CPU%': '0.1',  'MEM%': '0.3' },
-];`}
-
-function GaugeRow({ label, value }: { label: string; value: number }) {
-    const theme = useTheme();
-    const filled = Math.round(value * 20);
-    const empty  = 20 - filled;
-    const bar = '[' + '#'.repeat(filled) + '-'.repeat(empty) + ']';
-    return (
-        <row gap={2}>
-            <text color={theme.colors.primary}>{label.padEnd(4)}</text>
-            <text>{bar}</text>
-            <text>{(value * 100).toFixed(1).padStart(5)}%</text>
-        </row>
-    );
+    return loadTemplateFiles('dashboard', config);
 }
 
-function Dashboard() {
-    const [tick, setTick] = useState(0);
-${config.features.dataProviders
-    ? `    const cpu  = useCpu();
-    const mem  = useMemory();
-    const disk = useDisk();
-    const cpuVal  = (cpu.percent  ?? 0) / 100;
-    const memVal  = (mem.percent  ?? 0) / 100;
-    const diskVal = (disk.percent ?? 0) / 100;`
-    : `    const [cpuVal,  setCpuVal]  = useState(0.45);
-    const [memVal,  setMemVal]  = useState(0.62);
-    const [diskVal, setDiskVal] = useState(0.38);
-
-    // Simulate live updates
-    useEffect(() => {
-        const id = setInterval(() => {
-            setCpuVal(v  => Math.min(1, Math.max(0, v  + (Math.random() - 0.5) * 0.05)));
-            setMemVal(v  => Math.min(1, Math.max(0, v  + (Math.random() - 0.5) * 0.02)));
-            setDiskVal(v => Math.min(1, Math.max(0, v  + (Math.random() - 0.5) * 0.01)));
-            setTick(t => t + 1);
-        }, 1000);
-        return () => clearInterval(id);
-    }, []);`}
-
-    useKeymap([
-        { key: 'q',          action: () => process.exit(0), description: 'Quit' },
-        { key: 'c', ctrl: true, action: () => process.exit(0), description: 'Quit' },
-        { key: 'r',          action: () => setTick(t => t + 1), description: 'Refresh' },
-    ]);
-
-    const theme = useTheme();
-
-    return (
-        <box flexDirection="column" padding={1}>
-            <text bold color={theme.colors.primary}>${config.name} Dashboard</text>
-            <divider />
-
-            <grid columns={12} gap={1}>
-                {/* Gauges — top row */}
-                <box width="100%" flexDirection="column" border="single" padding={1} flexGrow={4}>
-                    <text bold>System Resources</text>
-                    <GaugeRow label="CPU"  value={cpuVal} />
-                    <GaugeRow label="MEM"  value={memVal} />
-                    <GaugeRow label="DISK" value={diskVal} />
-                </box>
-
-                {/* Info panel */}
-                <box width="100%" flexDirection="column" border="single" padding={1} flexGrow={8}>
-                    <text bold>Process Summary</text>
-                    <text color={theme.colors.muted}>Press r to refresh, q to quit</text>
-                    <text>Tick: {tick}</text>
-${config.features.dataProviders
-    ? `                    <skeleton variant="shimmer" />`
-    : `                    <text>node    PID:1234  CPU: {(cpuVal * 100).toFixed(1)}%</text>
-                    <text>chrome  PID:5678  MEM: {(memVal * 100).toFixed(1)}%</text>`}
-                </box>
-            </grid>
-        </box>
-    );
+function loadTemplateFiles(templateName: string, config: ProjectConfig): GeneratedFile[] {
+    const templatePath = resolve(TEMPLATES_ROOT, templateName);
+    return walkTemplateDirectory(templatePath, templatePath, config);
 }
 
-function App() {
-    return (
-        <AutoThemeProvider>
-            <ErrorBoundary fallback={(err) => (
-                <box border="single" borderColor="red" padding={1}>
-                    <text color="red" bold>Dashboard Error</text>
-                    <text>{err.message}</text>
-                </box>
-            )}>
-                <Dashboard />
-            </ErrorBoundary>
-        </AutoThemeProvider>
-    );
+function walkTemplateDirectory(rootPath: string, currentPath: string, config: ProjectConfig): GeneratedFile[] {
+    const entries = readdirSync(currentPath, { withFileTypes: true });
+    const files: GeneratedFile[] = [];
+
+    for (const entry of entries) {
+        const entryPath = join(currentPath, entry.name);
+        if (entry.isDirectory()) {
+            files.push(...walkTemplateDirectory(rootPath, entryPath, config));
+            continue;
+        }
+
+        if (entry.name === 'package.json') {
+            continue;
+        }
+
+        const relativePath = relative(rootPath, entryPath).replace(/\\/g, '/');
+        const content = replaceTemplatePlaceholders(readFileSync(entryPath, 'utf8'), config);
+        files.push({ path: relativePath, content });
+    }
+
+    return files;
 }
 
-render(<App />, { title: '${config.name}' });
-`,
-    }];
+function replaceTemplatePlaceholders(content: string, config: ProjectConfig) {
+    return content.replace(/{{name}}/g, config.name);
 }
 
 function generateInteractiveTemplate(config: ProjectConfig): GeneratedFile[] {
@@ -1025,6 +1036,55 @@ function App() {
                 </box>
             )}>
                 <AiAssistant />
+            </ErrorBoundary>
+        </AutoThemeProvider>
+    );
+}
+
+render(<App />, { title: '${config.name}' });
+`,
+    }];
+}
+
+function generateRestClientTemplate(config: ProjectConfig): GeneratedFile[] {
+    return [{
+        path: 'src/index.tsx',
+        content: `/** @jsxImportSource @termuijs/jsx */
+import { render, useState, useKeymap, ErrorBoundary } from '@termuijs/jsx';
+import { AutoThemeProvider } from '@termuijs/tss';
+import { useFetch } from '@termuijs/data';
+import { JSONView, Text } from '@termuijs/widgets';
+
+function RestClient() {
+    const result = useFetch<{ id: number; name: string; email: string }>(
+        'https://jsonplaceholder.typicode.com/users/1',
+    );
+
+    useKeymap([
+        { key: 'q', action: () => process.exit(0), description: 'Quit' },
+        { key: 'c', ctrl: true, action: () => process.exit(0), description: 'Quit' },
+    ]);
+
+    return (
+        <box flexDirection="column" padding={1} gap={1}>
+            <text bold>${config.name}</text>
+            {result.loading && <text>Loading...</text>}
+            {result.error && <text color="red">Error: {String(result.error.message)}</text>}
+            {result.data && <jsonview data={result.data} />}
+        </box>
+    );
+}
+
+function App() {
+    return (
+        <AutoThemeProvider>
+            <ErrorBoundary fallback={(err) => (
+                <box border="single" borderColor="red" padding={1}>
+                    <text color="red" bold>Error</text>
+                    <text>{err.message}</text>
+                </box>
+            )}>
+                <RestClient />
             </ErrorBoundary>
         </AutoThemeProvider>
     );
