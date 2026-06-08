@@ -15,6 +15,10 @@ export { ThemeEngine, compile, compileRules } from './engine.js';
 export type { ThemeVariables, ResolvedRule } from './engine.js';
 export { evalCalc } from './calc.js';
 
+// Pseudo-class state matching
+export { isSupportedPseudo, matchesPseudo, SUPPORTED_PSEUDO_CLASSES } from './pseudo.js';
+export type { PseudoClass } from './pseudo.js';
+
 // Built-in Themes
 export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThemes } from './themes.js';
 
