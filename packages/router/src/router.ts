@@ -106,6 +106,7 @@ export class Router {
                 afterEnter?: (to: string) => void;
             },
         meta?: RouteMeta,
+        redirect?: RedirectTarget,
         options?: {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
@@ -134,9 +135,11 @@ export class Router {
             layout,
             children,
             meta: finalMeta,
+            redirect,
             lazy: finalOptions?.lazy,
             beforeEnter: finalOptions?.beforeEnter,
             afterEnter: finalOptions?.afterEnter,
+
         });
     }
 
@@ -245,7 +248,7 @@ export class Router {
         if (!match) {
             this.events.emit(
                 'error',
-                new Error(`No route found for path: ${path}`),
+                new Error(`No route found for path: ${finalPath}`),
             );
             return;
         }
@@ -284,7 +287,7 @@ export class Router {
         if (!match) {
             this.events.emit(
                 'error',
-                new Error(`No route found for path: ${path}`),
+                new Error(`No route found for path: ${finalPath}`),
             );
             return;
         }
