@@ -12,7 +12,7 @@ import {
     Spinner,
 } from '@termuijs/widgets';
 import type { Style, Color } from '@termuijs/core';
-import { parseColor } from '@termuijs/core';
+import { parseColor, invalidateLayout } from '@termuijs/core';
 import type { VNode, VElement, FC } from './vnode.js';
 import { isVElement, isVFragment, Fragment, flattenChildren } from './vnode.js';
 import { applyDelegatedEvents } from './event-system.js';
@@ -225,6 +225,10 @@ function extractStyle(props: Record<string, any>): Partial<Style> {
     if (props.asciiOnly != null) style.asciiOnly = ascii;
     if (props.borderColor != null) style.borderColor = parseColorProp(props.borderColor);
     if (props.gap != null) style.gap = props.gap;
+    if (props.x != null) style.x = props.x;
+    if (props.y != null) style.y = props.y;
+    if (props.groupId != null) style.groupId = props.groupId;
+    if (props.constraints != null) style.constraints = props.constraints;
     return style;
 }
 
@@ -497,15 +501,19 @@ function renderComponent(
 }
 
 /**
- * Recursively remove _instanceMap entries for a widget and all its descendants.
- * This prevents stale child instances from accumulating across re-renders.
+ * Recursively remove stale _instanceMap entries for a widget and all its
+ * descendants. Fibers are NOT destroyed here — cleanupStaleChildFibers
+ * already handles orphaned fibers after each reconcile pass. This function
+ * only prevents _instanceMap from retaining dead widget references.
  */
 function _pruneInstancesForWidget(widget: Widget): void {
     _instanceMap.delete(widget);
     const children = (widget as any)._children ?? (widget as any).children ?? [];
     if (Array.isArray(children)) {
         for (const child of children) {
-            _pruneInstancesForWidget(child);
+            if (child && typeof child === 'object') {
+                _pruneInstancesForWidget(child);
+            }
         }
     }
 }
@@ -553,6 +561,8 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         runEffects(fiber);
         fiber.isDirty = false;
 
+        // Invalidate old widget's layout cache before replacing
+        invalidateLayout(instance.widget.getLayoutNode());
         _pruneInstancesForWidget(instance.widget);
 
         instance.widget = vnode;
@@ -584,6 +594,8 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     runEffects(fiber);
     fiber.isDirty = false;
 
+    // Invalidate old widget's layout cache before replacing
+    invalidateLayout(instance.widget.getLayoutNode());
     // Remove old widget and all its descendant instances from the map to prevent memory leak
     _pruneInstancesForWidget(instance.widget);
 

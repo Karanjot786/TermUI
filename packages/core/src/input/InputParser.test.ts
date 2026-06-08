@@ -134,6 +134,18 @@ describe('InputParser', () => {
         await expect(positionPromise).rejects.toThrow('Cursor position request timed out');
     });
 
+    it('rejects pending cursor position requests immediately when stop() is called', async () => {
+        vi.useFakeTimers();
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition(200);
+        parser.stop();
+
+        await expect(positionPromise).rejects.toThrow('InputParser stopped');
+    });
+
     it('does not emit a key event for cursor position reports', async () => {
         const stdin = createMockStdin();
         const parser = new InputParser(stdin);

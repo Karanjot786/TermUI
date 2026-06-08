@@ -146,6 +146,16 @@ describe('StreamingText – setText()', () => {
         widget.setText('World');
         expect(widget.isDirty).toBe(true);
     });
+
+    it('does not mark widget dirty when text is unchanged', () => {
+        const widget = new StreamingText({ text: 'Hello', speed: 3 });
+    
+        widget.clearDirty();
+        widget.setText('Hello');
+    
+        expect(widget.isDirty).toBe(false);
+    });
+    
 });
 
 // ── 6. Cursor appears when _cursorVisible = true ──────────────────────────────

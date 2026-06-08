@@ -18,8 +18,8 @@ export class Select extends Widget {
     private _onSelect?: (option: SelectOption, index: number) => void;
     focusable = true;
 
-    constructor(options: SelectOption[], config: SelectOptions = {}) {
-        super(mergeStyles(defaultStyle(), { height: 1 }));
+    constructor(options: SelectOption[], config: SelectOptions = {}, style?: Partial<Style>) {
+        super(mergeStyles(mergeStyles(defaultStyle(), { height: 1 }), style ?? {}));
         this._options = options;
         this._placeholder = config.placeholder ?? 'Select...';
         this._activeColor = config.activeColor ?? { type: 'named', name: 'cyan' };

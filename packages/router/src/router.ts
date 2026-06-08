@@ -79,14 +79,14 @@ export class Router {
     private _forwardStack: string[] = [];
     private _currentMatch: RouteMatch | null = null;
     private _maxHistory: number;
-
+    private _pendingInitialPath: string | null = null;
     readonly events = new EventEmitter<RouterEvents>();
 
     constructor(options: RouterOptions = {}) {
         this._maxHistory = options.maxHistory ?? 100;
 
         if (options.initialPath) {
-            this._history.push(options.initialPath);
+            this._pendingInitialPath = options.initialPath;
         }
     }
 
@@ -141,6 +141,7 @@ export class Router {
             afterEnter: finalOptions?.afterEnter,
 
         });
+        this._applyInitialPathIfPending();
     }
 
     // ─────────────────────────────────────────────────────
@@ -242,8 +243,16 @@ export class Router {
     // ─────────────────────────────────────────────────────
 
     push(path: string): void {
+
         const finalPath = this.resolveRedirect(path);
         const match = matchRoute(finalPath, this._routes);
+
+        this._navigateTo(path);
+    }
+
+    private _navigateTo(path: string): void {
+        const match = matchRoute(path, this._routes);
+
 
         if (!match) {
             this.events.emit(
@@ -279,6 +288,18 @@ export class Router {
 
         match.route.afterEnter?.(finalPath);
     }
+
+
+    private _applyInitialPathIfPending(): void {
+        if (!this._pendingInitialPath || this._routes.length === 0) return;
+        const path = this._pendingInitialPath;
+        const match = matchRoute(path, this._routes);
+        if (!match) return;
+        this._pendingInitialPath = null;
+        this._navigateTo(path);
+    }
+
+    /** Replace current path */
 
     replace(path: string): void {
         const finalPath = this.resolveRedirect(path);
@@ -378,9 +399,31 @@ export class Router {
         }
     }
 
+
     // ─────────────────────────────────────────────────────
     // GETTERS
     // ─────────────────────────────────────────────────────
+
+
+    /**
+     * Checks if a given path matches the currently active route pattern.
+     */
+    isActive(path: string): boolean {
+        // Return fast if string paths match exactly
+        if (this.currentPath === path) {
+            return true;
+        }
+
+        // Parse target path to see if it targets the currently active dynamic pattern configuration
+        const targetMatch = matchRoute(path, this._routes);
+        if (!targetMatch || !this._currentMatch) {
+            return false;
+        }
+
+        return targetMatch.route.path === this._currentMatch.route.path;
+    }
+
+    /** Whether a forward entry exists */
 
     get canGoForward(): boolean {
         return this._forwardStack.length > 0;

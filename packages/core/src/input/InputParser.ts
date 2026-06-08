@@ -98,6 +98,11 @@ export class InputParser {
             this._escapeTimeout = null;
         }
         this._escapeBuffer = Buffer.alloc(0);
+        for (const req of this._cursorRequests) {
+            clearTimeout(req.timeout);
+            req.reject(new Error('InputParser stopped'));
+        }
+        this._cursorRequests = [];
     }
 
     /**

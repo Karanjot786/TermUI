@@ -51,6 +51,7 @@ export function tail(filePath: string, opts: TailOptions = {}): TailStream {
             let fileSize = fs.statSync(filePath).size;
             stream.active = true;
             (stream as any)._watchPath = filePath;
+            let partialLine = '';
 
             // Watch for changes
             const watcher = fs.watchFile(filePath, { interval: 500 }, (curr) => {
@@ -67,7 +68,10 @@ export function tail(filePath: string, opts: TailOptions = {}): TailStream {
                         const buffer = Buffer.alloc(curr.size - fileSize);
                         fs.readSync(fd, buffer, 0, buffer.length, fileSize);
 
-                        const newLines = buffer.toString('utf-8').split('\n').filter(l => l.length > 0);
+                        const text = partialLine + buffer.toString('utf-8');
+                        const lines = text.split('\n');
+                        partialLine = lines.pop() ?? '';
+                        const newLines = lines.filter(l => l.length > 0);
                         stream.lines.push(...newLines);
 
                         // Trim to max
@@ -83,6 +87,7 @@ export function tail(filePath: string, opts: TailOptions = {}): TailStream {
                     }
                 } else if (curr.size < fileSize) {
                     // File was truncated — re-read
+                    partialLine = '';
                     const content = fs.readFileSync(filePath, 'utf-8');
                     stream.lines = content.split('\n').filter(l => l.length > 0).slice(-maxLines);
                     fileSize = curr.size;

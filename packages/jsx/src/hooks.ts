@@ -141,6 +141,24 @@ export function setInsertBefore(fn: ((line: string) => (() => void) | void) | nu
 let _pendingUpdates = new Set<Fiber>();
 let _flushScheduled = false;
 
+// ── Global Cleanup Registry ──
+// Used by singleton stores (NotificationStore, etc.) to register
+// cleanup functions that are called during test teardown.
+
+let _globalCleanups: Array<() => void> = [];
+
+/**
+ * Register a global cleanup function. Returns an unregister function.
+ * Registered cleanups are called when resetHooksGlobals() is invoked.
+ */
+export function registerCleanup(fn: () => void): () => void {
+    _globalCleanups.push(fn);
+    return () => {
+        const idx = _globalCleanups.indexOf(fn);
+        if (idx >= 0) _globalCleanups.splice(idx, 1);
+    };
+}
+
 /**
  * Schedule a re-render. Multiple setState calls within the same
  * microtask are batched into a single re-render cycle.
@@ -584,6 +602,15 @@ export function destroyFiber(fiber: Fiber): void {
             destroyFiber(entry.fiber);
         }
     }
+    // Clean up global _instanceMap entries pointing to this fiber
+    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+    if (termuiInstances instanceof Map) {
+        for (const [widget, inst] of termuiInstances) {
+            if (inst.fiber === fiber) {
+                termuiInstances.delete(widget);
+            }
+        }
+    }
     fiber.hooks = [];
     fiber.effects = [];
     fiber.layoutEffects = [];
@@ -592,6 +619,21 @@ export function destroyFiber(fiber: Fiber): void {
     fiber.contextValues.clear();
     fiber.childFibers = undefined;
     fiber._prevChildFibers = undefined;
+}
+
+/** Reset all module-level globals for test isolation */
+export function resetHooksGlobals(): void {
+    _currentFiber = null;
+    _requestRender = null;
+    _insertBefore = null;
+    _pendingUpdates.clear();
+    _flushScheduled = false;
+    // Run all registered global cleanups (singleton stores, etc.)
+    const cleanups = _globalCleanups;
+    _globalCleanups = [];
+    for (const fn of cleanups) {
+        try { fn(); } catch { /* ignore cleanup errors */ }
+    }
 }
 
 /**
