@@ -1,3 +1,4 @@
+import type { Style } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export type TaskStatus = 'pending' | 'running' | 'done' | 'error';
@@ -31,7 +32,7 @@ export class TaskList extends Widget {
   private elapsed = 0;
 
   constructor(
-    style?: any,
+    style?: Style,
     options: TaskListOptions = {},
     tasks: TaskItem[] = []
   ) {
