@@ -110,4 +110,5 @@ export interface EventMap {
     'mount': void;
     'unmount': void;
     'tick': number; // delta ms
+    'paste': string;
 }

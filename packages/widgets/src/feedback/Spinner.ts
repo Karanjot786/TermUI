@@ -2,7 +2,7 @@
 // @termuijs/widgets — Spinner widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, type Color, caps, BRAILLE_SPIN } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, type Color, caps, BRAILLE_SPIN, prefersReducedMotion } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import { Widget } from '../base/Widget.js';
 
@@ -144,7 +144,7 @@ export class Spinner extends Widget {
         // Dynamically manage timer if mounted
         this._timerUnsub?.();
         this._timerUnsub = undefined;
-        if (active && caps.motion) {
+        if (active && !prefersReducedMotion()) {
             this._startTime = Date.now();
             this._timerUnsub = timerPoolSubscribe(this._interval, () => {
                 this.markDirty();
@@ -169,7 +169,7 @@ export class Spinner extends Widget {
      * Call this with a delta (ms) from the render loop.
      */
     tick(deltaMs: number): void {
-        if (!caps.motion || !this._active) return;
+        if (prefersReducedMotion() || !this._active) return;
 
         this._elapsed += deltaMs;
         this._frameIndex = Math.floor(this._elapsed / this._interval) % this._frames.length;
@@ -178,7 +178,7 @@ export class Spinner extends Widget {
     /** Lifecycle: start the frame-advance timer (only when motion is enabled). */
     mount(): void {
         super.mount();
-        if (!caps.motion || !this._active) return;
+        if (prefersReducedMotion() || !this._active) return;
         this._startTime = Date.now();
         this._timerUnsub = timerPoolSubscribe(this._interval, () => {
             this.markDirty();
@@ -201,7 +201,7 @@ export class Spinner extends Widget {
 
         let char = '';
         if (this._active) {
-            if (!caps.motion) {
+            if (prefersReducedMotion()) {
                 // Static fallback when motion is disabled
                 char = '[...]';
             } else {

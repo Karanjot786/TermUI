@@ -38,6 +38,15 @@ describe('ProgressBar', () => {
         pb.setValue(-0.5);
         expect(pb.value).toBe(0);
     });
+        it('handles negative initialization by clamping to 0', () => {
+        const pb = new ProgressBar({}, { value: -0.5 });
+        expect(pb.value).toBe(0);
+    });
+
+    it('handles value above 1 by clamping to 1', () => {
+        const pb = new ProgressBar({}, { value: 1.5 });
+        expect(pb.value).toBe(1);
+    });
 });
 
 describe('ProgressBar — rendering', () => {

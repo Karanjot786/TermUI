@@ -81,7 +81,10 @@ export class App {
     private _exitResolve: ((code: number) => void) | null = null;
     private _unsubKey: (() => void) | null = null;
     private _unsubMouse: (() => void) | null = null;
+    private _unsubPaste: (() => void) | null = null;
     private _widgetById = new Map<string, any>();
+    private _consecutiveRenderFailures = 0;
+    private static readonly MAX_RENDER_FAILURES = 5;
     // Lines to insert before inline viewport output. Each entry: { id: symbol, text: string }
     private _insertBefore: Array<{ id: symbol; text: string }> = [];
 
@@ -195,6 +198,11 @@ export class App {
             this.events.emit('mouse', event);
         });
 
+        // Forward paste events
+        this._unsubPaste = this.input.onPaste((text) => {
+            this.events.emit('paste', text);
+        });
+
         // Start render loop — tick drives requestRender() so dirty widgets
         // (motion, timers) get redrawn without a separate setInterval.
         this.renderer.start(() => this.requestRender());
@@ -227,6 +235,8 @@ export class App {
         this._unsubKey = null;
         this._unsubMouse?.();
         this._unsubMouse = null;
+        this._unsubPaste?.();
+        this._unsubPaste = null;
 
         // Stop the stdout interceptor to restore native console.log behavior
         this.renderer.hook.stop();
@@ -274,29 +284,44 @@ export class App {
             return;
         }
 
-        // Compute layout
-        const layoutRoot = this._rootWidget.getLayoutNode();
-        computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+        try {
+            // Compute layout only if something in the tree has layout changes
+            const layoutRoot = this._rootWidget.getLayoutNode();
+            if (layoutRoot._dirty) {
+                computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+            }
 
-        // Sync computed rects from layout tree back to widgets
-        this._rootWidget.syncLayout?.();
+            // Sync computed rects from layout tree back to widgets
+            this._rootWidget.syncLayout?.();
 
-        // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
-        this._buildWidgetMap(this._rootWidget);
+            // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
+            this._buildWidgetMap(this._rootWidget);
 
-        // Clear the back buffer and render widgets into it
-        this.screen.clear();
-        this._rootWidget.render(this.screen);
+            // Clear the back buffer and render widgets into it
+            this.screen.clear();
+            this._rootWidget.render(this.screen);
 
-        // Clear dirty flags now that we've rendered — future requestRender()
-        // calls will skip layout until markDirty() is called again.
-        this._rootWidget.clearDirty?.();
-        // Merge adjacent borders into junction characters for a cleaner look
-        if (this._options.dockBorders) {
-           mergeBorders(this.screen);
+            // Clear dirty flags now that we've rendered — future requestRender()
+            // calls will skip layout until markDirty() is called again.
+            this._rootWidget.clearDirty?.();
+            // Merge adjacent borders into junction characters for a cleaner look
+            if (this._options.dockBorders) {
+               mergeBorders(this.screen);
+            }
+            // Composite overlay layers on top of the base rendering
+            this.layers.composite(this.screen);
+
+            this._consecutiveRenderFailures = 0;
+        } catch (err) {
+            this._consecutiveRenderFailures++;
+            console.error('[TermUI] Render cycle error:', err);
+            if (this._consecutiveRenderFailures >= App.MAX_RENDER_FAILURES) {
+                console.error('[TermUI] Too many consecutive render failures — exiting');
+                this.exit(1);
+                return;
+            }
+            return;
         }
-        // Composite overlay layers on top of the base rendering
-        this.layers.composite(this.screen);
 
         // Inline rendering bypasses the differential renderer and writes
         // the bottom N rows directly into the main buffer so scrollback
@@ -329,6 +354,20 @@ export class App {
             this._exitResolve(code);
             this._exitResolve = null;
         }
+    }
+
+    /**
+     * Read from the system clipboard.
+     */
+    readClipboard(): Promise<string> {
+        return this.terminal.readClipboard();
+    }
+
+    /**
+     * Write to the system clipboard.
+     */
+    writeClipboard(text: string): void {
+        this.terminal.writeClipboard(text);
     }
 
     /**

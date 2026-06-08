@@ -238,8 +238,8 @@ describe("render harness", () => {
     it("unmounts every tracked instance during cleanup", () => {
       const fixture = createFixture()
       const first = fixture.render(<Label text="First" />)
-      const second = fixture.render(<Label text="Second" />)
       const firstUnmount = vi.spyOn(first, "unmount")
+      const second = fixture.render(<Label text="Second" />)
       const secondUnmount = vi.spyOn(second, "unmount")
 
       fixture.cleanup()

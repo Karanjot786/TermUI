@@ -10,6 +10,7 @@ export interface LogViewOptions {
     highlight?: Record<string, Color>;
     /** Auto-scroll to bottom */
     autoScroll?: boolean;
+    /** Maximum lines to retain (0 = unlimited) */
     maxLines?: number;
 }
 
@@ -23,7 +24,7 @@ export class LogView extends Widget {
     private _scrollOffset = 0;
     private _highlight: Record<string, Color>;
     private _autoScroll: boolean;
-    private _maxLines?: number;
+    private _maxLines: number;
 
     constructor(style: Partial<Style> = {}, opts: LogViewOptions = {}) {
         super(style);
@@ -34,7 +35,7 @@ export class LogView extends Widget {
             DEBUG: { type: 'named', name: 'brightBlack' },
         };
         this._autoScroll = opts.autoScroll ?? true;
-        this._maxLines = opts.maxLines;
+        this._maxLines = opts.maxLines ?? 0;
     }
 
     setLines(lines: string[]): void {
@@ -47,6 +48,12 @@ export class LogView extends Widget {
 
     appendLine(line: string): void {
         this._lines.push(line);
+        if (this._maxLines > 0 && this._lines.length > this._maxLines) {
+            const trimmed = this._lines.length - this._maxLines;
+            this._lines.splice(0, trimmed);
+            this._scrollOffset = Math.max(0, this._scrollOffset - trimmed);
+        }
+        this._scrollOffset = Math.min(this._scrollOffset, Math.max(0, this._lines.length - 1));
         if (this._autoScroll) {
             this._scrollToBottom();
         }
@@ -80,20 +87,8 @@ export class LogView extends Widget {
         const { x, y, width, height } = rect;
         if (width <= 0 || height <= 0) return;
 
-        
         const attrs = styleToCellAttrs(this._style);
-
-        // Apply maxLines filter first
-    const baseLines =
-        this._maxLines && this._maxLines > 0
-            ? this._lines.slice(-this._maxLines)
-            : this._lines;
-           
-            // Then apply scroll
-    const visibleLines = baseLines.slice(
-        this._scrollOffset,
-        this._scrollOffset + height,
-    );
+        const visibleLines = this._lines.slice(this._scrollOffset, this._scrollOffset + height);
 
         for (let i = 0; i < Math.min(visibleLines.length, height); i++) {
             const line = truncate(visibleLines[i], width);
