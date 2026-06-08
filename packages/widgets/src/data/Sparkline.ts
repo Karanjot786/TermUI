@@ -4,12 +4,17 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { BrailleCanvas } from './BrailleCanvas.js';
 
 export interface SparklineOptions {
     /** Color of the sparkline */
     color?: Color;
+
     /** Show min/max labels */
     showRange?: boolean;
+
+    /** Rendering style */
+    marker?: 'block' | 'braille';
 }
 
 // Sparkline characters (8 levels per cell, bottom to top)
@@ -28,12 +33,13 @@ export class Sparkline extends Widget {
     private _data: number[] = [];
     private _color: Color;
     private _showRange: boolean;
-
+    private _marker: 'block' | 'braille';
     constructor(label: string, style: Partial<Style> = {}, opts: SparklineOptions = {}) {
         super(style);
         this._label = label;
         this._color = opts.color ?? { type: 'named', name: 'cyan' };
         this._showRange = opts.showRange ?? false;
+        this._marker = opts.marker ?? 'block';
     }
 
     setData(data: number[]): void {
@@ -69,6 +75,48 @@ export class Sparkline extends Widget {
         const min = Math.min(...data);
         const max = Math.max(...data);
         const range = max - min || 1;
+
+        if (caps.unicode && this._marker === 'braille') {
+    const canvas = new BrailleCanvas({
+        width: sparkWidth * 2,
+        height: 4,
+        color: this._color,
+    });
+
+    for (let i = 0; i < data.length; i++) {
+        const normalized = (data[i] - min) / range;
+
+        const barHeight = Math.max(
+            normalized * 4,
+        );
+        if (barHeight === 0) {
+            continue;
+      }
+
+        for (let py = 0; py < barHeight; py++) {
+            canvas.drawPixel(
+                i * 2,
+                3 - py,
+            );
+
+            canvas.drawPixel(
+                i * 2 + 1,
+                3 - py,
+            );
+        }
+    }
+
+    canvas.updateRect({
+        x: x + labelWidth,
+        y,
+        width: sparkWidth,
+        height: 1,
+    });
+
+    canvas.render(screen);
+
+    return;
+}
 
         const sparkChars = caps.unicode ? SPARK_CHARS_UNICODE : SPARK_CHARS_ASCII;
         for (let i = 0; i < data.length; i++) {

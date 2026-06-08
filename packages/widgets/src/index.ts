@@ -212,6 +212,10 @@ export type { DataGridColumn, DataGridRow, DataGridOptions, SortDirection } from
 export { PieChart } from './data/PieChart.js';
 export type { PieSlice, PieChartOptions } from './data/PieChart.js';
 
+export * from './data/BrailleCanvas.js';
+export * from './data/Sparkline.js';
+export * from './data/LineChart.js';
+
 export {
     BarColumn,
     TextColumn,
