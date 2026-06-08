@@ -27,12 +27,29 @@
 ## What is TermUI?
 
 TermUI is a TypeScript framework for building terminal apps. You get a layout engine, JSX support, React-style hooks, focus management, global state, theming, animations, routing, real-time data, error boundaries, and a hot-reload dev server. No curses bindings. No C extensions. Pure TypeScript.
+
 ### Prerequisites
-- Bun >= 1.3.0
+
+Before you start, make sure you have:
+
+| Requirement | Version | Why | Install/Check |
+|-------------|---------|-----|---------------|
+| **Bun** | >= 1.3.0 | Package manager & runtime | [Install Bun](https://bun.sh/docs/installation) → `bun --version` |
+| **Node.js** | >= 18.0.0 | For published `@termuijs/*` packages | [Install Node.js](https://nodejs.org/) → `node --version` |
+| **Terminal** | TTY support | Required for interactive apps | Any modern terminal (iTerm2, Windows Terminal, GNOME Terminal) |
+
+> 💡 **Tip:** 256-color or truecolor terminal is recommended for the best theming experience.
+
+## Quick Start
 
 ## Quick Start
 
 ```bash
+# Verify prerequisites
+bun --version  # Should show 1.3.0 or higher
+node --version # Should show v18.0.0 or higher
+
+# Create a new app
 bunx create-termui-app my-app
 cd my-app
 bun install
@@ -481,4 +498,13 @@ bun run clean
 bun install
 ```
 
+### Common Setup Issues
 
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `bun: command not found` | Bun not installed or not in PATH | Run `curl -fsSL https://bun.sh/install \| bash` and restart terminal |
+| `ERR_MODULE_NOT_FOUND` | Dependencies not installed | Run `bun install` in the project root |
+| `Cannot find package '@termuijs/core'` | Build not run after clone | Run `bun run build` after `bun install` |
+| Colors not rendering | Terminal lacks color support | Try `NO_COLOR=1` to disable colors, or upgrade your terminal |
+| Unicode characters show as `?` | Terminal font missing glyphs | Try `NO_UNICODE=1` for ASCII fallbacks |
+| `EACCES: permission denied` | Insufficient permissions | Use `sudo` only if necessary, or fix npm/bun permissions |
