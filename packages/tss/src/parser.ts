@@ -9,6 +9,7 @@ import { type Token, TokenType } from './tokenizer.js';
 export interface TSSStylesheet {
     themes: TSSTheme[];
     rules: TSSRule[];
+    mixins: Map<string, TSSProperty[]>;
 }
 
 export interface TSSTheme {
@@ -36,13 +37,15 @@ export type TSSValue =
 export interface TSSRule {
     selector: TSSSelector;
     properties: TSSProperty[];
+    includes: string[];
+    nested?: TSSRule[];
 }
 
 // ── Parser ──
 
 export function parse(tokens: Token[]): TSSStylesheet {
     let pos = 0;
-    const stylesheet: TSSStylesheet = { themes: [], rules: [] };
+    const stylesheet: TSSStylesheet = { themes: [], rules: [], mixins: new Map() };
 
     const peek = () => tokens[pos] ?? { type: TokenType.EOF, value: '', line: 0, col: 0 };
     const advance = () => tokens[pos++];
@@ -55,10 +58,13 @@ export function parse(tokens: Token[]): TSSStylesheet {
     while (peek().type !== TokenType.EOF) {
         if (peek().type === TokenType.AtTheme) {
             stylesheet.themes.push(parseTheme());
-        } else if (peek().type === TokenType.Ident) {
+        } else if (peek().type === TokenType.AtMixin) {
+            const { name, properties } = parseMixin();
+            stylesheet.mixins.set(name, properties);
+        } else if (peek().type === TokenType.Ident || peek().type === TokenType.Dot || peek().type === TokenType.PseudoClass) {
             stylesheet.rules.push(parseRule());
         } else {
-            advance(); // skip unknown
+            advance();
         }
     }
 
@@ -84,14 +90,15 @@ export function parse(tokens: Token[]): TSSStylesheet {
         return { name, variables };
     }
 
-    function parseRule(): TSSRule {
-        const selector = parseSelector();
+    function parseMixin(): { name: string; properties: TSSProperty[] } {
+        expect(TokenType.AtMixin);
+        const name = expect(TokenType.Ident).value;
         expect(TokenType.LBrace);
         const properties: TSSProperty[] = [];
         while (peek().type !== TokenType.RBrace && peek().type !== TokenType.EOF) {
-            if (peek().type === TokenType.Ident) {
+            if (peek().type === TokenType.Ident && tokens[pos + 1]?.type === TokenType.Colon) {
                 const propName = advance().value;
-                expect(TokenType.Colon);
+                advance(); // skip Colon
                 const value = parseValue();
                 properties.push({ name: propName, value });
                 if (peek().type === TokenType.Semicolon) advance();
@@ -100,13 +107,58 @@ export function parse(tokens: Token[]): TSSStylesheet {
             }
         }
         expect(TokenType.RBrace);
-        return { selector, properties };
+        return { name, properties };
+    }
+
+    function parseRule(): TSSRule {
+        const selector = parseSelector();
+        expect(TokenType.LBrace);
+        const properties: TSSProperty[] = [];
+        const includes: string[] = [];
+        const nested: TSSRule[] = [];
+        while (peek().type !== TokenType.RBrace && peek().type !== TokenType.EOF) {
+            if (peek().type === TokenType.AtInclude) {
+                advance(); // consume @include
+                const mixinName = expect(TokenType.Ident).value;
+                includes.push(mixinName);
+                if (peek().type === TokenType.Semicolon) advance();
+            } else if (peek().type === TokenType.Ident && tokens[pos + 1]?.type === TokenType.Colon) {
+                // property: value
+                const propName = advance().value;
+                expect(TokenType.Colon);
+                const value = parseValue();
+                properties.push({ name: propName, value });
+                if (peek().type === TokenType.Semicolon) advance();
+            } else if (peek().type === TokenType.Ident || peek().type === TokenType.Dot || peek().type === TokenType.PseudoClass) {
+                nested.push(parseRule());
+            } else {
+                advance();
+            }
+        }
+        expect(TokenType.RBrace);
+        return { selector, properties, includes, nested: nested.length > 0 ? nested : undefined };
     }
 
     function parseSelector(): TSSSelector {
+        // Pseudo-only selector: :hover { }
+        if (peek().type === TokenType.PseudoClass) {
+            const pseudo = advance().value;
+            return { widget: '*', pseudo };
+        }
+        // Class-only selector: .className { }
+        if (peek().type === TokenType.Dot) {
+            advance();
+            const className = expect(TokenType.Ident).value;
+            let pseudo: string | undefined;
+            if (peek().type === TokenType.PseudoClass) {
+                pseudo = advance().value;
+            }
+            return { widget: '*', className, pseudo };
+        }
         const widget = expect(TokenType.Ident).value;
         let className: string | undefined;
         let pseudo: string | undefined;
+
         if (peek().type === TokenType.Dot) {
             advance();
             className = expect(TokenType.Ident).value;

@@ -25,6 +25,7 @@ export interface Fiber {
     isDirty: boolean;
     onInput?: (event: KeyEvent) => void;
     effects: EffectRecord[];
+    layoutEffects: EffectRecord[];
     cleanups: (() => void)[];
     intervals: ReturnType<typeof setInterval>[];
     /** Context values provided by this fiber's component */
@@ -63,6 +64,19 @@ let _currentFiber: Fiber | null = null;
 let _requestRender: (() => void) | null = null;
 let _insertBefore: ((line: string) => (() => void) | void) | null = null;
 let _nextFiberId = 0;
+let _nextHookId = 0;
+export function useId(): string {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    if (idx >= fiber.hooks.length) {
+        fiber.hooks.push({
+            value: `id-${++_nextHookId}`,
+        });
+    }
+
+    return fiber.hooks[idx].value;
+}
 
 /** Get or throw the current fiber (hooks must be called inside a component) */
 export function currentFiber(): Fiber {
@@ -99,6 +113,7 @@ export function createFiber(parent?: Fiber): Fiber {
         hookIndex: 0,
         isDirty: true,
         effects: [],
+        layoutEffects: [],
         cleanups: [],
         intervals: [],
         contextValues: new Map(),
@@ -125,6 +140,24 @@ export function setInsertBefore(fn: ((line: string) => (() => void) | void) | nu
 
 let _pendingUpdates = new Set<Fiber>();
 let _flushScheduled = false;
+
+// ── Global Cleanup Registry ──
+// Used by singleton stores (NotificationStore, etc.) to register
+// cleanup functions that are called during test teardown.
+
+let _globalCleanups: Array<() => void> = [];
+
+/**
+ * Register a global cleanup function. Returns an unregister function.
+ * Registered cleanups are called when resetHooksGlobals() is invoked.
+ */
+export function registerCleanup(fn: () => void): () => void {
+    _globalCleanups.push(fn);
+    return () => {
+        const idx = _globalCleanups.indexOf(fn);
+        if (idx >= 0) _globalCleanups.splice(idx, 1);
+    };
+}
 
 /**
  * Schedule a re-render. Multiple setState calls within the same
@@ -207,6 +240,30 @@ export function useEffect(effect: () => void | (() => void), deps?: any[]): void
         fiber.hooks.push({ value: record, deps });
         fiber.effects.push(record);
     } else {
+        const prev = fiber.hooks[idx];
+        const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
+
+        if (shouldRun) {
+            prev.deps = deps;
+            // Update the existing record in-place (avoids duplicates)
+            const record = prev.value as EffectRecord;
+            record.effect = effect;
+            record.deps = deps;
+            record.ran = false;
+        }
+    }
+}
+
+export function useLayoutEffect(effect: () => void | (() => void), deps?: any[]): void {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    // Initialize or check deps
+    if (idx >= fiber.hooks.length) {
+        const record: EffectRecord = { effect, deps, ran: false };
+        fiber.hooks.push({ value: record, deps });
+        fiber.layoutEffects.push(record);
+        } else {
         const prev = fiber.hooks[idx];
         const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
 
@@ -428,10 +485,66 @@ export function useRef<T>(initialValue: T): { current: T } {
 }
 
 /**
+ * useImperativeHandle — expose an imperative handle through a ref.
+ *
+ * ```tsx
+ * useImperativeHandle(ref, () => ({ focus: () => input.focus() }), []);
+ * ```
+ */
+export function useImperativeHandle<T>(
+    ref: { current: T | null } | null | undefined,
+    createHandle: () => T,
+    deps: any[],
+): void {
+    const handle = useMemo(createHandle, deps);
+
+    if (ref) {
+        ref.current = handle;
+    }
+}
+
+/**
  * useCallback — memoize a callback function.
  */
 export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: any[]): T {
     return useMemo(() => callback, deps);
+}
+
+/**
+ * useReducer — manage state with a reducer function.
+ *
+ * ```tsx
+ * const [state, dispatch] = useReducer((state, action) => {
+ *     if (action === 'inc') return state + 1;
+ *     if (action === 'dec') return state - 1;
+ *     return state;
+ * }, 0);
+ * dispatch('inc');
+ * ```
+ */
+export function useReducer<S, A>(
+    reducer: (state: S, action: A) => S,
+    initialState: S,
+): [S, (action: A) => void] {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    if (idx >= fiber.hooks.length) {
+        fiber.hooks.push({ value: initialState });
+    }
+
+    const hookState = fiber.hooks[idx];
+
+    const dispatch = (action: A): void => {
+        const next = reducer(hookState.value, action);
+        if (!Object.is(hookState.value, next)) {
+            hookState.value = next;
+            fiber.isDirty = true;
+            scheduleRender(fiber);
+        }
+    };
+
+    return [hookState.value, dispatch];
 }
 
 /** Run all pending effects for a fiber */
@@ -449,9 +562,27 @@ export function runEffects(fiber: Fiber): void {
     }
 }
 
+export function runLayoutEffects(fiber: Fiber): void {
+    for (const record of fiber.layoutEffects) {
+        if (!record.ran) {
+            // Run cleanup from previous effect
+            record.cleanup?.();
+            const cleanup = record.effect();
+            if (typeof cleanup === 'function') {
+                record.cleanup = cleanup;
+            }
+            record.ran = true;
+        }
+    }
+}
+
+
 /** Clean up all effects and intervals for a fiber, including child fibers */
 export function destroyFiber(fiber: Fiber): void {
     for (const record of fiber.effects) {
+        record.cleanup?.();
+    }
+    for (const record of fiber.layoutEffects) {
         record.cleanup?.();
     }
     for (const cleanup of fiber.cleanups) {
@@ -471,13 +602,38 @@ export function destroyFiber(fiber: Fiber): void {
             destroyFiber(entry.fiber);
         }
     }
+    // Clean up global _instanceMap entries pointing to this fiber
+    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+    if (termuiInstances instanceof Map) {
+        for (const [widget, inst] of termuiInstances) {
+            if (inst.fiber === fiber) {
+                termuiInstances.delete(widget);
+            }
+        }
+    }
     fiber.hooks = [];
     fiber.effects = [];
+    fiber.layoutEffects = [];
     fiber.cleanups = [];
     fiber.intervals = [];
     fiber.contextValues.clear();
     fiber.childFibers = undefined;
     fiber._prevChildFibers = undefined;
+}
+
+/** Reset all module-level globals for test isolation */
+export function resetHooksGlobals(): void {
+    _currentFiber = null;
+    _requestRender = null;
+    _insertBefore = null;
+    _pendingUpdates.clear();
+    _flushScheduled = false;
+    // Run all registered global cleanups (singleton stores, etc.)
+    const cleanups = _globalCleanups;
+    _globalCleanups = [];
+    for (const fn of cleanups) {
+        try { fn(); } catch { /* ignore cleanup errors */ }
+    }
 }
 
 /**

@@ -8,7 +8,7 @@
 //   function Menu({ items }: { items: string[] }) {
 //       const { selectedIndex } = useKeyboardNavigation({
 //           itemCount: items.length,
-//           onSelect: (i) => console.log('selected', items[i]),
+//           onSelect: (i) => { /* handle selection */ },
 //       });
 //       return <List items={items} selectedIndex={selectedIndex} />;
 //   }

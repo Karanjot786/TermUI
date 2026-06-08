@@ -2,7 +2,7 @@
 // @termuijs/widgets — StreamingText widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, wordWrap, caps } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, wordWrap, caps, prefersReducedMotion } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import { Widget } from '../base/Widget.js';
 
@@ -48,6 +48,7 @@ export class StreamingText extends Widget {
 
     /** Replace text content and reset the revealed counter to 0. */
     setText(text: string): void {
+        if (text === this._text) return;
         this._text = text;
         this._revealed = 0;
         this.markDirty();
@@ -72,7 +73,7 @@ export class StreamingText extends Widget {
     /** Lifecycle: start the blink timer (only when motion is enabled). */
     mount(): void {
         super.mount();
-        if (!caps.motion) {
+        if (prefersReducedMotion()) {
             this._cursorVisible = false;  // Don't show cursor in reduced-motion
             return;
         }

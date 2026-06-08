@@ -1,3 +1,8 @@
+/**
+ * Core terminal utility functions for ANSI escape sequences.
+ * Handles layout formatting, terminal bells, and notification configurations.
+ */
+
 // ─────────────────────────────────────────────────────
 // @termuijs/core — ANSI escape sequence helpers
 // ─────────────────────────────────────────────────────
@@ -24,6 +29,8 @@ export function moveUp(n = 1): string { return `${CSI}${n}A`; }
 export function moveDown(n = 1): string { return `${CSI}${n}B`; }
 export function moveRight(n = 1): string { return `${CSI}${n}C`; }
 export function moveLeft(n = 1): string { return `${CSI}${n}D`; }
+
+export const requestCursorPosition = `${CSI}6n`;
 
 // ── Screen Control ──────────────────────────────────
 
@@ -58,6 +65,11 @@ export const disableMouse = `${CSI}?1000l${CSI}?1002l${CSI}?1006l`;
 export const enableBracketedPaste = `${CSI}?2004h`;
 export const disableBracketedPaste = `${CSI}?2004l`;
 
+// ── Focus Tracking ──────────────────────────────────
+
+export const enableFocusTracking = `${CSI}?1004h`;
+export const disableFocusTracking = `${CSI}?1004l`;
+
 // ── Text Styling ────────────────────────────────────
 
 export const reset = `${CSI}0m`;
@@ -90,6 +102,52 @@ export function setTitle(title: string): string {
     return `${OSC}0;${title}\x07`;
 }
 
+// ── Sanitization ────────────────────────────────────
+
+/**
+ * Strip ANSI escape sequences and C0 control characters from a string.
+ * This prevents escape injection attacks via user-supplied content.
+ *
+ * Strips:
+ * - CSI sequences (ESC [ ...)
+ * - OSC sequences (ESC ] ... ST)
+ * - C0 control characters (0x00-0x1F) except tab, newline, carriage return
+ * - C1 control characters (0x80-0x9F)
+ *
+ * @param input Raw string potentially containing ANSI controls
+ * @returns Safe string with control sequences removed
+ */
+export function stripAnsiControl(input: string): string {
+  return input.replace(
+    /[\u001b\u009b][[\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\d\/#&.:=?%@~_]+)*|[a-zA-Z\d]+(?:;[-a-zA-Z\d\/#&.:=?%@~_]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))|[\x80-\x9b\x9d-\x9f]|[\x00-\x08\x0b\x0c\x0e-\x1f]/g,
+    '',
+  );
+}
+
+// ── Hyperlinks (OSC 8) ──────────────────────────────
+
+/** OSC 8 open: ESC ] 8 ; ; <url> ST. */
+export function hyperlinkOpen(url: string): string {
+    // Block non-http/https/file schemes (e.g. javascript:, data:).
+    if (!/^(https?|file):\/\//i.test(url)) return '';
+    // Strip C0/C1 controls and ESC to prevent terminal escape injection.
+    const safeUrl = url.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `\x1b]8;;${safeUrl}\x1b\\`;
+}
+
+/** OSC 8 close: ESC ] 8 ; ; ST. */
+export const hyperlinkClose: string = '\x1b]8;;\x1b\\';
+
+/** The BEL control byte. */
+export const bell = '\x07';
+
+/** OSC 9 desktop notification: ESC ] 9 ; <text> BEL. */
+export function notify(text: string): string {
+    // Strip C0/C1 controls and ESC to prevent terminal escape injection.
+    const safeText = text.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `${OSC}9;${safeText}${bell}`;
+}
+
 // ── Clipboard ───────────────────────────────────────
 
 /**
@@ -101,4 +159,32 @@ export function setTitle(title: string): string {
 export function writeClipboard(text: string, stdout: NodeJS.WriteStream = process.stdout): void {
     const encoded = Buffer.from(text, 'utf8').toString('base64');
     stdout.write(`${OSC}52;c;${encoded}\x07`);
+}
+export function readClipboard(
+    stdin: NodeJS.ReadStream = process.stdin,
+    stdout: NodeJS.WriteStream = process.stdout
+): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const handler = (data: Buffer) => {
+            const str = data.toString('utf8');
+
+            const match = str.match(/\x1b\]52;c;([^\x07]+)\x07/);
+
+            if (!match) return;
+
+            stdin.off('data', handler);
+
+            try {
+                resolve(
+                    Buffer.from(match[1], 'base64').toString('utf8')
+                );
+            } catch (err) {
+                reject(err);
+            }
+        };
+
+        stdin.on('data', handler);
+
+        stdout.write(`${OSC}52;c;?\x07`);
+    });
 }

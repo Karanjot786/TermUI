@@ -31,7 +31,8 @@
   "dependencies": {
     "@termuijs/core": "workspace:*",
     "@termuijs/widgets": "workspace:*",
-    "@termuijs/jsx": "workspace:*"
+    "@termuijs/jsx": "workspace:*",
+    "@termuijs/motion": "workspace:*"
   },
   "devDependencies": {
     "tsup": "^8.0.0",

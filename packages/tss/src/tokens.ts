@@ -1,7 +1,4 @@
-// ─────────────────────────────────────────────────────
-// Design Tokens — TypeScript-first color system
-// with auto dark/light detection
-// ─────────────────────────────────────────────────────
+import { readFileSync } from 'node:fs';
 
 export interface ThemeTokens {
   bg: string;
@@ -81,4 +78,74 @@ export function tokensToTSS(name: string, tokens: ThemeTokens): string {
     return `@theme ${name} {\n` +
         Object.entries(tokens).map(([k, v]) => `  --${k}: ${v};`).join('\n') +
         '\n}';
+}
+
+/**
+ * Simple stack-based YAML parser for flat/nested config files.
+ * Avoids heavy external dependency footprints.
+ */
+function parseYaml(content: string): any {
+  const result: any = {};
+  const lines = content.split(/\r?\n/);
+  const stack: { indent: number; obj: any }[] = [{ indent: -1, obj: result }];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    const match = line.match(/^(\s*)([^:]+):\s*(.*)$/);
+    if (!match) continue;
+
+    const indent = match[1].length;
+    const key = match[2].trim().replace(/^['"]|['"]$/g, '');
+    let val = match[3].trim();
+
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.substring(1, val.length - 1);
+    }
+
+    while (stack.length > 1 && stack[stack.length - 1].indent >= indent) {
+      stack.pop();
+    }
+
+    const currentContext = stack[stack.length - 1].obj;
+
+    if (val === '') {
+      const newObj = {};
+      currentContext[key] = newObj;
+      stack.push({ indent, obj: newObj });
+    } else {
+      currentContext[key] = val;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Load theme tokens from a JSON or YAML file.
+ * Reads the file, parses it, and extracts the theme tokens.
+ */
+export function loadThemeFromFile(filePath: string): ThemeTokens {
+    const content = readFileSync(filePath, 'utf-8');
+    const isYaml = filePath.endsWith('.yaml') || filePath.endsWith('.yml');
+    const parsed = isYaml ? parseYaml(content) : JSON.parse(content);
+    
+    // Support nested "tokens" property or flat root level
+    const tokens = parsed.tokens ?? parsed;
+    
+    return {
+        bg: tokens.bg ?? '#000000',
+        fg: tokens.fg ?? '#ffffff',
+        primary: tokens.primary ?? '#7C3AED',
+        secondary: tokens.secondary ?? '#6366f1',
+        success: tokens.success ?? '#22c55e',
+        warning: tokens.warning ?? '#f59e0b',
+        error: tokens.error ?? '#ef4444',
+        muted: tokens.muted ?? '#6b7280',
+        border: tokens.border ?? '#374151',
+        highlight: tokens.highlight ?? '#1e1b4b',
+    };
 }

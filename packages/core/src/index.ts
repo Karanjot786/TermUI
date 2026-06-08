@@ -10,27 +10,41 @@ export type { Cell } from './terminal/Screen.js';
 export { Renderer } from './terminal/Renderer.js';
 export { LayerManager } from './terminal/LayerManager.js';
 export type { Layer } from './terminal/LayerManager.js';
-export { caps } from './terminal/env-caps.js';
+export { caps, prefersReducedMotion, shouldUseColor, prefersHighContrast } from './terminal/env-caps.js';
 export { BOX, BRAILLE_SPIN, BLOCK } from './terminal/ascii-map.js';
 
 // ── Renderer ──────────────────────────────────────────
 export { RenderHook } from './renderer/render-hook.js';
+export { mergeBorders } from './renderer/border-merge.js';
 
 // ── Input ─────────────────────────────────────────────
 export { InputParser } from './input/InputParser.js';
 export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './input/KeyMap.js';
 export { parseMouseEvent, isMouseSequence } from './input/MouseParser.js';
-
+export { MouseGestures } from './input/MouseGestures.js';
+export type { MouseGesturesOptions } from './input/MouseGestures.js';
+export { ChordMatcher } from './input/ChordMatcher.js';
+export type { ChordMatcherOptions, Chord } from './input/ChordMatcher.js';
+export { LiveRender } from './renderer/live-render.js';
 // ── Layout ────────────────────────────────────────────
-export { computeLayout, createLayoutNode } from './layout/LayoutEngine.js';
+export { computeLayout, createLayoutNode, invalidateLayout } from './layout/LayoutEngine.js';
 export type { LayoutNode } from './layout/LayoutEngine.js';
 export { emptyRect, containsPoint, shrinkRect, intersectRect, unionRect } from './layout/Rect.js';
 export type { Rect, Size } from './layout/Rect.js';
+export { Pos } from './layout/pos.js';
+export { Dim } from './layout/dim.js';
 export {
-    splitRect,
-    length, percentage, ratio, min, max, fill,
-} from './layout/ConstraintLayout.js';
-export type { Constraint } from './layout/ConstraintLayout.js';
+    Constraint,
+    LengthConstraint,
+    PercentageConstraint,
+    MinConstraint,
+    MaxConstraint,
+    FillConstraint,
+    Flex,
+    resolveConstraints,
+    resolveLayoutVariables
+} from './layout/constraint.js';
+export type { ResolvableNode } from './layout/constraint.js';
 
 // ── Events ────────────────────────────────────────────
 export { EventEmitter } from './events/EventEmitter.js';
@@ -40,7 +54,7 @@ export type { KeyEvent, MouseEvent, ResizeEvent, FocusEvent, EventMap } from './
 export { createKeyEvent } from './events/types.js';
 
 // ── Style ─────────────────────────────────────────────
-export { defaultStyle, mergeStyles, normalizeEdges, styleToCellAttrs } from './style/Style.js';
+export { defaultStyle, mergeStyles, normalizeEdges, styleToCellAttrs, hasLayoutChanges } from './style/Style.js';
 export type { Style, Edges } from './style/Style.js';
 export { getBorderChars, borderSize, BORDER_CHARS } from './style/Border.js';
 export type { BorderStyle, BorderChars } from './style/Border.js';
@@ -75,4 +89,6 @@ export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.
 // ── Utilities ─────────────────────────────────────────
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';
 export * as ansi from './utils/ansi.js';
-export { writeClipboard } from './utils/ansi.js';
+export { writeClipboard, readClipboard } from './utils/ansi.js';
+export { debounce } from './utils/debounce.js';
+export type { DebounceOptions } from './utils/debounce.js';
