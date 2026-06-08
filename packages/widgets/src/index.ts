@@ -90,6 +90,8 @@ export { Dock } from './layout/Dock.js';
 export type { DockOptions, DockItem, DockEdge } from './layout/Dock.js';
 export { Divider } from './layout/Divider.js';
 export type { DividerOptions, DividerOrientation } from './layout/Divider.js';
+export { AspectRatio } from './layout/AspectRatio.js';
+export type { AspectRatioOptions } from './layout/AspectRatio.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
