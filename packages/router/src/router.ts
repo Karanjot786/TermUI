@@ -144,7 +144,7 @@ export class Router {
         const finalPath = this.resolveRedirect(path);
         const match = matchRoute(finalPath, this._routes);
         if (!match) {
-            this.events.emit('error', new Error(`No route found for path: ${path}`));
+            this.events.emit('error', new Error(`No route found for path: ${finalPath}`));
             return;
         }
         this._history.push(finalPath);        // Prevent unbounded history growth
@@ -162,7 +162,7 @@ export class Router {
         const finalPath = this.resolveRedirect(path);
         const match = matchRoute(finalPath, this._routes);
         if (!match) {
-            this.events.emit('error', new Error(`No route found for path: ${path}`));
+            this.events.emit('error', new Error(`No route found for path: ${finalPath}`));
             return;
         }
         if (this._history.length > 0) {
