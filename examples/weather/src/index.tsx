@@ -6,8 +6,14 @@ import { app, row, gauge, progressBar, text, status } from "@termuijs/quick";
 // Default: Purnea (lat=25.6, lon=87.5)
 
 const args = process.argv.slice(2);
-const getArg = (name: string) =>
-  args.find((a: string) => a.startsWith(`--${name}=`))?.split("=")[1];
+const getArg = (name: string) => {
+  const value = args
+    .find((a: string) => a.startsWith(`--${name}=`))
+    ?.split("=")[1]
+    ?.trim();
+
+  return value || undefined;
+};
 
 const lat = getArg("lat") ?? "25.6";
 const lon = getArg("lon") ?? "87.5";
