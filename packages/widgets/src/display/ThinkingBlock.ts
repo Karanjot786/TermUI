@@ -9,6 +9,7 @@ import {
     styleToCellAttrs,
     wordWrap,
     caps,
+    prefersReducedMotion,
 } from '@termuijs/core';
 
 import { timerPoolSubscribe } from '@termuijs/motion';
@@ -61,7 +62,7 @@ export class ThinkingBlock extends Widget {
     mount(): void {
         super.mount();
 
-        if (!caps.motion) return;
+        if (prefersReducedMotion()) return;
 
         this._timerUnsub = timerPoolSubscribe(300, () => {
             this._dots =

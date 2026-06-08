@@ -1,10 +1,11 @@
 import { useState, useEffect } from '@termuijs/jsx';
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import * as os from 'node:os';
 
-const execAsync = (cmd: string, opts?: any): Promise<{ stdout: string; stderr: string }> => {
+const execFileAsync = (file: string, args: string[], opts?: any): Promise<{ stdout: string; stderr: string }> => {
     return new Promise((resolve, reject) => {
-        exec(cmd, opts, (err, stdout, stderr) => {
+        execFile(file, args, opts, (err, stdout, stderr) => {
             if (err) reject(err);
             else resolve({ stdout: String(stdout), stderr: String(stderr) });
         });
@@ -41,25 +42,25 @@ export function useBattery(intervalMs = 10000): UseBatteryResult {
                 let charging = false;
 
                 if (platform === 'darwin') {
-                    const { stdout } = await execAsync('pmset -g batt', { timeout: 2000 });
+                    const { stdout } = await execFileAsync('pmset', ['-g', 'batt'], { timeout: 2000 });
                     const levelMatch = stdout.match(/(\d+)%/);
                     if (!levelMatch) throw new Error('Could not parse battery level');
                     charging = stdout.includes('charging') || stdout.includes('AC Power');
                     level = parseInt(levelMatch[1], 10);
                 } else if (platform === 'linux') {
                     try {
-                        const { stdout: capacity } = await execAsync('cat /sys/class/power_supply/BAT0/capacity', { timeout: 2000 });
-                        const { stdout: status } = await execAsync('cat /sys/class/power_supply/BAT0/status', { timeout: 2000 });
+                        const capacity = readFileSync('/sys/class/power_supply/BAT0/capacity', 'utf-8');
+                        const status = readFileSync('/sys/class/power_supply/BAT0/status', 'utf-8');
                         level = parseInt(capacity.trim(), 10);
                         charging = status.trim().toLowerCase() === 'charging';
                     } catch {
-                        const { stdout: capacity } = await execAsync('cat /sys/class/power_supply/BAT1/capacity', { timeout: 2000 });
-                        const { stdout: status } = await execAsync('cat /sys/class/power_supply/BAT1/status', { timeout: 2000 });
+                        const capacity = readFileSync('/sys/class/power_supply/BAT1/capacity', 'utf-8');
+                        const status = readFileSync('/sys/class/power_supply/BAT1/status', 'utf-8');
                         level = parseInt(capacity.trim(), 10);
                         charging = status.trim().toLowerCase() === 'charging';
                     }
                 } else if (platform === 'win32') {
-                    const { stdout } = await execAsync('wmic path Win32_Battery get EstimatedChargeRemaining, BatteryStatus', { timeout: 2000 });
+                    const { stdout } = await execFileAsync('wmic', ['path', 'Win32_Battery', 'get', 'EstimatedChargeRemaining, BatteryStatus'], { timeout: 2000 });
                     const lines = stdout.trim().split('\n').map(l => l.trim()).filter(l => l);
                     if (lines.length < 2) throw new Error('Could not parse Windows battery');
                     const parts = lines[1].split(/\s+/);

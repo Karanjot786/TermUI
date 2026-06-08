@@ -196,33 +196,33 @@ export class LayerManager {
      * Composite all overlay layers onto the Screen's back buffer.
      * Layers are applied in z-index order (lowest first).
      * Transparent cells (empty with no colors) are skipped.
+     * Writes directly to screen.back to avoid setCell overhead
+     * (bounds/clip checks are already satisfied by dirtyRegion).
      */
     composite(screen: Screen): void {
         const sorted = this.getSortedLayers();
 
         for (const layer of sorted) {
-            if (!layer.dirtyRegion) continue; // Nothing to composite
+            if (!layer.dirtyRegion) continue;
 
             const { x: dx, y: dy, width: dw, height: dh } = layer.dirtyRegion;
+            const maxRow = Math.min(dy + dh, this._rows);
+            const maxCol = Math.min(dx + dw, this._cols);
 
-            for (let r = dy; r < dy + dh && r < this._rows; r++) {
-                for (let c = dx; c < dx + dw && c < this._cols; c++) {
-                    const cell = layer.cells[r][c];
-                    if (isCellTransparent(cell)) continue;
+            for (let r = dy; r < maxRow; r++) {
+                const backRow = screen.back[r];
+                const layerRow = layer.cells[r];
+                if (!backRow || !layerRow) continue;
 
-                    // Write non-transparent overlay cell to the screen's back buffer
-                    screen.setCell(c, r, {
-                        char: cell.char,
-                        fg: cell.fg,
-                        bg: cell.bg,
-                        bold: cell.bold,
-                        italic: cell.italic,
-                        underline: cell.underline,
-                        dim: cell.dim,
-                        strikethrough: cell.strikethrough,
-                        inverse: cell.inverse,
-                        width: cell.width,
-                    });
+                let c = dx;
+                while (c < maxCol) {
+                    const cell = layerRow[c];
+                    if (isCellTransparent(cell)) {
+                        c++;
+                        continue;
+                    }
+                    Object.assign(backRow[c], cell);
+                    c++;
                 }
             }
         }

@@ -6,7 +6,31 @@ import { describe, it, expect, vi } from 'vitest';
 import { Screen, ScrollbarSets } from '@termuijs/core';
 import { Scrollbar } from './Scrollbar.js';
 
-describe('Scrollbar', () => {
+describe('Scrollbar Widget — Initialization', () => {
+    it('should initialize with provided options and default style', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+            position: 5,
+            orientation: 'verticalLeft',
+            showArrows: false,
+        });
+
+        expect(bar).toBeDefined();
+        expect(bar.isDirty).toBe(true); // Starts dirty
+    });
+
+    it('should fall back to defaults for missing optional options', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 50,
+            viewportLength: 10,
+        });
+
+        expect(bar).toBeDefined();
+    });
+});
+
+describe('Scrollbar Widget — Rendering Edge Cases', () => {
     it('does not render if contentLength <= viewportLength', () => {
         const scrollbar = new Scrollbar({}, {
             contentLength: 10,
@@ -20,7 +44,23 @@ describe('Scrollbar', () => {
         expect(cells.every(c => c === ' ')).toBe(true);
     });
 
-    it('renders verticalRight mode correctly', () => {
+    it('should not render anything if width or height <= 0', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 20,
+            viewportLength: 10,
+            orientation: 'verticalRight',
+        });
+        bar.updateRect({ x: 0, y: 0, width: 0, height: 10 });
+        const screen = new Screen(10, 10);
+        bar.render(screen);
+
+        const allChars = screen.back.flat().map(c => c.char).join('');
+        expect(allChars.trim()).toBe('');
+    });
+});
+
+describe('Scrollbar Widget — Rendering Layouts', () => {
+    it('renders verticalRight mode with arrows correctly', () => {
         const scrollbar = new Scrollbar({}, {
             contentLength: 100,
             viewportLength: 10,
@@ -42,7 +82,31 @@ describe('Scrollbar', () => {
         expect(rightColumn.filter(c => c === ScrollbarSets.VERTICAL.track).length).toBeGreaterThan(0);
     });
 
-    it('renders verticalLeft mode correctly', () => {
+    it('should render verticalRight layout with arrows correctly (detailed coordinate checks)', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 20,
+            viewportLength: 10,
+            position: 0,
+            orientation: 'verticalRight',
+            showArrows: true,
+        });
+
+        bar.updateRect({ x: 0, y: 0, width: 10, height: 10 });
+        const screen = new Screen(10, 10);
+        bar.render(screen);
+
+        expect(screen.back[0][9].char).toBe('↑');
+        expect(screen.back[9][9].char).toBe('↓');
+        expect(screen.back[1][9].char).toBe('█');
+        expect(screen.back[2][9].char).toBe('█');
+        expect(screen.back[3][9].char).toBe('█');
+        expect(screen.back[4][9].char).toBe('█');
+        expect(screen.back[5][9].char).toBe('│');
+        expect(screen.back[8][9].char).toBe('│');
+        expect(screen.back[0][0].char).toBe(' ');
+    });
+
+    it('renders verticalLeft mode with arrows correctly', () => {
         const scrollbar = new Scrollbar({}, {
             contentLength: 100,
             viewportLength: 10,
@@ -62,7 +126,32 @@ describe('Scrollbar', () => {
         expect(leftColumn.filter(c => c === ScrollbarSets.VERTICAL.thumb).length).toBeGreaterThan(0);
     });
 
-    it('renders horizontalBottom mode correctly', () => {
+    it('should render verticalLeft layout without arrows correctly (detailed coordinate checks)', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 20,
+            viewportLength: 10,
+            position: 5,
+            orientation: 'verticalLeft',
+            showArrows: false,
+        });
+
+        bar.updateRect({ x: 0, y: 0, width: 10, height: 10 });
+        const screen = new Screen(10, 10);
+        bar.render(screen);
+
+        expect(screen.back[0][0].char).toBe('│');
+        expect(screen.back[1][0].char).toBe('│');
+        expect(screen.back[2][0].char).toBe('█');
+        expect(screen.back[3][0].char).toBe('█');
+        expect(screen.back[4][0].char).toBe('█');
+        expect(screen.back[5][0].char).toBe('█');
+        expect(screen.back[6][0].char).toBe('█');
+        expect(screen.back[7][0].char).toBe('│');
+        expect(screen.back[9][0].char).toBe('│');
+        expect(screen.back[0][9].char).toBe(' ');
+    });
+
+    it('renders horizontalBottom mode with arrows correctly', () => {
         const scrollbar = new Scrollbar({}, {
             contentLength: 100,
             viewportLength: 10,
@@ -82,7 +171,30 @@ describe('Scrollbar', () => {
         expect(bottomRow.filter(c => c === ScrollbarSets.HORIZONTAL.thumb).length).toBeGreaterThan(0);
     });
 
-    it('renders horizontalTop mode correctly', () => {
+    it('should render horizontalBottom layout correctly (detailed coordinate checks)', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 30,
+            viewportLength: 10,
+            position: 10,
+            orientation: 'horizontalBottom',
+            showArrows: true,
+        });
+
+        bar.updateRect({ x: 0, y: 0, width: 12, height: 10 });
+        const screen = new Screen(12, 10);
+        bar.render(screen);
+
+        expect(screen.back[9][0].char).toBe('←');
+        expect(screen.back[9][11].char).toBe('→');
+        expect(screen.back[9][1].char).toBe('─');
+        expect(screen.back[9][4].char).toBe('█');
+        expect(screen.back[9][5].char).toBe('█');
+        expect(screen.back[9][6].char).toBe('█');
+        expect(screen.back[9][7].char).toBe('─');
+        expect(screen.back[9][10].char).toBe('─');
+    });
+
+    it('renders horizontalTop mode with arrows correctly', () => {
         const scrollbar = new Scrollbar({}, {
             contentLength: 100,
             viewportLength: 10,
@@ -101,6 +213,28 @@ describe('Scrollbar', () => {
         expect(topRow[9]).toBe(ScrollbarSets.HORIZONTAL.end);
     });
 
+    it('should render horizontalTop layout without arrows correctly (detailed coordinate checks)', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 20,
+            viewportLength: 10,
+            position: 0,
+            orientation: 'horizontalTop',
+            showArrows: false,
+        });
+
+        bar.updateRect({ x: 0, y: 0, width: 10, height: 10 });
+        const screen = new Screen(10, 10);
+        bar.render(screen);
+
+        expect(screen.back[0][0].char).toBe('█');
+        expect(screen.back[0][4].char).toBe('█');
+        expect(screen.back[0][5].char).toBe('─');
+        expect(screen.back[0][9].char).toBe('─');
+        expect(screen.back[9][0].char).toBe(' ');
+    });
+});
+
+describe('Scrollbar Widget — Layout Operations', () => {
     it('toggles arrows correctly', () => {
         const withArrows = new Scrollbar({}, {
             contentLength: 100,
@@ -144,8 +278,6 @@ describe('Scrollbar', () => {
         scrollbar.setPosition(40); // (100 - 20) / 2 = 40
         scrollbar.render(screen);
         column = screen.back.map(row => row[0].char);
-        // trackLength is 10. thumbSize = floor(10 * 20 / 100) = 2.
-        // thumbOffset = floor(40 * (10 - 2) / 80) = floor(40 * 8 / 80) = 4.
         expect(column[4]).toBe(ScrollbarSets.VERTICAL.thumb);
         expect(column[5]).toBe(ScrollbarSets.VERTICAL.thumb);
         expect(column[3]).toBe(ScrollbarSets.VERTICAL.track);
@@ -155,7 +287,6 @@ describe('Scrollbar', () => {
         scrollbar.setPosition(80);
         scrollbar.render(screen);
         column = screen.back.map(row => row[0].char);
-        // thumbOffset = floor(80 * 8 / 80) = 8.
         expect(column[8]).toBe(ScrollbarSets.VERTICAL.thumb);
         expect(column[9]).toBe(ScrollbarSets.VERTICAL.thumb);
     });
