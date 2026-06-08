@@ -87,12 +87,10 @@ export class Sparkline extends Widget {
         const normalized = (data[i] - min) / range;
 
         const barHeight = Math.max(
-            normalized * 4,
+            1,
+            Math.ceil(normalized * 4),
         );
-        if (barHeight === 0) {
-            continue;
-      }
-
+      
         for (let py = 0; py < barHeight; py++) {
             canvas.drawPixel(
                 i * 2,
@@ -121,7 +119,7 @@ export class Sparkline extends Widget {
         const sparkChars = caps.unicode ? SPARK_CHARS_UNICODE : SPARK_CHARS_ASCII;
         for (let i = 0; i < data.length; i++) {
             const normalized = (data[i] - min) / range;
-            const charIdx = Math.min(7, Math.floor(normalized * 8));
+            const charIdx = Math.min(7, Math.round(normalized * 7));
             screen.setCell(x + labelWidth + i, y, {
                 char: sparkChars[charIdx],
                 fg: this._color,

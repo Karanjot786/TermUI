@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-
+import { BrailleCanvas } from './BrailleCanvas.js';
 async function renderCanvas(
-    draw: (canvas: any) => void,
+    draw: (canvas: BrailleCanvas) => void,
 ): Promise<string[]> {
     const { Screen } = await import('@termuijs/core');
-    const { BrailleCanvas } = await import('./BrailleCanvas.ts');
+
 
     const canvas = new BrailleCanvas({
         width: 2,

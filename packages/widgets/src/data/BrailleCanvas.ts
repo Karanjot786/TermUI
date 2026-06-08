@@ -1,4 +1,4 @@
-import { type Screen, type Style, type Color } from '@termuijs/core';
+import { type Screen, type Style, type Color, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface BrailleCanvasOptions {
@@ -36,7 +36,7 @@ export class BrailleCanvas extends Widget {
         );
     }
 
-    drawPixel(x: number, y: number, _color?: Color): void {
+    drawPixel(x: number, y: number): void {
         if (
             x < 0 ||
             y < 0 ||
@@ -55,10 +55,8 @@ export class BrailleCanvas extends Widget {
         y0: number,
         x1: number,
         y1: number,
-        color?: Color,
     ): void {
        
-   
     const dx = Math.abs(x1 - x0);
     const dy = Math.abs(y1 - y0);
 
@@ -68,7 +66,7 @@ export class BrailleCanvas extends Widget {
     let err = dx - dy;
 
     while (true) {
-        this.drawPixel(x0, y0, color);
+        this.drawPixel(x0, y0);
 
         if (x0 === x1 && y0 === y1) {
             break;
@@ -93,6 +91,11 @@ export class BrailleCanvas extends Widget {
 
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
+
+        if (rect.width <= 0 || rect.height <= 0) {
+            return;
+        }
+
         const { x, y } = rect;
 
         const cellWidth = Math.ceil(this._canvasWidth / 2);
@@ -117,9 +120,11 @@ export class BrailleCanvas extends Widget {
                     }
                 }
 
-                const char = String.fromCharCode(
-                    0x2800 + pattern,
-                );
+                 const char = caps.unicode
+                   ? String.fromCharCode(0x2800 + pattern)
+                   : pattern === 0
+                  ? ' '
+                  : '#';
 
                 screen.setCell(
                     x + cx,
