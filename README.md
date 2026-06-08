@@ -64,7 +64,7 @@ function Counter() {
     const [count, setCount] = useState(0)
 
     useKeymap([
-        { key: '+',      action: () => setCount((c) => c + 1) },
+        { key: '+', action: () => setCount((c) => c + 1) },
         { key: 'c', ctrl: true, action: () => process.exit(0) },
     ])
 
@@ -105,7 +105,7 @@ render(
 
 ### useKeymap
 
-Declare key bindings as a map. Cleaner than chained if-statements. Multiple calls in one component are additive.
+Declare key bindings as an array of objects. Cleaner than chained if-statements. Multiple calls in one component are additive.
 
 ```tsx
 import { useKeymap } from '@termuijs/jsx'
@@ -114,8 +114,8 @@ function App() {
     useKeymap([
         { key: 'c', ctrl: true, action: () => process.exit(0) },
         { key: 's', ctrl: true, action: () => save() },
-        { key: '/',            action: () => openSearch() },
-        { key: '?',            action: () => showHelp() },
+        { key: '/', action: () => openSearch() },
+        { key: '?', action: () => showHelp() },
     ])
     return <Box>...</Box>
 }
@@ -197,13 +197,10 @@ function Dashboard() {
     const { notify } = useNotifications()
 
     useKeymap([
-        {
-            key: 's',
-            action: async () => {
-                await save()
-                notify('Saved', { type: 'success', duration: 2000 })
-            },
-        },
+        { key: 's', action: async () => {
+            await save()
+            notify('Saved', { type: 'success', duration: 2000 })
+        }},
     ])
     return <Box>...</Box>
 }

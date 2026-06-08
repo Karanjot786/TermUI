@@ -74,13 +74,10 @@ function Dashboard() {
     const { notify, dismiss } = useNotifications()
 
     useKeymap([
-        {
-            key: 's',
-            action: async () => {
-                await save()
-                notify('Saved', { type: 'success', duration: 2000 })
-            },
-        },
+        { key: 's', action: async () => {
+            await save()
+            notify('Saved', { type: 'success', duration: 2000 })
+        }},
     ])
     return <Box>...</Box>
 }

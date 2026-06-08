@@ -62,13 +62,10 @@ function ThemeSwitcher() {
     const { theme, setTheme, availableThemes } = useTheme()
 
     useKeymap([
-        {
-            key: 't',
-            action: () => {
-                const idx = availableThemes.indexOf(theme)
-                setTheme(availableThemes[(idx + 1) % availableThemes.length])
-            },
-        },
+        { key: 't', action: () => {
+            const idx = availableThemes.indexOf(theme)
+            setTheme(availableThemes[(idx + 1) % availableThemes.length])
+        }},
     ])
 
     return <Text>Theme: {theme}</Text>

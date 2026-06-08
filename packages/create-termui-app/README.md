@@ -71,7 +71,7 @@ function App() {
 
     useKeymap([
         { key: 'c', ctrl: true, action: () => process.exit(0) },
-        { key: 'r',            action: () => notify('Refreshed', { type: 'success' }) },
+        { key: 'r', action: () => notify('Refreshed', { type: 'success' }) },
     ])
 
     const cpu = useCpu(1000)

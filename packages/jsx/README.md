@@ -66,7 +66,7 @@ render(<App />)
 
 ## useKeymap
 
-Declare key bindings as a map. More readable than chained if-statements. All bindings from multiple `useKeymap` calls in the same component are additive.
+Declare key bindings as an array of objects. More readable than chained if-statements. All bindings from multiple `useKeymap` calls in the same component are additive.
 
 ```tsx
 import { useKeymap } from '@termuijs/jsx'
@@ -74,14 +74,14 @@ import { useKeymap } from '@termuijs/jsx'
 function App() {
     useKeymap([
         { key: 'c', ctrl: true, action: () => process.exit(0) },
-        { key: 'q',            action: () => goBack() },
-        { key: '/',            action: () => openSearch() },
+        { key: 'q', action: () => goBack() },
+        { key: '/', action: () => openSearch() },
         { key: 's', ctrl: true, action: () => save() },
     ])
 
     // Bindings with modifier access
     useKeymap([
-        { key: 'k', ctrl: true, action: (e) => console.log('ctrl+k pressed', e) },
+        { key: 'k', ctrl: true, action: () => console.log('ctrl+k pressed') },
     ])
 
     return <Box>...</Box>
