@@ -114,13 +114,7 @@ export interface StoreOptions<T> {
 }
 
 export const logger: Middleware<any> = (prevState, update, next) => {
-    const nextState = next(update);
-    console.log('Previous State:', prevState);
-    console.log('Next State:', nextState);
-    // Pass-through middleware — console.log is forbidden in TermUI source files.
-    // This middleware is intentionally a no-op forwarder; consumers who need
-    // logging should attach their own subscribe() listener.
-    next(update);
+    return next(update);
 };
 
 export interface Computed<U> {
