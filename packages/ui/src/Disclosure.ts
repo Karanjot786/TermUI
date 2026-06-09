@@ -1,5 +1,13 @@
+import { 
+    type Screen, 
+    type KeyEvent, 
+    type Style, 
+    caps, 
+    mergeStyles, 
+    defaultStyle, 
+    styleToCellAttrs 
+} from '@termuijs/core';
 import { Widget } from '@termuijs/widgets';
-import { type Screen, type KeyEvent, type Style, caps } from '@termuijs/core';
 
 export interface DisclosureOptions {
     summary: string;
@@ -12,6 +20,7 @@ export class Disclosure extends Widget {
     private summary: string;
     private onToggleCallback?: (open: boolean) => void;
     private content: Widget;
+    private _customStyle: Style;
 
     constructor(content: Widget, options: DisclosureOptions, style?: Partial<Style>) {
         super();
@@ -21,6 +30,7 @@ export class Disclosure extends Widget {
         this._isOpen = options.defaultOpen ?? false;
         this.onToggleCallback = options.onToggle;
         
+        this._customStyle = mergeStyles(defaultStyle(), style ?? {}) as Style;
         
         this.focusable = true;
     }
@@ -59,7 +69,6 @@ export class Disclosure extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        
         const marker = caps.unicode 
             ? (this._isOpen ? '▼' : '▶') 
             : (this._isOpen ? 'v' : '>');
@@ -69,7 +78,6 @@ export class Disclosure extends Widget {
         const startX = this.rect?.x ?? 0;
         const startY = this.rect?.y ?? 0;
         
-       
         const screenWidth = (screen as any).width ?? (screen as any).rect?.width ?? 0;
         const screenHeight = (screen as any).height ?? (screen as any).rect?.height ?? 0;
         
@@ -77,11 +85,13 @@ export class Disclosure extends Widget {
 
         for (let i = 0; i < headerText.length && i < width; i++) {
             if (screen.back && screen.back[startY] && screen.back[startY][startX + i]) {
-                screen.back[startY][startX + i].char = headerText[i];
+                const cell = screen.back[startY][startX + i] as any;
+                cell.char = headerText[i];
+                
+                cell['attrs'] = styleToCellAttrs(this._customStyle);
             }
         }
 
-        
         if (this._isOpen && this.content) {
             const childRect = {
                 x: startX,
