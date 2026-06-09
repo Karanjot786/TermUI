@@ -54,16 +54,22 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
  * - gap between children
  */
 export function computeLayout(root: LayoutNode, containerWidth: number, containerHeight: number): void {
-    const sizeChanged = root.computed.width !== containerWidth || root.computed.height !== containerHeight;
-    if (!sizeChanged && !root._dirty && !hasDirtyChild(root)) {
+    if (!root._dirty && !hasDirtyChild(root)) {
         return;
     }
-    root.computed = { x: 0, y: 0, width: containerWidth, height: containerHeight };
+
+    root.computed = {
+        x: 0,
+        y: 0,
+        width: containerWidth,
+        height: containerHeight,
+    };
+
     layoutNode(root, containerWidth, containerHeight);
+
     root.computed.width = containerWidth;
     root.computed.height = containerHeight;
 }
-
 export function invalidateLayout(node: LayoutNode): void {
     node._dirty = true;
     for (const child of node.children) {
