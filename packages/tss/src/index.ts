@@ -39,3 +39,4 @@ export { AutoThemeProvider, ThemeContext, useTheme } from './AutoThemeProvider.j
 export type { AutoThemeProviderProps } from './AutoThemeProvider.js';
 export * from './media.js';
 export * from './importer.js';
+export { lighten, darken, alpha, evalColorFunction } from './color-functions.js';
