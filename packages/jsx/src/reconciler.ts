@@ -443,6 +443,8 @@ function renderComponent(
         const error = err instanceof Error ? err : new Error(String(err));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
+            destroyFiber(fiber);
+            _parentFiber = boundary;
             const fallbackVNode = boundary.errorFallback(error);
             return reconcile(fallbackVNode);
         }
@@ -546,6 +548,10 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         const err = rawErr instanceof Error ? rawErr : new Error(String(rawErr));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
+            destroyFiber(fiber);
+            _pruneInstancesForWidget(instance.widget);
+            invalidateLayout(instance.widget.getLayoutNode());
+            _parentFiber = boundary;
             return reconcile(boundary.errorFallback(err));
         }
         console.error('[TermUI] Unhandled component error:', err);
