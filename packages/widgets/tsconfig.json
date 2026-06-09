@@ -1,16 +1,18 @@
 {
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "jsx": "react-jsx",
-    "jsxImportSource": "@termuijs/jsx",
-    "baseUrl": ".",
-    "paths": {
-      "@termuijs/jsx": ["../jsx/src/index.ts"],
-      "@termuijs/jsx/*": ["../jsx/src/*"]
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "jsxImportSource": "@termuijs/jsx",
+        "outDir": "dist",
+        "rootDir": "src"
     },
-    "rootDir": "src",
-    "outDir": "dist"
-  },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "dist"]
+    "include": [
+        "src/**/*.ts",
+        "src/**/*.tsx"
+    ],
+    "exclude": [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "dist"
+    ]
 }
