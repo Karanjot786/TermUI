@@ -36,7 +36,7 @@ interface VisibleEntry {
  *
  * Supports:
  * - Expand/collapse of parent nodes
- * - Keyboard navigation (ArrowUp/Down/Left/Right, j/k/h/l, Home/End)
+ * - Keyboard navigation (up/down/left/right, j/k/h/l, home/end)
  * - Enter/Space to toggle or select
  * - onSelect callback for leaf nodes
  * - Unicode and ASCII fallback symbols
@@ -169,31 +169,37 @@ export class Tree extends Widget {
      * when this widget is focused.
      */
     handleKey(key: string): void {
-        switch (key) {
-            case 'ArrowUp':
+        const normalized = key.toLowerCase();
+        switch (normalized) {
+            case 'arrowup':
+            case 'up':
             case 'k':
                 this.movePrev();
                 break;
-            case 'ArrowDown':
+            case 'arrowdown':
+            case 'down':
             case 'j':
                 this.moveNext();
                 break;
-            case 'Enter':
+            case 'enter':
             case ' ':
+            case 'space':
                 this.toggle();
                 break;
-            case 'ArrowLeft':
+            case 'arrowleft':
+            case 'left':
             case 'h':
                 this.collapse();
                 break;
-            case 'ArrowRight':
+            case 'arrowright':
+            case 'right':
             case 'l':
                 this.expand();
                 break;
-            case 'Home':
+            case 'home':
                 this.moveFirst();
                 break;
-            case 'End':
+            case 'end':
                 this.moveLast();
                 break;
         }

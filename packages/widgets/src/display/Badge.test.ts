@@ -2,19 +2,20 @@
 // @termuijs/widgets — Tests for Badge widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
-import { Badge } from './Badge.js';
+import { describe, it, expect, vi } from 'vitest';
+import { Badge, type BadgeOptions } from './Badge.js';
 import { Screen, caps } from '@termuijs/core';
+import type { Style } from '@termuijs/core';
 
 /** Helper: create widget, set rect, render to a screen, return both. */
 function renderBadge(
     text: string,
-    opts: ConstructorParameters<typeof Badge>[1] = {},
-    style: ConstructorParameters<typeof Badge>[2] = {},
+    style: Partial<Style> = {},
+    opts: BadgeOptions = {},
     width = 20,
     height = 3,
 ) {
-    const badge = new Badge(text, opts, style);
+    const badge = new Badge(text, style, opts);
     const screen = new Screen(width, height);
     badge.updateRect({ x: 0, y: 0, width, height });
     badge.render(screen);
@@ -49,29 +50,29 @@ describe('Badge', () => {
 
     // ── 2. Variant colors ────────────────────────────────────────────────
     it('applies cyan background for info variant', () => {
-        const { screen } = renderBadge('info', { variant: 'info' });
+        const { screen } = renderBadge('info', {}, { variant: 'info' });
         // Content cell (row 1, col 1 = first char of padded text " info ")
         // The space char at col 1 should have the cyan background
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'cyan' });
     });
 
     it('applies green background for success variant', () => {
-        const { screen } = renderBadge('ok', { variant: 'success' });
+        const { screen } = renderBadge('ok', {}, { variant: 'success' });
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'green' });
     });
 
     it('applies yellow background for warning variant', () => {
-        const { screen } = renderBadge('warn', { variant: 'warning' });
+        const { screen } = renderBadge('warn', {}, { variant: 'warning' });
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'yellow' });
     });
 
     it('applies red background for error variant', () => {
-        const { screen } = renderBadge('err', { variant: 'error' });
+        const { screen } = renderBadge('err', {}, { variant: 'error' });
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'red' });
     });
 
     it('applies white background for neutral variant', () => {
-        const { screen } = renderBadge('ok', { variant: 'neutral' });
+        const { screen } = renderBadge('ok', {}, { variant: 'neutral' });
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'white' });
     });
 
@@ -117,5 +118,46 @@ describe('Badge', () => {
 
     it('handles zero-size rect without error', () => {
         expect(() => renderBadge('test', {}, {}, 0, 0)).not.toThrow();
+    });
+
+    // ── 6. Constructor overloads ──────────────────────────────────────────
+    it('deprecated signature Badge(text, opts) produces console.warn', () => {
+        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            new Badge('dep', { variant: 'info' });
+            expect(spy).toHaveBeenCalledWith(
+                'Badge(text, opts, style) is deprecated. Use Badge(text, style, opts) instead.',
+            );
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('canonical signature Badge(text, style, opts) does not produce console.warn', () => {
+        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            new Badge('canon', {}, { variant: 'info' });
+            expect(spy).not.toHaveBeenCalled();
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('deprecated and canonical signatures produce equivalent output', () => {
+        const { screen: screen1 } = renderBadge('same', {}, { variant: 'error' });
+        // Construct with deprecated overload (opts as second arg)
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        try {
+            const badge2 = new Badge('same', { variant: 'error' });
+            const screen2 = new Screen(20, 3);
+            badge2.updateRect({ x: 0, y: 0, width: 20, height: 3 });
+            badge2.render(screen2);
+            // First row should match
+            expect(screen2.back[0][0].char).toBe(screen1.back[0][0].char);
+            expect(screen2.back[1][2].char).toBe(screen1.back[1][2].char);
+            expect(warnSpy).toHaveBeenCalled();
+        } finally {
+            warnSpy.mockRestore();
+        }
     });
 });

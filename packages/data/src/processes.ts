@@ -2,7 +2,7 @@
 // @termuijs/data — Process listing via shell commands
 // ─────────────────────────────────────────────────────
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 export interface ProcessInfo {
     pid: number;
@@ -18,11 +18,13 @@ const PROCESS_CACHE_MS = 2000;
 
 function parsePs(): ProcessInfo[] {
     try {
-        // Works on macOS and Linux
-        const output = execSync(
-            'ps aux --sort=-%cpu 2>/dev/null || ps aux -r 2>/dev/null',
-            { encoding: 'utf-8', timeout: 3000 },
-        );
+        // Linux supports --sort=-%cpu; macOS does not — fall back to -r (sort by CPU)
+        let output: string;
+        try {
+            output = execFileSync('ps', ['aux', '--sort=-%cpu'], { encoding: 'utf-8', timeout: 3000 });
+        } catch {
+            output = execFileSync('ps', ['aux', '-r'], { encoding: 'utf-8', timeout: 3000 });
+        }
         const lines = output.trim().split('\n').slice(1); // skip header
 
         return lines.slice(0, 50).map(line => {

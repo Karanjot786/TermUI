@@ -93,6 +93,7 @@ describe('Renderer profiling hooks', () => {
             isTTY: true,
             write(s: string) { this.writes += s; },
             on() {},
+            once() {},
             off() {},
         };
         const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };

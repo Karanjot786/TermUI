@@ -19,6 +19,10 @@ export class Box extends Widget {
     constructor(style: Partial<Style> = {}) {
         super(style);
     }
+    /** Check if this Box has no children */
+    isEmpty(): boolean {
+        return this._children.length === 0;
+    }
 
     protected _renderSelf(screen: Screen): void {
         const { bg } = styleToCellAttrs(this._style);

@@ -66,4 +66,23 @@ describe('Marquee', () => {
             expect(line.trim()).not.toBe('');
         }
     });
+
+        it('setText marks widget dirty', () => {
+        const mq = new Marquee('Hello');
+
+        mq.clearDirty();
+        mq.setText('World');
+
+        expect(mq.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when text is unchanged', () => {
+        const mq = new Marquee('Hello');
+
+        mq.clearDirty();
+        mq.setText('Hello');
+
+        expect(mq.isDirty).toBe(false);
+    });
+    
 });

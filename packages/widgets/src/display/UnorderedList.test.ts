@@ -101,11 +101,10 @@ describe('UnorderedList', () => {
 
         list.clearDirty();
         list.setItems([{ text: 'New item' }]);
+        expect(list.isDirty).toBe(true);
 
         const nextScreen = new Screen(40, 10);
         list.render(nextScreen);
-
-        expect(list.isDirty).toBe(true);
         expect(rowText(nextScreen, 0)).toContain('New item');
     });
 });

@@ -31,6 +31,38 @@ function createMockRootWidget(): RootWidget {
 }
 
 describe('App', () => {
+    describe('unmount()', () => {
+        it('mount() resolves when unmount() is called directly', async () => {
+            const root = createMockRootWidget();
+            const fakeStdout: any = { // minimal stdout stub — full NodeJS.WriteStream type not required here
+                writes: '',
+                columns: 80,
+                rows: 24,
+                isTTY: true,
+                write(s: string) { this.writes += s; return true; },
+                on() {}, off() {}, once() {},
+            };
+            const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} }; // minimal stdin stub — full NodeJS.ReadStream type not required here
+
+            const app = new App(root, {
+                forceFallback: false,
+                skipFallback: true,
+                screenMode: 'main',
+                stdout: fakeStdout,
+                stdin: fakeStdin,
+            } as AppOptions); // cast needed — not all internal AppOptions fields are publicly exposed
+
+            const mountPromise = app.mount();
+
+            await new Promise((r) => setTimeout(r, 10));
+
+            app.unmount();
+
+            const code = await mountPromise;
+            expect(code).toBe(0);
+        });
+    });
+
     describe('exit()', () => {
         it('does NOT call process.exit when called before mount()', () => {
             const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
@@ -100,8 +132,8 @@ describe('App', () => {
                 columns: 80,
                 rows: 24,
                 isTTY: true,
-                write(s: string) { this.writes += s; },
-                on() {}, off() {},
+                write(s: string) { this.writes += s; return true; },
+                on() {}, off() {}, once() {},
             };
             const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
 
@@ -123,8 +155,8 @@ describe('App', () => {
                 columns: 80,
                 rows: 24,
                 isTTY: true,
-                write(s: string) { this.writes += s; },
-                on() {}, off() {},
+                write(s: string) { this.writes += s; return true; },
+                on() {}, off() {}, once() {},
             };
             const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
 
@@ -144,8 +176,8 @@ describe('App', () => {
                 columns: 5,
                 rows: 4,
                 isTTY: true,
-                write(s: string) { this.writes += s; },
-                on() {}, off() {},
+                write(s: string) { this.writes += s; return true; },
+                on() {}, off() {}, once() {},
             };
             const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
 
@@ -168,14 +200,15 @@ describe('App', () => {
 
             app.requestRender();
 
+            // requestRender defers via setImmediate — flush before asserting
+            await new Promise(r => setImmediate(r));
+
             // HEADER LINE plus rows should be present
             expect(fakeStdout.writes).toContain('HEADER LINE');
 
             // Verify back buffer was written
-            // @ts-ignore
-            expect((app as any).screen.back[2][0].char).toBe('X');
-            // @ts-ignore
-            expect((app as any).screen.back[3][0].char).toBe('Y');
+            expect(app.screen.back[2][0].char).toBe('X');
+            expect(app.screen.back[3][0].char).toBe('Y');
 
             // Inline output verified via back buffer above; scrollback write is implementation detail
 

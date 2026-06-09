@@ -5,7 +5,7 @@
 import type { Terminal } from './Terminal.js';
 import { type Cell, cellsEqual, type Screen } from './Screen.js';
 import { type ColorDepth, colorToAnsiFg, colorToAnsiBg } from '../style/Color.js';
-import { moveTo, beginSyncUpdate, endSyncUpdate, reset as ansiReset } from '../utils/ansi.js';
+import { moveTo, beginSyncUpdate, endSyncUpdate, reset as ansiReset, stripAnsiControl } from '../utils/ansi.js';
 import { RenderHook } from '../renderer/render-hook.js';
 
 /**
@@ -120,14 +120,34 @@ export class Renderer {
             this._screen.invalidate();
         }
 
-        const { front, back, cols, rows } = this._screen;
-        let output = beginSyncUpdate;
-        let lastRow = -1;
-        let lastCol = -1;
+        try {
+            const { front, back, cols, rows } = this._screen;
+            let output = beginSyncUpdate;
 
-        if (this._diffRenderer) {
+            if (this._diffRenderer) {
+                this._lastStyleFingerprint = null;
+                for (let r = 0; r < rows; r++) {
+                    output += this._renderDiffLine(r, front, back, cols);
+                }
+
+                output += ansiReset;
+                output += endSyncUpdate;
+
+                const isHookActive = this.hook.isActive;
+                if (isHookActive) this.hook.stop();
+                if (bufferedLogs) this._terminal.write(bufferedLogs);
+                this._terminal.write(output);
+                if (isHookActive) this.hook.start();
+
+                this._screen.saveLines();
+                this._emitStats(start, bufferedLogs, output);
+                this._screen.swap();
+                return;
+            }
+
             for (let r = 0; r < rows; r++) {
-                if (this._screen.getLine(r) === this._screen.getPreviousLine(r)) continue;
+                if (this._screen.getLine(r) === this._screen.getPreviousLine(r)
+                    && this._screen.getStyleLine(r) === this._screen.getPreviousStyleLine(r)) continue;
                 output += moveTo(0, r);
                 output += this._renderLine(r);
             }
@@ -135,90 +155,121 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
+            // 2. Pause the hook temporarily so our own UI rendering doesn't get buffered
             const isHookActive = this.hook.isActive;
-            if (isHookActive) this.hook.stop();
-            if (bufferedLogs) this._terminal.write(bufferedLogs);
-            this._terminal.write(output);
-            if (isHookActive) this.hook.start();
+            if (isHookActive) {
+                this.hook.stop();
+            }
 
-            this._screen.saveLines();
+            // 3. Print the captured logs FIRST (above the UI)
+            if (bufferedLogs) {
+                this._terminal.write(bufferedLogs);
+            }
+
+            // 4. Print the actual UI diff natively
+            this._terminal.write(output);
+
+            // 5. Resume catching external logs
+            if (isHookActive) {
+                this.hook.start();
+            }
+
             this._emitStats(start, bufferedLogs, output);
             this._screen.swap();
-            return;
+        } catch (err) {
+            console.error('[TermUI] Renderer flush error:', err);
         }
+    }
 
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const frontCell = front[r][c];
-                const backCell = back[r][c];
+    /** Style fingerprint of the last rendered cell (to suppress redundant ANSI reset/apply). */
+    private _lastStyleFingerprint: string | null = null;
 
-                if (cellsEqual(frontCell, backCell)) continue;
-
-                // Skip continuation cells (second half of wide chars)
-                if (backCell.width === 0) continue;
-
-                // Move cursor only if not already at the right position
-                if (r !== lastRow || c !== lastCol) {
-                    output += moveTo(c, r);
-                }
-
-                output += this._renderCell(backCell);
-                lastRow = r;
-                lastCol = c + (backCell.width === 2 ? 2 : 1);
-            }
+    /** Build a stable style fingerprint string for a cell (avoids allocation-heavy object comparison). */
+    private _styleFingerprint(cell: Cell): string {
+        const fg = cell.fg;
+        const bg = cell.bg;
+        let fgKey: string;
+        switch (fg.type) {
+            case 'none': fgKey = 'n'; break;
+            case 'named': fgKey = `N:${fg.name}`; break;
+            case 'ansi256': fgKey = `A:${fg.code}`; break;
+            case 'rgb': fgKey = `R:${fg.r},${fg.g},${fg.b}`; break;
+            case 'hex': fgKey = `H:${fg.hex}`; break;
+            default: fgKey = 'n';
         }
-
-        output += ansiReset;
-        output += endSyncUpdate;
-
-        // 2. Pause the hook temporarily so our own UI rendering doesn't get buffered
-        const isHookActive = this.hook.isActive;
-        if (isHookActive) {
-            this.hook.stop();
+        let bgKey: string;
+        switch (bg.type) {
+            case 'none': bgKey = 'n'; break;
+            case 'named': bgKey = `N:${bg.name}`; break;
+            case 'ansi256': bgKey = `A:${bg.code}`; break;
+            case 'rgb': bgKey = `R:${bg.r},${bg.g},${bg.b}`; break;
+            case 'hex': bgKey = `H:${bg.hex}`; break;
+            default: bgKey = 'n';
         }
-
-        // 3. Print the captured logs FIRST (above the UI)
-        if (bufferedLogs) {
-            this._terminal.write(bufferedLogs);
-        }
-
-        // 4. Print the actual UI diff natively
-        this._terminal.write(output);
-
-        // 5. Resume catching external logs
-        if (isHookActive) {
-            this.hook.start();
-        }
-
-        this._emitStats(start, bufferedLogs, output);
-        this._screen.swap();
+        return `${cell.bold ? 'B' : ''}${cell.dim ? 'D' : ''}${cell.italic ? 'I' : ''}${cell.underline ? 'U' : ''}${cell.strikethrough ? 'S' : ''}${cell.inverse ? 'V' : ''}|${fgKey}|${bgKey}`;
     }
 
     /**
      * Generate the ANSI escape sequence to render a single cell.
+     * Skips ansiReset + re-apply when the adjacent cell has identical style.
      */
     private _renderCell(cell: Cell): string {
         let seq = '';
+        const fp = this._styleFingerprint(cell);
 
-        // Reset before applying new attributes
-        seq += ansiReset;
+        if (fp !== this._lastStyleFingerprint) {
+            seq += ansiReset;
+            if (cell.bold) seq += '\x1b[1m';
+            if (cell.dim) seq += '\x1b[2m';
+            if (cell.italic) seq += '\x1b[3m';
+            if (cell.underline) seq += '\x1b[4m';
+            if (cell.strikethrough) seq += '\x1b[9m';
+            if (cell.inverse) seq += '\x1b[7m';
+            seq += colorToAnsiFg(cell.fg, this._colorDepth);
+            seq += colorToAnsiBg(cell.bg, this._colorDepth);
+            this._lastStyleFingerprint = fp;
+        }
 
-        // Apply text decorations
-        if (cell.bold) seq += '\x1b[1m';
-        if (cell.dim) seq += '\x1b[2m';
-        if (cell.italic) seq += '\x1b[3m';
-        if (cell.underline) seq += '\x1b[4m';
-        if (cell.strikethrough) seq += '\x1b[9m';
-        if (cell.inverse) seq += '\x1b[7m';
-
-        // Apply colors
-        seq += colorToAnsiFg(cell.fg, this._colorDepth);
-        seq += colorToAnsiBg(cell.bg, this._colorDepth);
-
-        // Write the character
-        seq += cell.char || ' ';
-
+        // Write the character (sanitized to prevent escape injection)
+        seq += stripAnsiControl(cell.char) || ' ';
         return seq;
+    }
+
+    /**
+     * Render only the changed spans within a single row (cell-level granularity).
+     * Uses moveTo to position the cursor at the start of each changed span.
+     */
+    private _renderDiffLine(row: number, front: Cell[][], back: Cell[][], cols: number): string {
+        let output = '';
+        let spanStart = -1;
+
+        for (let c = 0; c < cols; c++) {
+            const changed = !cellsEqual(front[row][c], back[row][c]);
+            if (changed && spanStart === -1) {
+                spanStart = c; // start a new changed span
+            } else if (!changed && spanStart !== -1) {
+                // flush the span
+                output += moveTo(spanStart, row);
+                for (let sc = spanStart; sc < c; sc++) {
+                    const cell = back[row][sc];
+                    if (cell.width === 0) continue;
+                    output += this._renderCell(cell);
+                }
+                spanStart = -1;
+            }
+        }
+
+        // flush trailing span
+        if (spanStart !== -1) {
+            output += moveTo(spanStart, row);
+            for (let sc = spanStart; sc < cols; sc++) {
+                const cell = back[row][sc];
+                if (cell.width === 0) continue;
+                output += this._renderCell(cell);
+            }
+        }
+
+        return output;
     }
 
     private _renderLine(row: number): string {

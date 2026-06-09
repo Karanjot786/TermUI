@@ -10,6 +10,9 @@ export { Fragment } from './vnode.js';
 export type { VNode, VElement, VFragment, FC, IntrinsicProps } from './vnode.js';
 export { isVElement, isVFragment, flattenChildren } from './vnode.js';
 
+// ── Portal ──
+export { createPortal } from './createPortal.js';
+
 // ── Hooks ──
 export {
     useState,
@@ -27,6 +30,7 @@ export {
     useInsertBefore,
     useReducer,
 } from './hooks.js';
+export { useMediaQuery } from './hooks/useMediaQuery.js';
 export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 export { useCounter } from './hooks/useCounter.js';
@@ -86,12 +90,14 @@ export { getCurrentApp } from './runtime.js';
 export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
 
 // ── Internal — used by @termuijs/testing ──
-export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber } from './hooks.js';
+export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber, resetHooksGlobals, registerCleanup } from './hooks.js';
 
 // ── Convenience alias ──
 /** h() — shorthand for createElement */
 export { createElement as h } from './createElement.js';
+export { useMount } from './hooks/useMount.js';
 export { usePrevious } from './hooks/usePrevious.js';
+export { useLatest } from './hooks/useLatest.js';
 export { useFirstRender } from './hooks/useFirstRender.js';
 export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
 export { useHover } from './hooks/useHover.js';
@@ -101,4 +107,7 @@ export { useDebounce } from './hooks/useDebounce.js';
 export { useTerminalSize } from './hooks/useTerminalSize.js';
 export type { TerminalSize } from './hooks/useTerminalSize.js';
 export { useIsMounted } from './hooks/useIsMounted.js';
+export { useUnmount } from './hooks/useUnmount.js';
 export { useTransition } from './hooks/useTransition.js';
+export { useStopwatch } from './hooks/useStopwatch.js';
+export type { UseStopwatchOptions, UseStopwatchControls } from './hooks/useStopwatch.js';

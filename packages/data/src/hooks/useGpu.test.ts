@@ -35,7 +35,7 @@ vi.mock('node:os', () => ({
 }));
 
 vi.mock('node:child_process', () => ({
-    exec: vi.fn(),
+    execFile: vi.fn(),
 }));
 
 const { useGpu } = await import('./useGpu.js');
@@ -50,15 +50,13 @@ describe('useGpu', () => {
         vi.useFakeTimers();
         vi.spyOn(os, 'platform').mockReturnValue('linux');
 
-        (cp.exec as ReturnType<typeof vi.fn>).mockImplementation((cmd: string, opts: unknown, cb: unknown) => {
-            const callback = typeof opts === 'function' ? opts : cb;
-            if (typeof callback !== 'function') return;
-
-            if (cmd.includes('nvidia-smi')) {
-                callback(null, '72, 4096, 8192\n', '');
+        (cp.execFile as ReturnType<typeof vi.fn>).mockImplementation((file: string, _args: unknown, _opts: unknown, cb: unknown) => {
+            if (typeof cb !== 'function') return;
+            if (file.includes('nvidia-smi')) {
+                cb(null, '72, 4096, 8192\n', '');
                 return;
             }
-            callback(new Error('Command failed'), '', '');
+            cb(new Error('Command failed'), '', '');
         });
     });
 
@@ -109,10 +107,9 @@ describe('useGpu', () => {
 
     it('sets error when GPU metrics cannot be read', async () => {
         vi.spyOn(os, 'platform').mockReturnValue('darwin');
-        (cp.exec as ReturnType<typeof vi.fn>).mockImplementation((cmd: string, opts: unknown, cb: unknown) => {
-            const callback = typeof opts === 'function' ? opts : cb;
-            if (typeof callback === 'function') {
-                callback(new Error('nvidia-smi not found'), '', '');
+        (cp.execFile as ReturnType<typeof vi.fn>).mockImplementation((_file: string, _args: unknown, _opts: unknown, cb: unknown) => {
+            if (typeof cb === 'function') {
+                cb(new Error('nvidia-smi not found'), '', '');
             }
         });
 
