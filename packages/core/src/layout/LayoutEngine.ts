@@ -28,6 +28,10 @@ export interface LayoutNode {
     /** Last container dimensions used — separate from computed so manual computed edits don't confuse sizeChanged detection */
     _lastContainerWidth: number;
     _lastContainerHeight: number;
+    /** Last computed dimensions — used to detect size changes in non-dirty nodes
+     *  so grandchildren are re-laid out when a parent recomputes this node's rect. */
+    _lastComputedWidth: number;
+    _lastComputedHeight: number;
 }
 
 /**
@@ -42,6 +46,8 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
         _dirty: true,
         _lastContainerWidth: 0,
         _lastContainerHeight: 0,
+        _lastComputedWidth: 0,
+        _lastComputedHeight: 0,
     };
 }
 
@@ -85,7 +91,11 @@ function hasDirtyChild(node: LayoutNode): boolean {
     return false;
 }
 function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, precomputed = false): void {
-    if (!node._dirty) return;
+    if (!node._dirty &&
+        node._lastComputedWidth === node.computed.width &&
+        node._lastComputedHeight === node.computed.height) {
+        return;
+    }
 
     const style = node.style;
     const padding = normalizeEdges(style.padding);
@@ -114,6 +124,8 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
     if (node.children.length === 0) {
         node._dirty = false;
+        node._lastComputedWidth = node.computed.width;
+        node._lastComputedHeight = node.computed.height;
         return;
     }
 
@@ -170,6 +182,8 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
             visibleIndex++;
         }
         node._dirty = false;
+        node._lastComputedWidth = node.computed.width;
+        node._lastComputedHeight = node.computed.height;
         return;
     }
 
@@ -369,6 +383,8 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
     // Mark this node clean after layout is complete (used by future caching logic)
     node._dirty = false;
+    node._lastComputedWidth = node.computed.width;
+    node._lastComputedHeight = node.computed.height;
 }
 
 /**
