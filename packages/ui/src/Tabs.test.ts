@@ -40,9 +40,12 @@ describe('Tabs', () => {
 
     it('safe with no tabs', () => {
         const tabs = new Tabs([]);
-        expect(() => tabs.selectTab(0)).not.toThrow();
-        expect(() => tabs.nextTab()).not.toThrow();
-        expect(() => tabs.prevTab()).not.toThrow();
+        tabs.selectTab(0);
+        tabs.nextTab();
+        tabs.nextTab();
+        tabs.prevTab();
+        tabs.prevTab();
         expect(tabs.activeIndex).toBe(0);
+        expect(Number.isFinite(tabs.activeIndex)).toBe(true);
     });
 });
