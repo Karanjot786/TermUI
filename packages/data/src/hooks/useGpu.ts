@@ -1,14 +1,13 @@
 import { useState, useEffect } from '@termuijs/jsx';
-import { execFile } from 'node:child_process';
+import { exec } from 'node:child_process';
 import * as os from 'node:os';
 
-const execFileAsync = (
-    file: string,
-    args: string[],
+const execAsync = (
+    command: string,
     opts?: { timeout?: number },
 ): Promise<{ stdout: string; stderr: string }> => {
     return new Promise((resolve, reject) => {
-        execFile(file, args, { ...opts, encoding: 'utf-8' }, (err, stdout, stderr) => {
+        exec(command, { ...opts, encoding: 'utf-8' }, (err, stdout, stderr) => {
             if (err) reject(err);
             else resolve({ stdout: String(stdout), stderr: String(stderr) });
         });
@@ -28,9 +27,8 @@ export interface UseGpuResult {
 }
 
 async function fetchNvidiaGpu(): Promise<GpuData> {
-    const { stdout } = await execFileAsync(
-        'nvidia-smi',
-        ['--query-gpu=utilization.gpu,memory.used,memory.total', '--format=csv,noheader,nounits'],
+    const { stdout } = await execAsync(
+        'nvidia-smi --query-gpu=utilization.gpu,memory.used,memory.total --format=csv,noheader,nounits',
         { timeout: 5000 },
     );
     const line = stdout.trim().split('\n')[0];
@@ -54,9 +52,8 @@ function parseOptionalInt(value: string | undefined): number | null {
 }
 
 async function fetchLinuxAmdGpu(): Promise<GpuData> {
-    const { stdout: busy } = await execFileAsync(
-        'cat',
-        ['/sys/class/drm/card0/device/gpu_busy_percent'],
+    const { stdout: busy } = await execAsync(
+        'cat /sys/class/drm/card0/device/gpu_busy_percent',
         { timeout: 2000 },
     );
     const utilizationPercent = parseInt(busy.trim(), 10);
@@ -67,14 +64,12 @@ async function fetchLinuxAmdGpu(): Promise<GpuData> {
     let vramUsedMb: number | null = null;
     let vramTotalMb: number | null = null;
     try {
-        const { stdout: used } = await execFileAsync(
-            'cat',
-            ['/sys/class/drm/card0/device/mem_info_vram_used'],
+        const { stdout: used } = await execAsync(
+            'cat /sys/class/drm/card0/device/mem_info_vram_used',
             { timeout: 2000 },
         );
-        const { stdout: total } = await execFileAsync(
-            'cat',
-            ['/sys/class/drm/card0/device/mem_info_vram_total'],
+        const { stdout: total } = await execAsync(
+            'cat /sys/class/drm/card0/device/mem_info_vram_total',
             { timeout: 2000 },
         );
         vramUsedMb = Math.round(parseInt(used.trim(), 10) / (1024 * 1024));
