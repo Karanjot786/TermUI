@@ -55,11 +55,13 @@ export class Gradient extends Widget {
     }
 
     setText(text: string): void {
+        if (text === this._text) return;
         this._text = text;
         this.markDirty();
     }
 
     setColors(start: string, end: string): void {
+        if (start === this._startColor && end === this._endColor) return;
         this._startColor = start;
         this._endColor = end;
         this.markDirty();

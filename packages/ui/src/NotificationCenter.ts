@@ -162,10 +162,14 @@ export class NotificationCenter extends Widget {
     }
 
     protected override _renderSelf(screen: Screen): void {
-        const visible = this._current.slice(-this._maxVisible);
-        if (visible.length === 0) return;
+        if (this._maxVisible <= 0) return;
 
         const { x, y, width, height } = this._rect;
+        if (width <= 2 || height <= 1) return;
+
+        const visible = this._current.slice(-this._maxVisible).slice(-(height - 1));
+        if (visible.length === 0) return;
+
         const tw = Math.min(this._notifWidth, width - 2);
         if (tw <= 0) return;
 

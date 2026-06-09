@@ -141,6 +141,7 @@ export { SegmentedControl } from './SegmentedControl.js';
 export type { SegmentedControlOptions } from './SegmentedControl.js';
 
 export { SearchableSelect } from './SearchableSelect.js';
+export { Autocomplete, type AutocompleteOptions } from './Autocomplete.js';
 export { Toggle } from './Toggle.js';
 export type { ToggleOptions } from './Toggle.js';
 export { Switch } from './Switch.js';

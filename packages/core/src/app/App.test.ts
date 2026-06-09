@@ -39,8 +39,8 @@ describe('App', () => {
                 columns: 80,
                 rows: 24,
                 isTTY: true,
-                write(s: string) { this.writes += s; },
-                on() {}, off() {},
+                write(s: string) { this.writes += s; return true; },
+                on() {}, off() {}, once() {},
             };
             const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} }; // minimal stdin stub — full NodeJS.ReadStream type not required here
 
@@ -132,8 +132,8 @@ describe('App', () => {
                 columns: 80,
                 rows: 24,
                 isTTY: true,
-                write(s: string) { this.writes += s; },
-                on() {}, off() {},
+                write(s: string) { this.writes += s; return true; },
+                on() {}, off() {}, once() {},
             };
             const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
 
@@ -155,8 +155,8 @@ describe('App', () => {
                 columns: 80,
                 rows: 24,
                 isTTY: true,
-                write(s: string) { this.writes += s; },
-                on() {}, off() {},
+                write(s: string) { this.writes += s; return true; },
+                on() {}, off() {}, once() {},
             };
             const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
 
@@ -176,8 +176,8 @@ describe('App', () => {
                 columns: 5,
                 rows: 4,
                 isTTY: true,
-                write(s: string) { this.writes += s; },
-                on() {}, off() {},
+                write(s: string) { this.writes += s; return true; },
+                on() {}, off() {}, once() {},
             };
             const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
 
@@ -199,6 +199,9 @@ describe('App', () => {
             (root as any).isDirty = true;
 
             app.requestRender();
+
+            // requestRender defers via setImmediate — flush before asserting
+            await new Promise(r => setImmediate(r));
 
             // HEADER LINE plus rows should be present
             expect(fakeStdout.writes).toContain('HEADER LINE');

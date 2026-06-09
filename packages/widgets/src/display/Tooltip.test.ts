@@ -94,3 +94,55 @@ describe("Tooltip", () => {
         expect(tooltip.getVisible()).toBe(false);
     });
 });
+
+describe("Tooltip – mutation regression tests", () => {
+    it("does not mark dirty when text is unchanged", () => {
+        const tooltip = new Tooltip({
+            text: "help",
+            visible: true,
+        });
+
+        tooltip.clearDirty();
+        tooltip.setText("help");
+
+        expect(tooltip.isDirty).toBe(false);
+    });
+
+    it("does not mark dirty when visibility is unchanged", () => {
+        const tooltip = new Tooltip({
+            text: "help",
+            visible: true,
+        });
+
+        tooltip.clearDirty();
+        tooltip.setVisible(true);
+
+        expect(tooltip.isDirty).toBe(false);
+    });
+
+    it("marks dirty when text changes", () => {
+        const tooltip = new Tooltip({
+            text: "old",
+            visible: true,
+        });
+
+        tooltip.clearDirty();
+        tooltip.setText("new");
+
+        expect(tooltip.getText()).toBe("new");
+        expect(tooltip.isDirty).toBe(true);
+    });
+
+    it("marks dirty when visibility changes", () => {
+        const tooltip = new Tooltip({
+            text: "help",
+            visible: true,
+        });
+
+        tooltip.clearDirty();
+        tooltip.setVisible(false);
+
+        expect(tooltip.getVisible()).toBe(false);
+        expect(tooltip.isDirty).toBe(true);
+    });
+});

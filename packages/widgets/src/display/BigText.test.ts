@@ -121,3 +121,32 @@ describe('BigText', () => {
         expect(screen.back[0][1].char).toBe('█');
     });
 });
+
+describe('BigText – mutation regression tests', () => {
+    it('does not mark dirty when text is unchanged', () => {
+        const widget = new BigText('HELLO');
+
+        widget.clearDirty();
+        widget.setText('HELLO');
+
+        expect(widget.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when text differs only by case', () => {
+        const widget = new BigText('HELLO');
+
+        widget.clearDirty();
+        widget.setText('hello');
+
+        expect(widget.isDirty).toBe(false);
+    });
+
+    it('marks dirty when text changes', () => {
+        const widget = new BigText('HELLO');
+
+        widget.clearDirty();
+        widget.setText('WORLD');
+
+        expect(widget.isDirty).toBe(true);
+    });
+});

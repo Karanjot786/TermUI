@@ -13,6 +13,7 @@ export type { TSSStylesheet, TSSTheme, TSSSelector, TSSProperty, TSSValue, TSSRu
 // Theme Engine
 export { ThemeEngine, compile, compileRules } from './engine.js';
 export type { ThemeVariables, ResolvedRule } from './engine.js';
+export { evalCalc } from './calc.js';
 
 // Built-in Themes
 export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThemes } from './themes.js';

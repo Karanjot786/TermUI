@@ -46,6 +46,8 @@ export { Slider } from "./input/Slider.js";
 export type { SliderOptions } from "./input/Slider.js";
 export { RangeInput } from "./input/RangeInput.js";
 export type { RangeInputOptions } from "./input/RangeInput.js";
+export { PinInput } from "./input/PinInput.js";
+export type { PinInputOptions } from "./input/PinInput.js";
 export { Knob } from "./input/Knob.js";
 export type { KnobOptions } from "./input/Knob.js";
 
@@ -88,6 +90,8 @@ export { Dock } from './layout/Dock.js';
 export type { DockOptions, DockItem, DockEdge } from './layout/Dock.js';
 export { Divider } from './layout/Divider.js';
 export type { DividerOptions, DividerOrientation } from './layout/Divider.js';
+export { AspectRatio } from './layout/AspectRatio.js';
+export type { AspectRatioOptions } from './layout/AspectRatio.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
@@ -157,6 +161,9 @@ export type { TagOptions, TagVariant } from './display/Tag.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
 
+export { Carousel } from './display/Carousel.js';
+export type { CarouselOptions } from './display/Carousel.js';
+
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 
@@ -205,6 +212,10 @@ export type { DataGridColumn, DataGridRow, DataGridOptions, SortDirection } from
 export { PieChart } from './data/PieChart.js';
 export type { PieSlice, PieChartOptions } from './data/PieChart.js';
 
+export * from './data/BrailleCanvas.js';
+export * from './data/Sparkline.js';
+export * from './data/LineChart.js';
+
 export {
     BarColumn,
     TextColumn,
@@ -223,3 +234,4 @@ export type {
     ProgressProps,
     ProgressTask,
 } from './feedback/Progress.js';
+export * from './display/Highlight.js';

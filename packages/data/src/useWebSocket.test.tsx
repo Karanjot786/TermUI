@@ -121,4 +121,62 @@ describe('useWebSocket hook', () => {
         // The cleanup function should have fired
         expect(socket.isClosed).toBe(true)
     })
+
+    it('url change mid-connection resets retry count and uses new url', () => {
+        const { rerender } = render(<TestComponent url="wss://old.com" />)
+        activeSockets[0].onopen?.()
+        activeSockets[0].onclose?.()
+
+        // Advance past the reconnect timeout so a failed retry increments retryCount
+        vi.advanceTimersByTime(2000) // after reconnect timeout
+        expect(activeSockets.length).toBe(2)
+
+        // Now change URL — should reset retryCount and create new connection
+        rerender(<TestComponent url="wss://new.com" />)
+        // After rerender, cleanup closes old socket, then effect runs again
+        // The new effect should create a new socket
+        expect(activeSockets[2].url).toBe('wss://new.com')
+    })
+
+    it('rapid url changes do not accumulate reconnect timers', () => {
+        const { rerender } = render(<TestComponent url="wss://a.com" />)
+        // Simulate disconnect which schedules reconnect
+        activeSockets[0].onclose?.()
+        // Rerender with a new URL quickly
+        rerender(<TestComponent url="wss://b.com" />)
+        // The pending reconnect timer from old URL should be cleared
+        // Only one new socket should exist (for b.com), not two
+        const socketsForB = activeSockets.filter(s => s.url === 'wss://b.com')
+        expect(socketsForB.length).toBe(1)
+    })
+
+    it('unmount with pending reconnect clears timer and closes socket', () => {
+        const { unmount } = render(<TestComponent url="wss://test.com" />)
+        activeSockets[0].onclose?.() // triggers reconnect scheduling
+
+        // Unmount before reconnect fires
+        unmount()
+
+        // Advance past the reconnect timeout
+        vi.advanceTimersByTime(5000)
+
+        // No new socket should be created because unmount cleared the timer
+        expect(activeSockets.length).toBe(1)
+    })
+
+    it('recovers from error after a failed connection', () => {
+        render(<TestComponent url="wss://test.com" />)
+        const socket = activeSockets[0]
+
+        // Simulate connection error — error handler closes the socket
+        socket.onerror?.()
+        // Closing the socket triggers onclose which schedules the reconnect
+        socket.onclose?.()
+        // The error handler should close the socket
+        expect(socket.isClosed).toBe(true)
+
+        // Should have scheduled a reconnect
+        vi.advanceTimersByTime(1000)
+        expect(activeSockets.length).toBe(2)
+    })
 })

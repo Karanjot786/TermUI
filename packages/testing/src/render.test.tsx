@@ -303,4 +303,40 @@ describe("render harness", () => {
       expect(() => screen.queryByType(FakeWidget)).not.toThrow()
     })
   })
+
+  describe("queryAllByText", () => {
+    it("returns all matching widgets", () => {
+      const t = render(<MultiText />)
+      const results = t.queryAllByText("o")
+      expect(results.length).toBeGreaterThan(0)
+    })
+
+    it("returns empty array on miss", () => {
+      const t = render(<Hello />)
+      expect(t.queryAllByText("Missing")).toEqual([])
+    })
+
+    it("does not throw on miss", () => {
+      const t = render(<Hello />)
+      expect(() => t.queryAllByText("Missing")).not.toThrow()
+    })
+  })
+
+  describe("queryAllByType", () => {
+    it("returns all widgets of a given type", () => {
+      const t = render(<MultiText />)
+      const results = t.queryAllByType(Text)
+      expect(results.length).toBe(3)
+    })
+
+    it("returns empty array on miss", () => {
+      const t = render(<MultiText />)
+      expect(t.queryAllByType(FakeWidget)).toEqual([])
+    })
+
+    it("does not throw on miss", () => {
+      const t = render(<MultiText />)
+      expect(() => t.queryAllByType(FakeWidget)).not.toThrow()
+    })
+  })
 })

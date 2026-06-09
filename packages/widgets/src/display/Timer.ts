@@ -76,7 +76,14 @@ export class Timer extends Widget {
      * running countdown.
      */
     reset(): void {
+        const wasRunning = this._running;
+    
         this.stop();
+    
+        if (!wasRunning && this._remaining === this._duration) {
+            return;
+        }
+    
         this._remaining = this._duration;
         this.markDirty();
     }

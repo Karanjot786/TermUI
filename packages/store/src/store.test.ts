@@ -305,16 +305,16 @@ describe('middleware', () => {
         expect(useStore.getState().count).toBe(10)
     })
 
-    it('logger middleware receives previous and next state', () => {
+    it('logger middleware passes state through without calling console.log', () => {
         const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
         const useStore = createStore(() => ({ count: 0 }), { middleware: [logger] })
-        
+
         useStore.setState({ count: 1 })
-        
-        expect(logSpy).toHaveBeenCalledTimes(2)
-        expect(logSpy.mock.calls[0]).toEqual(['Previous State:', { count: 0 }])
-        expect(logSpy.mock.calls[1]).toEqual(['Next State:', { count: 1 }])
-        
+
+        // console.log is forbidden in TermUI source files — logger is a pass-through
+        expect(logSpy).not.toHaveBeenCalled()
+        expect(useStore.getState().count).toBe(1)
+
         logSpy.mockRestore()
     })
 })

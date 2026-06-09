@@ -140,6 +140,14 @@ export class Screen {
         this.back = this._createGrid(cols, rows);
     }
 
+    /** Retrieve a read-only copy of the cell at (x, y) from the back buffer. */
+    getCell(x: number, y: number): Readonly<Cell> | undefined {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        if (!(x >= 0 && x < this._cols && y >= 0 && y < this._rows)) return undefined;
+        return this.back[y][x];
+    }
+
     /** Serialize a back-buffer row to a plain string (skips continuation cells). */
     getLine(row: number): string {
         if (row < 0 || row >= this._rows) return '';
