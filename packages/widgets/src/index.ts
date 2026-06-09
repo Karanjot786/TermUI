@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 // ── Base ──────────────────────────────────────────────
-export { Widget } from './base/Widget.js';
+export { Widget, _resetWidgetIdCounter } from './base/Widget.js';
 export type { WidgetEvents } from './base/Widget.js';
 
 // ── Display Widgets ───────────────────────────────────
@@ -39,10 +39,25 @@ export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
 export { CommandPalette } from './input/CommandPalette.js';
 export type { Command, CommandPaletteOptions } from './input/CommandPalette.js';
+export { Button } from './input/Button.js';
+export type { ButtonOptions, ButtonVariant } from './input/Button.js';
+
+export { Slider } from "./input/Slider.js";
+export type { SliderOptions } from "./input/Slider.js";
+export { RangeInput } from "./input/RangeInput.js";
+export type { RangeInputOptions } from "./input/RangeInput.js";
+export { PinInput } from "./input/PinInput.js";
+export type { PinInputOptions } from "./input/PinInput.js";
+export { Knob } from "./input/Knob.js";
+export type { KnobOptions } from "./input/Knob.js";
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
-export type { TableColumn, TableRow, TableOptions } from './data/Table.js';
+export type { TableColumn, TableRow, TableOptions, TableProps } from './data/Table.js';
+export { useTableState } from './data/TableState.js';
+export type { TableState } from './data/TableState.js';
+export { TreeTable } from './data/TreeTable.js';
+export type { TreeTableColumn, TreeTableRow, TreeTableOptions } from './data/TreeTable.js';
 export { Gauge } from './data/Gauge.js';
 export type { GaugeOptions } from './data/Gauge.js';
 export { LineGauge } from './data/LineGauge.js';
@@ -55,6 +70,8 @@ export { StatusIndicator } from './data/StatusIndicator.js';
 export type { StatusIndicatorOptions } from './data/StatusIndicator.js';
 export { BarChart } from './data/BarChart.js';
 export type { Bar, BarGroup, BarChartDirection, BarChartOptions } from './data/BarChart.js';
+export { GanttChart } from './data/GanttChart.js';
+export type { GanttChartOptions, GanttTask } from './data/GanttChart.js';
 
 // ── Layout Widgets ────────────────────────────────────
 export { Grid } from './layout/Grid.js';
@@ -65,8 +82,14 @@ export { Center } from './layout/Center.js';
 export type { CenterOptions } from './layout/Center.js';
 export { Card } from './layout/Card.js';
 export type { CardOptions } from './layout/Card.js';
+export { Masonry } from './layout/Masonry.js';
+export type { MasonryOptions } from './layout/Masonry.js';
 export { Columns } from './layout/Columns.js';
 export type { ColumnsOptions } from './layout/Columns.js';
+export { Dock } from './layout/Dock.js';
+export type { DockOptions, DockItem, DockEdge } from './layout/Dock.js';
+export { Divider } from './layout/Divider.js';
+export type { DividerOptions, DividerOrientation } from './layout/Divider.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
@@ -75,6 +98,8 @@ export { MultiProgress } from './feedback/MultiProgress.js';
 export type { ProgressItem, MultiProgressOptions } from './feedback/MultiProgress.js';
 export { Spinner, SPINNER_FRAMES } from './feedback/Spinner.js';
 export type { SpinnerOptions } from './feedback/Spinner.js';
+export { LoadingDots } from './feedback/LoadingDots.js';
+export type { LoadingDotsOptions } from './feedback/LoadingDots.js';
 export { TaskList } from './feedback/TaskList.js';
 export type { TaskItem, TaskStatus, TaskListOptions } from './feedback/TaskList.js';
 export { Scrollbar } from './feedback/Scrollbar.js';
@@ -85,8 +110,12 @@ export { StatusMessage } from './feedback/StatusMessage.js';
 export type { StatusMessageOptions, StatusVariant } from './feedback/StatusMessage.js';
 export { Banner } from './feedback/Banner.js';
 export type { BannerOptions } from './feedback/Banner.js';
+export { Alert } from './feedback/Alert.js';
+export type { AlertOptions } from './feedback/Alert.js';
+
 export { EmptyState } from './feedback/EmptyState.js';
 export type { EmptyStateOptions } from './feedback/EmptyState.js';
+
 export { Callout } from './feedback/Callout.js';
 export type { CalloutVariant, CalloutOptions } from './feedback/Callout.js';
 
@@ -103,8 +132,15 @@ export { HeatMap } from './data/HeatMap.js';
 export type { HeatMapOptions } from './data/HeatMap.js';
 export { Definition } from './data/Definition.js';
 export type { DefinitionPair, DefinitionOptions } from './data/Definition.js';
+export { Hexdump } from './data/Hexdump.js';
+export type { HexdumpOptions } from './data/Hexdump.js';
+export { BulletChart } from './data/BulletChart.js';
+export type { BulletChartOptions, BulletRange } from './data/BulletChart.js';
 
 // ── New Display Widgets ───────────────────────────────
+export { Breadcrumbs } from './display/Breadcrumbs.js';
+export type { BreadcrumbsOptions } from './display/Breadcrumbs.js';
+
 export { BigText } from './display/BigText.js';
 export type { BigTextOptions } from './display/BigText.js';
 export { Gradient } from './display/Gradient.js';
@@ -123,12 +159,22 @@ export type { TagOptions, TagVariant } from './display/Tag.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
 
+export { Carousel } from './display/Carousel.js';
+export type { CarouselOptions } from './display/Carousel.js';
+
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 
 export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
+
+export { Link } from './display/Link.js';
+export type { LinkOptions } from './display/Link.js';
+
+export { ShortcutBar } from './display/ShortcutBar.js';
+export type { ShortcutItem, ShortcutBarOptions } from './display/ShortcutBar.js';
+
 
 // ── Missing layout elements restored ──
 export { QRCodePattern, QRCode } from './display/QRCode.js';
@@ -150,10 +196,36 @@ export { Stopwatch } from './display/Stopwatch.js';
 export type { StopwatchOptions } from './display/Stopwatch.js';
 export { OrderedList } from './display/OrderedList.js';
 export type { OrderedListItem, OrderedListOptions } from './display/OrderedList.js';
-
 export { Typewriter } from './display/Typewriter.js';
 export type { TypewriterOptions } from './display/Typewriter.js';
+
 export { Timeline } from './display/Timeline.js';
 export type { TimelineItem, TimelineStatus } from './display/Timeline.js';
+
 export { Marquee } from './display/Marquee.js';
 export type { MarqueeDirection, MarqueeOptions } from './display/Marquee.js';
+export { DataGrid } from './data/DataGrid.js';
+export { DataGrid as DataGridView } from './data/DataGrid.js';
+export type { DataGridColumn, DataGridRow, DataGridOptions, SortDirection } from './data/DataGrid.js';
+export { PieChart } from './data/PieChart.js';
+export type { PieSlice, PieChartOptions } from './data/PieChart.js';
+
+export {
+    BarColumn,
+    TextColumn,
+    TimeColumn,
+    SpeedColumn,
+    PercentageColumn,
+} from './feedback/ProgressColumn.js';
+
+export type {
+    ProgressColumnDefinition,
+    ProgressColumnProps,
+} from './feedback/ProgressColumn.js';
+export { Progress } from './feedback/Progress.js';
+
+export type {
+    ProgressProps,
+    ProgressTask,
+} from './feedback/Progress.js';
+export * from './display/Highlight.js';

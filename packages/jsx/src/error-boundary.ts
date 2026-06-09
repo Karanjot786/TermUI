@@ -4,10 +4,13 @@
 // A marker component that the reconciler uses to
 // catch render errors in descendant components and
 // render a fallback UI instead of crashing.
+// Also catches widget render-layer errors through
+// the _renderError tracking on widgets.
 // ─────────────────────────────────────────────────────
 
 import type { VNode, FC } from './vnode.js';
 import { Fragment } from './vnode.js';
+import { Widget } from '@termuijs/widgets';
 
 export interface ErrorBoundaryProps {
     fallback?: (error: Error) => VNode;
@@ -29,3 +32,19 @@ export const ErrorBoundary: FC<ErrorBoundaryProps> = (props) => {
     // Wrap multiple children in a Fragment so the reconciler handles them correctly
     return { type: Fragment, children } as any;
 };
+
+/**
+ * Check if a widget (or any descendant) has a render error.
+ * Used by ErrorBoundary-aware code to detect widget-layer failures.
+ */
+export function hasWidgetRenderError(widget: Widget): Error | null {
+    if ((widget as any)._renderError) {
+        return (widget as any)._renderError;
+    }
+    const children: Widget[] = (widget as any)._children ?? [];
+    for (const child of children) {
+        const err = hasWidgetRenderError(child);
+        if (err) return err;
+    }
+    return null;
+}

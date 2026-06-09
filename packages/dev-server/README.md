@@ -20,15 +20,19 @@ npx termui-dev --entry src/index.tsx
 
 ## How it works
 
-The dev server uses Node's `child_process.fork()` to run your entry file in a child process. When a source file changes:
+The dev server runs your application as a Bun child process. A `FileWatcher` monitors the configured source directories for changes to `.ts`, `.tsx`, `.js`, `.jsx`, `.tss`, and `termui.config` files.
 
-1. Send a `reload` IPC message to the child process.
-2. The child calls `unmountAll()` to clean up all active fibers.
-3. Wait up to 200ms for the child to exit cleanly.
-4. If it's still alive after 200ms, send SIGTERM.
-5. Fork a fresh child with the same entry.
+When a change is detected:
 
-This graceful reload prevents fiber leaks from incomplete unmounts.
+1. The watcher captures the file event.
+2. Rapid consecutive saves are coalesced through a short debounce window.
+3. The dev server records the reload event and sends a `reload` IPC message to the running child process.
+4. The child process gets a short grace period to perform cleanup.
+5. The current process is terminated gracefully (with a force-kill fallback if necessary).
+6. A fresh Bun child process is spawned using the same entry file.
+7. A temporary reload banner is displayed, and development continues automatically.
+
+This approach provides fast feedback while avoiding stale processes and incomplete cleanup between reloads.
 
 ## CLI flags
 
@@ -53,24 +57,70 @@ index.ts
 
 ## Environment variables
 
-The child process receives these:
-
 | Variable | Value | Purpose |
 |----------|-------|---------|
-| `TERMUI_DEV` | `"1"` | Enable dev-only logging or debug overlays |
-| `NODE_ENV` | `"development"` | Standard Node convention |
+| `TERMUI_DEV` | `"1"` | Enables development-specific behavior such as debug overlays, verbose logging, and other development helpers. |
+| `NODE_ENV` | `"development"` | Indicates that the application is running in development mode. |
 
-```typescript
+Example:
+
+```ts
 if (process.env.TERMUI_DEV === '1') {
-    // enable verbose logging, performance counters, etc.
+    // Enable development-only features
 }
 ```
+
+## Troubleshooting
+
+### Changes are not reloading
+
+- Make sure you started your app with `npm run dev` or `termui-dev`.
+- Verify that the modified files are inside the watched directories.
+- The watcher only reacts to supported source and configuration files.
+
+### The app does not restart
+
+- Save the file completely before expecting a reload.
+- Check for syntax errors that might prevent the child process from starting.
+- Restart the dev server if the watcher was interrupted unexpectedly.
+
+### Environment variables are missing
+
+The dev server automatically starts the child process with:
+
+- `TERMUI_DEV=1`
+- `NODE_ENV=development`
+
+You normally do not need to set these manually.
 
 ## Devtools inspector
 
 The dev server includes a runtime inspector that shows your widget tree, hook state, and timer pool health. Connect to it on the default port while your app runs.
 
 All new widget types are supported: Grid, Skeleton, Tree, JSONView, DiffView, CommandPalette, NotificationCenter, StreamingText, ChatMessage, and ToolCall.
+
+## Custom setup example
+
+You can customize the dev server by specifying your own entry file and debounce interval.
+
+```bash
+termui-dev --entry src/index.tsx --debounce 300
+```
+
+Example programmatic setup:
+
+```ts
+import { DevServer } from '@termuijs/dev-server';
+
+const server = new DevServer({
+    rootDir: process.cwd(),
+    entry: 'src/index.tsx',
+    watchDirs: ['src', 'themes'],
+    debounce: 300
+});
+
+server.start();
+```
 
 ## Graceful shutdown
 

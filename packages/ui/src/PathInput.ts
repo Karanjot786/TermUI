@@ -9,8 +9,8 @@
 // - Handles relative and absolute paths gracefully
 // ─────────────────────────────────────────────────────
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { Widget } from '@termuijs/widgets';
 import { type Style, type Screen, type KeyEvent, styleToCellAttrs, truncate, caps } from '@termuijs/core';
 

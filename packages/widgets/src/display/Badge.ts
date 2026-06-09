@@ -30,15 +30,33 @@ const FG_COLOR: Color = { type: 'named', name: 'black' };
  * Used for status indicators such as "online", "error", "beta".
  * Renders a bordered box with the text on a colored background.
  * Uses `caps.unicode` to choose between Unicode box-drawing and ASCII fallback.
+ *
+ * CONSTRUCTOR (canonical): (text, style?, opts?)
+ * @deprecated Badge(text, opts, style) is deprecated. Use Badge(text, style, opts) instead.
  */
 export class Badge extends Widget {
     private _text: string;
     private _variant: BadgeVariant;
 
-    constructor(text: string, opts: BadgeOptions = {}, style: Partial<Style> = {}) {
-        super(style);
-        this._text = text;
-        this._variant = opts.variant ?? 'neutral';
+    constructor(text: string, style?: Partial<Style>, opts?: BadgeOptions);
+    /** @deprecated Use Badge(text, style?, opts?) instead */
+    constructor(text: string, opts: BadgeOptions, style?: Partial<Style>);
+    constructor(text: string, styleOrOpts?: Partial<Style> | BadgeOptions, optsOrStyle?: BadgeOptions | Partial<Style>) {
+        // Detect old deprecated signature: Badge(text, opts, style)
+        if (styleOrOpts && 'variant' in styleOrOpts) {
+            console.warn('Badge(text, opts, style) is deprecated. Use Badge(text, style, opts) instead.');
+            const opts = styleOrOpts as BadgeOptions;
+            const style = optsOrStyle as Partial<Style> | undefined;
+            super(style ?? {});
+            this._text = text;
+            this._variant = opts.variant ?? 'neutral';
+        } else {
+            const style = styleOrOpts as Partial<Style> | undefined;
+            const opts = optsOrStyle as BadgeOptions | undefined;
+            super(style ?? {});
+            this._text = text;
+            this._variant = opts?.variant ?? 'neutral';
+        }
     }
 
     /** Update the badge text. */

@@ -2,7 +2,7 @@
 // @termuijs/widgets — Banner widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, getBorderChars } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, getBorderChars, normalizeEdges } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type StatusVariant } from './StatusMessage.js';
 
@@ -47,16 +47,22 @@ export class Banner extends Widget {
     }
 
     setTitle(title: string): void {
+        if (this._title === title) return;
+
         this._title = title;
         this.markDirty();
     }
 
     setBody(body: string): void {
+        if (this._body === body) return;
+
         this._body = body;
         this.markDirty();
     }
 
     setVariant(variant: StatusVariant): void {
+        if (this._variant === variant) return;
+        
         this._variant = variant;
         this.markDirty();
     }
@@ -93,11 +99,13 @@ export class Banner extends Widget {
             }
         }
 
-        // Content area (inside border + padding=1)
-        const cx = x + 2; // border(1) + padding(1)
-        const cy = y + 2;
-        const contentWidth = Math.max(0, width - 4);  // left/right border+padding
-        const contentHeight = Math.max(0, height - 4); // top/bottom border+padding
+        // Content area (inside border + padding)
+        const padding = normalizeEdges(this._style.padding);
+        const borderWidth = borderChars ? 1 : 0;
+        const cx = x + borderWidth + padding.left;
+        const cy = y + borderWidth + padding.top;
+        const contentWidth = Math.max(0, width - borderWidth * 2 - padding.left - padding.right);
+        const contentHeight = Math.max(0, height - borderWidth * 2 - padding.top - padding.bottom);
 
         let row = 0;
 

@@ -172,3 +172,33 @@ describe('Stopwatch – destroy()', () => {
         expect((sw as any)._intervalId).toBeUndefined();
     });
 });
+
+// ── 7. setInterval() mutation behavior ───────────────────────────────────
+describe('Stopwatch – setInterval()', () => {
+    it('setInterval marks widget dirty', () => {
+        const sw = new Stopwatch({ interval: 10 });
+
+        sw.clearDirty();
+        sw.setInterval(20);
+
+        expect(sw.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when interval is unchanged', () => {
+        const sw = new Stopwatch({ interval: 10 });
+
+        sw.clearDirty();
+        sw.setInterval(10);
+
+        expect(sw.isDirty).toBe(false);
+    });
+
+    it('updates interval value', () => {
+        const sw = new Stopwatch({ interval: 10 });
+
+        sw.setInterval(25);
+
+        expect(sw.getInterval()).toBe(25);
+    });
+});
+
