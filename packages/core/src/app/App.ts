@@ -80,12 +80,13 @@ export class App {
     private _unsubKey: (() => void) | null = null;
     private _unsubMouse: (() => void) | null = null;
     private _unsubPaste: (() => void) | null = null;
+    private _unsubFocus: (() => void) | null = null;
+    private _unsubBlur: (() => void) | null = null;
     private _unsubSigInt: (() => void) | null = null;
     private _unsubSigTerm: (() => void) | null = null;
     private _widgetById = new Map<string, any>();
     private _pendingFocusState = new Map<string, boolean>();
 
-    private _unsubPaste: (() => void) | null = null;
     private _consecutiveRenderFailures = 0;
     private static readonly MAX_RENDER_FAILURES = 5;
 
