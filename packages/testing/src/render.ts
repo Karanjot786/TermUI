@@ -47,6 +47,18 @@ export interface TestInstance {
     getAllByText(text: string): Widget[];
 
     /**
+     * Find a widget whose role prop matches the given string.
+     * Returns null if not found.
+     */
+    getByRole(role: string): Widget | null;
+
+    /**
+     * Find a widget whose label prop matches the given string.
+     * Returns null if not found.
+     */
+    getByLabelText(label: string): Widget | null;
+
+    /**
      * Find all widgets of a specific type (by constructor).
      */
     getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
@@ -331,6 +343,16 @@ export function render(
                 return container;
             }
             return null;
+        },
+
+        getByRole(role: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'role') === role);
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        getByLabelText(label: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'label') === label);
+            return matches.length > 0 ? matches[0] : null;
         },
 
         getAllByText(text: string): Widget[] {

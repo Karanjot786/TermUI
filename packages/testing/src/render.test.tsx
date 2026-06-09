@@ -6,16 +6,16 @@ import { Text, Box, Widget } from "@termuijs/widgets"
 import { useInput, useState } from "@termuijs/jsx" 
 
 function Hello() {
-    return <Text>Hello World</Text>;
+    return <text>Hello World</text>;
 }
 
 function MultiText() {
     return (
-        <Box>
-            <Text>One</Text>
-            <Text>Two</Text>
-            <Text>Three</Text>
-        </Box>
+        <box>
+            <text>One</text>
+            <text>Two</text>
+            <text>Three</text>
+        </box>
     );
 }
 
@@ -26,7 +26,7 @@ function InputComponent() {
         setValue((prev: string) => prev + input);
     });
 
-    return <Text>{value}</Text>;
+    return <text>{value}</text>;
 }
 
 function Counter() {
@@ -38,14 +38,23 @@ function Counter() {
         }
     });
 
-    return <Text>Count: {count}</Text>;
+    return <text>Count: {count}</text>;
 }
 
 function Label(props: { text: string }) {
-    return <Text>{props.text}</Text>;
+    return <text>{props.text}</text>;
 }
 
-class FakeWidget extends Widget {}
+class FakeWidget extends Widget {
+    protected _renderSelf(): void {}
+}
+
+function FakeA11yWidget(props: { role?: string, label?: string }) {
+    const box = new Box();
+    if (props.role !== undefined) Reflect.set(box, "role", props.role);
+    if (props.label !== undefined) Reflect.set(box, "label", props.label);
+    return box;
+}
 
 describe("render harness", () => {
     describe("getByText", () => {
@@ -60,6 +69,34 @@ describe("render harness", () => {
             const screen = render(<Hello />);
 
             expect(screen.getByText("Missing")).toBeNull();
+        });
+    });
+
+    describe("getByRole", () => {
+        it("returns the widget whose role prop matches the query", () => {
+            const screen = render(<FakeA11yWidget role="button" />);
+            const widget = screen.getByRole("button");
+            expect(widget).toBeTruthy();
+            expect(Reflect.get(widget!, "role")).toBe("button");
+        });
+
+        it("returns null when no node matches", () => {
+            const screen = render(<FakeA11yWidget role="button" />);
+            expect(screen.getByRole("link")).toBeNull();
+        });
+    });
+
+    describe("getByLabelText", () => {
+        it("returns the widget whose label prop matches the query", () => {
+            const screen = render(<FakeA11yWidget label="Email" />);
+            const widget = screen.getByLabelText("Email");
+            expect(widget).toBeTruthy();
+            expect(Reflect.get(widget!, "label")).toBe("Email");
+        });
+
+        it("returns null when no node matches", () => {
+            const screen = render(<FakeA11yWidget label="Email" />);
+            expect(screen.getByLabelText("Password")).toBeNull();
         });
     });
 
