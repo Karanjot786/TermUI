@@ -45,7 +45,7 @@ describe('AutoThemeProvider', () => {
         const vnode = AutoThemeProvider({});
         clearCurrentFiber();
 
-        expect(vnode.props.value).toBe(defaultDark);
+        expect(vnode.props.value).toMatchObject({ Normal: { fg: defaultDark.fg, bg: defaultDark.bg } });
         destroyFiber(fiber);
     });
 
@@ -58,7 +58,7 @@ describe('AutoThemeProvider', () => {
         const vnode = AutoThemeProvider({});
         clearCurrentFiber();
 
-        expect(vnode.props.value).toBe(defaultLight);
+        expect(vnode.props.value).toMatchObject({ Normal: { fg: defaultLight.fg, bg: defaultLight.bg } });
         destroyFiber(fiber);
     });
 
@@ -72,7 +72,7 @@ describe('AutoThemeProvider', () => {
         setCurrentFiber(fiber);
         let vnode = AutoThemeProvider({ darkTheme: customDark, lightTheme: customLight });
         clearCurrentFiber();
-        expect(vnode.props.value).toBe(customDark);
+        expect(vnode.props.value).toMatchObject({ Normal: { fg: customDark.fg, bg: customDark.bg } });
         destroyFiber(fiber);
 
         // Light mode
@@ -81,7 +81,7 @@ describe('AutoThemeProvider', () => {
         setCurrentFiber(fiber);
         vnode = AutoThemeProvider({ darkTheme: customDark, lightTheme: customLight });
         clearCurrentFiber();
-        expect(vnode.props.value).toBe(customLight);
+        expect(vnode.props.value).toMatchObject({ Normal: { fg: customLight.fg, bg: customLight.bg } });
         destroyFiber(fiber);
     });
 
