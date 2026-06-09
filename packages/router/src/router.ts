@@ -4,7 +4,7 @@
 
 import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
-import { type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, matchRoute, compilePattern, serializeQuery } from './route.js';
+import { type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern, serializeQuery } from './route.js';
 import { RouterContext } from './hooks.js';
 
 function defaultErrorScreen(err: Error): VNode {
@@ -62,6 +62,7 @@ export class Router {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            redirect?: RedirectTarget;
         },
     ): void;
 
@@ -71,10 +72,11 @@ export class Router {
         layout?: () => any,
         children?: Route[],
         meta?: RouteMeta,
-        options?: {
+        redirectOrOptions?: RedirectTarget | {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            redirect?: RedirectTarget;
         },
     ): void;
 
@@ -86,34 +88,44 @@ export class Router {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            redirect?: RedirectTarget;
         },
         meta?: RouteMeta,
         options?: {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
-        },
+            redirect?: RedirectTarget;
+        } | RedirectTarget,
     ): void {
         let children: Route[] | undefined = undefined;
         let finalOptions: {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
-        } | undefined = options;
+            redirect?: RedirectTarget;
+        } | undefined = undefined;
 
         if (Array.isArray(childrenOrOptions)) {
             children = childrenOrOptions;
         } else if (childrenOrOptions && typeof childrenOrOptions === 'object') {
-            finalOptions = childrenOrOptions;
+            finalOptions = childrenOrOptions as any;
+        }
+
+        if (typeof options === 'string' || typeof options === 'function') {
+            finalOptions = { ...finalOptions, redirect: options };
+        } else if (options && typeof options === 'object') {
+            finalOptions = options;
         }
 
         let finalMeta = meta ?? {};
-        if (options === undefined && meta && typeof meta === 'object' && ('lazy' in meta || 'beforeEnter' in meta || 'afterEnter' in meta)) {
+        if (options === undefined && meta && typeof meta === 'object' && ('lazy' in meta || 'beforeEnter' in meta || 'afterEnter' in meta || 'redirect' in meta)) {
             finalOptions = meta as any;
             const strippedMeta = { ...meta };
             delete (strippedMeta as any).lazy;
             delete (strippedMeta as any).beforeEnter;
             delete (strippedMeta as any).afterEnter;
+            delete (strippedMeta as any).redirect;
             finalMeta = strippedMeta;
         }
 
@@ -130,6 +142,7 @@ export class Router {
             lazy: finalOptions?.lazy,
             beforeEnter: finalOptions?.beforeEnter,
             afterEnter: finalOptions?.afterEnter,
+            redirect: finalOptions?.redirect,
         });
         this._applyInitialPathIfPending();
     }
@@ -145,6 +158,7 @@ export class Router {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            redirect?: RedirectTarget;
         }>,
     ): void {
         for (const r of routes) {
@@ -152,6 +166,7 @@ export class Router {
                 lazy: r.lazy,
                 beforeEnter: r.beforeEnter,
                 afterEnter: r.afterEnter,
+                redirect: r.redirect,
             });
         }
     }
@@ -170,44 +185,65 @@ export class Router {
         return createElement(ErrorBoundary, { fallback: defaultErrorScreen }, withProvider);
     }
 
-    /** Navigate to a path */
-    push(path: string, options?: { query?: QueryParams }): void {
-        let targetPath = path;
-        if (options?.query) {
-            const queryString = serializeQuery(options.query);
-            if (queryString) {
-                const separator = targetPath.includes('?') ? '&' : '?';
-                targetPath += separator + queryString;
-            }
+    private _resolveRedirect(path: string, depth = 0): string | null {
+        if (depth > 10) {
+            this.events.emit('error', new Error(`Max redirect depth exceeded for path: ${path}`));
+            return null;
         }
-        this._navigateTo(targetPath);
+
+        const match = matchRoute(path, this._routes);
+        if (!match) return path;
+
+        if (match.route.redirect) {
+            const redirectTarget = match.route.redirect;
+            const nextPath = typeof redirectTarget === 'function' ? redirectTarget(match.params) : redirectTarget;
+            return this._resolveRedirect(nextPath, depth + 1);
+        }
+
+        return path;
     }
 
-    private _navigateTo(path: string): void {
-        const match = matchRoute(path, this._routes);
+    private _handleNavigation(path: string, isReplace: boolean): void {
+        const resolvedPath = this._resolveRedirect(path);
+        if (!resolvedPath) return;
+
+        const match = matchRoute(resolvedPath, this._routes);
 
         if (!match) {
-            this.events.emit('error', new Error(`No route found for path: ${path}`));
+            this.events.emit('error', new Error(`No route found for path: ${resolvedPath}`));
             return;
         }
 
-        // A new push(path) clears the forward stack
-        this._forwardStack = [];
-        const guardResult = match.route.beforeEnter?.(path);
+        if (!isReplace) {
+            this._forwardStack = [];
+        }
+
+        const guardResult = match.route.beforeEnter?.(resolvedPath);
 
         if (guardResult === false) {
             return;
         }
 
         if (typeof guardResult === 'string') {
-            this.push(guardResult);
+            if (isReplace) {
+                this.replace(guardResult);
+            } else {
+                this.push(guardResult);
+            }
             return;
         }
 
-        this._history.push(path);
-
-        if (this._history.length > this._maxHistory) {
-            this._history = this._history.slice(-this._maxHistory);
+        if (isReplace) {
+            if (this._history.length > 0) {
+                this._history[this._history.length - 1] = resolvedPath;
+            } else {
+                this._history.push(resolvedPath);
+            }
+        } else {
+            this._history.push(resolvedPath);
+            if (this._history.length > this._maxHistory) {
+                this._history = this._history.slice(-this._maxHistory);
+            }
         }
 
         this._currentMatch = match;
@@ -218,67 +254,45 @@ export class Router {
 
         this.events.emit('navigate', { match, screen });
 
-        match.route.afterEnter?.(path);
+        match.route.afterEnter?.(resolvedPath);
+    }
+
+    /** Navigate to a path */
+    push(path: string, options?: { query?: QueryParams }): void {
+        let targetPath = path;
+        if (options?.query) {
+            const qs = serializeQuery(options.query);
+            if (qs) targetPath += (targetPath.includes('?') ? '&' : '?') + qs;
+        }
+        this._handleNavigation(targetPath, false);
     }
 
     private _applyInitialPathIfPending(): void {
         if (!this._pendingInitialPath || this._routes.length === 0) return;
         const path = this._pendingInitialPath;
-        const match = matchRoute(path, this._routes);
+        const resolvedPath = this._resolveRedirect(path);
+        if (!resolvedPath) return;
+
+        const match = matchRoute(resolvedPath, this._routes);
         if (!match) return;
         this._pendingInitialPath = null;
-        this._navigateTo(path);
+        this.push(path);
     }
 
     /** Replace current path */
     replace(path: string, options?: { query?: QueryParams }): void {
         let targetPath = path;
         if (options?.query) {
-            const queryString = serializeQuery(options.query);
-            if (queryString) {
-                const separator = targetPath.includes('?') ? '&' : '?';
-                targetPath += separator + queryString;
-            }
+            const qs = serializeQuery(options.query);
+            if (qs) targetPath += (targetPath.includes('?') ? '&' : '?') + qs;
         }
-        const match = matchRoute(targetPath, this._routes);
-
-        if (!match) {
-            this.events.emit('error', new Error(`No route found for path: ${targetPath}`));
-            return;
-        }
-
-        const guardResult = match.route.beforeEnter?.(targetPath);
-
-        if (guardResult === false) {
-            return;
-        }
-
-        if (typeof guardResult === 'string') {
-            this.replace(guardResult);
-            return;
-        }
-
-        if (this._history.length > 0) {
-            this._history[this._history.length - 1] = targetPath;
-        } else {
-            this._history.push(targetPath);
-        }
-
-        this._currentMatch = match;
-
-        unmountAll();
-
-        const screen = this._wrapScreen(match);
-
-        this.events.emit('navigate', { match, screen });
-
-        match.route.afterEnter?.(targetPath);
+        this._handleNavigation(targetPath, true);
     }
 
     /** Go back in history */
     back(): void {
         if (this._history.length <= 1) return;
-        
+
         // back() pushes the popped path onto a forward stack
         const poppedPath = this._history.pop();
         if (poppedPath) {

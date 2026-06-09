@@ -36,6 +36,10 @@ export function serializeQuery(query: QueryParams): string {
     return searchParams.toString();
 }
 
+export type RedirectTarget =
+    | string
+    | ((params: RouteParams) => string);
+
 export interface Route {
     /** URL-like path, e.g. "/settings/theme" */
     path: string;
@@ -57,6 +61,8 @@ export interface Route {
     afterEnter?: AfterEnterGuard;
     /** Optional metadata object */
     meta?: RouteMeta;
+    /** Declarative redirect target */
+    redirect?: RedirectTarget;
 }
 
 export interface RouteMatch {

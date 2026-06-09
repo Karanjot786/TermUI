@@ -15,6 +15,7 @@ export type {
     BeforeEnterGuard,
     AfterEnterGuard,
     RouteMeta,
+    RedirectTarget,
 } from './route.js';
 
 export { scanRoutes } from './scanner.js';
