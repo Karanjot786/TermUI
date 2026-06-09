@@ -29,6 +29,7 @@ export {
 } from '@termuijs/widgets';
 
 // ── New components ──
+import { Slider, RangeInput } from './Slider.js';
 export { Divider } from './Divider.js';
 export type { DividerOptions } from './Divider.js';
 
