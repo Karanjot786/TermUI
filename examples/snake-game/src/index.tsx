@@ -193,20 +193,33 @@ class SnakeGame extends Widget {
     private restart() {
         this.snake = [{ x: 7, y: 7 }];
         this.direction = 'right';
+        this.pendingDirection = null;
         this.score = 0;
         this.gameOver = false;
+
         const newFood = this.generateRandomFood();
-        if (newFood) this.food = newFood;
+        if (newFood) {
+            this.food = newFood;
+        }
+
         this.scoreText.setContent('Score: 0');
+
         if (this.gameOverText) {
             this.removeChild(this.gameOverText);
             this.gameOverText = null;
         }
+
         this.board.updateState(this.snake, this.food);
         this.markDirty();
 
-        if (this.timer) clearInterval(this.timer);
-        this.timer = setInterval(() => this.moveSnake(), TICK_INTERVAL_MS);
+        if (this.timer) {
+            clearInterval(this.timer);
+        }
+
+        this.timer = setInterval(
+            () => this.moveSnake(),
+            TICK_INTERVAL_MS
+        );
     }
 
     public onMount() {
@@ -236,11 +249,14 @@ class SnakeGame extends Widget {
         else if (key === 'right' || key === 'd') newDir = 'right';
 
         if (newDir) {
+            const currentDirection =
+                this.pendingDirection ?? this.direction;
+
             if (
-                (newDir === 'up' && this.direction !== 'down') ||
-                (newDir === 'down' && this.direction !== 'up') ||
-                (newDir === 'left' && this.direction !== 'right') ||
-                (newDir === 'right' && this.direction !== 'left')
+                (newDir === 'up' && currentDirection !== 'down') ||
+                (newDir === 'down' && currentDirection !== 'up') ||
+                (newDir === 'left' && currentDirection !== 'right') ||
+                (newDir === 'right' && currentDirection !== 'left')
             ) {
                 this.pendingDirection = newDir;
             }
