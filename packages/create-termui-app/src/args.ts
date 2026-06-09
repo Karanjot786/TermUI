@@ -17,6 +17,7 @@ const TEMPLATE_KEYS = [
     "cli-wrapper",
     "cli-tool",
     "file-manager",
+    "ai-assistant",
     "form-wizard",
 ] as const;
 
@@ -97,9 +98,15 @@ export function parseArgs(argv: string[]): CliArgs {
         args.theme = theme;
     }
 
+    if (args.yes) {
+        args.name = args.name ?? "my-termui-app";
+        args.template = args.template ?? "empty";
+        args.theme = args.theme ?? "default";
+    }
+
     return args;
 }
 
 export function isNonInteractive(args: CliArgs): boolean {
-    return args.yes === true;
+    return args.yes === true || (!!args.name && !!args.template && !!args.theme);
 }
