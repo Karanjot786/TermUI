@@ -172,40 +172,58 @@ Spring animations simulate natural physical movement by using configurable physi
 
 animateSpring continuously updates a value until the spring reaches equilibrium, invoking a callback on every animation frame.
 
+```typescript
 import { animateSpring } from '@termuijs/motion'
 
 animateSpring(
-    {
-        from: 0,
-        to: 100,
-    },
-    (value) => progressBar.setValue(value),
-    () => console.log('Animation complete'),
+    0,
+    100,
+    {},
+    (value) => progressBar.setValue(value / 100),
+    () => console.log('done'),
 )
+```
+
 
 ### Using stepSpring
 
 stepSpring can be used when you want to manually advance the spring simulation one step at a time, giving you fine-grained control over the animation loop.
 
-import { stepSpring } from '@termuijs/motion'
+```typescript
+import { stepSpring, SPRING_PRESETS } from '@termuijs/motion'
 
-// Example: advancing a spring simulation manually
-// Call stepSpring repeatedly inside your update loop
+let state = {
+    value: 0,
+    velocity: 0,
+    target: 100,
+    done: false,
+}
+
+state = stepSpring(
+    state,
+    SPRING_PRESETS.default,
+    0.016,
+)
+
+console.log(state.value)
+```
+
 
 ### Using SPRING_PRESETS
 
 SPRING_PRESETS provides predefined configurations for common animation styles, allowing consistent motion without manually tuning spring parameters.
 
+```typescript
 import { animateSpring, SPRING_PRESETS } from '@termuijs/motion'
 
 animateSpring(
-    {
-        from: 0,
-        to: 1,
-        ...SPRING_PRESETS.gentle,
-    },
+    0,
+    1,
+    SPRING_PRESETS.stiff,
     onFrame,
 )
+```
+
 
 Choose a preset that matches the desired interaction style, such as quick and responsive motion or slower, more expressive animations.
 
