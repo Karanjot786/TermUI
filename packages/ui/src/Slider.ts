@@ -148,10 +148,15 @@ export class RangeInput extends Widget {
         this._max = opts.max;
         this._step = opts.step ?? 1;
 
-        this._low = opts.low ?? opts.min;
-        this._high = opts.high ?? opts.max;
-
         this.onChange = opts.onChange;
+
+this._low = this._min;
+this._high = this._max;
+
+this.setRange(
+    opts.low ?? this._min,
+    opts.high ?? this._max,
+);
     }
 
     getLow(): number {
@@ -163,15 +168,39 @@ export class RangeInput extends Widget {
     }
 
     setRange(low: number, high: number): void {
-        const nextLow = Math.max(this._min, Math.min(low, high));
-        const nextHigh = Math.min(this._max, Math.max(high, nextLow));
+    const nextLow = Math.max(
+        this._min,
+        Math.min(this._max, low),
+    );
 
-        this._low = nextLow;
-        this._high = nextHigh;
+    const nextHigh = Math.max(
+        this._min,
+        Math.min(this._max, high),
+    );
 
-        this.onChange?.(this._low, this._high);
-        this.markDirty();
+    const normalizedLow = Math.min(
+        nextLow,
+        nextHigh,
+    );
+
+    const normalizedHigh = Math.max(
+        nextLow,
+        nextHigh,
+    );
+
+    if (
+        normalizedLow === this._low &&
+        normalizedHigh === this._high
+    ) {
+        return;
     }
+
+    this._low = normalizedLow;
+    this._high = normalizedHigh;
+
+    this.onChange?.(this._low, this._high);
+    this.markDirty();
+}
 
     protected _renderSelf(screen: Screen): void {
         const { x, y, width } = this._rect;
