@@ -3,13 +3,18 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Buffer } from 'node:buffer';
+import { Screen, createKeyEvent, type KeyEvent } from '@termuijs/core';
 import { ConfirmDialog } from './ConfirmDialog.js';
 
 // ── Helpers ───────────────────────────────────────────
 
 const COLS = 60;
 const ROWS = 20;
+
+function makeKey(key: string): KeyEvent {
+    return createKeyEvent({ key, ctrl: false, shift: false, alt: false, raw: Buffer.from(key) });
+}
 
 function makeScreen(cols = COLS, rows = ROWS): Screen {
     return new Screen(cols, rows);
@@ -576,5 +581,30 @@ describe('ConfirmDialog', () => {
 
         const screen = renderDialog(dialog);
         expect(screenHasContent(screen)).toBe(false);
+    });
+
+    it('Escape invokes cancel callback when visible', () => {
+        const onCancel = vi.fn();
+        const onConfirm = vi.fn();
+        const dialog = new ConfirmDialog({ message: 'Continue?', onCancel, onConfirm });
+        dialog.show();
+        renderDialog(dialog);
+
+        dialog.events.emit('key', makeKey('escape'));
+
+        expect(onCancel).toHaveBeenCalled();
+        expect(onConfirm).not.toHaveBeenCalled();
+        expect(dialog.visible).toBe(false);
+    });
+
+    it('Escape does nothing when hidden', () => {
+        const onCancel = vi.fn();
+        const dialog = new ConfirmDialog({ message: 'Continue?', onCancel });
+        renderDialog(dialog);
+
+        dialog.events.emit('key', makeKey('escape'));
+
+        expect(onCancel).not.toHaveBeenCalled();
+        expect(dialog.visible).toBe(false);
     });
 });

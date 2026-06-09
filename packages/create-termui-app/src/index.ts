@@ -2,195 +2,135 @@
 // create-termui-app — Interactive CLI scaffolding tool
 // ─────────────────────────────────────────────────────
 
-import { resolve, join, dirname } from "node:path";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { getBuiltinThemeNames } from "@termuijs/tss";
-import {
-    textPrompt,
-    selectPrompt,
-    multiSelectPrompt,
-} from "./prompts.js";
-import { generateProject, type ProjectConfig } from "./templates.js";
-import { parseArgs, isNonInteractive } from "./args.js";
-import { validateProjectName } from "./validate.js";
-
-const VALID_PROJECT_NAME_RE = /^[a-zA-Z0-9@][a-zA-Z0-9_.-]*$/;
-
-function validateProjectName(name: string, source: string): void {
-    if (!VALID_PROJECT_NAME_RE.test(name)) {
-        throw new Error(
-            `Invalid project name "${name}" (from ${source}). Use only letters, digits, hyphens, underscores, dots, or start with @ for scoped packages.`
-        );
-    }
-    if (name === "." || name === "..") {
-        throw new Error(
-            `Invalid project name "${name}". "." and ".." are not allowed as project names.`
-        );
-    }
-}
+import { dirname, resolve, join } from 'node:path';
+import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { getBuiltinThemeNames } from '@termuijs/tss';
+import { textPrompt, selectPrompt, multiSelectPrompt } from './prompts.js';
+import { generateProject, type ProjectConfig } from './templates.js';
+import { parseArgs, type CliArgs } from './args.js';
+import { runAddCommand } from './commands/add.js';
+import { validateProjectName, validateResolvedPath } from "./validate.js";
 
 const TEMPLATES = [
-    "Empty (start from scratch)",
-    "Dashboard (real-time data)",
-    "Interactive Tool (forms, prompts)",
-    "CLI Wrapper (wrap existing CLI)",
-    "CLI Tool (minimal: box + text + useKeymap)",
-    "File Manager",
-    "AI Assistant (Claude + mock mode)",
-    "Form Wizard (multi-step forms)",
-    "REST Client (HTTP request explorer)",
-] as const;
+  'Empty (start from scratch)',
+  'Dashboard (real-time data)',
+  'Interactive Tool (forms, prompts)',
+  'CLI Wrapper (wrap existing CLI)',
+  'CLI Tool (minimal: box + text + useKeymap)',
+  'File Manager',
+  'AI Assistant (Claude + mock mode)',
+  'Form Wizard',
+];
 
 const TEMPLATE_KEYS = [
-    "empty",
-    "dashboard",
-    "interactive-tool",
-    "cli-wrapper",
-    "cli-tool",
-    "file-manager",
-    "ai-assistant",
-    "form-wizard",
-    "rest-client",
+  'empty',
+  'dashboard',
+  'interactive-tool',
+  'cli-wrapper',
+  'cli-tool',
+  'file-manager',
+  'ai-assistant',
+  'form-wizard',
 ] as const;
+const FEATURES = ['Screen Router', 'Data Providers', 'Hot Reload'];
 
-const FEATURES = ["Screen Router", "Data Providers", "Hot Reload"];
+export async function runCli(argv: string[]): Promise<void> {
+  const args = parseArgs(argv);
 
-async function main() {
-    const args = parseArgs(process.argv.slice(2));
-    const themes = getBuiltinThemeNames();
+  if (args.command === 'add') {
+    await runAddCommand({
+      component: args.component ?? '',
+      dir: args.dir,
+      dryRun: args.dryRun,
+      yes: args.yes,
+    });
+    return;
+  }
 
-    let projectName = args.name;
-    let template: string;
-    let theme: string;
-    let featureFlags: boolean[] = [false, false, true];
-
-    console.log();
-    console.log("  ┌──────────────────────────────────┐");
-    console.log("  │       create-termui-app           │");
-    console.log("  │   The React/Next.js for CLI apps  │");
-    console.log("  └──────────────────────────────────┘");
-    console.log();
-
-    // ───────── CI MODE ─────────
-    if (isNonInteractive(args)) {
-        projectName ??= "my-termui-app";
-        validateProjectName(projectName, "command-line argument");
-
-        // Validate project name before any filesystem operations
-        projectName = validateProjectName(projectName);
-
-        if (args.template && !TEMPLATE_KEYS.includes(args.template as any)) {
-            throw new Error(
-                `Invalid template "${args.template}". Valid: ${TEMPLATE_KEYS.join(", ")}`
-            );
-        }
-
-        if (args.theme && !themes.includes(args.theme)) {
-            throw new Error(
-                `Invalid theme "${args.theme}". Valid themes: ${themes.join(", ")}`
-            );
-        }
-
-        template = args.template ?? "empty";
-        theme = args.theme ?? themes[0];
-
-        featureFlags = [
-            false,
-            template === "dashboard",
-            true,
-        ];
-
-        const config: ProjectConfig = {
-            name: projectName,
-            template,
-            theme,
-            features: {
-                router: featureFlags[0],
-                dataProviders: featureFlags[1],
-                hotReload: featureFlags[2],
-            },
-        };
-
-        const projectDir = resolve(process.cwd(), projectName);
-
-        const files = generateProject(config);
-
-        for (const file of files) {
-            const fullPath = join(projectDir, file.path);
-            const dir = dirname(fullPath);
-
-            mkdirSync(dir, { recursive: true });
-            writeFileSync(fullPath, file.content, "utf-8");
-
-            console.log(`    ✓ ${file.path}`);
-        }
-
-        console.log();
-        console.log("  ┌──────────────────────────────────┐");
-        console.log("  │  ✅ Project created successfully! │");
-        console.log("  └──────────────────────────────────┘");
-
-        return;
-    }
-
-    // ───────── INTERACTIVE MODE ─────────
-
-    if (!projectName) {
-        projectName = await textPrompt("Project name", "my-termui-app");
-    }
-    validateProjectName(projectName, "interactive prompt");
-
-    // Validate project name before any filesystem operations
-    projectName = validateProjectName(projectName);
-
-    const templateIdx = await selectPrompt("What kind of app?", TEMPLATES);
-    template = TEMPLATE_KEYS[templateIdx];
-
-    const themesList = themes.map((t) =>
-        t.charAt(0).toUpperCase() + t.slice(1)
-    );
-
-    const themeIdx = await selectPrompt("Choose a theme", themesList);
-    theme = themes[themeIdx];
-
-    featureFlags = await multiSelectPrompt(
-        "Features to include",
-        FEATURES,
-        [false, template === "dashboard", true]
-    );
-
-    const config: ProjectConfig = {
-        name: projectName,
-        template,
-        theme,
-        features: {
-            router: featureFlags[0],
-            dataProviders: featureFlags[1],
-            hotReload: featureFlags[2],
-        },
-    };
-
-    const projectDir = resolve(process.cwd(), projectName);
-
-    const files = generateProject(config);
-
-    for (const file of files) {
-        const fullPath = join(projectDir, file.path);
-        const dir = dirname(fullPath);
-
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(fullPath, file.content, "utf-8");
-
-        console.log(`    ✓ ${file.path}`);
-    }
-
-    console.log();
-    console.log("  ┌──────────────────────────────────┐");
-    console.log("  │  ✅ Project created successfully! │");
-    console.log("  └──────────────────────────────────┘");
+  await runProjectScaffold(args);
 }
 
-main().catch((err) => {
-    console.error("Error:", err.message);
+async function runProjectScaffold(args: CliArgs): Promise<void> {
+  console.log();
+  console.log('  ┌──────────────────────────────────┐');
+  console.log('  │       create-termui-app           │');
+  console.log('  │   The React/Next.js for CLI apps  │');
+  console.log('  └──────────────────────────────────┘');
+  console.log();
+
+  // ── Get project name from args or prompt ──
+  let projectName = args.name;
+  if (!projectName) {
+    projectName = await textPrompt('Project name', 'my-termui-app');
+  }
+  projectName = validateProjectName(projectName);
+  validateResolvedPath(process.cwd(), projectName);
+
+  // ── Template selection ──
+  const templateIdx = args.template
+    ? TEMPLATE_KEYS.indexOf(args.template as typeof TEMPLATE_KEYS[number])
+    : await selectPrompt('What kind of app?', TEMPLATES);
+  const template = TEMPLATE_KEYS[templateIdx >= 0 ? templateIdx : 0];
+
+  // ── Theme selection ──
+  const themes = getBuiltinThemeNames();
+  const themeIdx = args.theme
+    ? themes.indexOf(args.theme)
+    : await selectPrompt('Choose a theme', themes.map(t => t.charAt(0).toUpperCase() + t.slice(1)));
+  const theme = themes[themeIdx >= 0 ? themeIdx : 0];
+
+  // ── Feature selection ──
+  const featureDefaults = [false, template === 'dashboard', true]; // Router off, Data on for dashboard, HotReload on
+  const featureFlags = await multiSelectPrompt('Features to include', FEATURES, featureDefaults);
+
+  const config: ProjectConfig = {
+    name: projectName,
+    template,
+    theme,
+    features: {
+      router: featureFlags[0],
+      dataProviders: featureFlags[1],
+      hotReload: featureFlags[2],
+    },
+  };
+
+  // ── Generate project ──
+  const projectDir = resolve(process.cwd(), projectName);
+  if (existsSync(projectDir)) {
+    console.log(`\n  ⚠  Directory "${projectName}" already exists. Files may be overwritten.\n`);
+  }
+
+  console.log(`\n  Creating ${projectName}...`);
+
+  const files = generateProject(config);
+
+  for (const file of files) {
+    const fullPath = join(projectDir, file.path);
+    const dir = dirname(fullPath);
+
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(fullPath, file.content, 'utf-8');
+
+    console.log(`    ✓ ${file.path}`);
+  }
+
+  console.log();
+  console.log('  ┌──────────────────────────────────┐');
+  console.log('  │  ✅ Project created successfully!  │');
+  console.log('  └──────────────────────────────────┘');
+  console.log();
+  console.log(`  Next steps:`);
+  console.log(`    cd ${projectName}`);
+  console.log(`    bun install`);
+  console.log(`    bun run dev`);
+  console.log();
+}
+
+if (import.meta.main) {
+  runCli(process.argv.slice(2)).catch(err => {
+    console.error('Error:', err.message);
     process.exit(1);
-});
+  });
+}
+
+

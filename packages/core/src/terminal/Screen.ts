@@ -4,6 +4,7 @@
 
 import type { Color } from '../style/Color.js';
 import { stringWidth } from '../utils/unicode.js';
+import { stripAnsiControl } from '../utils/ansi.js';
 import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
@@ -114,6 +115,14 @@ export class Screen {
     private _cols: number;
     private _rows: number;
     private _previousLines: string[] = [];
+    private _lastRenderedHeight = 0;
+
+     get lastRenderedHeight(): number {
+     return this._lastRenderedHeight;
+     }
+     set lastRenderedHeight(value: number) {
+     this._lastRenderedHeight = value;
+     }
     private _previousStyleLines: string[] = [];
     front: Cell[][];
     back: Cell[][];
@@ -129,6 +138,14 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+    }
+
+    /** Retrieve a read-only copy of the cell at (x, y) from the back buffer. */
+    getCell(x: number, y: number): Readonly<Cell> | undefined {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        if (!(x >= 0 && x < this._cols && y >= 0 && y < this._rows)) return undefined;
+        return this.back[y][x];
     }
 
     /** Serialize a back-buffer row to a plain string (skips continuation cells). */
@@ -254,6 +271,9 @@ export class Screen {
         }
 
         const existing = this.back[row][col];
+        if (cell.char !== undefined) {
+            cell = { ...cell, char: stripAnsiControl(cell.char) };
+        }
         Object.assign(existing, cell);
     }
 
@@ -271,8 +291,10 @@ export class Screen {
         col = Math.floor(col);
         if (!(row >= 0 && row < this._rows)) return;
 
+        // Strip ANSI control sequences from user-supplied content to prevent escape injection
+        const safeStr = stripAnsiControl(str);
         let x = col;
-        for (const char of str) {
+        for (const char of safeStr) {
             if (x >= this._cols) break;
 
             let finalChar = char;
@@ -346,11 +368,13 @@ export class Screen {
 
     /**
      * Clear the front buffer (marks everything as "needs redraw").
+     * Mutates cells in-place to avoid GC pressure from object allocation.
      */
     invalidate(): void {
         for (let r = 0; r < this._rows; r++) {
             for (let c = 0; c < this._cols; c++) {
-                this.front[r][c] = { ...emptyCell(), char: '\0' }; // force diff
+                resetCell(this.front[r][c]);
+                this.front[r][c].char = '\0'; // force diff
             }
         }
     }

@@ -56,6 +56,10 @@ export class Terminal {
     private _unhandledRejectionHandler: (() => void) | null = null;
     private _restored = false;
 
+    // Stream write queue state to prevent interleaving backpressure fragmentation
+    private _writeQueue: string[] = [];
+    private _isWriting = false;
+
     constructor(options: TerminalOptions = {}) {
         this.stdout = options.stdout ?? process.stdout;
         this.stdin = options.stdin ?? process.stdin;
@@ -193,8 +197,59 @@ export class Terminal {
 
     // ── Output ──────────────────────────────────────────
 
+    /**
+     * Writes chunked string data to stdout.
+     * Enforces queue serialization to ensure atomic ANSI escape execution.
+     */
     write(data: string): void {
-        this.stdout.write(data);
+        if (!data) return;
+        
+        this._writeQueue.push(data);
+        if (this._isWriting) return;
+
+        this._processWriteQueue();
+    }
+
+    /**
+     * Sequentially unshifts and drains string frames to stdout safely.
+     */
+    private _processWriteQueue(): void {
+        if (this._writeQueue.length === 0) {
+            this._isWriting = false;
+            return;
+        }
+
+        this._isWriting = true;
+        const chunk = this._writeQueue.shift()!;
+
+        // Execute write operation
+        const canContinue = this.stdout.write(chunk);
+
+        if (!canContinue) {
+            // Buffer saturation hit; halt processing until kernel drains stream cache
+            this.stdout.once('drain', () => {
+                this._processWriteQueue();
+            });
+        } else {
+            // Proceed instantly via synchronous event-loop cycle
+            this._processWriteQueue();
+        }
+    }
+
+    // ── Clipboard ───────────────────────────────────────
+
+    /**
+     * Read text from the system clipboard via OSC 52.
+     */
+    readClipboard(): Promise<string> {
+        return ansi.readClipboard(this.stdin, this.stdout);
+    }
+
+    /**
+     * Write text to the system clipboard via OSC 52.
+     */
+    writeClipboard(text: string): void {
+        ansi.writeClipboard(text, this.stdout);
     }
 
     // ── Resize ──────────────────────────────────────────
@@ -222,6 +277,10 @@ export class Terminal {
             clearTimeout(this._resizeTimer);
             this._resizeTimer = null;
         }
+
+        // Clear hanging buffer data states
+        this._writeQueue = [];
+        this._isWriting = false;
 
         // Remove process-level signal handlers to prevent leaks
         if (this._exitHandler) process.off('exit', this._exitHandler);
@@ -280,9 +339,7 @@ export class Terminal {
             this.restore();
             process.exit(1);
         };
-        // Use .on() (not .once()) so restore() can explicitly remove these handlers
-        // via process.off(). With .once(), the reference is removed after first fire,
-        // making process.off() in restore() a no-op on subsequent exceptions.
+        
         process.on('uncaughtException', this._uncaughtExceptionHandler);
         process.on('unhandledRejection', this._unhandledRejectionHandler);
     }

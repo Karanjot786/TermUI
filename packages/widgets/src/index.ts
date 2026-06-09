@@ -44,6 +44,12 @@ export type { ButtonOptions, ButtonVariant } from './input/Button.js';
 
 export { Slider } from "./input/Slider.js";
 export type { SliderOptions } from "./input/Slider.js";
+export { RangeInput } from "./input/RangeInput.js";
+export type { RangeInputOptions } from "./input/RangeInput.js";
+export { PinInput } from "./input/PinInput.js";
+export type { PinInputOptions } from "./input/PinInput.js";
+export { Knob } from "./input/Knob.js";
+export type { KnobOptions } from "./input/Knob.js";
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
@@ -64,6 +70,8 @@ export { StatusIndicator } from './data/StatusIndicator.js';
 export type { StatusIndicatorOptions } from './data/StatusIndicator.js';
 export { BarChart } from './data/BarChart.js';
 export type { Bar, BarGroup, BarChartDirection, BarChartOptions } from './data/BarChart.js';
+export { GanttChart } from './data/GanttChart.js';
+export type { GanttChartOptions, GanttTask } from './data/GanttChart.js';
 
 // ── Layout Widgets ────────────────────────────────────
 export { Grid } from './layout/Grid.js';
@@ -102,8 +110,12 @@ export { StatusMessage } from './feedback/StatusMessage.js';
 export type { StatusMessageOptions, StatusVariant } from './feedback/StatusMessage.js';
 export { Banner } from './feedback/Banner.js';
 export type { BannerOptions } from './feedback/Banner.js';
+export { Alert } from './feedback/Alert.js';
+export type { AlertOptions } from './feedback/Alert.js';
+
 export { EmptyState } from './feedback/EmptyState.js';
 export type { EmptyStateOptions } from './feedback/EmptyState.js';
+
 export { Callout } from './feedback/Callout.js';
 export type { CalloutVariant, CalloutOptions } from './feedback/Callout.js';
 
@@ -147,12 +159,22 @@ export type { TagOptions, TagVariant } from './display/Tag.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
 
+export { Carousel } from './display/Carousel.js';
+export type { CarouselOptions } from './display/Carousel.js';
+
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 
 export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
+
+export { Link } from './display/Link.js';
+export type { LinkOptions } from './display/Link.js';
+
+export { ShortcutBar } from './display/ShortcutBar.js';
+export type { ShortcutItem, ShortcutBarOptions } from './display/ShortcutBar.js';
+
 
 // ── Missing layout elements restored ──
 export { QRCodePattern, QRCode } from './display/QRCode.js';
@@ -207,3 +229,4 @@ export type {
     ProgressProps,
     ProgressTask,
 } from './feedback/Progress.js';
+export * from './display/Highlight.js';

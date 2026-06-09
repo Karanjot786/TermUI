@@ -14,6 +14,22 @@ class TestWidget extends Widget {
     }
 }
 
+class ErrorWidget extends Widget {
+    protected _renderSelf(_screen: Screen): void {
+        throw new Error('render failure');
+    }
+}
+
+class RecoversWidget extends Widget {
+    callCount = 0;
+    protected _renderSelf(_screen: Screen): void {
+        this.callCount++;
+        if (this.callCount === 1) {
+            throw new Error('first call fails');
+        }
+    }
+}
+
 describe('Widget', () => {
     it('generates unique IDs', () => {
         const a = new TestWidget();
@@ -80,7 +96,52 @@ describe('Widget', () => {
         expect(node.children).toHaveLength(2);
     });
 
-    // 🌟 Added verification tests for Widget active state lifecycles
+    it('captures render errors in _renderError', () => {
+        const w = new ErrorWidget();
+        const screen = new Screen(10, 5);
+        w.updateRect({ x: 0, y: 0, width: 10, height: 5 });
+        w.render(screen);
+        expect(w.renderError).toBeInstanceOf(Error);
+        expect(w.renderError!.message).toBe('render failure');
+    });
+
+    it('stays dirty after render error for retry on next frame', () => {
+        const w = new ErrorWidget();
+        const screen = new Screen(10, 5);
+        w.updateRect({ x: 0, y: 0, width: 10, height: 5 });
+        expect(w.isDirty).toBe(true);
+        w.render(screen);
+        expect(w.isDirty).toBe(true);
+        expect(w.renderError).toBeInstanceOf(Error);
+    });
+
+    it('clearDirty does not clear errored widgets', () => {
+        const parent = new TestWidget();
+        const child = new ErrorWidget();
+        parent.addChild(child);
+        const screen = new Screen(10, 5);
+        child.updateRect({ x: 0, y: 0, width: 10, height: 5 });
+        parent.updateRect({ x: 0, y: 0, width: 10, height: 5 });
+        parent.render(screen);
+        parent.clearDirty();
+        expect(child.isDirty).toBe(true);
+        expect(parent.isDirty).toBe(true);
+    });
+
+    it('recovers after render error on subsequent attempt', () => {
+        const w = new RecoversWidget();
+        const screen = new Screen(10, 5);
+        w.updateRect({ x: 0, y: 0, width: 10, height: 5 });
+        w.render(screen);
+        expect(w.renderError).toBeInstanceOf(Error);
+        expect(w.isDirty).toBe(true);
+        w.clearDirty();
+        w._renderError = null;
+        w.render(screen);
+        expect(w.renderError).toBeNull();
+        expect(w.callCount).toBe(2);
+    });
+
     describe('isActive() Lifecycle', () => {
         class FocusableTestWidget extends Widget {
             focusable = true;
@@ -94,7 +155,7 @@ describe('Widget', () => {
 
         it('should return true after the widget is activated', () => {
             const widget = new FocusableTestWidget();
-            widget.isFocused = true; // Simulating activation pass
+            widget.isFocused = true;
             expect(widget.isActive()).toBe(true);
         });
 
@@ -102,8 +163,7 @@ describe('Widget', () => {
             const widget = new FocusableTestWidget();
             widget.isFocused = true;
             expect(widget.isActive()).toBe(true);
-            
-            widget.isFocused = false; // Simulating deactivation pass
+            widget.isFocused = false;
             expect(widget.isActive()).toBe(false);
         });
     });

@@ -10,7 +10,7 @@ import { caps } from '@termuijs/core';
 
 const todos: string[] = ['Learn TermUI', 'Build a CLI app', 'Ship to npm'];
 
-const done = () => todos.filter(t => t.startsWith('✓ ')).length;
+const done = () => todos.filter(t => t.startsWith('[x] ')).length;
 const total = () => Math.max(todos.length, 1);
 
 app(caps.unicode ? '✅ Todo App' : '[x] Todo App')
@@ -31,7 +31,7 @@ app(caps.unicode ? '✅ Todo App' : '[x] Todo App')
                 label: 'Clear Done',
                 description: 'x',
                 action: () => batch(() => {
-                    const keep = todos.filter(t => !t.startsWith('✓ '));
+                    const keep = todos.filter(t => !t.startsWith('[x] '));
                     todos.length = 0;
                     todos.push(...keep);
                 }),
@@ -42,9 +42,9 @@ app(caps.unicode ? '✅ Todo App' : '[x] Todo App')
         list(() => todos, {
             selectable: true,
             onSelect: (idx: number) => {
-                todos[idx] = todos[idx].startsWith('✓ ')
-                    ? todos[idx].slice(2)
-                    : `✓ ${todos[idx]}`;
+                todos[idx] = todos[idx].startsWith('[x] ')
+                    ? todos[idx].slice(4)
+                    : `[x] ${todos[idx]}`;
             },
         }),
         // Input to add new todos

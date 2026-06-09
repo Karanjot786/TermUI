@@ -22,10 +22,11 @@
 
 > ⭐ **GSSoC 2026 contributors:** star this repo before opening a PR. The `star-check` workflow blocks unstarred merges. Read [CONTRIBUTING.md](./CONTRIBUTING.md#gssoc-2026) for the full point system.
 
-> 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
+> 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). Not sure which API to use? Read our [Choosing your API guide](./docs/choosing-your-api.md). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
 
 ## Available Scripts
 
+- `clean` → Clears build cache and node_modules
 - `dev` → Runs the development server
 - `build` → Builds the project for production
 - `test` → Runs test cases (if available)

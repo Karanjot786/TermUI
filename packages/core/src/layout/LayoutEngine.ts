@@ -25,6 +25,9 @@ export interface LayoutNode {
     computed: Rect;
     /** Dirty flag — true when this node needs to be re-laid-out. Foundation for layout caching. */
     _dirty: boolean;
+    /** Last container dimensions used — separate from computed so manual computed edits don't confuse sizeChanged detection */
+    _lastContainerWidth: number;
+    _lastContainerHeight: number;
 }
 
 /**
@@ -37,6 +40,8 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
         children,
         computed: { x: 0, y: 0, width: 0, height: 0 },
         _dirty: true,
+        _lastContainerWidth: 0,
+        _lastContainerHeight: 0,
     };
 }
 
@@ -54,17 +59,13 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
  * - gap between children
  */
 export function computeLayout(root: LayoutNode, containerWidth: number, containerHeight: number): void {
-    if (!root._dirty && !hasDirtyChild(root)) {
+    const sizeChanged = root._lastContainerWidth !== containerWidth || root._lastContainerHeight !== containerHeight;
+    if (!sizeChanged && !root._dirty && !hasDirtyChild(root)) {
         return;
     }
-
-    root.computed = {
-        x: 0,
-        y: 0,
-        width: containerWidth,
-        height: containerHeight,
-    };
-
+    root._lastContainerWidth = containerWidth;
+    root._lastContainerHeight = containerHeight;
+    root.computed = { x: 0, y: 0, width: containerWidth, height: containerHeight };
     layoutNode(root, containerWidth, containerHeight);
 
     root.computed.width = containerWidth;
@@ -99,6 +100,10 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
         // Apply constraints
         if (nodeWidth === undefined) nodeWidth = availWidth - margin.left - margin.right;
         if (nodeHeight === undefined) nodeHeight = availHeight - margin.top - margin.bottom;
+
+        // Validate dimensions — prevent NaN/Infinity propagation
+        if (!Number.isFinite(nodeWidth)) nodeWidth = 0;
+        if (!Number.isFinite(nodeHeight)) nodeHeight = 0;
 
         nodeWidth = clampSize(nodeWidth, style.minWidth, style.maxWidth);
         nodeHeight = clampSize(nodeHeight, style.minHeight, style.maxHeight);
@@ -372,9 +377,13 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
  */
 function resolveSize(value: number | string | undefined | Dim, available: number): number | undefined {
     if (value === undefined) return undefined;
-    if (typeof value === 'number') return value;
+    if (typeof value === 'number') {
+        if (!Number.isFinite(value) || value < 0) return 0;
+        return value;
+    }
     if (typeof value === 'string' && value.endsWith('%')) {
         const pct = parseFloat(value) / 100;
+        if (!Number.isFinite(pct)) return 0;
         return Math.floor(available * pct);
     }
     return undefined;
