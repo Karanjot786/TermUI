@@ -21,6 +21,7 @@ function defaultErrorScreen(err: Error): VNode {
 export interface NavigateEvent {
     match: RouteMatch;
     screen: VNode;
+    direction?: 'push' | 'replace' | 'back' | 'forward';
 }
 
 export interface RouterEvents {
@@ -203,7 +204,18 @@ export class Router {
         return path;
     }
 
-    private _handleNavigation(path: string, isReplace: boolean): void {
+    /**
+     * Core navigation execution with redirect resolution, guard evaluation,
+     * history management, and hook dispatch. Used by push, replace, back, and forward.
+     */
+    private _executeNavigation(
+        path: string,
+        options: {
+            modifyHistory?: 'push' | 'replace' | 'none';
+            clearForwardStack?: boolean;
+            direction?: 'push' | 'replace' | 'back' | 'forward';
+        } = {},
+    ): void {
         const resolvedPath = this._resolveRedirect(path);
         if (!resolvedPath) return;
 
@@ -214,7 +226,7 @@ export class Router {
             return;
         }
 
-        if (!isReplace) {
+        if (options.clearForwardStack) {
             this._forwardStack = [];
         }
 
@@ -225,24 +237,23 @@ export class Router {
         }
 
         if (typeof guardResult === 'string') {
-            if (isReplace) {
-                this.replace(guardResult);
-            } else {
-                this.push(guardResult);
-            }
+            this._executeNavigation(guardResult, { ...options, clearForwardStack: false });
             return;
         }
 
-        if (isReplace) {
+        const { modifyHistory = 'push', direction = 'push' } = options;
+
+        if (modifyHistory === 'push') {
+            this._history.push(resolvedPath);
+
+            if (this._history.length > this._maxHistory) {
+                this._history = this._history.slice(-this._maxHistory);
+            }
+        } else if (modifyHistory === 'replace') {
             if (this._history.length > 0) {
                 this._history[this._history.length - 1] = resolvedPath;
             } else {
                 this._history.push(resolvedPath);
-            }
-        } else {
-            this._history.push(resolvedPath);
-            if (this._history.length > this._maxHistory) {
-                this._history = this._history.slice(-this._maxHistory);
             }
         }
 
@@ -252,9 +263,19 @@ export class Router {
 
         const screen = this._wrapScreen(match);
 
-        this.events.emit('navigate', { match, screen });
+        const emitEvent = direction === 'back' ? 'back' : 'navigate';
+        this.events.emit(emitEvent, { match, screen, direction });
 
         match.route.afterEnter?.(resolvedPath);
+    }
+
+    private _applyInitialPathIfPending(): void {
+        if (!this._pendingInitialPath || this._routes.length === 0) return;
+        const path = this._pendingInitialPath;
+        const match = matchRoute(path, this._routes);
+        if (!match) return;
+        this._pendingInitialPath = null;
+        this.push(path);
     }
 
     /** Navigate to a path */
@@ -264,19 +285,7 @@ export class Router {
             const qs = serializeQuery(options.query);
             if (qs) targetPath += (targetPath.includes('?') ? '&' : '?') + qs;
         }
-        this._handleNavigation(targetPath, false);
-    }
-
-    private _applyInitialPathIfPending(): void {
-        if (!this._pendingInitialPath || this._routes.length === 0) return;
-        const path = this._pendingInitialPath;
-        const resolvedPath = this._resolveRedirect(path);
-        if (!resolvedPath) return;
-
-        const match = matchRoute(resolvedPath, this._routes);
-        if (!match) return;
-        this._pendingInitialPath = null;
-        this.push(path);
+        this._executeNavigation(targetPath, { clearForwardStack: true, direction: 'push' });
     }
 
     /** Replace current path */
@@ -286,41 +295,53 @@ export class Router {
             const qs = serializeQuery(options.query);
             if (qs) targetPath += (targetPath.includes('?') ? '&' : '?') + qs;
         }
-        this._handleNavigation(targetPath, true);
+        this._executeNavigation(targetPath, { modifyHistory: 'replace', direction: 'replace' });
     }
 
-    /** Go back in history */
+    /** Go back in history with full lifecycle (beforeEnter, afterEnter, redirects) */
     back(): void {
         if (this._history.length <= 1) return;
 
-        // back() pushes the popped path onto a forward stack
+        const prevPath = this._history[this._history.length - 2];
+        const match = prevPath ? matchRoute(prevPath, this._routes) : null;
+
+        if (!match) {
+            this.events.emit('back', null);
+            return;
+        }
+
+        const guardResult = match.route.beforeEnter?.(prevPath);
+
+        if (guardResult === false) {
+            return;
+        }
+
+        if (typeof guardResult === 'string') {
+            this.push(guardResult);
+            return;
+        }
+
         const poppedPath = this._history.pop();
         if (poppedPath) {
             this._forwardStack.push(poppedPath);
         }
 
-        const prevPath = this._history[this._history.length - 1];
-        const match = prevPath ? matchRoute(prevPath, this._routes) : null;
-
         this._currentMatch = match;
 
-        if (match) {
-            unmountAll();
+        unmountAll();
 
-            const screen = this._wrapScreen(match);
+        const screen = this._wrapScreen(match);
 
-            this.events.emit('back', { match, screen });
-        } else {
-            this.events.emit('back', null);
-        }
+        this.events.emit('back', { match, screen, direction: 'back' });
+
+        match.route.afterEnter?.(prevPath);
     }
 
-    /** Move forward one step if a forward entry exists */
+    /** Move forward one step with full lifecycle (beforeEnter, afterEnter, redirects) */
     forward(): void {
         if (this._forwardStack.length === 0) return;
 
-        const nextPath = this._forwardStack.pop();
-        if (!nextPath) return;
+        const nextPath = this._forwardStack[this._forwardStack.length - 1];
 
         const match = matchRoute(nextPath, this._routes);
         if (!match) {
@@ -328,12 +349,27 @@ export class Router {
             return;
         }
 
+        const guardResult = match.route.beforeEnter?.(nextPath);
+
+        if (guardResult === false) {
+            return;
+        }
+
+        if (typeof guardResult === 'string') {
+            this._forwardStack.pop();
+            this.push(guardResult);
+            return;
+        }
+
+        this._forwardStack.pop();
         this._history.push(nextPath);
         this._currentMatch = match;
+
         unmountAll();
         const screen = this._wrapScreen(match);
-        // forward() re-navigates to the most recent forward entry and emits navigate
-        this.events.emit('navigate', { match, screen });
+        this.events.emit('navigate', { match, screen, direction: 'forward' });
+
+        match.route.afterEnter?.(nextPath);
     }
 
     /** Move delta steps: negative is back, positive is forward */
@@ -342,13 +378,11 @@ export class Router {
 
         if (delta < 0) {
             const steps = Math.abs(delta);
-            // go(n) past either boundary is a no-op (clamped, no error)
             if (steps >= this._history.length) return;
             for (let i = 0; i < steps; i++) {
                 this.back();
             }
         } else {
-            // go(n) past either boundary is a no-op (clamped, no error)
             if (delta > this._forwardStack.length) return;
             for (let i = 0; i < delta; i++) {
                 this.forward();
