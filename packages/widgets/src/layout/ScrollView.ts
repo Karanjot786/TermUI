@@ -52,7 +52,7 @@ export class ScrollView extends Widget {
 
     /** Scroll by delta rows */
     scrollBy(delta: number): void {
-        this._scrollOffset += delta;
+        this._scrollOffset = Math.round(this._scrollOffset + delta);
         this._clampOffset();
         this.markDirty();
     }
@@ -61,7 +61,7 @@ export class ScrollView extends Widget {
     scrollTo(offset: number): void {
         const previousOffset = this._scrollOffset;
     
-        this._scrollOffset = offset;
+        this._scrollOffset = Math.round(offset);
         this._clampOffset();
     
         if (previousOffset !== this._scrollOffset) {
