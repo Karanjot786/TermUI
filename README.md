@@ -48,7 +48,7 @@
 - [Architecture](#architecture)
 - [Examples](#examples)
   - [Running the Examples](#running-the-examples)
-  - [Available Examples](#available-examples)
+    - [Available Examples](#available-examples)
 - [Project Structure](#project-structure)
 - [Development](#development)
 - [Requirements](#requirements)
