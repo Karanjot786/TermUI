@@ -9,6 +9,7 @@
 import type { KeyEvent } from '@termuijs/core';
 import { caps } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
+import type { Widget } from '@termuijs/widgets';
 import type { FC } from './vnode.js';
 
 // ── Fiber — per-component-instance state ──
@@ -44,6 +45,9 @@ export interface Fiber {
     _prevChildFibers?: Map<string, ChildFiberEntry>;
     /** Next child render index, reset by setCurrentFiber each render pass */
     _nextChildIdx?: number;
+    // ── Portal tracking ──
+    /** Widgets created via createPortal and their target, for proper teardown */
+    portalChildren?: Array<{ widgets: Widget[]; target: Widget }>;
 }
 
 interface HookState {
@@ -601,6 +605,15 @@ export function destroyFiber(fiber: Fiber): void {
         for (const entry of fiber._prevChildFibers.values()) {
             destroyFiber(entry.fiber);
         }
+    }
+    // Clean up portal children — remove portal widgets from their targets
+    if (fiber.portalChildren) {
+        for (const entry of fiber.portalChildren) {
+            for (const widget of entry.widgets) {
+                entry.target.removeChild(widget);
+            }
+        }
+        fiber.portalChildren = undefined;
     }
     // Clean up global _instanceMap entries pointing to this fiber
     const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
