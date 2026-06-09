@@ -160,4 +160,44 @@ describe('Badge', () => {
             warnSpy.mockRestore();
         }
     });
+
+    it('does not mark dirty when text is unchanged', () => {
+        const badge = new Badge('same');
+
+        badge.clearDirty();
+        badge.setText('same');
+
+        expect(badge.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when variant is unchanged', () => {
+        const badge = new Badge('ok', {}, { variant: 'success' });
+
+        badge.clearDirty();
+        badge.setVariant('success');
+
+        expect(badge.isDirty).toBe(false);
+    });
+
+    // ── 7. Mutation regression tests ─────────────────────────────────────────
+    describe('Badge – mutation regression tests', () => {
+        it('setText updates text across multiple mutations', () => {
+            const badge = new Badge('one');
+
+            badge.setText('two');
+            badge.setText('three');
+
+            expect(badge.getText()).toBe('three');
+        });
+
+        it('setVariant updates variant across multiple mutations', () => {
+            const badge = new Badge('ok');
+
+            badge.setVariant('warning');
+            badge.setVariant('error');
+
+            expect(badge.getVariant()).toBe('error');
+        });
+    });
+
 });

@@ -61,6 +61,7 @@ export class Badge extends Widget {
 
     /** Update the badge text. */
     setText(text: string): void {
+        if (text === this._text) return; 
         this._text = text;
         this.markDirty();
     }
@@ -72,6 +73,7 @@ export class Badge extends Widget {
 
     /** Update the badge variant. */
     setVariant(variant: BadgeVariant): void {
+        if (variant === this._variant) return;
         this._variant = variant;
         this.markDirty();
     }

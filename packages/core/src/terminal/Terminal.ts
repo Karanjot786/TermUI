@@ -55,6 +55,11 @@ export class Terminal {
     private _uncaughtExceptionHandler: ((err: Error) => void) | null = null;
     private _unhandledRejectionHandler: (() => void) | null = null;
     private _restored = false;
+    private _restoring = false;
+
+    // Stream write queue state to prevent interleaving backpressure fragmentation
+    private _writeQueue: string[] = [];
+    private _isWriting = false;
 
     constructor(options: TerminalOptions = {}) {
         this.stdout = options.stdout ?? process.stdout;
@@ -88,7 +93,8 @@ export class Terminal {
                     this._lastDispatchedCols = this._cols;
                     this._lastDispatchedRows = this._rows;
 
-                    for (const handler of this._resizeHandlers) {
+                    const handlers = [...this._resizeHandlers];
+                    for (const handler of handlers) {
                         handler(this._cols, this._rows);
                     }
                 }
@@ -193,8 +199,43 @@ export class Terminal {
 
     // ── Output ──────────────────────────────────────────
 
+    /**
+     * Writes chunked string data to stdout.
+     * Enforces queue serialization to ensure atomic ANSI escape execution.
+     */
     write(data: string): void {
-        this.stdout.write(data);
+        if (!data) return;
+        
+        this._writeQueue.push(data);
+        if (this._isWriting) return;
+
+        this._processWriteQueue();
+    }
+
+    /**
+     * Sequentially unshifts and drains string frames to stdout safely.
+     */
+    private _processWriteQueue(): void {
+        if (this._writeQueue.length === 0) {
+            this._isWriting = false;
+            return;
+        }
+
+        this._isWriting = true;
+        const chunk = this._writeQueue.shift()!;
+
+        // Execute write operation
+        const canContinue = this.stdout.write(chunk);
+
+        if (!canContinue) {
+            // Buffer saturation hit; halt processing until kernel drains stream cache
+            this.stdout.once('drain', () => {
+                this._processWriteQueue();
+            });
+        } else {
+            // Proceed instantly via synchronous event-loop cycle
+            this._processWriteQueue();
+        }
     }
 
     // ── Clipboard ───────────────────────────────────────
@@ -231,13 +272,17 @@ export class Terminal {
      * Called automatically on SIGINT, SIGTERM, process exit.
      */
     restore(): void {
-        if (this._restored) return; // Prevent double-restore
-        this._restored = true;
+        if (this._restored || this._restoring) return;
+        this._restoring = true;
 
         if (this._resizeTimer) {
             clearTimeout(this._resizeTimer);
             this._resizeTimer = null;
         }
+
+        // Clear hanging buffer data states
+        this._writeQueue = [];
+        this._isWriting = false;
 
         // Remove process-level signal handlers to prevent leaks
         if (this._exitHandler) process.off('exit', this._exitHandler);
@@ -257,12 +302,23 @@ export class Terminal {
             this.stdout.off('resize', this._resizeHandler);
         }
 
-        this.disableBracketedPaste();
-        this.disableMouse();
-        this.exitAltScreen();
-        this.exitRawMode();
-        this.showCursor();
-        this.write(ansi.reset);
+        // Capture direct stdout.write to bypass any RenderHook hijack
+        const directWrite = this.stdout.write.bind(this.stdout);
+        const savedWrite = this.write;
+        this.write = (s: string) => { directWrite(s); };
+
+        try {
+            this.disableBracketedPaste();
+            this.disableMouse();
+            this.exitAltScreen();
+            this.exitRawMode();
+            this.showCursor();
+            this.write(ansi.reset);
+            this._restored = true;
+        } finally {
+            this.write = savedWrite;
+            this._restoring = false;
+        }
     }
 
     /**
@@ -274,7 +330,8 @@ export class Terminal {
 
     private _setupCleanup(): void {
         const runCleanupHandlers = () => {
-            for (const handler of this._cleanupHandlers) {
+            const handlers = [...this._cleanupHandlers];
+            for (const handler of handlers) {
                 try { handler(); } catch { /* swallow */ }
             }
             this.restore();
@@ -296,9 +353,7 @@ export class Terminal {
             this.restore();
             process.exit(1);
         };
-        // Use .on() (not .once()) so restore() can explicitly remove these handlers
-        // via process.off(). With .once(), the reference is removed after first fire,
-        // making process.off() in restore() a no-op on subsequent exceptions.
+        
         process.on('uncaughtException', this._uncaughtExceptionHandler);
         process.on('unhandledRejection', this._unhandledRejectionHandler);
     }

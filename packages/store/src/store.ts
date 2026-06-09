@@ -114,9 +114,10 @@ export interface StoreOptions<T> {
 }
 
 export const logger: Middleware<any> = (prevState, update, next) => {
-    // console.log is forbidden in TermUI source files.
-    // To debug state changes, write to a file instead.
-    const nextState = next(update);
+    // Pass-through middleware — console.log is forbidden in TermUI source files.
+    // This middleware is intentionally a no-op forwarder; consumers who need
+    // logging should attach their own subscribe() listener.
+    next(update);
 };
 
 export interface Computed<U> {

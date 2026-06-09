@@ -133,11 +133,13 @@ export class Renderer {
                 output += ansiReset;
                 output += endSyncUpdate;
 
-                const isHookActive = this.hook.isActive;
-                if (isHookActive) this.hook.stop();
-                if (bufferedLogs) this._terminal.write(bufferedLogs);
-                this._terminal.write(output);
-                if (isHookActive) this.hook.start();
+                try {
+                    RenderHook.suspendAll();
+                    if (bufferedLogs) this._terminal.write(bufferedLogs);
+                    this._terminal.write(output);
+                } finally {
+                    RenderHook.resumeAll();
+                }
 
                 this._screen.saveLines();
                 this._emitStats(start, bufferedLogs, output);
@@ -155,23 +157,15 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
-            // 2. Pause the hook temporarily so our own UI rendering doesn't get buffered
-            const isHookActive = this.hook.isActive;
-            if (isHookActive) {
-                this.hook.stop();
-            }
+            try {
+                RenderHook.suspendAll();
+                if (bufferedLogs) {
+                    this._terminal.write(bufferedLogs);
+                }
 
-            // 3. Print the captured logs FIRST (above the UI)
-            if (bufferedLogs) {
-                this._terminal.write(bufferedLogs);
-            }
-
-            // 4. Print the actual UI diff natively
-            this._terminal.write(output);
-
-            // 5. Resume catching external logs
-            if (isHookActive) {
-                this.hook.start();
+                this._terminal.write(output);
+            } finally {
+                RenderHook.resumeAll();
             }
 
             this._emitStats(start, bufferedLogs, output);

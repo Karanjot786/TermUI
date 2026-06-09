@@ -9,6 +9,8 @@
         "dotenv": "^16.0.0",
       },
       "devDependencies": {
+        "@termuijs/jsx": "^0.1.5",
+        "@termuijs/widgets": "^0.1.5",
         "@types/bun": "latest",
         "@types/node": "^25.2.3",
         "tsup": "^8.3.0",
@@ -382,7 +384,7 @@
       "name": "@termuijs/core",
       "version": "0.1.5",
       "devDependencies": {
-        "@types/node": "^22.0.0",
+        "@types/node": "^22.19.20",
         "tsup": "^8.3.0",
         "typescript": "^5.7.0",
       },
@@ -964,7 +966,7 @@
 
     "@termuijs/adapters/@types/node": ["@types/node@22.19.19", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-dyh/xO2Fh5bYrfWaaqGrRQQGkNdmYw6AmaAUvYeUMNTWQtvb796ikLdmTchRmOlOiIJ1TDXfWgVx1QkUlQ6Hew=="],
 
-    "@termuijs/core/@types/node": ["@types/node@22.19.19", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-dyh/xO2Fh5bYrfWaaqGrRQQGkNdmYw6AmaAUvYeUMNTWQtvb796ikLdmTchRmOlOiIJ1TDXfWgVx1QkUlQ6Hew=="],
+    "@termuijs/core/@types/node": ["@types/node@22.19.20", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-6tELRwSDYWW9EdZhbeZmYGZ1/7Djkt+Ah3/ScEYT9cDord7UJzasR/4D3VONg9tQI5CDp+/CZC1AXj2pCFOvpw=="],
 
     "@termuijs/data/@types/node": ["@types/node@22.19.19", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-dyh/xO2Fh5bYrfWaaqGrRQQGkNdmYw6AmaAUvYeUMNTWQtvb796ikLdmTchRmOlOiIJ1TDXfWgVx1QkUlQ6Hew=="],
 

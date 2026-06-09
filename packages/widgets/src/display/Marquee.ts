@@ -30,6 +30,7 @@ export class Marquee extends Widget {
     }
 
     setText(text: string): void {
+        if (text === this._text) return;
         this._text = text;
         this._offset = 0;
         this.markDirty();

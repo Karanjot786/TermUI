@@ -149,4 +149,22 @@ export class Stopwatch extends Widget {
 
         screen.writeString(x, y, label, attrs);
     }
+
+    setInterval(interval: number): void {
+        if (interval === this._interval) return;
+    
+        this._interval = interval;
+    
+        if (this._running) {
+            this._clearInterval();
+            this._intervalId = setInterval(() => this._tick(), this._interval);
+        }
+    
+        this.markDirty();
+    }
+    
+    getInterval(): number {
+        return this._interval;
+    }
+
 }

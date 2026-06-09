@@ -259,42 +259,62 @@ export function useWebSocket(url: string): UseWebSocketReturn {
     const socketRef = useRef<WebSocket | null>(null)
     const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const retryCountRef = useRef(0)
+    const generationRef = useRef(0)
 
     useEffect(() => {
         let isMounted = true;
+        const thisGeneration = ++generationRef.current;
+        retryCountRef.current = 0;
 
         function connect() {
+            if (socketRef.current) {
+                socketRef.current.onopen = null;
+                socketRef.current.onmessage = null;
+                socketRef.current.onclose = null;
+                socketRef.current.onerror = null;
+                if (socketRef.current.readyState === WebSocket.OPEN ||
+                    socketRef.current.readyState === WebSocket.CONNECTING) {
+                    socketRef.current.close();
+                }
+            }
+
             const socket = new WebSocket(url);
             socketRef.current = socket;
             setState('connecting')
 
             socket.onopen = () => {
-                if (!isMounted) return;
+                if (!isMounted || thisGeneration !== generationRef.current) return;
                 setState('open');
                 retryCountRef.current = 0;
             }
 
             socket.onmessage = (e) => {
-                if (!isMounted) return;
+                if (!isMounted || thisGeneration !== generationRef.current) return;
                 setMessage(e.data)
             }
 
             socket.onclose = () => {
-                if (!isMounted) return;
+                if (!isMounted || thisGeneration !== generationRef.current) return;
                 setState('closed')
+
+                if (reconnectTimeoutRef.current) {
+                    clearTimeout(reconnectTimeoutRef.current);
+                    reconnectTimeoutRef.current = null;
+                }
 
                 const timeout = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000);
                 retryCountRef.current += 1;
 
                 reconnectTimeoutRef.current = setTimeout(() => {
+                    if (!isMounted || thisGeneration !== generationRef.current) return;
                     connect();
                 }, timeout)
             }
 
             socket.onerror = () => {
-                if (!isMounted) return;
+                if (!isMounted || thisGeneration !== generationRef.current) return;
                 setState('error')
-
+                socket.close();
             }
         }
 
@@ -302,11 +322,18 @@ export function useWebSocket(url: string): UseWebSocketReturn {
 
         return () => {
             isMounted = false;
+            generationRef.current += 1;
             if (reconnectTimeoutRef.current) {
                 clearTimeout(reconnectTimeoutRef.current)
+                reconnectTimeoutRef.current = null;
             }
             if (socketRef.current) {
+                socketRef.current.onopen = null;
+                socketRef.current.onmessage = null;
+                socketRef.current.onclose = null;
+                socketRef.current.onerror = null;
                 socketRef.current.close();
+                socketRef.current = null;
             }
         }
     }, [url])
