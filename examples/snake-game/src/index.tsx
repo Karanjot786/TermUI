@@ -58,6 +58,7 @@ class SnakeGame extends Widget {
     private gameOverText: Text | null = null;
     private snake: { x: number; y: number }[] = [{ x: 7, y: 7 }];
     private direction: 'up' | 'down' | 'left' | 'right' = 'right';
+    private pendingDirection: 'up' | 'down' | 'left' | 'right' | null = null;
     private food: { x: number; y: number };
     private score = 0;
     private gameOver = false;
@@ -101,20 +102,34 @@ class SnakeGame extends Widget {
 
     // Returns null when board is full (victory condition)
     private generateRandomFood(): { x: number; y: number } | null {
-        if (this.snake.length >= GRID_SIZE * GRID_SIZE) {
+        const emptyCells: { x: number; y: number }[] = [];
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const occupied = this.snake.some(
+                    seg => seg.x === x && seg.y === y
+                );
+
+                if (!occupied) {
+                    emptyCells.push({ x, y });
+                }
+            }
+        }
+
+        if (emptyCells.length === 0) {
             return null;
         }
-        let newPos: { x: number; y: number };
-        do {
-            newPos = {
-                x: Math.floor(Math.random() * GRID_SIZE),
-                y: Math.floor(Math.random() * GRID_SIZE),
-            };
-        } while (this.snake.some(seg => seg.x === newPos.x && seg.y === newPos.y));
-        return newPos;
+
+        return emptyCells[
+            Math.floor(Math.random() * emptyCells.length)
+        ];
     }
 
     private moveSnake() {
+        if (this.pendingDirection) {
+            this.direction = this.pendingDirection;
+            this.pendingDirection = null;
+        }
         if (this.gameOver) return;
 
         const head = this.snake[0];
@@ -122,9 +137,9 @@ class SnakeGame extends Widget {
 
         switch (this.direction) {
             case 'right': newHead.x++; break;
-            case 'left':  newHead.x--; break;
-            case 'up':    newHead.y--; break;
-            case 'down':  newHead.y++; break;
+            case 'left': newHead.x--; break;
+            case 'up': newHead.y--; break;
+            case 'down': newHead.y++; break;
         }
 
         // Wall collision
@@ -227,14 +242,14 @@ class SnakeGame extends Widget {
                 (newDir === 'left' && this.direction !== 'right') ||
                 (newDir === 'right' && this.direction !== 'left')
             ) {
-                this.direction = newDir;
+                this.pendingDirection = newDir;
             }
             return true;
         }
         return true;
     }
 
-    protected _renderSelf(_screen: Screen): void {}
+    protected _renderSelf(_screen: Screen): void { }
 }
 
 async function main() {
