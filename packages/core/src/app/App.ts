@@ -382,6 +382,12 @@ export class App {
             } finally {
                 // Unlock the queue flag so subsequent frames can be scheduled
                 this._isRenderPending = false;
+                // Re-schedule if a widget became dirty during the render cycle —
+                // the previous early-return on _isRenderPending would have silently
+                // dropped that state change.
+                if (this._rootWidget.isDirty !== false) {
+                    this.requestRender();
+                }
             }
         });
     }
