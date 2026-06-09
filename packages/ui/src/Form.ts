@@ -1,6 +1,6 @@
 // Form — compound input container with validation
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs } from '@termuijs/core';
 
 export interface FormField {
     name: string; label: string; type: 'text' | 'select' | 'checkbox';
@@ -32,6 +32,9 @@ export class Form extends Widget {
         this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSubmit = options.onSubmit;
         for (const f of fields) this._values.set(f.name, '');
+        // Wire key events from the App/event system into this widget's handlers.
+        // Minimal: only route printable chars and backspace to existing methods.
+        this.events.on('key', (event: KeyEvent) => this.handleKey(event));
     }
 
     get values(): Record<string, string> { const r: Record<string, string> = {}; for (const [k, v] of this._values) r[k] = v; return r; }
@@ -57,6 +60,18 @@ export class Form extends Widget {
         }
         if (!hasErr) this._onSubmit?.(this.values);
         this.markDirty();
+    }
+
+    /** Minimal key router — printable chars -> insertChar, backspace -> deleteBack */
+    handleKey(event: KeyEvent): void {
+        if (event.key === 'backspace') {
+            this.deleteBack();
+            return;
+        }
+
+        if (event.key && event.key.length === 1 && !event.ctrl && !event.alt) {
+            this.insertChar(event.key);
+        }
     }
 
     protected _renderSelf(screen: Screen): void {
