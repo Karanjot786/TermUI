@@ -37,4 +37,12 @@ describe('Tabs', () => {
         tabs.prevTab(); // wraps to 2
         expect(tabs.activeIndex).toBe(2);
     });
+
+    it('safe with no tabs', () => {
+        const tabs = new Tabs([]);
+        expect(() => tabs.selectTab(0)).not.toThrow();
+        expect(() => tabs.nextTab()).not.toThrow();
+        expect(() => tabs.prevTab()).not.toThrow();
+        expect(tabs.activeIndex).toBe(0);
+    });
 });
