@@ -218,7 +218,7 @@ TERMUI_KEYBINDINGS=emacs
 import { caps } from '@termuijs/core'
 
 const bullet = caps.unicode ? '●' : '*'
-console.log(caps.keybindingMode) // 'default', 'vim', or 'emacs'
+// caps.keybindingMode → "default", "vim", or "emacs"
 ```
 
 ### Notifications
