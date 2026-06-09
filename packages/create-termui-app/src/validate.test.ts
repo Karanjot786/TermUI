@@ -180,4 +180,19 @@ describe("validateResolvedPath", () => {
         expect(() => validateResolvedPath(cwd, "project-1")).not.toThrow();
         expect(() => validateResolvedPath(cwd, "my_app")).not.toThrow();
     });
+
+    it("rejects traversal escaping cwd", () => {
+        expect(() => validateResolvedPath(cwd, "../evil")).toThrow(
+            /escapes current working directory/
+        );
+        expect(() => validateResolvedPath(cwd, "../../hack")).toThrow(
+            /escapes current working directory/
+        );
+    });
+
+    it("rejects absolute paths", () => {
+        expect(() => validateResolvedPath(cwd, "/etc/passwd")).toThrow(
+            /escapes current working directory/
+        );
+    });
 });
