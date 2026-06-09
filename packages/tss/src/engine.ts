@@ -209,7 +209,9 @@ export class ThemeEngine {
     }
 
     private _matchesSelector(sel: TSSSelector, widgetType: string, className?: string, pseudo?: string): boolean {
+        // Widget type match (* = universal)
         if (sel.widget !== '*' && sel.widget.toLowerCase() !== widgetType.toLowerCase()) return false;
+        // Class name match
         if (sel.className && sel.className !== className) return false;
         if (!matchesPseudo(sel.pseudo, pseudo)) return false;
         return true;
