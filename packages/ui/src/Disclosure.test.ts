@@ -39,11 +39,9 @@ describe('Disclosure Widget', () => {
         const d = new Disclosure(new Text('body text'), { summary: 'Details' });
         expect(d.isOpen).toBe(false);
         
-        // Test Space key
         d.handleKey({ key: ' ' } as any);
         expect(d.isOpen).toBe(true);
 
-        // Test Enter key
         d.handleKey({ key: 'Enter' } as any);
         expect(d.isOpen).toBe(false);
     });
@@ -65,12 +63,10 @@ describe('Disclosure Widget', () => {
         const d = new Disclosure(new Text('body text'), { summary: 'Details' });
         d.updateRect({ x: 0, y: 0, width: 30, height: 4 });
         
-        // Test closed state fallback
         d.render(screen);
         let rows = screen.back.map(r => r.map(c => c.char).join('')).join('\n');
         expect(rows).toContain('> Details');
 
-        // Test open state fallback
         d.open();
         d.render(screen);
         rows = screen.back.map(r => r.map(c => c.char).join('')).join('\n');

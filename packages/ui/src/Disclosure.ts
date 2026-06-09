@@ -21,7 +21,7 @@ export class Disclosure extends Widget {
         this._isOpen = options.defaultOpen ?? false;
         this.onToggleCallback = options.onToggle;
         
-        // Per Acceptance Criteria: focusable must be true
+        
         this.focusable = true;
     }
 
@@ -58,11 +58,8 @@ export class Disclosure extends Widget {
         }
     }
 
-    /**
-     * Implements the abstract lifecycle method from the base Widget class
-     */
     protected _renderSelf(screen: Screen): void {
-        // Fall back to ASCII characters if the terminal doesn't support unicode
+        
         const marker = caps.unicode 
             ? (this._isOpen ? '▼' : '▶') 
             : (this._isOpen ? 'v' : '>');
@@ -72,20 +69,19 @@ export class Disclosure extends Widget {
         const startX = this.rect?.x ?? 0;
         const startY = this.rect?.y ?? 0;
         
-        // Use screen.width and screen.height directly if they exist, fallback to screen.rect properties
+       
         const screenWidth = (screen as any).width ?? (screen as any).rect?.width ?? 0;
         const screenHeight = (screen as any).height ?? (screen as any).rect?.height ?? 0;
         
         const width = this.rect?.width ?? screenWidth;
 
-        // Render the summary header row
         for (let i = 0; i < headerText.length && i < width; i++) {
             if (screen.back && screen.back[startY] && screen.back[startY][startX + i]) {
                 screen.back[startY][startX + i].char = headerText[i];
             }
         }
 
-        // If open, render the wrapped content Widget directly below it (y + 1)
+        
         if (this._isOpen && this.content) {
             const childRect = {
                 x: startX,
