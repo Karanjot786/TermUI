@@ -291,23 +291,9 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
         else if (t === Sidebar) type = 'sidebar';
         else if (t === Spinner) type = 'spinner';
 
-        // Suspense boundary
+        // Suspense boundary — go through renderComponent so fiber context is set
         if (type === Suspense) {
-            try {
-                const suspenseChild = children.length === 1 ? children[0] : {
-                    type: Fragment,
-                    props: {},
-                    children,
-                } as any;
-
-                return reconcile(suspenseChild);
-            } catch (err) {
-                if (err instanceof Promise) {
-                    return reconcile(props.fallback);
-                }
-
-                throw err;
-            }
+            return renderComponent(SuspenseBoundary as any, props, children);
         }
 
         // Functional component
@@ -355,6 +341,32 @@ function defaultErrorVNode(err: Error): VNode {
             { type: 'text', props: {}, children: [err.message] },
         ],
     } as any;
+}
+
+/**
+ * SuspenseBoundary — a component wrapper that reconciles children and, if a
+ * lazy-loaded component throws a Promise, renders the fallback instead.
+ * Because it goes through renderComponent(), the fiber context
+ * (_currentFiber, _parentFiber) is correctly set, so the fallback subtree
+ * has proper parent references, context propagation, and error boundary
+ * traversal.
+ */
+function SuspenseBoundary(props: Record<string, any>): any {
+    const children = Array.isArray(props.children) ? props.children : [props.children];
+    const child = children.length === 1 ? children[0] : {
+        type: Fragment,
+        props: {},
+        children,
+    } as any;
+
+    try {
+        return reconcile(child);
+    } catch (err) {
+        if (err instanceof Promise) {
+            return props.fallback;
+        }
+        throw err;
+    }
 }
 
 /** Destroy child fibers in _prevChildFibers that were not re-visited this render */
