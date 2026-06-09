@@ -74,6 +74,9 @@ export type { Bar, BarGroup, BarChartDirection, BarChartOptions } from './data/B
 export { Histogram } from './data/Histogram.js';
 export type { HistogramOptions } from './data/Histogram.js';
 
+export { StackedBarChart } from './data/StackedBarChart.js';
+export type { StackedBarChartOptions, StackedSeries } from './data/StackedBarChart.js';
+
 export { GanttChart } from './data/GanttChart.js';
 export type { GanttChartOptions, GanttTask } from './data/GanttChart.js';
 
