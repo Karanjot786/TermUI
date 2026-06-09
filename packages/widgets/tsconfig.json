@@ -1,18 +1,14 @@
 {
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
-        "jsx": "react-jsx",
-        "jsxImportSource": "@termuijs/jsx",
-        "outDir": "dist",
-        "rootDir": "src"
+        "outDir": "./dist",
+        "rootDir": "./src"
     },
     "include": [
-        "src/**/*.ts",
-        "src/**/*.tsx"
+        "src/**/*.ts"
     ],
     "exclude": [
         "src/**/*.test.ts",
-        "src/**/*.test.tsx",
         "dist"
     ]
 }
