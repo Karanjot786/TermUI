@@ -95,7 +95,6 @@ export class App {
     private _pendingFocusState = new Map<string, boolean>();
 
     private _unsubPaste: (() => void) | null = null;
-    private _widgetById = new Map<string, any>();
     private _consecutiveRenderFailures = 0;
     private static readonly MAX_RENDER_FAILURES = 5;
 
