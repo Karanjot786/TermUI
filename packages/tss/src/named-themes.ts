@@ -1,4 +1,4 @@
-// Named ThemeTokens — 10 curated color schemes
+// Named ThemeTokens — 11 curated color schemes
 // ─────────────────────────────────────────────────────
 
 import type { ThemeTokens } from './tokens.js';
@@ -121,6 +121,19 @@ export const gruvboxTheme: ThemeTokens = {
   highlight: '#3c3836',
 };
 
+export const rosePineTheme: ThemeTokens = {
+  bg: '#191724',
+  fg: '#e0def4',
+  primary: '#c4a7e7',
+  secondary: '#ebbcba',
+  success: '#9ccfd8',
+  warning: '#f6c177',
+  error: '#eb6f92',
+  muted: '#6e6a86',
+  border: '#6e6a86',
+  highlight: '#26233a',
+};
+
 export const highContrastTheme: ThemeTokens = {
   bg: '#000000',
   fg: '#ffffff',
@@ -160,6 +173,7 @@ export const NAMED_THEMES: Record<string, ThemeTokens> = {
   gruvbox: gruvboxTheme,
   highContrast: highContrastTheme,
   everforest: everforestTheme,
+  "rose-pine": rosePineTheme,
 };
 
 /** Get a named theme by string key, falling back to defaultDark if not found. */
