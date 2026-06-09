@@ -224,6 +224,22 @@ describe('Form — text editing', () => {
         expect(form.values.first).toBe('');
     });
 
+    it('modified key events do not change field values', () => {
+        const { form } = makeForm(TEXT_FIELDS);
+        form.insertChar('X');
+        const ev = createKeyEvent({ key: 'a', ctrl: true, alt: false, shift: false, raw: Buffer.from('a') });
+        form.events.emit('key', ev);
+        expect(form.values.first).toBe('X');
+    });
+
+    it('multi-character key events do not change field values', () => {
+        const { form } = makeForm(TEXT_FIELDS);
+        form.insertChar('Y');
+        const ev = createKeyEvent({ key: 'enter', ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0) });
+        form.events.emit('key', ev);
+        expect(form.values.first).toBe('Y');
+    });
+
     it('backspace at position 0 is safe and leaves value unchanged', () => {
         const { form } = makeForm(TEXT_FIELDS);
         expect(() => form.deleteBack()).not.toThrow();
