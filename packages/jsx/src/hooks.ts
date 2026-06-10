@@ -169,7 +169,7 @@ export function registerCleanup(fn: () => void): () => void {
  * Schedule a re-render. Multiple setState calls within the same
  * microtask are batched into a single re-render cycle.
  */
-function scheduleRender(fiber?: Fiber): void {
+export function scheduleRender(fiber?: Fiber): void {
     if (fiber) {
         _pendingUpdates.add(fiber);
     }
