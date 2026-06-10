@@ -14,7 +14,7 @@ function walkWidgets(
       result.push(widget);
     }
 
-    const children: Widget[] = (widget as any)._children ?? [];
+    const children: Widget[] = [...(widget.children ?? [])];
 
     for (let i = children.length - 1; i >= 0; i--) {
       stack.push(children[i]);
