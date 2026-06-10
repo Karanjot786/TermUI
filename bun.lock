@@ -539,6 +539,7 @@
         "@standard-schema/spec": "^1.1.0",
         "@termuijs/core": "workspace:*",
         "@termuijs/jsx": "workspace:*",
+        "@termuijs/tss": "workspace:*",
         "@termuijs/widgets": "workspace:*",
       },
       "devDependencies": {
