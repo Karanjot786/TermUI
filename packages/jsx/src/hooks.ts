@@ -647,6 +647,12 @@ export function resetHooksGlobals(): void {
     for (const fn of cleanups) {
         try { fn(); } catch { /* ignore cleanup errors */ }
     }
+    
+    // Clear global instance map
+    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+    if (termuiInstances instanceof Map) {
+        termuiInstances.clear();
+    }
 }
 
 /**
