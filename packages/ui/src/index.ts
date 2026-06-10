@@ -218,6 +218,8 @@ export type { InputValidator } from './validation.js';
 export { Popover } from './Popover.js';
 export type { PopoverOptions, PopoverPlacement } from './Popover.js'
 
+export { FormBuilder, useForm } from './components/FormBuilder.js';
+export type { FormBuilderProps } from './components/FormBuilder.js';
+
 // -- External Theme / Stylesheet Engine --
 export * from '@termuijs/tss';
-
