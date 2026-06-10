@@ -32,10 +32,8 @@ export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
 export type { ScrollRange } from './input/virtual-scroll.js';
 
 // ─────────────────────────────────────────────────────
-export { Form, useForm } from './input/Form.js';
-export type { FormProps } from './input/Form.js';
-export { ContextMenu } from './display/ContextMenu.js';
-export type { ContextMenuProps } from './display/ContextMenu.js';
+
+
 
 // ── Input Widgets ─────────────────────────────────────
 export { List } from './input/List.js';

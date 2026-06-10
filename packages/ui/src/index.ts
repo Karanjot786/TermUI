@@ -212,3 +212,5 @@ export type { ListbarOptions, ListbarItem } from './Listbar.js';
 
 export { validateInput } from './validation.js';
 export type { InputValidator } from './validation.js';
+export { ContextMenu } from './components/ContextMenu.js';
+export type { ContextMenuProps } from './components/ContextMenu.js';
