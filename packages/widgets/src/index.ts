@@ -170,6 +170,8 @@ export { Tag } from './display/Tag.js';
 export type { TagOptions, TagVariant } from './display/Tag.js';
 export { Placeholder } from './display/Placeholder.js';
 export type { PlaceholderOptions } from './display/Placeholder.js';
+export { Watermark } from './display/Watermark.js';
+export type { WatermarkOptions } from './display/Watermark.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
 
