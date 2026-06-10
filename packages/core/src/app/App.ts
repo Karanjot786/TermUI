@@ -312,8 +312,9 @@ export class App {
         // pick up all dirty state when it eventually runs.
         if (this._isRenderPending) return;
 
-        // Skip full layout pass if widget tree reports nothing has changed.
-        if (this._rootWidget.isDirty === false) {
+        // Skip full render pass if neither the widget tree nor overlay layers
+        // have reported any changes.
+        if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
             return;
         }
 
@@ -349,35 +350,35 @@ export class App {
                         mergeBorders(this.screen);
                     }
 
-                    // Composite overlay layers on top of the base rendering
-                    this.layers.composite(this.screen);
-
-                    // Inline rendering bypasses the differential renderer and writes
-                    // the bottom N rows directly into the main buffer so scrollback is preserved.
-                    if (this._options.screenMode === 'inline') {
-                        for (const item of this._insertBefore) {
-                            this.terminal.write(item.text + '\n');
-                        }
-                        try {
-                            // eslint-disable-next-line @typescript-eslint/no-var-requires
-                            const mod = require('../inline-viewport.js');
-                            const renderInlineToTerminal = mod.renderInlineToTerminal ?? mod.default?.renderInlineToTerminal;
-                            if (typeof renderInlineToTerminal === 'function') {
-                                const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
-                                    ? (this.terminal as any)
-                                    : { write: (s: string) => (this.terminal as any).stdout.write(s) };
-                                renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
-                            }
-                        } catch (_e) {
-                            // Fallback: write nothing
-                        }
-                    } else {
-                        this.renderer.requestFrame();
-                    }
-
-                    // Clear dirty flags now that rendering is complete — future
-                    // requestRender() calls will skip layout until markDirty() fires again.
+                    // Clear dirty flags on the widget tree
                     this._rootWidget.clearDirty?.();
+                }
+
+                // Composite overlay layers on top of the base rendering.
+                // Runs even when only layers are dirty (root widget is clean).
+                this.layers.composite(this.screen);
+
+                // Inline rendering bypasses the differential renderer and writes
+                // the bottom N rows directly into the main buffer so scrollback is preserved.
+                if (this._options.screenMode === 'inline') {
+                    for (const item of this._insertBefore) {
+                        this.terminal.write(item.text + '\n');
+                    }
+                    try {
+                        // eslint-disable-next-line @typescript-eslint/no-var-requires
+                        const mod = require('../inline-viewport.js');
+                        const renderInlineToTerminal = mod.renderInlineToTerminal ?? mod.default?.renderInlineToTerminal;
+                        if (typeof renderInlineToTerminal === 'function') {
+                            const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
+                                ? (this.terminal as any)
+                                : { write: (s: string) => (this.terminal as any).stdout.write(s) };
+                            renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
+                        }
+                    } catch (_e) {
+                        // Fallback: write nothing
+                    }
+                } else {
+                    this.renderer.requestFrame();
                 }
             } finally {
                 // Unlock the queue flag so subsequent frames can be scheduled
