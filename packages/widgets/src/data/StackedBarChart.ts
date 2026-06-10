@@ -1,4 +1,4 @@
-import { type Color, type Screen, type Style, caps } from "@termuijs/core";
+import { type Color, type Screen, type Style, caps, truncate } from "@termuijs/core";
 import { Widget } from "../base/Widget.js";
 import { BrailleCanvas } from "./BrailleCanvas.js";
 
@@ -205,7 +205,7 @@ export class StackedBarChart extends Widget {
             const labelX = x + index * step;
             if (labelX >= x + width) return;
 
-            screen.writeString(labelX, y, category.slice(0, barWidth), {});
+            screen.writeString(labelX, y, truncate(category, barWidth), {});
         });
     }
 }
