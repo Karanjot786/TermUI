@@ -489,8 +489,8 @@ export function card(children: Widget[], opts?: QuickCardOptions): Widget {
     const borderColor = opts?.borderColor ?? { type: 'named', name: 'brightBlack' };
 
     const c = new Card(
-        { flexGrow: 1, borderColor },
-        { title: opts?.title }
+        { flexGrow: 1, border: 'single', padding: 1, borderColor },
+        { title: opts?.title, borderColor }
     );
 
     for (const child of children) {
