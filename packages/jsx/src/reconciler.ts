@@ -566,7 +566,6 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         if (boundary?.errorFallback) {
             destroyFiber(fiber);
             _pruneInstancesForWidget(instance.widget);
-            instance.widget.destroy();
             invalidateLayout(instance.widget.getLayoutNode());
             _parentFiber = boundary;
             return reconcile(boundary.errorFallback(err));
@@ -588,7 +587,6 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         // Invalidate old widget's layout cache before replacing
         invalidateLayout(instance.widget.getLayoutNode());
         _pruneInstancesForWidget(instance.widget);
-        instance.widget.destroy();
 
         instance.widget = vnode;
         instance.lastVNode = vnode;
@@ -623,7 +621,6 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     invalidateLayout(instance.widget.getLayoutNode());
     // Remove old widget and all its descendant instances from the map to prevent memory leak
     _pruneInstancesForWidget(instance.widget);
-    instance.widget.destroy();
 
     instance.widget = newWidget;
     instance.lastVNode = vnode;
