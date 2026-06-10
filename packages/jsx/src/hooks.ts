@@ -606,7 +606,8 @@ export function destroyFiber(fiber: Fiber): void {
             destroyFiber(entry.fiber);
         }
     }
-    // Clean up portal children — remove portal widgets from their targets
+    // Clean up portal children - remove portal widgets from their targets
+    // This is critical to prevent ghost widgets remaining in the target widget tree and causing a memory leak
     if (fiber.portalChildren) {
         for (const entry of fiber.portalChildren) {
             for (const widget of entry.widgets) {
