@@ -50,10 +50,6 @@ export class Terminal {
     // Stored handler references for proper cleanup
     private _resizeHandler: (() => void) | null = null;
     private _exitHandler: (() => void) | null = null;
-    private _sigintHandler: (() => void) | null = null;
-    private _sigtermHandler: (() => void) | null = null;
-    private _uncaughtExceptionHandler: ((err: Error) => void) | null = null;
-    private _unhandledRejectionHandler: (() => void) | null = null;
     private _restored = false;
     private _restoring = false;
 
@@ -294,18 +290,8 @@ export class Terminal {
         this._writeQueue = [];
         this._isWriting = false;
 
-        // Remove process-level signal handlers to prevent leaks
+        // Remove process-level handlers to prevent leaks
         if (this._exitHandler) process.off('exit', this._exitHandler);
-        if (this._sigintHandler) process.off('SIGINT', this._sigintHandler);
-        if (this._sigtermHandler) process.off('SIGTERM', this._sigtermHandler);
-        if (this._uncaughtExceptionHandler) {
-            process.off('uncaughtException', this._uncaughtExceptionHandler);
-            this._uncaughtExceptionHandler = null;
-        }
-        if (this._unhandledRejectionHandler) {
-            process.off('unhandledRejection', this._unhandledRejectionHandler);
-            this._unhandledRejectionHandler = null;
-        }
 
         // Remove resize listener
         if (this._resizeHandler) {
@@ -347,34 +333,8 @@ export class Terminal {
             this.restore();
         };
 
-        const handleSignal = (code: number) => {
-            const exit = () => { runCleanupHandlers(); process.exit(code); };
-            if (this._isWriting) {
-                // Wait for the kernel to drain the buffer before restoring and exiting
-                this.stdout.once('drain', exit);
-            } else {
-                exit();
-            }
-        };
-
         this._exitHandler = runCleanupHandlers;
-        this._sigintHandler = () => handleSignal(130);
-        this._sigtermHandler = () => handleSignal(143);
 
         process.on('exit', this._exitHandler);
-        process.on('SIGINT', this._sigintHandler);
-        process.on('SIGTERM', this._sigtermHandler);
-
-        this._uncaughtExceptionHandler = (err: Error) => {
-            this.restore();
-            process.exit(1);
-        };
-        this._unhandledRejectionHandler = () => {
-            this.restore();
-            process.exit(1);
-        };
-        
-        process.on('uncaughtException', this._uncaughtExceptionHandler);
-        process.on('unhandledRejection', this._unhandledRejectionHandler);
     }
 }
