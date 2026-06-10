@@ -112,3 +112,4 @@ export { useTransition } from './hooks/useTransition.js';
 export { useStopwatch } from './hooks/useStopwatch.js';
 export type { UseStopwatchOptions, UseStopwatchControls } from './hooks/useStopwatch.js';
 export { useTimeout } from './hooks/useTimeout.js';
+export { useBell } from './hooks/useBell.js';

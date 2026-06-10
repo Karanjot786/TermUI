@@ -55,4 +55,25 @@ describe('Watermark', () => {
 
         expect(rowText(screen, 0)).toBe('XYXYXY');
     });
+
+    it('does not mark dirty when setText receives the same value', () => {
+        const watermark = new Watermark('CONFIDENTIAL');
+    
+        watermark.clearDirty();
+    
+        watermark.setText('CONFIDENTIAL');
+    
+        expect(watermark.isDirty).toBe(false);
+    });
+    
+    it('marks dirty when setText receives a different value', () => {
+        const watermark = new Watermark('CONFIDENTIAL');
+    
+        watermark.clearDirty();
+    
+        watermark.setText('INTERNAL');
+    
+        expect(watermark.isDirty).toBe(true);
+    });
+
 });

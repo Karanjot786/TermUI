@@ -30,6 +30,7 @@ export class Placeholder extends Widget {
     }
 
     setLabel(label: string): void {
+        if (this._label === label) return;
         this._label = label;
         this.markDirty();
     }

@@ -105,6 +105,11 @@ export class Renderer {
         this._flush();
     }
 
+    /** ANSI sequence to save cursor position */
+    private static _CURSOR_SAVE = '\x1b[s';
+    /** ANSI sequence to restore cursor position */
+    private static _CURSOR_RESTORE = '\x1b[u';
+
     /**
      * Core diff and flush: compare front vs back buffer,
      * emit only changed cells.
@@ -133,13 +138,12 @@ export class Renderer {
                 output += ansiReset;
                 output += endSyncUpdate;
 
-                try {
-                    RenderHook.suspendAll();
-                    if (bufferedLogs) this._terminal.write(bufferedLogs);
-                    this._terminal.write(output);
-                } finally {
-                    RenderHook.resumeAll();
+                // Write buffered logs wrapped in cursor save/restore so they
+                // don't shift the frame's expected cursor position
+                if (bufferedLogs) {
+                    this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
                 }
+                this._terminal.writeSync(output);
 
                 this._screen.saveLines();
                 this._emitStats(start, bufferedLogs, output);
@@ -157,16 +161,10 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
-            try {
-                RenderHook.suspendAll();
-                if (bufferedLogs) {
-                    this._terminal.write(bufferedLogs);
-                }
-
-                this._terminal.write(output);
-            } finally {
-                RenderHook.resumeAll();
+            if (bufferedLogs) {
+                this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
             }
+            this._terminal.writeSync(output);
 
             this._emitStats(start, bufferedLogs, output);
             this._screen.swap();

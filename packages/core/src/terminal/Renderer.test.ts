@@ -104,7 +104,6 @@ describe('Renderer profiling hooks', () => {
 
     afterEach(() => {
         terminal.restore();
-        RenderHook.globalRestore();
     });
 
     it('onFrame fires once per flush', () => {
@@ -202,7 +201,7 @@ describe('Renderer profiling hooks', () => {
 
         const hook = new RenderHook();
         hook.start();
-        process.stdout.write('before flush');
+        console.log('before flush');
 
         const originalWrite = terminal.write.bind(terminal);
         vi.spyOn(terminal, 'write').mockImplementation(() => {
@@ -216,7 +215,7 @@ describe('Renderer profiling hooks', () => {
 
         vi.restoreAllMocks();
 
-        process.stdout.write('after flush');
-        expect(hook.flush()).toBe('before flushafter flush');
+        console.log('after flush');
+        expect(hook.flush()).toBe('before flush\nafter flush\n');
     });
 });

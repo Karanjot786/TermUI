@@ -73,6 +73,9 @@ export class TaskList extends Widget {
 
     /** Replace the task list and schedule a re-render. */
     setTasks(tasks: TaskItem[]): void {
+        if (tasks === this._tasks) {
+            return;
+        }
         this._tasks = tasks;
         this.markDirty();
     }

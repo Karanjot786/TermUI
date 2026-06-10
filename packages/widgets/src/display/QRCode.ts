@@ -36,6 +36,7 @@ export class QRCodePattern extends Widget {
     }
 
     setData(data: string): void {
+        if(this.data === data) return;
         this.data = data;
         this.markDirty();
     }

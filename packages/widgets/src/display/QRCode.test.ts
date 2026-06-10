@@ -103,3 +103,25 @@ describe('QRCodePattern widget', () => {
     });
 
 });
+
+describe('Performance optimizations', () => {
+    it('does not mark dirty when setData receives the same value', () => {
+        const qr = new QRCodePattern('hello');
+
+        qr.clearDirty();
+
+        qr.setData('hello');
+
+        expect(qr.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setData receives a different value', () => {
+        const qr = new QRCodePattern('hello');
+
+        qr.clearDirty();
+
+        qr.setData('world');
+
+        expect(qr.isDirty).toBe(true);
+    });
+});

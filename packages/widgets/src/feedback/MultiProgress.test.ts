@@ -19,13 +19,13 @@ describe('MultiProgress', () => {
 
     it('renders correct number of rows (one per item)', () => {
         const mp = new MultiProgress({ items });
-        const height = (mp as any)._style.height;
+        const height = mp.getHeightForTest();
         expect(height).toBe(3);
     });
 
     it('setItems() replaces all items and marks dirty', () => {
         const mp = new MultiProgress({ items });
-        (mp as any)._dirty = false;
+        mp.setDirtyForTest(false);
 
         const newItems: ProgressItem[] = [
             { label: 'Task1', value: 0.5 },
@@ -34,15 +34,15 @@ describe('MultiProgress', () => {
         mp.setItems(newItems);
 
         expect(mp.isDirty).toBe(true);
-        expect((mp as any)._items.length).toBe(2);
+        expect(mp.getItemsForTest().length).toBe(2);
     });
 
     it('updateItem(index, value) changes a single item value', () => {
         const mp = new MultiProgress({ items });
-        (mp as any)._dirty = false;
+        mp.setDirtyForTest(false);
 
         mp.updateItem(0, 0.8);
-        expect((mp as any)._items[0].value).toBe(0.8);
+        expect(mp.getItemsForTest()[0].value).toBe(0.8);
         expect(mp.isDirty).toBe(true);
     });
 
@@ -50,10 +50,10 @@ describe('MultiProgress', () => {
         const mp = new MultiProgress({ items });
 
         mp.updateItem(0, 1.5);
-        expect((mp as any)._items[0].value).toBe(1);
+        expect(mp.getItemsForTest()[0].value).toBe(1);
 
         mp.updateItem(0, -0.5);
-        expect((mp as any)._items[0].value).toBe(0);
+        expect(mp.getItemsForTest()[0].value).toBe(0);
     });
 
     it('updateItem() ignores invalid indices silently', () => {
@@ -64,22 +64,22 @@ describe('MultiProgress', () => {
 
     it('initializes with default labelWidth=12', () => {
         const mp = new MultiProgress({ items });
-        expect((mp as any)._labelWidth).toBe(12);
+        expect(mp.getLabelWidthForTest()).toBe(12);
     });
 
     it('respects custom labelWidth', () => {
         const mp = new MultiProgress({ items, labelWidth: 20 });
-        expect((mp as any)._labelWidth).toBe(20);
+        expect(mp.getLabelWidthForTest()).toBe(20);
     });
 
     it('initializes with showValues=true by default', () => {
         const mp = new MultiProgress({ items });
-        expect((mp as any)._showValues).toBe(true);
+        expect(mp.getShowValuesForTest()).toBe(true);
     });
 
     it('respects showValues=false option', () => {
         const mp = new MultiProgress({ items, showValues: false });
-        expect((mp as any)._showValues).toBe(false);
+        expect(mp.getShowValuesForTest()).toBe(false);
     });
 
     it('clamps item values during initialization', () => {
@@ -88,8 +88,8 @@ describe('MultiProgress', () => {
             { label: 'B', value: -0.5 },
         ];
         const mp = new MultiProgress({ items: itemsWithBadValues });
-        expect((mp as any)._items[0].value).toBe(1);
-        expect((mp as any)._items[1].value).toBe(0);
+        expect(mp.getItemsForTest()[0].value).toBe(1);
+        expect(mp.getItemsForTest()[1].value).toBe(0);
     });
 
     it('preserves custom colors on items', () => {
@@ -98,8 +98,8 @@ describe('MultiProgress', () => {
             { label: 'Tests', value: 0.8 },
         ];
         const mp = new MultiProgress({ items: itemsWithColors });
-        expect((mp as any)._items[0].color).toEqual({ type: 'named', name: 'red' });
-        expect((mp as any)._items[1].color).toBeUndefined();
+        expect(mp.getItemsForTest()[0].color).toEqual({ type: 'named', name: 'red' });
+        expect(mp.getItemsForTest()[1].color).toBeUndefined();
     });
 });
 
@@ -143,12 +143,12 @@ describe('MultiProgress — ASCII fallback', () => {
 describe('MultiProgress — edge cases', () => {
     it('handles empty items array', () => {
         const mp = new MultiProgress({ items: [] });
-        expect((mp as any)._items.length).toBe(0);
+        expect(mp.getItemsForTest().length).toBe(0);
     });
 
     it('handles single item', () => {
         const mp = new MultiProgress({ items: [{ label: 'Single', value: 0.5 }] });
-        expect((mp as any)._items.length).toBe(1);
+        expect(mp.getItemsForTest().length).toBe(1);
     });
 
     it('handles very long labels', () => {
@@ -166,7 +166,7 @@ describe('MultiProgress — edge cases', () => {
             { label: 'C', value: -1 },
         ];
         mp.setItems(newItems);
-        expect((mp as any)._items[0].value).toBe(1);
-        expect((mp as any)._items[1].value).toBe(0);
+        expect(mp.getItemsForTest()[0].value).toBe(1);
+        expect(mp.getItemsForTest()[1].value).toBe(0);
     });
 });

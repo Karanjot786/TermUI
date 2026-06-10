@@ -90,6 +90,8 @@ export class RangeInput extends Widget {
             this._activeHandle =
                 this._activeHandle === 'low' ? 'high' : 'low';
             this.markDirty();
+            event.preventDefault();
+            event.stopPropagation();
             return;
         }
 
