@@ -315,7 +315,7 @@ Table {
     --error: #eb6f92;
     --warning: #f6c177;
     --success: #9ccfd8;
-    --border: round;
+    --border: #6e6a86;
     --border-color: #6e6a86;
     --border-focus: #c4a7e7;
 }

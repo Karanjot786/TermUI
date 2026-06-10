@@ -31,6 +31,7 @@ export { adaptive, type AdaptiveColor } from './adaptive.js';
 export {
   draculaTheme, nordTheme, catppuccinTheme, monokaiTheme,
   solarizedTheme, solarizedLightTheme, tokyoNightTheme, oneDarkTheme, highContrastTheme,
+  rosePineTheme,
   NAMED_THEMES, getNamedTheme,
 } from './named-themes.js';
 
