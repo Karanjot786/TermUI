@@ -232,6 +232,18 @@ export class Renderer {
     }
 
     /**
+     * If a span starts at a width-0 continuation cell (the second half of a
+     * wide character), adjust backward to the preceding cell so the cursor
+     * is placed at a valid column boundary.
+     */
+    private static _adjustSpanStart(col: number, row: Cell[]): number {
+        while (col > 0 && row[col].width === 0) {
+            col--;
+        }
+        return col;
+    }
+
+    /**
      * Render only the changed spans within a single row (cell-level granularity).
      * Uses moveTo to position the cursor at the start of each changed span.
      */
@@ -249,7 +261,8 @@ export class Renderer {
                 spanStart = c; // start a new changed span
             } else if (!changed && spanStart !== -1) {
                 // flush the span
-                output += moveTo(spanStart, row);
+                const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
+                output += moveTo(adjustedStart, row);
                 for (let sc = spanStart; sc < c; sc++) {
                     const cell = back[row][sc];
                     if (cell.width === 0) continue;
@@ -261,7 +274,8 @@ export class Renderer {
 
         // flush trailing span
         if (spanStart !== -1) {
-            output += moveTo(spanStart, row);
+            const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
+            output += moveTo(adjustedStart, row);
             for (let sc = spanStart; sc < cols; sc++) {
                 const cell = back[row][sc];
                 if (cell.width === 0) continue;
