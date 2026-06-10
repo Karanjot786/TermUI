@@ -337,9 +337,19 @@ export class Terminal {
             this.restore();
         };
 
+        const handleSignal = (code: number) => {
+            const exit = () => { runCleanupHandlers(); process.exit(code); };
+            if (this._isWriting) {
+                // Wait for the kernel to drain the buffer before restoring and exiting
+                this.stdout.once('drain', exit);
+            } else {
+                exit();
+            }
+        };
+
         this._exitHandler = runCleanupHandlers;
-        this._sigintHandler = () => { runCleanupHandlers(); process.exit(130); };
-        this._sigtermHandler = () => { runCleanupHandlers(); process.exit(143); };
+        this._sigintHandler = () => handleSignal(130);
+        this._sigtermHandler = () => handleSignal(143);
 
         process.on('exit', this._exitHandler);
         process.on('SIGINT', this._sigintHandler);
