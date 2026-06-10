@@ -42,6 +42,8 @@ import type { Reactive } from './reactive.js';
 import { resolve } from './reactive.js';
 import { Box, Card } from '@termuijs/widgets';
 
+// ── Text ──
+
 export interface QuickTextOptions {
     bold?: boolean;
     dim?: boolean;
@@ -468,50 +470,53 @@ export function multiProgress(
 
 // ── Card & Box Containers ───────────────────────────────────────────────────
 
-/** 
- * Card title shown on the top border.
- * Border color. Default: brightBlack 
- */
 export interface QuickCardOptions {
+    /** Card title shown on the top border. */
     title?: string;
+    /** Border color. Default: brightBlack */
     borderColor?: Color;
 }
 
-/** Border color. Default: brightBlack */
 export interface QuickBoxOptions {
+    /** Border color. Default: brightBlack */
     borderColor?: Color;
 }
 
-/** Bordered container with a title and padding. */
+/**
+ * Bordered container with a title and padding.
+ */
 export function card(children: Widget[], opts?: QuickCardOptions): Widget {
     const borderColor = opts?.borderColor ?? { type: 'named', name: 'brightBlack' };
 
-    const container = new Card(
-        { borderColor },
-        { title: opts?.title, borderColor }
+    const c = new Card(
+        { flexGrow: 1, borderColor },
+        { title: opts?.title }
     );
 
     for (const child of children) {
-        container.addChild(child);
+        c.addChild(child);
     }
 
-    return container;
+    return c;
 }
 
-/** Thin bordered container without a title. */
+/**
+ * Thin bordered container without a title.
+ */
 export function box(children: Widget[], opts?: QuickBoxOptions): Widget {
     const borderColor = opts?.borderColor ?? { type: 'named', name: 'brightBlack' };
-    
-    const container = new Box({
+
+    const b = new Box({
+        flexGrow: 1,
         border: 'single',
-        borderColor: borderColor,
+        borderColor,
     });
 
     for (const child of children) {
-        container.addChild(child);
+        b.addChild(child);
     }
 
-    return container;
+    return b;
 }
 
 // ── Re-export types from @termuijs/widgets for convenience ──
