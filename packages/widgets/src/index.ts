@@ -28,9 +28,6 @@ export { ToolCall, ToolApproval } from './display/ToolCall.js';
 export type { ToolCallOptions, ToolApprovalOptions, ToolCallStatus } from './display/ToolCall.js';
 export { Canvas } from './display/Canvas.js';
 
-
-
-
 // ── Virtual Scroll Helpers ────────────────────────────
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
 export type { ScrollRange } from './input/virtual-scroll.js';
