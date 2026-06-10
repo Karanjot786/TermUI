@@ -377,7 +377,7 @@ describe("render harness", () => {
         });
     });
 
-    // ✅ NEW TEST ADDED
+    // ✅ NEW TEST ADDED (FIXED)
     describe("nested widget traversal", () => {
         it("queries work inside deeply nested widget trees", () => {
             const screen = render(
@@ -393,7 +393,9 @@ describe("render harness", () => {
             const result = screen.getByText("Nested Hello");
 
             expect(result).toBeTruthy();
-            expect(screen.getByText("Nested Hello")).not.toBeNull();
+
+            // stronger assertion for proper traversal
+            expect(screen.renderToString()).toContain("Nested Hello");
         });
     });
 });
