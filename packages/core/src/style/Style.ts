@@ -81,6 +81,9 @@ export interface Style {
 
     // ── Visibility ──────────
     visible?: boolean;
+
+    // ── RTL / I18N ──────────
+    direction?: 'ltr' | 'rtl';
 }
 
 /**
@@ -141,7 +144,7 @@ export const LAYOUT_PROPS: ReadonlySet<keyof Style> = new Set<keyof Style>([
     'width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
     'padding', 'margin', 'border',
     'flexDirection', 'justifyContent', 'alignItems', 'flexGrow', 'flexShrink', 'flexWrap', 'gap',
-    'overflow', 'visible',
+    'overflow', 'visible', 'direction',
 ]);
 
 /**
