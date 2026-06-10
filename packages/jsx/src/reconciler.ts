@@ -293,12 +293,12 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
 
         // Suspense boundary — go through renderComponent so fiber context is set
         if (type === Suspense) {
-            return renderComponent(SuspenseBoundary as any, props, children);
+            return renderComponent(SuspenseBoundary as any, props, children, (vnode as VElement).key);
         }
 
         // Functional component
         if (typeof type === 'function') {
-            return renderComponent(type, props, children);
+            return renderComponent(type, props, children, (vnode as VElement).key);
         }
 
         // Intrinsic element (string tag)
@@ -390,6 +390,7 @@ function renderComponent(
     component: FC<any>,
     props: Record<string, any>,
     children: VNode[] = [],
+    key?: string | number
 ): Widget {
     const parentFiber = _parentFiber;
 
@@ -400,7 +401,7 @@ function renderComponent(
     if (parentFiber) parentFiber._nextChildIdx = childIdx + 1;
 
     const componentName = (component as any).displayName ?? (component as any).name ?? 'anon';
-    const identityKey = `${childIdx}:${componentName}`;
+    const identityKey = key != null ? String(key) : `${childIdx}:${componentName}`;
 
     let fiber: Fiber;
     if (parentFiber?._prevChildFibers) {
