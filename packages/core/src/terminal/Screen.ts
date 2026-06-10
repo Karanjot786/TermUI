@@ -133,6 +133,9 @@ export class Screen {
      */
     private _clipStack: Array<{ x: number; y: number; width: number; height: number }> = [];
 
+    private _translateYStack: number[] = [];
+    private _translateY = 0;
+
     constructor(cols: number, rows: number) {
         this._cols = cols;
         this._rows = rows;
@@ -251,6 +254,16 @@ export class Screen {
             : null;
     }
 
+    pushTranslateY(offset: number): void {
+        this._translateYStack.push(offset);
+        this._translateY += offset;
+    }
+
+    popTranslateY(): void {
+        const offset = this._translateYStack.pop() ?? 0;
+        this._translateY -= offset;
+    }
+
     /**
      * Write a cell to the back buffer at position (col, row).
      */
@@ -258,6 +271,8 @@ export class Screen {
         // Floor to integers — layout engine may produce fractional values
         col = Math.floor(col);
         row = Math.floor(row);
+        // Apply Y translation before bounds/clip checks
+        row += this._translateY;
         // Use positive range check (NaN fails >= 0, preventing NaN indices)
         if (!(col >= 0 && col < this._cols && row >= 0 && row < this._rows)) return;
 
