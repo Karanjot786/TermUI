@@ -516,14 +516,18 @@ function renderComponent(
 
 /**
  * Recursively remove stale _instanceMap entries for a widget and all its
- * descendants. Fibers are NOT destroyed here — cleanupStaleChildFibers
- * already handles orphaned fibers after each reconcile pass. This function
- * only prevents _instanceMap from retaining dead widget references.
+ * descendants, destroying associated fibers to prevent memory leaks from
+ * orphaned effect cleanups, interval timers, and event handlers.
  */
 /** @internal exposed for testing */
 export function _pruneInstancesForWidget(widget: Widget): void {
-    _instanceMap.delete(widget);
-    const children = (widget as any)._children ?? (widget as any).children ?? []; // cast required: Widget._children/children are protected, not part of public API
+    const instance = _instanceMap.get(widget);
+    if (instance) {
+        destroyFiber(instance.fiber);
+        _instanceMap.delete(widget);
+    }
+
+    const children = (widget as any)._children ?? (widget as any).children ?? [];
     if (Array.isArray(children)) {
         for (const child of children) {
             if (child && typeof child === 'object') {
@@ -562,6 +566,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         if (boundary?.errorFallback) {
             destroyFiber(fiber);
             _pruneInstancesForWidget(instance.widget);
+            instance.widget.destroy();
             invalidateLayout(instance.widget.getLayoutNode());
             _parentFiber = boundary;
             return reconcile(boundary.errorFallback(err));
@@ -583,6 +588,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         // Invalidate old widget's layout cache before replacing
         invalidateLayout(instance.widget.getLayoutNode());
         _pruneInstancesForWidget(instance.widget);
+        instance.widget.destroy();
 
         instance.widget = vnode;
         instance.lastVNode = vnode;
@@ -617,6 +623,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     invalidateLayout(instance.widget.getLayoutNode());
     // Remove old widget and all its descendant instances from the map to prevent memory leak
     _pruneInstancesForWidget(instance.widget);
+    instance.widget.destroy();
 
     instance.widget = newWidget;
     instance.lastVNode = vnode;
