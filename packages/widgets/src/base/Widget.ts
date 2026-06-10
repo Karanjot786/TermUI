@@ -161,6 +161,7 @@ export abstract class Widget {
         for (const child of children) {
             child.destroy();
         }
+        this.events.emit('unmount', undefined as any);
         this.events.removeAll();
         this.parent = null;
     }

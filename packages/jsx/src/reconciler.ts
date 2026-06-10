@@ -516,18 +516,14 @@ function renderComponent(
 
 /**
  * Recursively remove stale _instanceMap entries for a widget and all its
- * descendants, destroying associated fibers to prevent memory leaks from
- * orphaned effect cleanups, interval timers, and event handlers.
+ * descendants. Fiber destruction is handled separately by
+ * cleanupStaleChildFibers for stale subtrees after each reconcile pass.
  */
 /** @internal exposed for testing */
 export function _pruneInstancesForWidget(widget: Widget): void {
-    const instance = _instanceMap.get(widget);
-    if (instance) {
-        destroyFiber(instance.fiber);
-        _instanceMap.delete(widget);
-    }
+    _instanceMap.delete(widget);
 
-    const children = (widget as any)._children ?? (widget as any).children ?? [];
+    const children = widget.children;
     if (Array.isArray(children)) {
         for (const child of children) {
             if (child && typeof child === 'object') {
