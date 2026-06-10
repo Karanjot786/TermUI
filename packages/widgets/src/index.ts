@@ -39,7 +39,6 @@ export { List } from './input/List.js';
 export type { ListItem, ListProps } from './input/List.js';
 export { useListState } from './data/ListState.js';
 export type { ListState } from './data/ListState.js';
-export { TextInput } from './input/TextInput.js';
 export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
 export { CommandPalette } from './input/CommandPalette.js';
@@ -51,10 +50,12 @@ export { Slider } from "./input/Slider.js";
 export type { SliderOptions } from "./input/Slider.js";
 export { RangeInput } from "./input/RangeInput.js";
 export type { RangeInputOptions } from "./input/RangeInput.js";
-export { PinInput } from "./input/PinInput.js";
-export type { PinInputOptions } from "./input/PinInput.js";
+export { TextInput } from './input/TextInput.js';
+export type { TextInputProps } from './input/TextInput.js';
 export { Knob } from "./input/Knob.js";
 export type { KnobOptions } from "./input/Knob.js";
+export { PinInput } from "./input/PinInput.js";
+export type { PinInputOptions } from "./input/PinInput.js";
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
@@ -258,3 +259,4 @@ export type {
     ProgressTask,
 } from './feedback/Progress.js';
 export * from './display/Highlight.js';
+export type { TextInputProps } from './input/TextInput.js';
