@@ -363,7 +363,7 @@ function SuspenseBoundary(props: Record<string, any>): any {
         return reconcile(child);
     } catch (err) {
         if (err instanceof Promise) {
-            return props.fallback;
+            return reconcile(props.fallback ?? null);
         }
         throw err;
     }
