@@ -34,6 +34,8 @@ export {
     toolCall,
     commandPalette,
     multiProgress,
+    card,
+    box,
 } from './widgets.js';
 
 export type {
@@ -62,6 +64,8 @@ export type {
     QuickCommand,
     DiffLine,
     ToolCallStatus,
+    QuickCardOptions,
+    QuickBoxOptions,
 } from './widgets.js';
 
 // ── Store (re-exported for convenience) ───────────────

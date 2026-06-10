@@ -40,8 +40,7 @@ import type { Command, CommandPaletteOptions } from '@termuijs/widgets';
 import type { ProgressItem, MultiProgressOptions } from '@termuijs/widgets';
 import type { Reactive } from './reactive.js';
 import { resolve } from './reactive.js';
-
-// ── Text ──
+import { Box, Card } from '@termuijs/widgets';
 
 export interface QuickTextOptions {
     bold?: boolean;
@@ -465,6 +464,54 @@ export function multiProgress(
         (mp as any).__reactiveMultiItems = items;
     }
     return mp;
+}
+
+// ── Card & Box Containers ───────────────────────────────────────────────────
+
+/** 
+ * Card title shown on the top border.
+ * Border color. Default: brightBlack 
+ */
+export interface QuickCardOptions {
+    title?: string;
+    borderColor?: Color;
+}
+
+/** Border color. Default: brightBlack */
+export interface QuickBoxOptions {
+    borderColor?: Color;
+}
+
+/** Bordered container with a title and padding. */
+export function card(children: Widget[], opts?: QuickCardOptions): Widget {
+    const borderColor = opts?.borderColor ?? { type: 'named', name: 'brightBlack' };
+
+    const container = new Card(
+        { borderColor },
+        { title: opts?.title, borderColor }
+    );
+
+    for (const child of children) {
+        container.addChild(child);
+    }
+
+    return container;
+}
+
+/** Thin bordered container without a title. */
+export function box(children: Widget[], opts?: QuickBoxOptions): Widget {
+    const borderColor = opts?.borderColor ?? { type: 'named', name: 'brightBlack' };
+    
+    const container = new Box({
+        border: 'single',
+        borderColor: borderColor,
+    });
+
+    for (const child of children) {
+        container.addChild(child);
+    }
+
+    return container;
 }
 
 // ── Re-export types from @termuijs/widgets for convenience ──

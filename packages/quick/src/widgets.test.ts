@@ -78,3 +78,50 @@ describe('quick – toolCall builder', () => {
         expect(w).toBeInstanceOf(Widget);
     });
 });
+
+describe('quick – card builder', () => {
+    it('exports card() and returns a Widget', async () => {
+        const { card, text } = await import('./widgets.js');
+        expect(typeof card).toBe('function');
+        const child = text('Test');
+        const w = card([child]);
+        expect(w).toBeInstanceOf(Widget);
+        expect(w.children).toContain(child);
+    });
+
+    it('card forwards a title', async () => {
+        const { card, text } = await import('./widgets.js');
+        const child = text('Test');
+        const w = card([child], { title: 'My Card' });
+        expect(w).toBeInstanceOf(Widget);
+        expect((w as any)._title).toBe('My Card');
+    });
+
+    it('card defaults to brightBlack border color when omitted', async () => {
+        const { card, text } = await import('./widgets.js');
+        const child = text('Test');
+        const w = card([child]);
+        expect(w).toBeInstanceOf(Widget);
+        expect(((w as any)._borderColor as any)?.name).toBe('brightBlack');
+        expect(((w as any)._style?.borderColor as any)?.name).toBe('brightBlack');
+    });
+});
+
+describe('quick – box builder', () => {
+    it('exports box() and returns a bordered Widget', async () => {
+        const { box, text } = await import('./widgets.js');
+        expect(typeof box).toBe('function');
+        const child = text('Test');
+        const w = box([child]);
+        expect(w).toBeInstanceOf(Widget);
+        expect(w.children).toContain(child);
+    });
+
+    it('box defaults to brightBlack border color when omitted', async () => {
+        const { box, text } = await import('./widgets.js');
+        const child = text('Test');
+        const w = box([child]);
+        expect(w).toBeInstanceOf(Widget);
+        expect(((w as any)._style?.borderColor as any)?.name).toBe('brightBlack');
+    });
+});
