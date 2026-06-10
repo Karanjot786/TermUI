@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, createKeyEvent } from '@termuijs/core';
 import { Box } from '@termuijs/widgets';
 import { Drawer } from './Drawer.js';
 
@@ -150,14 +150,15 @@ describe('Drawer', () => {
         childA.focusable = true;
         drawer.addChild(childA);
 
-        const event = {
+        const event = createKeyEvent({
             key: 'tab',
+            raw: Buffer.alloc(0),
             ctrl: false,
             alt: false,
             shift: false,
-            preventDefault: vi.fn(),
-            stopPropagation: vi.fn(),
-        } as any;
+        });
+        vi.spyOn(event, 'preventDefault');
+        vi.spyOn(event, 'stopPropagation');
 
         drawer.handleKey(event);
 
