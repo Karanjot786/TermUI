@@ -91,6 +91,9 @@ function hasDirtyChild(node: LayoutNode): boolean {
     return false;
 }
 function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, precomputed = false): void {
+    // Skip only if not dirty AND dimensions are unchanged since last layout pass.
+    // Note: node.computed.width/height are written by the parent before this call,
+    // so comparing against them detects non-dirty nodes whose allocated size changed.
     if (!node._dirty &&
         node._lastComputedWidth === node.computed.width &&
         node._lastComputedHeight === node.computed.height) {
