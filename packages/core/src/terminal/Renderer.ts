@@ -172,6 +172,10 @@ export class Renderer {
             this._screen.swap();
         } catch (err) {
             console.error('[TermUI] Renderer flush error:', err);
+            // Re-request render so the next frame tick retries.
+            this._renderRequested = true;
+            // Reset style fingerprint to prevent color bleed on retry.
+            this._lastStyleFingerprint = null;
         }
     }
 
