@@ -99,7 +99,7 @@ describe('PathInput', () => {
             raw: Buffer.from('\t'),
             preventDefault: vi.fn(),
             stopPropagation: vi.fn(),
-        } as unknown as import('@termuijs/core').KeyEvent;
+        } as unknown as import('@termuijs/core').KeyEvent; // runtime-only test object with mocked event methods
 
         input.handleKey(event);
 
