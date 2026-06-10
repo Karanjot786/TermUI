@@ -24,6 +24,41 @@
 
 > 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). Not sure which API to use? Read our [Choosing your API guide](./docs/choosing-your-api.md). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
 
+## Table of Contents
+
+- [Available Scripts](#available-scripts)
+- [What is TermUI?](#what-is-termui)
+  - [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Manual Setup](#manual-setup)
+- [Packages](#packages)
+- [Features](#features)
+  - [useKeymap](#usekeymap)
+  - [Focus Management](#focus-management)
+  - [ErrorBoundary](#errorboundary)
+  - [Capability Flags](#capability-flags)
+  - [Notifications](#notifications)
+  - [Imperative Prompts](#imperative-prompts)
+  - [Global State with Batch Updates](#global-state-with-batch-updates)
+  - [Theming](#theming)
+  - [AI Widgets](#ai-widgets)
+  - [VirtualList](#virtuallist)
+  - [Reactive System Data](#reactive-system-data)
+  - [Testing](#testing)
+- [Architecture](#architecture)
+- [Examples](#examples)
+  - [Running the Examples](#running-the-examples)
+    - [Available Examples](#available-examples)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Requirements](#requirements)
+- [Roadmap](#roadmap)
+- [Community](#community)
+- [Contributors](#contributors)
+- [License](#license)
+- [Troubleshooting](#troubleshooting)
+  - [Build Cache and Dependency Synchronization Issues](#build-cache-and-dependency-synchronization-issues)
+
 ## Available Scripts
 
 - `clean` → Clears build cache and node_modules
@@ -63,10 +98,10 @@ import { useState, useKeymap, ErrorBoundary } from '@termuijs/jsx'
 function Counter() {
     const [count, setCount] = useState(0)
 
-    useKeymap({
-        '+':      () => setCount((c) => c + 1),
-        'ctrl+c': () => process.exit(0),
-    })
+    useKeymap([
+        { key: '+', action: () => setCount((c) => c + 1) },
+        { key: 'c', ctrl: true, action: () => process.exit(0) },
+    ])
 
     return (
         <Box border="round" padding={1}>
@@ -105,18 +140,18 @@ render(
 
 ### useKeymap
 
-Declare key bindings as a map. Cleaner than chained if-statements. Multiple calls in one component are additive.
+Declare key bindings as an array of objects. Cleaner than chained if-statements. Multiple calls in one component are additive.
 
 ```tsx
 import { useKeymap } from '@termuijs/jsx'
 
 function App() {
-    useKeymap({
-        'ctrl+c': () => process.exit(0),
-        'ctrl+s': () => save(),
-        '/':      () => openSearch(),
-        '?':      () => showHelp(),
-    })
+    useKeymap([
+        { key: 'c', ctrl: true, action: () => process.exit(0) },
+        { key: 's', ctrl: true, action: () => save() },
+        { key: '/', action: () => openSearch() },
+        { key: '?', action: () => showHelp() },
+    ])
     return <Box>...</Box>
 }
 ```
@@ -165,7 +200,7 @@ import { ErrorBoundary } from '@termuijs/jsx'
 
 ### Capability flags
 
-TermUI checks the terminal environment before rendering unicode or animations. Set environment variables to get ASCII output in CI or reduced-motion output for accessibility.
+TermUI checks the terminal environment before rendering unicode or animations. Set environment variables to get ASCII output in CI or reduced-motion output for accessibility. You can also configure standard keyboard navigation schemes.
 
 ```bash
 NO_UNICODE=1  # ASCII fallbacks for all widgets
@@ -173,10 +208,17 @@ NO_MOTION=1   # Skip all animations; static output
 NO_COLOR=1    # Disable ANSI color sequences
 ```
 
+Configure global navigation modes (`default` arrow keys, `vim` j/k/h/l, or `emacs` ctrl+n/p):
+```bash
+TERMUI_KEYBINDINGS=vim
+TERMUI_KEYBINDINGS=emacs
+```
+
 ```typescript
 import { caps } from '@termuijs/core'
 
 const bullet = caps.unicode ? '●' : '*'
+// caps.keybindingMode → "default", "vim", or "emacs"
 ```
 
 ### Notifications
@@ -196,12 +238,12 @@ function App() {
 function Dashboard() {
     const { notify } = useNotifications()
 
-    useKeymap({
-        's': async () => {
+    useKeymap([
+        { key: 's', action: async () => {
             await save()
             notify('Saved', { type: 'success', duration: 2000 })
-        },
-    })
+        }},
+    ])
     return <Box>...</Box>
 }
 ```

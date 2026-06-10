@@ -27,15 +27,32 @@ const FG_COLORS: Record<TagVariant, Color> = {
  * Used for categorical labels such as "typescript", "react", "v2.0".
  * Renders a bordered box with the text colored by variant but no background.
  * Uses `caps.unicode` to choose between Unicode box-drawing and ASCII fallback.
+ *
+ * CONSTRUCTOR (canonical): (text, style?, opts?)
+ * @deprecated Tag(text, opts, style) is deprecated. Use Tag(text, style, opts) instead.
  */
 export class Tag extends Widget {
     private _text: string;
     private _variant: TagVariant;
 
-    constructor(text: string, opts: TagOptions = {}, style: Partial<Style> = {}) {
-        super(style);
-        this._text = text;
-        this._variant = opts.variant ?? 'neutral';
+    constructor(text: string, style?: Partial<Style>, opts?: TagOptions);
+    /** @deprecated Use Tag(text, style?, opts?) instead */
+    constructor(text: string, opts: TagOptions, style?: Partial<Style>);
+    constructor(text: string, styleOrOpts?: Partial<Style> | TagOptions, optsOrStyle?: TagOptions | Partial<Style>) {
+        if (styleOrOpts && 'variant' in styleOrOpts) {
+            console.warn('Tag(text, opts, style) is deprecated. Use Tag(text, style, opts) instead.');
+            const opts = styleOrOpts as TagOptions;
+            const style = optsOrStyle as Partial<Style> | undefined;
+            super(style ?? {});
+            this._text = text;
+            this._variant = opts.variant ?? 'neutral';
+        } else {
+            const style = styleOrOpts as Partial<Style> | undefined;
+            const opts = optsOrStyle as TagOptions | undefined;
+            super(style ?? {});
+            this._text = text;
+            this._variant = opts?.variant ?? 'neutral';
+        }
     }
 
     /** Update the tag text. */

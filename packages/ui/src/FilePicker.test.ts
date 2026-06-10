@@ -3,14 +3,14 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Dirent } from 'fs';
+import type { Dirent } from 'node:fs';
 import { createKeyEvent } from '@termuijs/core';
 
 // ── fs mock setup ────────────────────────────────────
-// We mock the 'fs' module (matching FilePicker.ts's import * as fs from 'fs')
+// We mock the 'node:fs' module (matching FilePicker.ts's import * as fs from 'node:fs')
 // so no real filesystem IO happens in CI.
 
-vi.mock('fs', () => {
+vi.mock('node:fs', () => {
     return {
         default: {},
         readdirSync: vi.fn(),
@@ -19,8 +19,8 @@ vi.mock('fs', () => {
 });
 
 // Must import after vi.mock is hoisted
-import * as fsMod from 'fs';
-import * as nodePath from 'path';
+import * as fsMod from 'node:fs';
+import * as nodePath from 'node:path';
 // Cast through unknown so vi.mocked() doesn't fight the overloaded fs signatures
 const readdirSync = fsMod.readdirSync as unknown as ReturnType<typeof vi.fn>;
 const statSync    = fsMod.statSync    as unknown as ReturnType<typeof vi.fn>;

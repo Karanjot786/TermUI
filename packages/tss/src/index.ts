@@ -13,6 +13,11 @@ export type { TSSStylesheet, TSSTheme, TSSSelector, TSSProperty, TSSValue, TSSRu
 // Theme Engine
 export { ThemeEngine, compile, compileRules } from './engine.js';
 export type { ThemeVariables, ResolvedRule } from './engine.js';
+export { evalCalc } from './calc.js';
+
+// Pseudo-class state matching
+export { isSupportedPseudo, matchesPseudo, SUPPORTED_PSEUDO_CLASSES } from './pseudo.js';
+export type { PseudoClass } from './pseudo.js';
 
 // Built-in Themes
 export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThemes } from './themes.js';
@@ -26,8 +31,13 @@ export { adaptive, type AdaptiveColor } from './adaptive.js';
 export {
   draculaTheme, nordTheme, catppuccinTheme, monokaiTheme,
   solarizedTheme, solarizedLightTheme, tokyoNightTheme, oneDarkTheme, highContrastTheme,
+  rosePineTheme,
   NAMED_THEMES, getNamedTheme,
 } from './named-themes.js';
+
+// Theme utilities
+export { deriveTheme } from './theme/derive.js';
+export type { DerivedTheme, NormalColorPair } from './theme/derive.js';
 
 // Hot-Reload Watcher
 export { TSSWatcher } from './watcher.js';
@@ -38,3 +48,4 @@ export { AutoThemeProvider, ThemeContext, useTheme } from './AutoThemeProvider.j
 export type { AutoThemeProviderProps } from './AutoThemeProvider.js';
 export * from './media.js';
 export * from './importer.js';
+export { lighten, darken, alpha, evalColorFunction } from './color-functions.js';

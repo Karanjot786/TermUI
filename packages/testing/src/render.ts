@@ -47,9 +47,21 @@ export interface TestInstance {
     getAllByText(text: string): Widget[];
 
     /**
+     * Find a widget whose role prop matches the given string.
+     * Returns null if not found.
+     */
+    getByRole(role: string): Widget | null;
+
+    /**
+     * Find a widget whose label prop matches the given string.
+     * Returns null if not found.
+     */
+    getByLabelText(label: string): Widget | null;
+
+    /**
      * Find all widgets of a specific type (by constructor).
      */
-    getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[];
+    getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
 
     /**
      * Find the first widget whose text content includes the given string.
@@ -61,7 +73,18 @@ export interface TestInstance {
      * Find the first widget of a specific type (by constructor).
      * Returns null instead of throwing when nothing matches.
      */
-    queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null;
+    queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null; // any[] is required to accept widget constructors with varying signatures
+
+    /**
+     * Find all widgets whose text content includes the given string.
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByText(text: string): Widget[];
+    /**
+     * Find all widgets of a specific type (by constructor).
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
 
     /**
      * Simulate a key press event. This dispatches to useInput handlers.
@@ -322,6 +345,16 @@ export function render(
             return null;
         },
 
+        getByRole(role: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'role') === role);
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        getByLabelText(label: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'label') === label);
+            return matches.length > 0 ? matches[0] : null;
+        },
+
         getAllByText(text: string): Widget[] {
             return walkWidgets(container, (w) => {
                 if (w instanceof Text) {
@@ -348,6 +381,13 @@ export function render(
         queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null {
             const matches = walkWidgets(container, (w) => w instanceof type) as T[];
             return matches.length > 0 ? matches[0] : null;
+        },
+
+        queryAllByText(text: string): Widget[] {
+            return instance.getAllByText(text);
+        },
+        queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
+            return instance.getAllByType(type);
         },
 
         fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {

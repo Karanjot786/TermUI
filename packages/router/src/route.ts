@@ -14,6 +14,32 @@ export interface RouteParams {
     [key: string]: string;
 }
 
+export interface QueryParams {
+    [key: string]: string;
+}
+
+export function parseQuery(queryString: string): QueryParams {
+    const query: QueryParams = {};
+    if (!queryString) return query;
+    const searchParams = new URLSearchParams(queryString);
+    for (const [key, val] of searchParams.entries()) {
+        query[key] = val;
+    }
+    return query;
+}
+
+export function serializeQuery(query: QueryParams): string {
+    const searchParams = new URLSearchParams();
+    for (const [key, val] of Object.entries(query)) {
+        searchParams.append(key, val);
+    }
+    return searchParams.toString();
+}
+
+export type RedirectTarget =
+    | string
+    | ((params: RouteParams) => string);
+
 export interface Route {
     /** URL-like path, e.g. "/settings/theme" */
     path: string;
@@ -35,6 +61,8 @@ export interface Route {
     afterEnter?: AfterEnterGuard;
     /** Optional metadata object */
     meta?: RouteMeta;
+    /** Declarative redirect target */
+    redirect?: RedirectTarget;
 }
 
 export interface RouteMatch {
@@ -42,6 +70,7 @@ export interface RouteMatch {
     chain: Route[];
     params: RouteParams;
     meta: RouteMeta;
+    query: QueryParams;
 }
 
 /**
@@ -120,6 +149,7 @@ function matchNested(
                 chain: [...chain, route],
                 params,
                 meta: route.meta ?? {},
+                query: {},
             };
         }
 
@@ -133,5 +163,14 @@ function matchNested(
 }
 
 export function matchRoute(path: string, routes: Route[]): RouteMatch | null {
-    return matchNested(path, routes);
+    const questionIdx = path.indexOf('?');
+    const pathname = questionIdx === -1 ? path : path.substring(0, questionIdx);
+    const queryString = questionIdx === -1 ? '' : path.substring(questionIdx + 1);
+
+    const match = matchNested(pathname, routes);
+    if (match) {
+        match.query = parseQuery(queryString);
+        return match;
+    }
+    return null;
 }

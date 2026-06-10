@@ -22,3 +22,6 @@ export type { SliceDef } from './slices.js';
 
 export { createHistoryStore } from './history.js'
 export type { TemporalHistory, TemporalStoreActions } from './history.js'
+
+export { createLogger } from './logger.js';
+export type { LoggerOptions } from './logger.js';

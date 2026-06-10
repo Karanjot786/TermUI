@@ -5,7 +5,7 @@
 import type { Terminal } from './Terminal.js';
 import { type Cell, cellsEqual, type Screen } from './Screen.js';
 import { type ColorDepth, colorToAnsiFg, colorToAnsiBg } from '../style/Color.js';
-import { moveTo, beginSyncUpdate, endSyncUpdate, reset as ansiReset } from '../utils/ansi.js';
+import { moveTo, beginSyncUpdate, endSyncUpdate, reset as ansiReset, stripAnsiControl } from '../utils/ansi.js';
 import { RenderHook } from '../renderer/render-hook.js';
 
 /**
@@ -133,11 +133,13 @@ export class Renderer {
                 output += ansiReset;
                 output += endSyncUpdate;
 
-                const isHookActive = this.hook.isActive;
-                if (isHookActive) this.hook.stop();
-                if (bufferedLogs) this._terminal.write(bufferedLogs);
-                this._terminal.write(output);
-                if (isHookActive) this.hook.start();
+                try {
+                    RenderHook.suspendAll();
+                    if (bufferedLogs) this._terminal.write(bufferedLogs);
+                    this._terminal.write(output);
+                } finally {
+                    RenderHook.resumeAll();
+                }
 
                 this._screen.saveLines();
                 this._emitStats(start, bufferedLogs, output);
@@ -155,29 +157,25 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
-            // 2. Pause the hook temporarily so our own UI rendering doesn't get buffered
-            const isHookActive = this.hook.isActive;
-            if (isHookActive) {
-                this.hook.stop();
-            }
+            try {
+                RenderHook.suspendAll();
+                if (bufferedLogs) {
+                    this._terminal.write(bufferedLogs);
+                }
 
-            // 3. Print the captured logs FIRST (above the UI)
-            if (bufferedLogs) {
-                this._terminal.write(bufferedLogs);
-            }
-
-            // 4. Print the actual UI diff natively
-            this._terminal.write(output);
-
-            // 5. Resume catching external logs
-            if (isHookActive) {
-                this.hook.start();
+                this._terminal.write(output);
+            } finally {
+                RenderHook.resumeAll();
             }
 
             this._emitStats(start, bufferedLogs, output);
             this._screen.swap();
         } catch (err) {
             console.error('[TermUI] Renderer flush error:', err);
+            // Re-request render so the next frame tick retries.
+            this._renderRequested = true;
+            // Reset style fingerprint to prevent color bleed on retry.
+            this._lastStyleFingerprint = null;
         }
     }
 
@@ -194,7 +192,7 @@ export class Renderer {
             case 'named': fgKey = `N:${fg.name}`; break;
             case 'ansi256': fgKey = `A:${fg.code}`; break;
             case 'rgb': fgKey = `R:${fg.r},${fg.g},${fg.b}`; break;
-            case 'hex': fgKey = `H:${fg.hex}`; break;
+            case 'hex': fgKey = `H:${fg.hex.toLowerCase()}`; break;
             default: fgKey = 'n';
         }
         let bgKey: string;
@@ -203,7 +201,7 @@ export class Renderer {
             case 'named': bgKey = `N:${bg.name}`; break;
             case 'ansi256': bgKey = `A:${bg.code}`; break;
             case 'rgb': bgKey = `R:${bg.r},${bg.g},${bg.b}`; break;
-            case 'hex': bgKey = `H:${bg.hex}`; break;
+            case 'hex': bgKey = `H:${bg.hex.toLowerCase()}`; break;
             default: bgKey = 'n';
         }
         return `${cell.bold ? 'B' : ''}${cell.dim ? 'D' : ''}${cell.italic ? 'I' : ''}${cell.underline ? 'U' : ''}${cell.strikethrough ? 'S' : ''}${cell.inverse ? 'V' : ''}|${fgKey}|${bgKey}`;
@@ -230,7 +228,8 @@ export class Renderer {
             this._lastStyleFingerprint = fp;
         }
 
-        seq += cell.char || ' ';
+        // Write the character (sanitized to prevent escape injection)
+        seq += stripAnsiControl(cell.char) || ' ';
         return seq;
     }
 
@@ -243,6 +242,10 @@ export class Renderer {
         let spanStart = -1;
 
         for (let c = 0; c < cols; c++) {
+            // Skip continuation cells (right half of wide chars) - they are not
+            // independently renderable and their primary cell handles the output.
+            if (back[row][c].width === 0) continue;
+            
             const changed = !cellsEqual(front[row][c], back[row][c]);
             if (changed && spanStart === -1) {
                 spanStart = c; // start a new changed span

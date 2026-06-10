@@ -120,4 +120,71 @@ describe('BigText', () => {
         // Should render 'A'
         expect(screen.back[0][1].char).toBe('█');
     });
+
+    it('applies custom color to rendered cells', () => {
+        const color: import('@termuijs/core').Color = { type: 'named', name: 'red' };
+        const widget = new BigText('A', {}, { color });
+        const screen = new Screen(10, 10);
+        widget.updateRect({ x: 0, y: 0, width: 10, height: 10 });
+        widget.render(screen);
+
+        // A filled cell should have the custom fg color
+        expect(screen.back[0][1].fg).toEqual(color);
+    });
+
+    it('renders digit glyphs correctly', () => {
+        const widget = new BigText('1');
+        const screen = new Screen(10, 10);
+        widget.updateRect({ x: 0, y: 0, width: 10, height: 10 });
+        widget.render(screen);
+
+        // '1' row 0: " # "
+        expect(screen.back[0][0].char).toBe(' ');
+        expect(screen.back[0][1].char).toBe('█');
+        expect(screen.back[0][2].char).toBe(' ');
+        // '1' row 4: "###"
+        expect(screen.back[4][0].char).toBe('█');
+        expect(screen.back[4][1].char).toBe('█');
+        expect(screen.back[4][2].char).toBe('█');
+    });
+
+    it('clips glyphs when height is smaller than 5', () => {
+        const widget = new BigText('A');
+        const screen = new Screen(10, 3);
+        widget.updateRect({ x: 0, y: 0, width: 10, height: 3 });
+        widget.render(screen);
+
+        // Only first 3 rows should render
+        expect(screen.back[0][1].char).toBe('█'); // row 0 of 'A'
+        expect(screen.back[2][0].char).toBe('█'); // row 2 of 'A' (###)
+    });
+});
+
+describe('BigText – mutation regression tests', () => {
+    it('does not mark dirty when text is unchanged', () => {
+        const widget = new BigText('HELLO');
+
+        widget.clearDirty();
+        widget.setText('HELLO');
+
+        expect(widget.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when text differs only by case', () => {
+        const widget = new BigText('HELLO');
+
+        widget.clearDirty();
+        widget.setText('hello');
+
+        expect(widget.isDirty).toBe(false);
+    });
+
+    it('marks dirty when text changes', () => {
+        const widget = new BigText('HELLO');
+
+        widget.clearDirty();
+        widget.setText('WORLD');
+
+        expect(widget.isDirty).toBe(true);
+    });
 });

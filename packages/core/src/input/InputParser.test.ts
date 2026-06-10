@@ -111,6 +111,22 @@ describe('InputParser', () => {
         expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'x', alt: true }));
     });
 
+    it('does not emit Alt+[ for incomplete CSI prefix', () => {
+        const { stdin, handler } = createParser();
+        sendKey(stdin, '\x1b[');
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('parses split Arrow Up escape sequence arriving in chunks', () => {
+        const { stdin, handler } = createParser();
+        sendKey(stdin, Buffer.from([0x1b]));
+        sendKey(stdin, '[');
+        sendKey(stdin, 'A');
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'up' }));
+    });
+
     it('resolves cursor position reports with correct row/col', async () => {
         const stdin = createMockStdin();
         const parser = new InputParser(stdin);
@@ -132,6 +148,18 @@ describe('InputParser', () => {
         vi.advanceTimersByTime(201);
 
         await expect(positionPromise).rejects.toThrow('Cursor position request timed out');
+    });
+
+    it('rejects pending cursor position requests immediately when stop() is called', async () => {
+        vi.useFakeTimers();
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition(200);
+        parser.stop();
+
+        await expect(positionPromise).rejects.toThrow('InputParser stopped');
     });
 
     it('does not emit a key event for cursor position reports', async () => {

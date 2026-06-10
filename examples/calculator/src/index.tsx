@@ -1,10 +1,10 @@
-import { App, type KeyEvent, type Screen, type Style, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
-import { Widget, Box, Text, Grid, Center } from '@termuijs/widgets';
+import {App,type KeyEvent,type Screen, type Style,styleToCellAttrs, stringWidth,truncate} from "@termuijs/core";
+import { Widget, Box, Text, Grid, Center } from "@termuijs/widgets";
 
 // ── Button Widget ────────────────────────────────────────────────────────────
 
 class Button extends Widget {
-    private label: string;
+ private label: string;
     private onClick: () => void;
 
     constructor(label: string, onClick: () => void, style: Partial<Style> = {}) {
@@ -56,7 +56,6 @@ class Button extends Widget {
         this.onClick();
     }
 }
-
 // ── Tokenizer & Evaluator ───────────────────────────────────────────────────
 
 function tokenize(expr: string): string[] {
@@ -155,7 +154,6 @@ function safeEval(expr: string): string {
     }
     return resStr;
 }
-
 // ── Calculator App Widget ───────────────────────────────────────────────────
 
 const BUTTONS_LAYOUT = [
@@ -176,80 +174,86 @@ class CalculatorApp extends Widget {
 
     constructor() {
         super({
-            flexDirection: 'column',
-            width: 32,
-            height: 19,
-            border: 'double',
+            flexDirection: "column",
+            width: 60,
+            maxWidth: 60,
+            height: 20,
+            border: "double",
             borderColor: { type: 'named', name: 'cyan' },
-            padding: 1,
-        });
-
-        // 1. Title
-        const title = new Text(' ⚡ TermUI Calculator ', {
-            bold: true,
-            height: 1,
-            fg: { type: 'named', name: 'cyan' },
-        }, { align: 'center' });
-
-        // 2. Display screen area
-        const displayBox = new Box({
-            border: 'single',
-            height: 3,
-            borderColor: { type: 'named', name: 'brightBlack' },
             padding: { left: 1, right: 1, top: 0, bottom: 0 },
         });
 
-        this._display = new Text('0', {
-            bold: true,
-            height: 1,
-            fg: { type: 'named', name: 'white' },
-        }, { align: 'right' });
+        // 1. Title
+        const title = new Text(
+            " ⚡ TermUI Calculator ",
+            {
+                bold: true,
+                height: 1,
+                fg: { type: "named", name: "cyan" },
+            },
+            { align: "center" },
+        );
+
+        // 2. Display screen area
+        const displayBox = new Box({
+            border: "single",
+            height: 3,
+            borderColor: { type: "named", name: "brightBlack" },
+            padding: { left: 1, right: 1, top: 0, bottom: 0 },
+        });
+
+        this._display = new Text("0",{
+                bold: true,
+                height: 1,
+                fg: { type: "named", name: "white" },
+            },{ align: "left" },
+        );
 
         displayBox.addChild(this._display);
 
         // 3. Grid for calculator keys
-        const grid = new Grid({ flexGrow: 1, gap: 0 }, { columns: 4, gap: 0 });
+        const grid = new Box({ flexDirection: "column", flexGrow: 1, height: 12 });
 
         for (let r = 0; r < 4; r++) {
+            const rowBox = new Box({ flexDirection: "row", height: 3 });
             const rowButtons: Button[] = [];
             for (let c = 0; c < 4; c++) {
                 const label = BUTTONS_LAYOUT[r][c];
-                const buttonColor = this.getButtonColor(label);
                 const button = new Button(
                     label,
                     () => this.handleButtonAction(label),
-                    { fg: buttonColor }
+                    { fg: this.getButtonColor(label), flexGrow: 1 },
                 );
                 rowButtons.push(button);
-                grid.addItem(button);
+                rowBox.addChild(button);
             }
             this._buttons.push(rowButtons);
+            grid.addChild(rowBox);
         }
 
         // Add elements to root container
         this.addChild(title);
-        this.addChild(new Box({ height: 1 })); // Spacing spacer
         this.addChild(displayBox);
-        this.addChild(new Box({ height: 1 })); // Spacing spacer
         this.addChild(grid);
 
         this.updateFocus();
     }
 
     private getButtonColor(label: string) {
-        if (label === 'C') {
-            return { type: 'named' as const, name: 'red' as const };
+        if (label === "C") {
+            return { type: "named" as const, name: "red" as const };
         }
-        if (['/', '*', '-', '+', '='].includes(label)) {
-            return { type: 'named' as const, name: 'yellow' as const };
+        if (["/", "*", "-", "+", "="].includes(label)) {
+            return { type: "named" as const, name: "yellow" as const };
         }
-        return { type: 'named' as const, name: 'white' as const };
+        return { type: "named" as const, name: "white" as const };
     }
 
     private updateFocus() {
         for (let r = 0; r < 4; r++) {
             for (let c = 0; c < 4; c++) {
-                this._buttons[r][c].isFocused = (r === this._focusedRow && c === this._focusedCol);
+                this._buttons[r][c].isFocused =
+                    r === this._focusedRow && c === this._focusedCol;
                 this._buttons[r][c].markDirty();
             }
         }
@@ -258,11 +262,11 @@ class CalculatorApp extends Widget {
 
     private addDigit(digit: string) {
         if (this.result !== null) {
-            this.expression = '';
+            this.expression = "";
             this.result = null;
         }
-        if (this.expression === '0' && digit === '0') return;
-        if (this.expression === '0') {
+        if (this.expression === "0" && digit === "0") return;
+        if (this.expression === "0") {
             this.expression = digit;
         } else {
             this.expression += digit;
@@ -272,8 +276,8 @@ class CalculatorApp extends Widget {
 
     private addOperator(op: string) {
         if (this.result !== null) {
-            if (this.result.startsWith('Error')) {
-                this.expression = '';
+            if (this.result.startsWith("Error")) {
+                this.expression = "";
             } else {
                 this.expression = this.result;
             }
@@ -281,18 +285,21 @@ class CalculatorApp extends Widget {
         }
 
         const trimmed = this.expression.trim();
-        if (trimmed === '') {
-            if (op === '-') {
-                this.expression = '-';
+        if (trimmed === "") {
+            if (op === "-") {
+                this.expression = "-";
             }
             this.updateDisplay();
             return;
         }
 
         const lastChar = trimmed[trimmed.length - 1];
-        if (['+', '-', '*', '/'].includes(lastChar)) {
+        if (["+", "-", "*", "/"].includes(lastChar)) {
             // Replace trailing operator block
-            this.expression = this.expression.replace(/\s*[\+\-\*\/]\s*$/, ` ${op} `);
+            this.expression = this.expression.replace(
+                /\s*[\+\-\*\/]\s*$/,
+                ` ${op} `,
+            );
         } else {
             this.expression += ` ${op} `;
         }
@@ -306,7 +313,7 @@ class CalculatorApp extends Widget {
             return;
         }
         if (this.expression.length > 0) {
-            if (this.expression.endsWith(' ')) {
+            if (this.expression.endsWith(" ")) {
                 this.expression = this.expression.slice(0, -3);
             } else {
                 this.expression = this.expression.slice(0, -1);
@@ -316,13 +323,13 @@ class CalculatorApp extends Widget {
     }
 
     private clear() {
-        this.expression = '';
+        this.expression = "";
         this.result = null;
         this.updateDisplay();
     }
 
     private evaluate() {
-        if (this.expression.trim() === '') return;
+        if (this.expression.trim() === "") return;
         this.result = safeEval(this.expression);
         this.updateDisplay();
     }
@@ -340,13 +347,13 @@ class CalculatorApp extends Widget {
     }
 
     private updateDisplay() {
-        const text = this.result !== null ? this.result : (this.expression || '0');
+        const text = this.result !== null ? this.result : this.expression || "0";
         this._display.setContent(text);
         this.markDirty();
     }
 
     handleKey(event: KeyEvent): boolean {
-        if (event.key === 'q' || (event.ctrl && event.key === 'c')) {
+         if (event.key === 'q' || (event.ctrl && event.key === 'c')) {
             return false; // Stop application
         }
 
@@ -373,15 +380,14 @@ class CalculatorApp extends Widget {
             this.updateFocus();
             return true;
         }
-
         // Action trigger
-        if (key === 'enter' || key === 'return' || key === 'space') {
+        if (key === "enter" || key === "return" || key === "space") {
             this._buttons[this._focusedRow][this._focusedCol].click();
             return true;
         }
 
         // Direct inputs
-        if (/\d/.test(key)) {
+       if (key.length === 1 && key >= '0' && key <= '9') {
             this.addDigit(key);
             return true;
         }
@@ -423,7 +429,7 @@ async function main() {
         fps: 30,
     });
 
-    app.events.on('key', (event) => {
+    app.events.on("key", (event) => {
         const shouldContinue = calcApp.handleKey(event);
         if (!shouldContinue) {
             app.exit(0);
@@ -436,6 +442,6 @@ async function main() {
 }
 
 main().catch((err) => {
-    console.error('Calculator application error:', err);
+    console.error("Calculator application error:", err);
     process.exit(1);
 });

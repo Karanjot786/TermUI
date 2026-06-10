@@ -5,7 +5,7 @@
 // ─────────────────────────────────────────────────────
 
 import { caps } from '@termuijs/core';
-import { app, row, gauge, sparkline, table, text, status, multiProgress } from '@termuijs/quick';
+import { app, row, sparkline, table, text, status, multiProgress } from '@termuijs/quick';
 import { cpu, memory, disk, processes, system, network } from '@termuijs/data';
 
 // Keep a rolling history for sparklines
@@ -18,19 +18,30 @@ app(caps.unicode ? '⚡ System Monitor' : '* System Monitor')
         row(
             text(() => `${caps.unicode ? '🖥' : '[sys]'}  ${system.hostname} • ${system.platform} • up ${system.uptime}`, { color: { type: 'named', name: 'cyan' }, bold: true }),
         ),
-        // Row 2: CPU + Memory gauges
+        // Row 2: CPU + Memory + Disk (color-coded with status labels)
         row(
-            gauge('CPU', () => {
+            // CPU — dynamic status + color
+            multiProgress(() => {
                 const pct = cpu.percent;
                 cpuHistory.push(pct); if (cpuHistory.length > 40) cpuHistory.shift();
-                return pct / 100;
-            }, { color: { type: 'named', name: 'green' } }),
-            gauge('MEM', () => {
+                const status = pct <= 50 ? { label: 'Normal', color: 'green', emoji: '🟢' }
+                    : pct <= 80 ? { label: 'Moderate', color: 'yellow', emoji: '🟡' }
+                    : { label: 'Critical', color: 'red', emoji: '🔴' };
+                return [{ label: `${caps.unicode ? 'CPU' : 'CPU'} ${status.emoji} ${status.label}`, value: pct / 100, color: { type: 'named', name: status.color } }];
+            }, { labelWidth: 18, showValues: true }),
+
+            // MEM — dynamic status + color
+            multiProgress(() => {
                 const pct = memory.percent;
                 memHistory.push(pct); if (memHistory.length > 40) memHistory.shift();
-                return pct / 100;
-            }, { color: { type: 'named', name: 'yellow' } }),
-            gauge('DSK', () => disk.percent / 100, { color: { type: 'named', name: 'magenta' } }),
+                const status = pct <= 50 ? { label: 'Normal', color: 'green', emoji: '🟢' }
+                    : pct <= 80 ? { label: 'Moderate', color: 'yellow', emoji: '🟡' }
+                    : { label: 'Critical', color: 'red', emoji: '🔴' };
+                return [{ label: `${caps.unicode ? 'MEM' : 'MEM'} ${status.emoji} ${status.label}`, value: pct / 100, color: { type: 'named', name: status.color } }];
+            }, { labelWidth: 18, showValues: true }),
+
+            // DSK (keep existing color)
+            multiProgress(() => [{ label: 'DSK', value: disk.percent / 100, color: { type: 'named', name: 'magenta' } }], { labelWidth: 8, showValues: true }),
         ),
         // Row 3: Multi-bar progress (MEM used + CPU load)
         row(

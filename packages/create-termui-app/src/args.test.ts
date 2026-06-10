@@ -107,5 +107,13 @@ describe("CLI args", () => {
     it("isNonInteractive works", () => {
         expect(isNonInteractive(parseArgs(["app", "--yes"]))).toBe(true);
         expect(isNonInteractive(parseArgs(["app"]))).toBe(false);
+        expect(isNonInteractive(parseArgs(["app", "--template", "dashboard", "--theme", "default"]))).toBe(true);
+        expect(isNonInteractive(parseArgs(["app", "--template", "dashboard"]))).toBe(false);
+    });
+
+    it("throws error for invalid template key", () => {
+        expect(() => parseArgs(["app", "--template", "invalid-template"])).toThrow(
+            'Invalid template "invalid-template". Valid: empty, dashboard, interactive-tool, cli-wrapper, cli-tool, file-manager, ai-assistant, form-wizard'
+        );
     });
 });

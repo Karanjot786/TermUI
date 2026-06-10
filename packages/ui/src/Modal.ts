@@ -19,8 +19,8 @@ export class Modal extends Widget {
     private _visible = false;
     private _content: Widget | null = null;
 
-    constructor(options: ModalOptions = {}) {
-        super(mergeStyles(defaultStyle(), {}));
+    constructor(options: ModalOptions = {}, style?: Partial<Style>) {
+        super(mergeStyles(defaultStyle(), style ?? {}));
         this._title = options.title ?? '';
         this._modalWidth = options.width ?? 50;
         this._modalHeight = options.height ?? 15;

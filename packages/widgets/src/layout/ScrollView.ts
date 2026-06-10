@@ -2,14 +2,18 @@
 // @termuijs/widgets — ScrollView widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, type KeyEvent } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, type KeyEvent, normalizeNavigationKey } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { ScrollAcceleration } from './scroll-acceleration.js';
+
 
 export interface ScrollViewOptions {
     /** Total height of content in rows */
     contentHeight?: number;
     /** Show scrollbar indicator on right edge */
     showScrollbar?: boolean;
+     /** Whether to use scroll acceleration */
+    scrollAccel?: boolean;
 }
 
 /**
@@ -22,11 +26,15 @@ export class ScrollView extends Widget {
     private _scrollOffset: number = 0;
     private _contentHeight: number;
     private _showScrollbar: boolean;
+    private _scrollAccel: boolean;
+    private _acceleration = new ScrollAcceleration();
+    
 
     constructor(style: Partial<Style> = {}, opts: ScrollViewOptions = {}) {
         super({ overflow: 'hidden', ...style });
         this._contentHeight = opts.contentHeight ?? 0;
         this._showScrollbar = opts.showScrollbar ?? true;
+        this._scrollAccel = opts.scrollAccel ??  false;
         this.focusable = true;
     }
 
@@ -44,7 +52,7 @@ export class ScrollView extends Widget {
 
     /** Scroll by delta rows */
     scrollBy(delta: number): void {
-        this._scrollOffset += delta;
+        this._scrollOffset = Math.round(this._scrollOffset + delta);
         this._clampOffset();
         this.markDirty();
     }
@@ -53,7 +61,7 @@ export class ScrollView extends Widget {
     scrollTo(offset: number): void {
         const previousOffset = this._scrollOffset;
     
-        this._scrollOffset = offset;
+        this._scrollOffset = Math.round(offset);
         this._clampOffset();
     
         if (previousOffset !== this._scrollOffset) {
@@ -66,14 +74,26 @@ export class ScrollView extends Widget {
         const maxOffset = Math.max(0, this._contentHeight - viewHeight);
         this._scrollOffset = Math.max(0, Math.min(this._scrollOffset, maxOffset));
     }
+    
+    private getScrollDelta(baseDelta: number): number {
+    if (!this._scrollAccel) {
+        return baseDelta;
+    }
 
+    const multiplier =
+        this._acceleration.getMultiplier(
+            Date.now()
+        );
+
+    return baseDelta * multiplier; 
+}
     /** Handle keyboard navigation */
     handleKey(event: KeyEvent): void {
-        switch (event.key) {
-            case 'up':       this.scrollBy(-1); break;
-            case 'down':     this.scrollBy(1); break;
-            case 'pageup':   this.scrollBy(-Math.max(1, this._rect.height - 1)); break;
-            case 'pagedown': this.scrollBy(Math.max(1, this._rect.height - 1)); break;
+        switch (normalizeNavigationKey(event.key)) {
+            case 'up':       this.scrollBy(-this.getScrollDelta(1)); break;
+            case 'down':     this.scrollBy(this.getScrollDelta(1)); break;
+            case 'pageup':   this.scrollBy(-this.getScrollDelta(Math.max(1, this._rect.height - 1))); break;
+            case 'pagedown': this.scrollBy(this.getScrollDelta(Math.max(1, this._rect.height - 1))); break;
         }
     }
 

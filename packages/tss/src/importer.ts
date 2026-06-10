@@ -1,5 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
+
+const ALLOWED_EXTENSIONS = ['.tss', '.json', '.yaml', '.yml'];
 
 /**
  * Resolves and inlines @import statements in TSS strings.
@@ -12,12 +14,25 @@ import { dirname, resolve } from 'node:path';
  */
 export function resolveImports(source: string, basePath: string, visited = new Set<string>()): string {
     const importRegex = /@import\s+(?:'([^']+)'|"([^"]+)");?/g;
+    const baseDir = dirname(basePath);
 
     return source.replace(importRegex, (match, singleQuotePath, doubleQuotePath) => {
         const importPath = singleQuotePath || doubleQuotePath;
         if (!importPath) return match;
 
-        const fullPath = resolve(dirname(basePath), importPath);
+        const fullPath = resolve(baseDir, importPath);
+
+        // Security: Prevent path traversal — use path.relative() instead of startsWith()
+        // so that paths like "../base/../../" that normalize to escape baseDir are caught.
+        if (relative(baseDir, fullPath).startsWith('..')) {
+            return `/* Error: Path traversal blocked: ${importPath} */`;
+        }
+
+        // Only allow known theme file extensions
+        const ext = fullPath.toLowerCase().slice(fullPath.lastIndexOf('.'));
+        if (!ALLOWED_EXTENSIONS.includes(ext)) {
+            return `/* Error: Unsupported import extension: ${importPath} */`;
+        }
 
         // Edge case: Prevent infinite loops from circular dependencies
         if (visited.has(fullPath)) {

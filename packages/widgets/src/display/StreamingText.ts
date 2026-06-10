@@ -48,6 +48,7 @@ export class StreamingText extends Widget {
 
     /** Replace text content and reset the revealed counter to 0. */
     setText(text: string): void {
+        if (text === this._text) return;
         this._text = text;
         this._revealed = 0;
         this.markDirty();

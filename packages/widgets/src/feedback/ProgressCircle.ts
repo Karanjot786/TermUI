@@ -45,6 +45,10 @@ export class ProgressCircle extends Widget {
 
     /** Update the current progress. Out-of-range values are clamped to [0, 1]. */
     setValue(value: number): void {
+        const nextValue = clamp01(value);
+            if (this._value === nextValue) {
+            return;
+        }
         this._value = clamp01(value);
         this.markDirty();
     }

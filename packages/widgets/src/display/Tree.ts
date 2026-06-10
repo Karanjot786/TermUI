@@ -9,6 +9,7 @@ import {
     truncate,
     stringWidth,
     caps,
+    normalizeNavigationKey,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
@@ -169,16 +170,14 @@ export class Tree extends Widget {
      * when this widget is focused.
      */
     handleKey(key: string): void {
-        const normalized = key.toLowerCase();
+        const normalized = normalizeNavigationKey(key.toLowerCase());
         switch (normalized) {
             case 'arrowup':
             case 'up':
-            case 'k':
                 this.movePrev();
                 break;
             case 'arrowdown':
             case 'down':
-            case 'j':
                 this.moveNext();
                 break;
             case 'enter':
@@ -188,12 +187,10 @@ export class Tree extends Widget {
                 break;
             case 'arrowleft':
             case 'left':
-            case 'h':
                 this.collapse();
                 break;
             case 'arrowright':
             case 'right':
-            case 'l':
                 this.expand();
                 break;
             case 'home':

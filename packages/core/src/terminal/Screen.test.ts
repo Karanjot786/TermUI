@@ -190,4 +190,34 @@ describe('Screen and Cell Hyperlink Support', () => {
     it('hyperlinkClose produces a valid OSC 8 suffix', () => {
         expect(hyperlinkClose).toBe(`\x1b]8;;\x1b\\`);
     });
+
+    describe('ANSI injection protection', () => {
+        it('strips CSI escape sequences from writeString', () => {
+            const screen = new Screen(20, 5);
+            screen.writeString(0, 0, 'hello\x1b[31mworld');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('helloworld');
+        });
+
+        it('strips escape sequences from setCell char', () => {
+            const screen = new Screen(10, 5);
+            screen.setCell(0, 0, { char: '\x1b[2J' });
+            expect(screen.back[0][0].char).toBe('');
+        });
+
+        it('strips C0 control characters (except tab/LF/CR) from writeString', () => {
+            const screen = new Screen(20, 5);
+            // \x01 = SOH, \x07 = BEL — both stripped; 'cd' is unaffected
+            screen.writeString(0, 0, 'ab\x01\x07cd');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('abcd');
+        });
+
+        it('preserves normal printable characters', () => {
+            const screen = new Screen(20, 5);
+            screen.writeString(0, 0, 'Hello, World!');
+            const text = screen.back[0].slice(0, 13).map(c => c.char).join('');
+            expect(text).toBe('Hello, World!');
+        });
+    });
 });

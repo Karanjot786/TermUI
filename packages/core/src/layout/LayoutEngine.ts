@@ -28,6 +28,10 @@ export interface LayoutNode {
     /** Last container dimensions used — separate from computed so manual computed edits don't confuse sizeChanged detection */
     _lastContainerWidth: number;
     _lastContainerHeight: number;
+    /** Last computed dimensions — used to detect size changes in non-dirty nodes
+     *  so grandchildren are re-laid out when a parent recomputes this node's rect. */
+    _lastComputedWidth: number;
+    _lastComputedHeight: number;
 }
 
 /**
@@ -42,6 +46,8 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
         _dirty: true,
         _lastContainerWidth: 0,
         _lastContainerHeight: 0,
+        _lastComputedWidth: 0,
+        _lastComputedHeight: 0,
     };
 }
 
@@ -67,10 +73,10 @@ export function computeLayout(root: LayoutNode, containerWidth: number, containe
     root._lastContainerHeight = containerHeight;
     root.computed = { x: 0, y: 0, width: containerWidth, height: containerHeight };
     layoutNode(root, containerWidth, containerHeight);
+
     root.computed.width = containerWidth;
     root.computed.height = containerHeight;
 }
-
 export function invalidateLayout(node: LayoutNode): void {
     node._dirty = true;
     for (const child of node.children) {
@@ -85,7 +91,14 @@ function hasDirtyChild(node: LayoutNode): boolean {
     return false;
 }
 function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, precomputed = false): void {
-    if (!node._dirty) return;
+    // Skip only if not dirty AND dimensions are unchanged since last layout pass.
+    // Note: node.computed.width/height are written by the parent before this call,
+    // so comparing against them detects non-dirty nodes whose allocated size changed.
+    if (!node._dirty &&
+        node._lastComputedWidth === node.computed.width &&
+        node._lastComputedHeight === node.computed.height) {
+        return;
+    }
 
     const style = node.style;
     const padding = normalizeEdges(style.padding);
@@ -114,6 +127,8 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
     if (node.children.length === 0) {
         node._dirty = false;
+        node._lastComputedWidth = node.computed.width;
+        node._lastComputedHeight = node.computed.height;
         return;
     }
 
@@ -170,6 +185,8 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
             visibleIndex++;
         }
         node._dirty = false;
+        node._lastComputedWidth = node.computed.width;
+        node._lastComputedHeight = node.computed.height;
         return;
     }
 
@@ -369,6 +386,8 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
     // Mark this node clean after layout is complete (used by future caching logic)
     node._dirty = false;
+    node._lastComputedWidth = node.computed.width;
+    node._lastComputedHeight = node.computed.height;
 }
 
 /**
