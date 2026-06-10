@@ -83,10 +83,8 @@ export { GanttChart } from './data/GanttChart.js';
 export type { GanttChartOptions, GanttTask } from './data/GanttChart.js';
 
 // ── Layout Widgets ────────────────────────────────────
-export { Split } from './layout/Split.js';
-export type { SplitProps } from './layout/Split.js';
-export { Draggable, Droppable } from './layout/DragAndDrop.js';
-export type { DraggableProps, DroppableProps } from './layout/DragAndDrop.js';
+
+
 export { Grid } from './layout/Grid.js';
 export type { GridOptions } from './layout/Grid.js';
 export { ScrollView } from './layout/ScrollView.js';
