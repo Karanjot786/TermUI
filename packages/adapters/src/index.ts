@@ -39,4 +39,5 @@ export type { RAGChatOptions } from './ai/RAGChat.js'
 
 export { useDotenv } from './dotenv/index.js'
 export type { DotenvValues, UseDotenvResult } from './dotenv/index.js'
-
+export { useLocalStorage } from './localStorage/index.js'
+export type { LocalStorageAdapter } from './localStorage/index.js'
