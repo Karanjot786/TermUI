@@ -87,4 +87,23 @@ describe('PathInput', () => {
         
         screen.unmount();
     });
+
+    it('prevents default Tab focus navigation when completing', () => {
+        const input = new PathInput({}, { cwd: '/mock/dir' });
+        input.value = 's';
+        const event = {
+            key: 'tab',
+            ctrl: false,
+            shift: false,
+            alt: false,
+            raw: Buffer.from('\t'),
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as unknown as import('@termuijs/core').KeyEvent;
+
+        input.handleKey(event);
+
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
+    });
 });

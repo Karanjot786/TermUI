@@ -187,7 +187,11 @@ export class PathInput extends Widget {
      */
     handleKey(event: KeyEvent): void {
         switch (event.key) {
-            case 'tab': this.triggerCompletion(); break;
+            case 'tab':
+                this.triggerCompletion();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
             case 'escape': this._dismissCompletions(); this.markDirty(); break;
             case 'backspace': this.deleteBack(); break;
             case 'delete': this.deleteForward(); break;
