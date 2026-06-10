@@ -70,6 +70,22 @@ describe('RangeInput', () => {
         expect(r.getLow()).toBe(20);  // low unchanged
     });
 
+    it('prevents default tab focus behavior when toggling handles', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price');
+        const event = makeKey('tab');
+        const preventDefault = vi.fn();
+        const stopPropagation = vi.fn();
+
+        event.preventDefault = preventDefault;
+        event.stopPropagation = stopPropagation;
+
+        r.handleKey(event);
+
+        expect(preventDefault).toHaveBeenCalled();
+        expect(stopPropagation).toHaveBeenCalled();
+    });
+
     it('arrow keys move low handle by step', async () => {
         const { RangeInput } = await import('./RangeInput.js');
         const r = new RangeInput('Price');

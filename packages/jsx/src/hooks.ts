@@ -31,6 +31,8 @@ export interface Fiber {
     intervals: ReturnType<typeof setInterval>[];
     /** Context values provided by this fiber's component */
     contextValues: Map<symbol, any>;
+    contextSubscribers?: Map<symbol, Set<Fiber>>;
+    contextDependencies?: Set<Set<Fiber>>;
     /** Parent fiber for context lookup */
     parent?: Fiber;
     // ── ErrorBoundary fields ──
@@ -167,7 +169,7 @@ export function registerCleanup(fn: () => void): () => void {
  * Schedule a re-render. Multiple setState calls within the same
  * microtask are batched into a single re-render cycle.
  */
-function scheduleRender(fiber?: Fiber): void {
+export function scheduleRender(fiber?: Fiber): void {
     if (fiber) {
         _pendingUpdates.add(fiber);
     }
@@ -638,6 +640,14 @@ export function destroyFiber(fiber: Fiber): void {
     fiber.cleanups = [];
     fiber.intervals = [];
     fiber.contextValues.clear();
+    
+    if (fiber.contextDependencies) {
+        for (const subs of fiber.contextDependencies) {
+            subs.delete(fiber);
+        }
+        fiber.contextDependencies.clear();
+    }
+    
     fiber.childFibers = undefined;
     fiber._prevChildFibers = undefined;
 }

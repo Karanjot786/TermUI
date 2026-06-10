@@ -28,6 +28,7 @@ export class Watermark extends Widget {
     }
 
     setText(text: string): void {
+        if (this._text === text) return;
         this._text = text;
         this.markDirty();
     }

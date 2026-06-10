@@ -138,16 +138,33 @@ export abstract class Widget {
         const idx = this._children.indexOf(child);
         if (idx >= 0) {
             this._children.splice(idx, 1);
-            child.parent = null;
+            child.destroy();
         }
     }
 
     /** Remove all children */
     clearChildren(): void {
-        for (const child of this._children) {
-            child.parent = null;
-        }
+        const children = [...this._children];
         this._children = [];
+        for (const child of children) {
+            child.destroy();
+        }
+    }
+
+    /**
+     * Destroy this widget and all its descendants.
+     * Cleans up event handlers, removes parent references, and clears children.
+     * Fiber-level cleanup is handled by the reconciler's _pruneInstancesForWidget.
+     */
+    destroy(): void {
+        const children = [...this._children];
+        this._children = [];
+        for (const child of children) {
+            child.destroy();
+        }
+        this.events.emit('unmount', undefined as any);
+        this.events.removeAll();
+        this.parent = null;
     }
 
     /** Get all children */

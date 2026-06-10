@@ -51,6 +51,9 @@ export type { DrawerOptions, DrawerPosition } from './Drawer.js';
 export { Select } from './Select.js';
 export type { SelectOption, SelectOptions } from './Select.js';
 
+export { Combobox } from './Combobox.js';
+export type { ComboboxOption, ComboboxOptions } from './Combobox.js';
+
 export { LinearPrompt } from './LinearPrompt.js';
 export type { LinearPromptOption, LinearPromptOptions } from './LinearPrompt.js';
 
@@ -212,3 +215,7 @@ export type { ListbarOptions, ListbarItem } from './Listbar.js';
 
 export { validateInput } from './validation.js';
 export type { InputValidator } from './validation.js';
+
+// -- External Theme / Stylesheet Engine --
+export * from '@termuijs/tss';
+
