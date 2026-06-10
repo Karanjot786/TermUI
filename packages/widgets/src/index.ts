@@ -165,6 +165,8 @@ export { Kbd } from './display/Kbd.js';
 export type { KbdOptions } from './display/Kbd.js';
 export { Tag } from './display/Tag.js';
 export type { TagOptions, TagVariant } from './display/Tag.js';
+export { Placeholder } from './display/Placeholder.js';
+export type { PlaceholderOptions } from './display/Placeholder.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
 
