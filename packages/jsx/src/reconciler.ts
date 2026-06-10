@@ -601,9 +601,10 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     }
 
     // Rebuild the widget tree (fiber state is preserved via childFibers reuse)
+    // Push fiber as parent so child components maintain their parent reference
+    // for context lookups and error boundary traversal during re-renders.
+    _parentFiber = fiber;
     const newWidget = reconcile(vnode);
-
-    // Restore parent fiber
     _parentFiber = prevParent;
 
     // Destroy child fibers not visited during this render
