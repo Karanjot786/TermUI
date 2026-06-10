@@ -21,7 +21,7 @@ export class RenderHook {
 
         const methods: ConsoleMethod[] = ['log', 'warn', 'error'];
         for (const method of methods) {
-            this._originalConsole[method] = console[method].bind(console);
+            this._originalConsole[method] = console[method];
             const hook = this;
             console[method] = function (...args: any[]): void {
                 const text = args.map(a => typeof a === 'string' ? a : String(a)).join(' ');
