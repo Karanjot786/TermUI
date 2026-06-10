@@ -1,4 +1,4 @@
-import { type Screen, type Style, type Color, caps } from "@termuijs/core";
+import { type Screen, type Style, type Color, caps, truncate } from "@termuijs/core";
 import { Widget } from "../base/Widget.js";
 
 export interface HistogramOptions {
@@ -79,7 +79,7 @@ export class Histogram extends Widget {
             screen.writeString(
                 x,
                 y + height - 1,
-                this._xLabel.slice(0, width),
+                truncate(this._xLabel, width),
                 {},
             );
         }
