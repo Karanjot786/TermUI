@@ -141,6 +141,31 @@ describe('Drawer', () => {
         expect(childB.isFocused).toBe(false);
     });
 
+    it('consumes Tab events so Drawer focus trapping does not fall through', () => {
+        const onClose = vi.fn();
+        const drawer = new Drawer({ position: 'left', width: 20, onClose });
+        drawer.open();
+
+        const childA = new Box();
+        childA.focusable = true;
+        drawer.addChild(childA);
+
+        const event = {
+            key: 'tab',
+            ctrl: false,
+            alt: false,
+            shift: false,
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as any;
+
+        drawer.handleKey(event);
+
+        expect(childA.isFocused).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
+    });
+
     it('cycles focus backwards on Shift+Tab', () => {
         const onClose = vi.fn();
         const drawer = new Drawer({ position: 'left', width: 20, onClose });
