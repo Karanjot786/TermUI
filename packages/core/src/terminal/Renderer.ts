@@ -177,54 +177,6 @@ export class Renderer {
         }
     }
 
-        try {
-            const { front, back, cols, rows } = this._screen;
-            let output = beginSyncUpdate;
-
-            if (this._diffRenderer) {
-                this._lastStyleFingerprint = null;
-                for (let r = 0; r < rows; r++) {
-                    output += this._renderDiffLine(r, front, back, cols);
-                }
-
-                output += ansiReset;
-                output += endSyncUpdate;
-
-                // Write buffered logs wrapped in cursor save/restore so they
-                // don't shift the frame's expected cursor position
-                if (bufferedLogs) {
-                    this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
-                }
-                this._terminal.writeSync(output);
-
-                this._screen.saveLines();
-                this._emitStats(start, bufferedLogs, output);
-                this._screen.swap();
-                return;
-            }
-
-            for (let r = 0; r < rows; r++) {
-                if (this._screen.getLine(r) === this._screen.getPreviousLine(r)
-                    && this._screen.getStyleLine(r) === this._screen.getPreviousStyleLine(r)) continue;
-                output += moveTo(0, r);
-                output += this._renderLine(r);
-            }
-
-            output += ansiReset;
-            output += endSyncUpdate;
-
-            if (bufferedLogs) {
-                this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
-            }
-            this._terminal.writeSync(output);
-
-            this._emitStats(start, bufferedLogs, output);
-            this._screen.swap();
-        } catch (err) {
-            console.error('[TermUI] Renderer flush error:', err);
-        }
-    }
-
     /** Style fingerprint of the last rendered cell (to suppress redundant ANSI reset/apply). */
     private _lastStyleFingerprint: string | null = null;
 
