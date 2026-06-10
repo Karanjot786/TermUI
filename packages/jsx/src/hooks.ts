@@ -180,8 +180,15 @@ function scheduleRender(fiber?: Fiber): void {
 /** Flush all pending state updates in a single render pass */
 function flushUpdates(): void {
     _flushScheduled = false;
-    _pendingUpdates.clear();
-    _requestRender?.();
+    const pending = _pendingUpdates;
+    _pendingUpdates = new Set<Fiber>();
+    if (!_requestRender) {
+        for (const fiber of pending) {
+            _pendingUpdates.add(fiber);
+        }
+        return;
+    }
+    _requestRender();
 }
 
 // ── Hooks ──
