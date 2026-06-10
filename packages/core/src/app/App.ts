@@ -384,8 +384,10 @@ export class App {
                 this._isRenderPending = false;
                 // Re-schedule if a widget became dirty during the render cycle —
                 // the previous early-return on _isRenderPending would have silently
-                // dropped that state change.
-                if (this._rootWidget.isDirty !== false) {
+                // dropped that state change. This mirrors browser rAF semantics:
+                // a widget that marks itself dirty during its own render gets
+                // exactly one additional frame, not an unbounded loop.
+                if (this._rootWidget.isDirty === true) {
                     this.requestRender();
                 }
             }
