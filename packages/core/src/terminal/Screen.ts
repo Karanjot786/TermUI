@@ -98,7 +98,7 @@ function colorsEqual(a: Color, b: Color): boolean {
         case 'named': return a.name === (b as typeof a).name;
         case 'ansi256': return a.code === (b as typeof a).code;
         case 'rgb': return a.r === (b as typeof a).r && a.g === (b as typeof a).g && a.b === (b as typeof a).b;
-        case 'hex': return a.hex === (b as typeof a).hex;
+        case 'hex': return a.hex.toLowerCase() === (b as typeof a).hex.toLowerCase();
     }
 }
 
