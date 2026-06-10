@@ -213,6 +213,16 @@ export class Terminal {
     }
 
     /**
+     * Writes data to stdout synchronously, bypassing the write queue.
+     * Used by the renderer during frame flush to avoid races with the
+     * async queue lifecycle. Only use for render-path output.
+     */
+    writeSync(data: string): void {
+        if (!data) return;
+        this.stdout.write(data);
+    }
+
+    /**
      * Sequentially unshifts and drains string frames to stdout safely.
      */
     private _processWriteQueue(): void {

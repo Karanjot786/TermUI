@@ -104,7 +104,6 @@ describe('Renderer profiling hooks', () => {
 
     afterEach(() => {
         terminal.restore();
-        RenderHook.globalRestore();
     });
 
     it('onFrame fires once per flush', () => {
