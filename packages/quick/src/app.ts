@@ -293,8 +293,18 @@ export class AppBuilder {
                 return;
             }
 
-            // 2. Check app-level key bindings
-            const action = this._keyMap[event.key];
+            // 2. Check app-level key bindings (support modifier-aware tokens)
+            // Build normalized token: prefixed modifiers (ctrl, alt, shift) in that order
+            const modParts: string[] = [];
+            if (event.ctrl) modParts.push('ctrl');
+            if (event.alt) modParts.push('alt');
+            if (event.shift) modParts.push('shift');
+            const baseKey = String(event.key).toLowerCase();
+            const modToken = modParts.length > 0 ? `${modParts.join('+')}+${baseKey}` : baseKey;
+
+            // Lookup order: modifier-specific token first, then exact plain key,
+            // then lowercase plain-key fallback for backward compatibility.
+            const action = this._keyMap[modToken] ?? this._keyMap[event.key] ?? this._keyMap[baseKey];
             if (action) {
                 if (action === 'quit') {
                     appInstance.exit();
