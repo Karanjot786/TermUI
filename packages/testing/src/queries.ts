@@ -1,5 +1,9 @@
 import { Widget, Text } from "@termuijs/widgets";
 
+/**
+ * Traverses a widget tree recursively and returns all widgets
+ * that satisfy the given predicate.
+ */
 function walkWidgets(
   root: Widget,
   predicate: (widget: Widget) => boolean,
@@ -24,6 +28,9 @@ function walkWidgets(
   return result;
 }
 
+/**
+ * Extracts text content from a Text widget.
+ */
 function getTextContent(widget: Widget): string {
   if (widget instanceof Text) {
     return (widget as any)._content ?? "";
@@ -32,6 +39,10 @@ function getTextContent(widget: Widget): string {
   return "";
 }
 
+/**
+ * Finds the first widget with a matching role attribute.
+ * Throws an error if no widget is found.
+ */
 export function getByRole(
   tree: Widget,
   role: string,
@@ -48,6 +59,10 @@ export function getByRole(
   return match;
 }
 
+/**
+ * Finds the first widget with a matching label attribute.
+ * Throws an error if no widget is found.
+ */
 export function getByLabel(
   tree: Widget,
   label: string,
@@ -64,6 +79,10 @@ export function getByLabel(
   return match;
 }
 
+/**
+ * Queries a widget by matching text content (partial match).
+ * Returns null if no widget matches.
+ */
 export function queryByText(
   tree: Widget,
   text: string,
