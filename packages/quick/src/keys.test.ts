@@ -3,10 +3,25 @@ import { app } from './index.js';
 import { App } from '@termuijs/core';
 
 // Helper to run builder without mounting terminal
+// Notes:
+// - `builder: any` used to avoid importing private types from the runtime.
+// - Tests intentionally call internal helpers: `_buildRoot()`, `_runWithRoot()`, and
+//   access `_app` to observe the live `App` instance without performing a real
+//   terminal mount. These are private by design but required for this focused test.
 async function runBuilder(builder: any) {
+    // Build the internal root widget tree (private API used for testing)
     const root = builder._buildRoot();
+
+    // Avoid performing a real terminal mount in tests — mock it so mount()
+    // resolves immediately and doesn't touch the TTY.
     vi.spyOn(App.prototype, 'mount').mockResolvedValue(0);
+
+    // Run the builder lifecycle up to the point where the App instance exists.
+    // `_runWithRoot` is a private helper that wires widgets and events; we
+    // invoke it here to keep the test deterministic.
     await (builder as any)._runWithRoot(root);
+
+    // Read the internal App instance so we can emit key events directly.
     const appInstance = (builder as any)._app;
     return { builder, root, appInstance };
 }
