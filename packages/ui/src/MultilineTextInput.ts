@@ -260,11 +260,12 @@ export class MultilineTextInput extends Widget {
                 const segments = Array.from(segmenter.segment(rowText));
                 let w = 0;
                 for (const seg of segments) {
-                    if (w === cursorDisplayCol) {
+                    const segWidth = stringWidth(seg.segment);
+                    if (cursorDisplayCol >= w && cursorDisplayCol < w + segWidth) {
                         cursorChar = seg.segment;
                         break;
                     }
-                    w += stringWidth(seg.segment);
+                    w += segWidth;
                 }
                 
                 // Unicode block cursor vs ASCII '|'
@@ -300,6 +301,7 @@ export class MultilineTextInput extends Widget {
             let currentWidth = 0;
             let currentStart = 0;
             let currentText = '';
+            let charOffset = 0;
             
             for (let i = 0; i < segments.length; i++) {
                 const seg = segments[i];
@@ -311,13 +313,14 @@ export class MultilineTextInput extends Widget {
                         lineIdx: li,
                         lineOffset: currentStart,
                     });
-                    currentStart = seg.index;
+                    currentStart = charOffset;
                     currentText = seg.segment;
                     currentWidth = w;
                 } else {
                     currentText += seg.segment;
                     currentWidth += w;
                 }
+                charOffset += seg.segment.length;
             }
             if (currentText.length > 0) {
                 rows.push({
@@ -346,9 +349,19 @@ export class MultilineTextInput extends Widget {
                 this._cursorCol >= row.lineOffset &&
                 (this._cursorCol < rowEndOffset || ri === rows.length - 1 || rows[ri + 1]?.lineIdx !== this._cursorLine)
             ) {
+                const targetCharOffset = this._cursorCol - row.lineOffset;
+                const segmenter = new Intl.Segmenter();
+                const segments = Array.from(segmenter.segment(row.text));
+                let charCount = 0;
+                let displayWidth = 0;
+                for (const seg of segments) {
+                    if (charCount >= targetCharOffset) break;
+                    charCount += seg.segment.length;
+                    displayWidth += stringWidth(seg.segment);
+                }
                 best = {
                     displayRow: ri,
-                    displayCol: stringWidth(row.text.slice(0, this._cursorCol - row.lineOffset)),
+                    displayCol: displayWidth,
                 };
             }
         }

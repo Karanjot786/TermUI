@@ -12,6 +12,8 @@ export interface WatermarkOptions {
     angle?: 0 | 45;
 }
 
+const segmenter = new Intl.Segmenter();
+
 /**
  * Watermark - fills its area with faint repeating text.
  */
@@ -40,13 +42,13 @@ export class Watermark extends Widget {
         const attrs = { ...styleToCellAttrs(this._style), fg: this._color };
         const rowOffsetStep = this._angle === 45 ? 1 : 0;
         
-        const segmenter = new Intl.Segmenter();
         const segments = Array.from(segmenter.segment(this._text)).map(s => s.segment);
         if (segments.length === 0) return;
 
-        let colOffset = 0;
         for (let row = 0; row < height; row++) {
             let col = 0;
+            // row * rowOffsetStep produces the 45° horizontal offset per row
+            // row * width contributes to linearizing row/col into the segments index
             let index = (row * width + row * rowOffsetStep) % segments.length;
             
             while (col < width) {

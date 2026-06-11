@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import type { Color } from '../style/Color.js';
-import { stringWidth } from '../utils/unicode.js';
+import { stringWidth, segmenter } from '../utils/unicode.js';
 import { stripAnsiControl } from '../utils/ansi.js';
 import { caps } from './env-caps.js';
 
@@ -310,7 +310,6 @@ export class Screen {
         const safeStr = stripAnsiControl(str);
         let x = col;
         
-        const segmenter = new Intl.Segmenter();
         const segments = segmenter.segment(safeStr);
         for (const { segment } of segments) {
             if (x >= this._cols) break;

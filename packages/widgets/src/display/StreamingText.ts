@@ -17,6 +17,8 @@ export interface StreamingTextOptions {
     blinkInterval?: number;
 }
 
+const segmenter = new Intl.Segmenter();
+
 /**
  * StreamingText — renders text that "streams in" token by token with a blinking cursor.
  *
@@ -60,7 +62,6 @@ export class StreamingText extends Widget {
      */
     tick(): void {
         if (this._speed <= 0 || this.isComplete()) return;
-        const segmenter = new Intl.Segmenter();
         const len = Array.from(segmenter.segment(this._text)).length;
         this._revealed = Math.min(this._revealed + this._speed, len);
         this.markDirty();
@@ -69,7 +70,6 @@ export class StreamingText extends Widget {
     /** Returns true when all text has been revealed. */
     isComplete(): boolean {
         if (this._speed === 0) return true;
-        const segmenter = new Intl.Segmenter();
         const len = Array.from(segmenter.segment(this._text)).length;
         return this._revealed >= len;
     }
@@ -102,7 +102,6 @@ export class StreamingText extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         // Determine how much text to display
-        const segmenter = new Intl.Segmenter();
         const segments = Array.from(segmenter.segment(this._text));
         const displayText = this._speed > 0
             ? segments.slice(0, this._revealed).map(s => s.segment).join('')
