@@ -53,4 +53,35 @@ describe("TaskList", () => {
         widget.render(screen)
         expect(screen.back[0].map(c => c.char).join('')).toContain('Task 1 ⠙')
     })
+
+    it("does not mark dirty when setTasks receives the same array reference", () => {
+        const tasks: TaskItem[] = [
+            { id: 1, label: "Task 1", status: "pending" }
+        ];
+    
+        const widget = new TaskList({}, {}, tasks);
+    
+        widget.clearDirty();
+    
+        widget.setTasks(tasks);
+    
+        expect(widget.isDirty).toBe(false);
+    });
+    
+    it("marks dirty when setTasks receives a different array", () => {
+        const widget = new TaskList(
+            {},
+            {},
+            [{ id: 1, label: "Task 1", status: "pending" }]
+        );
+    
+        widget.clearDirty();
+    
+        widget.setTasks([
+            { id: 2, label: "Task 2", status: "done" }
+        ]);
+    
+        expect(widget.isDirty).toBe(true);
+    });
+    
 })

@@ -10,25 +10,36 @@ describe('RenderHook', () => {
 
     afterEach(() => {
         // Guarantee restoration even if a test fails
-        RenderHook.globalRestore();
+        hook.stop();
     });
 
-    it('intercepts stdout when active', () => {
+    it('intercepts console.log when active', () => {
         hook.start();
-        process.stdout.write('test log 1\n');
-        process.stdout.write('test log 2\n');
+        console.log('test log 1');
+        console.log('test log 2');
 
         expect(hook.flush()).toBe('test log 1\ntest log 2\n');
         expect(hook.flush()).toBe(''); // Buffer should be empty after flush
     });
 
-    it('restores original stdout on stop', () => {
-        const originalWrite = process.stdout.write;
+    it('restores original console.log on stop', () => {
+        const originalLog = console.log;
         hook.start();
-        expect(process.stdout.write).not.toBe(originalWrite);
+        expect(console.log).not.toBe(originalLog);
 
         hook.stop();
-        expect(process.stdout.write).toBe(originalWrite);
+        expect(console.log).toBe(originalLog);
+    });
+
+    it('intercepts console.warn and console.error', () => {
+        const originalWarn = console.warn;
+        const originalError = console.error;
+        hook.start();
+        expect(console.warn).not.toBe(originalWarn);
+        expect(console.error).not.toBe(originalError);
+        hook.stop();
+        expect(console.warn).toBe(originalWarn);
+        expect(console.error).toBe(originalError);
     });
 
     it('writeRaw bypasses the buffer', () => {
@@ -39,95 +50,33 @@ describe('RenderHook', () => {
         expect(hook.flush()).toBe('');
     });
 
-    describe('multi-instance', () => {
-        let hookA: RenderHook;
-        let hookB: RenderHook;
+    it('multiple console.log calls are buffered and flushed', () => {
+        hook.start();
+        console.log('first');
+        console.log('second');
+        console.log('third');
 
-        beforeEach(() => {
-            hookA = new RenderHook();
-            hookB = new RenderHook();
-        });
-
-        it('two instances: A start, B start, A stop, B stop — restores original write', () => {
-            const originalWrite = process.stdout.write;
-
-            hookA.start();
-            process.stdout.write('msgA');
-            expect(hookA.flush()).toBe('msgA');
-
-            hookB.start();
-            process.stdout.write('msgB');
-            expect(hookB.flush()).toBe('msgB');
-
-            // stop A — stdout should still be patched because B is active
-            hookA.stop();
-            expect(process.stdout.write).not.toBe(originalWrite);
-
-            // stop B — now restore
-            hookB.stop();
-            expect(process.stdout.write).toBe(originalWrite);
-        });
-
-        it('each instance buffers independently', () => {
-            hookA.start();
-            hookB.start();
-
-            process.stdout.write('fromA');
-            process.stdout.write('fromB');
-
-            expect(hookA.flush()).toBe('fromAfromB');
-            expect(hookB.flush()).toBe('fromAfromB');
-
-            process.stdout.write('afterFlush');
-            expect(hookA.flush()).toBe('afterFlush');
-            expect(hookB.flush()).toBe('afterFlush');
-        });
+        expect(hook.flush()).toBe('first\nsecond\nthird\n');
     });
 
-    describe('suspend/resume', () => {
-        let hook: RenderHook;
+    it('flush empties the buffer', () => {
+        hook.start();
+        console.log('hello');
+        hook.flush();
+        expect(hook.flush()).toBe('');
+    });
 
-        beforeEach(() => {
-            hook = new RenderHook();
-        });
+    it('isActive returns correct state', () => {
+        expect(hook.isActive).toBe(false);
+        hook.start();
+        expect(hook.isActive).toBe(true);
+        hook.stop();
+        expect(hook.isActive).toBe(false);
+    });
 
-        it('suspendAll bypasses buffering', () => {
-            const originalWrite = process.stdout.write;
-            hook.start();
-            expect(process.stdout.write).not.toBe(originalWrite);
-
-            RenderHook.suspendAll();
-            process.stdout.write('bypass');
-            expect(hook.flush()).toBe('');
-        });
-
-        it('resumeAll restores buffering after suspend', () => {
-            hook.start();
-            RenderHook.suspendAll();
-            process.stdout.write('during suspend');
-            expect(hook.flush()).toBe('');
-
-            RenderHook.resumeAll();
-            process.stdout.write('after resume');
-            expect(hook.flush()).toBe('after resume');
-        });
-
-        it('suspendAll/resumeAll in try/finally restores even when write throws', () => {
-            hook.start();
-
-            expect(() => {
-                RenderHook.suspendAll();
-                try {
-                    const fn: any = () => { throw new Error('write error'); };
-                    fn();
-                } finally {
-                    RenderHook.resumeAll();
-                }
-            }).toThrow('write error');
-
-            // After the throw, resumeAll should have run
-            process.stdout.write('after throw');
-            expect(hook.flush()).toBe('after throw');
-        });
+    it('multiple arguments are joined with space', () => {
+        hook.start();
+        console.log('a', 'b', 'c');
+        expect(hook.flush()).toBe('a b c\n');
     });
 });

@@ -72,4 +72,25 @@ describe('Placeholder', () => {
         expect(screen.back[0][1].char).toBe('-');
         expect(screen.back[1][0].char).toBe('|');
     });
+
+    it('does not mark dirty when setLabel receives the same value', () => {
+        const placeholder = new Placeholder('Loading');
+    
+        placeholder.clearDirty();
+    
+        placeholder.setLabel('Loading');
+    
+        expect(placeholder.isDirty).toBe(false);
+    });
+    
+    it('marks dirty when setLabel receives a different value', () => {
+        const placeholder = new Placeholder('Loading');
+    
+        placeholder.clearDirty();
+    
+        placeholder.setLabel('Ready');
+    
+        expect(placeholder.isDirty).toBe(true);
+    });
+
 });
