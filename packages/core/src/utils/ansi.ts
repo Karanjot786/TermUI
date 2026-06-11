@@ -193,3 +193,8 @@ export function readClipboard(
         stdout.write(`${OSC}52;c;?\x07`);
     });
 }
+
+export const clipboard = {
+    write: writeClipboard,
+    read: readClipboard,
+};
