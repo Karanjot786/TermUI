@@ -91,11 +91,16 @@ function parseInterval(interval: string): number {
 function walkWidgets(root: Widget, predicate: (w: Widget) => boolean): Widget[] {
     const result: Widget[] = [];
     const stack: Widget[] = [root];
+
     while (stack.length > 0) {
         const w = stack.pop()!;
         if (predicate(w)) result.push(w);
-        for (const child of w.children) stack.push(child);
+        // Push children in reverse order so pop() visits them left-to-right
+        for (let i = w.children.length - 1; i >= 0; i--) {
+            stack.push(w.children[i]);
+        }
     }
+
     return result;
 }
 
@@ -251,10 +256,8 @@ export class AppBuilder {
         const appInstance = new App(root, { fullscreen: this._fullscreen, skipFallback: true });
         this._app = appInstance;
 
-        // ── Discover focusable widgets (List, TextInput) ──
-        const listWidgets = walkWidgets(root, w => w instanceof List) as List[];
-        const inputWidgets = walkWidgets(root, w => w instanceof TextInput) as TextInput[];
-        const focusableWidgets: Widget[] = [...listWidgets, ...inputWidgets];
+        // ── Discover focusable widgets (List, TextInput) in tree order ──
+        const focusableWidgets = walkWidgets(root, w => w instanceof List || w instanceof TextInput) as Array<List | TextInput>;
 
         // Register focusable widgets with the focus manager
         let _focusedIdx = -1;
