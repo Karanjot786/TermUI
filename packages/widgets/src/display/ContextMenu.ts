@@ -23,7 +23,7 @@ export class ContextMenu extends Widget {
             y,
             zIndex: 9999, // Float above everything
             border: 'single',
-            bg: 'gray',
+            bg: { type: 'named', name: 'gray' } as any,
             ...options.style
         });
 
