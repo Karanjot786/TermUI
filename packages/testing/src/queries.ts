@@ -1,8 +1,8 @@
 import { Widget, Text } from "@termuijs/widgets";
 
 /**
- * Traverses a widget tree recursively and returns all widgets
- * that satisfy the given predicate.
+ * Depth-first traversal of widget tree.
+ * Collects all widgets matching the predicate.
  */
 function walkWidgets(
   root: Widget,
@@ -29,20 +29,18 @@ function walkWidgets(
 }
 
 /**
- * Extracts text content from a Text widget.
- * Uses public API instead of private fields.
+ * Safely extracts text content from a Text widget using public API.
  */
 function getTextContent(widget: Widget): string {
   if (widget instanceof Text) {
     return widget.getContent?.() ?? "";
   }
-
   return "";
 }
 
 /**
- * Finds the first widget with a matching role attribute.
- * Throws an error if no widget is found.
+ * Finds the first widget with a matching role.
+ * Throws if no matching widget exists.
  */
 export function getByRole(tree: Widget, role: string): Widget {
   const match = walkWidgets(
@@ -58,8 +56,8 @@ export function getByRole(tree: Widget, role: string): Widget {
 }
 
 /**
- * Finds the first widget with a matching label attribute.
- * Throws an error if no widget is found.
+ * Finds the first widget with a matching label.
+ * Throws if no matching widget exists.
  */
 export function getByLabel(tree: Widget, label: string): Widget {
   const match = walkWidgets(
@@ -75,8 +73,8 @@ export function getByLabel(tree: Widget, label: string): Widget {
 }
 
 /**
- * Queries a widget by matching text content (partial match).
- * Returns null if no widget matches.
+ * Queries widget tree for text match (partial match supported).
+ * Returns first match or null if not found.
  */
 export function queryByText(
   tree: Widget,
