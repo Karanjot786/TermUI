@@ -21,6 +21,7 @@ export {
     ProgressBar,
     Spinner,
     Widget,
+    ContextMenu,
 } from '@termuijs/widgets';
 
 // ── New components ──
@@ -215,12 +216,6 @@ export type { ListbarOptions, ListbarItem } from './Listbar.js';
 
 export { validateInput } from './validation.js';
 export type { InputValidator } from './validation.js';
-<<<<<<< HEAD
-export { ContextMenu } from './components/ContextMenu.js';
-export type { ContextMenuProps } from './components/ContextMenu.js';
-=======
-
 // -- External Theme / Stylesheet Engine --
 export * from '@termuijs/tss';
 
->>>>>>> main
