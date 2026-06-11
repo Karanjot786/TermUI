@@ -65,6 +65,8 @@ export class Table extends Widget {
     protected _separator: string;
     private _state?: TableState;
     private _onStateChange?: (state: TableState) => void;
+    private _selectedRow = 0;
+    private _sortColumn = '';
 
     constructor(
         columnsOrProps: TableColumn[] | TableProps,
@@ -108,6 +110,18 @@ export class Table extends Widget {
         this._pushState();
     }
 
+    sortByColumn(columnKey: string): void {
+    this._sortColumn = columnKey;
+
+    this._rows.sort((a, b) =>
+        String(a[columnKey] ?? '').localeCompare(
+            String(b[columnKey] ?? '')
+        )
+    );
+
+    this.markDirty();
+}
+
     // ── External state sync ───────────────────────────
 
     private _pushState(): void {
@@ -116,6 +130,21 @@ export class Table extends Widget {
             this._onStateChange?.(this._state);
         }
     }
+
+    handleKey(key: string): void {
+    if (key === 'up') {
+        this._selectedRow = Math.max(0, this._selectedRow - 1);
+    }
+
+    if (key === 'down') {
+        this._selectedRow = Math.min(
+            this._rows.length - 1,
+            this._selectedRow + 1
+        );
+    }
+
+    this.markDirty();
+}
 
     // ── Rendering ─────────────────────────────────────
 
@@ -165,6 +194,7 @@ export class Table extends Widget {
         for (let r = 0; r < this._rows.length && row < height; r++) {
             const dataRow = this._rows[r];
             const isStripe = this._stripe && r % 2 === 1;
+            const isSelected = r === this._selectedRow;
             let cx = x;
 
             for (let c = 0; c < this._columns.length; c++) {
@@ -173,9 +203,13 @@ export class Table extends Widget {
                 const cellText = this._alignText(rawValue, colWidths[c], col.align ?? 'left');
 
                 screen.writeString(cx, y + row, cellText, {
-                    ...attrs,
-                    bg: isStripe ? this._stripeColor : attrs.bg,
-                });
+    ...attrs,
+    bg: isSelected
+        ? { type: 'named', name: 'blue' }
+        : isStripe
+            ? this._stripeColor
+            : attrs.bg,
+});
                 cx += colWidths[c];
                 if (c < this._columns.length - 1) {
                     screen.writeString(cx, y + row, this._separator, {
