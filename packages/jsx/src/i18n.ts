@@ -22,7 +22,8 @@ export interface I18nProviderProps {
 }
 
 export function I18nProvider({ value, children }: I18nProviderProps) {
-    return createElement(I18nContext.Provider, { value, children });
+    const childArr = Array.isArray(children) ? children : (children ? [children] : []);
+    return createElement(I18nContext.Provider, { value }, ...childArr);
 }
 
 export function useI18n(): I18nContextValue {
