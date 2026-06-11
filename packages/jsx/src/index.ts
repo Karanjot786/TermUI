@@ -124,3 +124,5 @@ export { useForceUpdate } from './hooks/useForceUpdate.js';
 export { useSet } from './hooks/useSet.js';
 export type { UseSetActions } from './hooks/useSet.js';
 export { useThrottle } from './hooks/useThrottle.js';
+export { useTimeout } from './hooks/useTimeout.js';
+export { useEventListener } from './hooks/useEventListener.js';
