@@ -309,12 +309,15 @@ export class Screen {
         // Strip ANSI control sequences from user-supplied content to prevent escape injection
         const safeStr = stripAnsiControl(str);
         let x = col;
-        for (const char of safeStr) {
+        
+        const segmenter = new Intl.Segmenter();
+        const segments = segmenter.segment(safeStr);
+        for (const { segment } of segments) {
             if (x >= this._cols) break;
 
-            let finalChar = char;
+            let finalChar = segment;
             // Measure the visual width with the shared unicode utility
-            let width = stringWidth(char);
+            let width = stringWidth(segment);
 
             // Advance past off-screen-left cells by the real width
             if (x < 0) { x += width; continue; }

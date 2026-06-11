@@ -17,6 +17,7 @@ import {
     type KeyEvent,
     styleToCellAttrs,
     caps,
+    stringWidth,
 } from '@termuijs/core';
 
 export interface MultilineTextInputOptions {
@@ -253,8 +254,19 @@ export class MultilineTextInput extends Widget {
             if (screenRow >= 0 && screenRow < height) {
                 const cursorDisplayRow2 = cursorDisplayRow;
                 const rowText = displayRows[cursorDisplayRow2]?.text ?? '';
-                const cursorChar =
-                    cursorDisplayCol < rowText.length ? rowText[cursorDisplayCol] : ' ';
+                
+                let cursorChar = ' ';
+                const segmenter = new Intl.Segmenter();
+                const segments = Array.from(segmenter.segment(rowText));
+                let w = 0;
+                for (const seg of segments) {
+                    if (w === cursorDisplayCol) {
+                        cursorChar = seg.segment;
+                        break;
+                    }
+                    w += stringWidth(seg.segment);
+                }
+                
                 // Unicode block cursor vs ASCII '|'
                 const cursorGlyph = caps.unicode ? cursorChar : cursorChar;
                 screen.setCell(x + cursorDisplayCol, y + screenRow, {
@@ -273,27 +285,46 @@ export class MultilineTextInput extends Widget {
         this.markDirty();
     }
 
-    /**
-     * Soft-wrap all logical lines to `width` columns.
-     * Returns an array of display rows, each carrying the logical
-     * line index and the char offset within that line where it starts.
-     */
     private _softWrap(width: number): Array<{ text: string; lineIdx: number; lineOffset: number }> {
         const rows: Array<{ text: string; lineIdx: number; lineOffset: number }> = [];
+        const segmenter = new Intl.Segmenter();
+
         for (let li = 0; li < this._lines.length; li++) {
             const line = this._lines[li];
             if (line.length === 0) {
                 rows.push({ text: '', lineIdx: li, lineOffset: 0 });
                 continue;
             }
-            let offset = 0;
-            while (offset < line.length) {
+            
+            const segments = Array.from(segmenter.segment(line));
+            let currentWidth = 0;
+            let currentStart = 0;
+            let currentText = '';
+            
+            for (let i = 0; i < segments.length; i++) {
+                const seg = segments[i];
+                const w = stringWidth(seg.segment);
+                
+                if (currentWidth + w > width && currentText.length > 0) {
+                    rows.push({
+                        text: currentText,
+                        lineIdx: li,
+                        lineOffset: currentStart,
+                    });
+                    currentStart = seg.index;
+                    currentText = seg.segment;
+                    currentWidth = w;
+                } else {
+                    currentText += seg.segment;
+                    currentWidth += w;
+                }
+            }
+            if (currentText.length > 0) {
                 rows.push({
-                    text: line.slice(offset, offset + width),
+                    text: currentText,
                     lineIdx: li,
-                    lineOffset: offset,
+                    lineOffset: currentStart,
                 });
-                offset += width;
             }
         }
         return rows;
@@ -310,14 +341,14 @@ export class MultilineTextInput extends Widget {
         for (let ri = 0; ri < rows.length; ri++) {
             const row = rows[ri];
             if (row.lineIdx !== this._cursorLine) continue;
-            const rowEnd = row.lineOffset + width;
+            const rowEndOffset = row.lineOffset + row.text.length;
             if (
                 this._cursorCol >= row.lineOffset &&
-                (this._cursorCol < rowEnd || ri === rows.length - 1 || rows[ri + 1]?.lineIdx !== this._cursorLine)
+                (this._cursorCol < rowEndOffset || ri === rows.length - 1 || rows[ri + 1]?.lineIdx !== this._cursorLine)
             ) {
                 best = {
                     displayRow: ri,
-                    displayCol: this._cursorCol - row.lineOffset,
+                    displayCol: stringWidth(row.text.slice(0, this._cursorCol - row.lineOffset)),
                 };
             }
         }

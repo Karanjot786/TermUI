@@ -93,12 +93,15 @@ function isEmoji(codePoint: number): boolean {
  * - ANSI escape sequences count as 0
  * - Regular characters count as 1
  */
+const segmenter = new Intl.Segmenter();
+
 export function stringWidth(str: string): number {
     let width = 0;
     let inEscape = false;
 
-    for (const char of str) {
-        const cp = char.codePointAt(0)!;
+    const segments = segmenter.segment(str);
+    for (const { segment } of segments) {
+        const cp = segment.codePointAt(0)!;
 
         // Skip ANSI escape sequences
         if (cp === 0x1B) { // ESC
@@ -124,7 +127,8 @@ export function stringWidth(str: string): number {
         }
 
         // Double-width
-        if (isWideChar(cp) || isEmoji(cp)) {
+        const charCount = [...segment].length;
+        if (isWideChar(cp) || isEmoji(cp) || charCount > 1) {
             width += 2;
             continue;
         }
@@ -153,16 +157,17 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
     let inEscape = false;
     let escapeBuffer = '';
 
-    for (const char of str) {
-        const cp = char.codePointAt(0)!;
+    const segments = segmenter.segment(str);
+    for (const { segment } of segments) {
+        const cp = segment.codePointAt(0)!;
 
         if (cp === 0x1B) {
             inEscape = true;
-            escapeBuffer += char;
+            escapeBuffer += segment;
             continue;
         }
         if (inEscape) {
-            escapeBuffer += char;
+            escapeBuffer += segment;
             if ((cp >= 0x40 && cp <= 0x7E) && cp !== 0x5B) {
                 inEscape = false;
                 result += escapeBuffer;
@@ -172,9 +177,10 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
         }
 
         let charW = 1;
+        const charCount = [...segment].length;
         if (isCombining(cp)) {
             charW = 0;
-        } else if (isWideChar(cp) || isEmoji(cp)) {
+        } else if (isWideChar(cp) || isEmoji(cp) || charCount > 1) {
             charW = 2;
         } else if (cp < 0x20 || (cp >= 0x7F && cp < 0xA0)) {
             charW = 0;
@@ -182,7 +188,7 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
 
         if (width + charW > targetW) break;
         width += charW;
-        result += char;
+        result += segment;
     }
 
     return result + ellipsis;
@@ -229,15 +235,17 @@ export function wordWrap(str: string, width: number): string {
                     currentLine = '';
                     currentWidth = 0;
                 }
-                for (const char of word) {
-                    const cp = char.codePointAt(0)!;
-                    const charW = (isWideChar(cp) || isEmoji(cp)) ? 2 : (isCombining(cp) ? 0 : 1);
+                const wordSegments = segmenter.segment(word);
+                for (const { segment } of wordSegments) {
+                    const cp = segment.codePointAt(0)!;
+                    const charCount = [...segment].length;
+                    const charW = (isWideChar(cp) || isEmoji(cp) || charCount > 1) ? 2 : (isCombining(cp) ? 0 : 1);
                     if (currentWidth + charW > width) {
                         result.push(currentLine);
                         currentLine = '';
                         currentWidth = 0;
                     }
-                    currentLine += char;
+                    currentLine += segment;
                     currentWidth += charW;
                 }
             } else {

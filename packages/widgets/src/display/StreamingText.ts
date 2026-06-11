@@ -60,14 +60,18 @@ export class StreamingText extends Widget {
      */
     tick(): void {
         if (this._speed <= 0 || this.isComplete()) return;
-        this._revealed = Math.min(this._revealed + this._speed, this._text.length);
+        const segmenter = new Intl.Segmenter();
+        const len = Array.from(segmenter.segment(this._text)).length;
+        this._revealed = Math.min(this._revealed + this._speed, len);
         this.markDirty();
     }
 
     /** Returns true when all text has been revealed. */
     isComplete(): boolean {
         if (this._speed === 0) return true;
-        return this._revealed >= this._text.length;
+        const segmenter = new Intl.Segmenter();
+        const len = Array.from(segmenter.segment(this._text)).length;
+        return this._revealed >= len;
     }
 
     /** Lifecycle: start the blink timer (only when motion is enabled). */
@@ -98,8 +102,10 @@ export class StreamingText extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         // Determine how much text to display
+        const segmenter = new Intl.Segmenter();
+        const segments = Array.from(segmenter.segment(this._text));
         const displayText = this._speed > 0
-            ? this._text.slice(0, this._revealed)
+            ? segments.slice(0, this._revealed).map(s => s.segment).join('')
             : this._text;
 
         // Append cursor if visible

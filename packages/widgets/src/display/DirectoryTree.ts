@@ -1,5 +1,5 @@
 import { Widget } from '../base/Widget.js';
-import { caps, type Screen, type Style } from '@termuijs/core';
+import { caps, type Screen, type Style, stringWidth, truncate } from '@termuijs/core';
 
 export type TreeNode = {
 name: string;
@@ -156,8 +156,8 @@ protected _renderSelf(screen: Screen): void {
         const line = `${indent}${icon} ${item.node.name}`;
 
         const text =
-            line.length > width
-                ? line.slice(0, width)
+            stringWidth(line) > width
+                ? truncate(line, width, '')
                 : line;
 
         screen.writeString(rect.x, rect.y + i, text, {
