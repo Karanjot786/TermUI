@@ -219,3 +219,5 @@ export type { InputValidator } from './validation.js';
 // -- External Theme / Stylesheet Engine --
 export * from '@termuijs/tss';
 
+export type { VimMode } from './vim_modes.js';
+
