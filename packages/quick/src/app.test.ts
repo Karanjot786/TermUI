@@ -18,7 +18,7 @@ describe('quick – focus traversal', () => {
 
         const root = (builder as any)._buildRoot();
 
-        vi.spyOn(App.prototype, 'mount').mockResolvedValue(0 as any);
+        vi.spyOn(App.prototype, 'mount').mockResolvedValue(0);
 
         await (builder as any)._runWithRoot(root);
         const appInstance = (builder as any)._app;
