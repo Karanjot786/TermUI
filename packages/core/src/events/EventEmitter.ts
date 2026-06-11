@@ -53,7 +53,9 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
         const handlers = this._handlers.get(event);
         if (handlers) {
             for (const handler of handlers) {
-                try { handler(data); } catch { /* prevent one handler from breaking others */ }
+                try { handler(data); } catch (err) {
+                    console.warn(`[EventEmitter] Handler error for '${String(event)}':`, err);
+                }
             }
         }
 
@@ -61,7 +63,9 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
         const onceHandlers = this._onceHandlers.get(event);
         if (onceHandlers) {
             for (const handler of onceHandlers) {
-                try { handler(data); } catch { /* prevent one handler from breaking others */ }
+                try { handler(data); } catch (err) {
+                    console.warn(`[EventEmitter] Once-handler error for '${String(event)}':`, err);
+                }
             }
             onceHandlers.clear();
         }

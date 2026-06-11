@@ -158,4 +158,88 @@ describe('Terminal', () => {
             expect(handler).not.toHaveBeenCalled();
         });
     });
+
+    describe('Reentrant restore', () => {
+        let term: Terminal;
+        let fakeStdout: EventEmitter & { columns: number; rows: number; write: any };
+
+        beforeEach(() => {
+            vi.useFakeTimers();
+            fakeStdout = Object.assign(new EventEmitter(), {
+                columns: 80,
+                rows: 24,
+                write: vi.fn()
+            });
+            term = new Terminal({
+                stdout: fakeStdout as unknown as NodeJS.WriteStream,
+                resizeDebounceMs: 16
+            });
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+            vi.useRealTimers();
+            try { term.restore(); } catch { /* already restored */ }
+        });
+
+        it('reentrant restore from cleanup handler does not stack overflow', () => {
+            const handler = vi.fn(() => { term.restore(); });
+            term.onCleanup(handler);
+            // Run cleanup handlers directly to simulate the exit handler path
+            const cleanupFns = (term as any)._cleanupHandlers;
+            for (const fn of [...cleanupFns]) { fn(); }
+            expect(handler).toHaveBeenCalledTimes(1);
+        });
+
+        it('reentrant restore from resize handler is safe', () => {
+            const handler = vi.fn(() => { term.restore(); });
+            term.onResize(handler);
+            // Trigger resize handler before restore completes
+            term['_resizeHandlers']?.forEach((h: any) => h());
+            expect(() => term.restore()).not.toThrow();
+        });
+
+        it('cleanup handler can remove itself without crashing', () => {
+            const handler = vi.fn(() => {
+                const arr = (term as any)._cleanupHandlers;
+                const idx = arr.indexOf(handler);
+                if (idx >= 0) arr.splice(idx, 1);
+            });
+            term.onCleanup(handler);
+            const cleanupFns = (term as any)._cleanupHandlers;
+            for (const fn of [...cleanupFns]) { fn(); }
+            expect(handler).toHaveBeenCalledTimes(1);
+            // Handler should have been removed
+            expect((term as any)._cleanupHandlers.length).toBe(0);
+        });
+
+        it('_restoring is reset in finally when disableMouse throws', () => {
+            const orig = term.disableMouse;
+            term.disableMouse = () => { throw new Error('oops'); };
+            try { term.restore(); } catch { /* expected */ }
+            term.disableMouse = orig;
+            expect((term as any)._restoring).toBe(false);
+            // Subsequent restore should proceed
+            expect(() => term.restore()).not.toThrow();
+        });
+
+        it('_restoring is reset in finally when exitRawMode throws', () => {
+            const orig = term.exitRawMode;
+            term.exitRawMode = () => { throw new Error('oops'); };
+            try { term.restore(); } catch { /* expected */ }
+            term.exitRawMode = orig;
+            expect((term as any)._restoring).toBe(false);
+            expect(() => term.restore()).not.toThrow();
+        });
+
+        it('_restoring guard prevents recursive restore call', () => {
+            const spy = vi.fn();
+            // Simulate the scenario: resize handler calls restore while restore is in progress
+            // by accessing _restoring state directly
+            (term as any)._restoring = true;
+            term.restore();
+            // restore returned immediately without doing anything
+            expect((term as any)._restored).toBe(false);
+        });
+    });
 });

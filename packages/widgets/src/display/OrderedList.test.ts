@@ -122,4 +122,34 @@ describe('OrderedList', () => {
         });
     });
 
+    describe('Performance optimizations', () => {
+        it('does not mark dirty when setItems receives the same array reference', () => {
+            const items: OrderedListItem[] = [
+                { text: 'Item 1' },
+            ];
+    
+            const list = makeList(items);
+    
+            list.clearDirty();
+    
+            list.setItems(items);
+    
+            expect(list.isDirty).toBe(false);
+        });
+    
+        it('marks dirty when setItems receives a different array', () => {
+            const list = makeList([
+                { text: 'Item 1' },
+            ]);
+    
+            list.clearDirty();
+    
+            list.setItems([
+                { text: 'Item 2' },
+            ]);
+    
+            expect(list.isDirty).toBe(true);
+        });
+    });
+
 });

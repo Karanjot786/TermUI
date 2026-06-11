@@ -98,6 +98,11 @@ export class InputParser {
             this._escapeTimeout = null;
         }
         this._escapeBuffer = Buffer.alloc(0);
+        for (const req of this._cursorRequests) {
+            clearTimeout(req.timeout);
+            req.reject(new Error('InputParser stopped'));
+        }
+        this._cursorRequests = [];
     }
 
     /**
@@ -123,7 +128,7 @@ export class InputParser {
                 clearTimeout(this._escapeTimeout);
                 this._escapeTimeout = null;
             }
-            this._tryParseEscape(data);
+            this._tryParseEscape();
             return;
         }
 
@@ -148,7 +153,7 @@ export class InputParser {
 
         if (str.startsWith('\x1b')) {
             this._escapeBuffer = data;
-            this._tryParseEscape(data);
+            this._tryParseEscape();
             return;
         }
 
@@ -199,7 +204,7 @@ export class InputParser {
     /**
      * Try to parse buffered escape sequence.
      */
-    private _tryParseEscape(rawData: Buffer): void {
+    private _tryParseEscape(): void {
         const seq = this._escapeBuffer.toString('utf8');
 
         // Check for mouse event first
@@ -263,7 +268,7 @@ export class InputParser {
 
             this._events.emit('key', createKeyEvent({
                 key: cleanKey,
-                raw: rawData,
+                raw: this._escapeBuffer,
                 ctrl: isCtrl,
                 alt: isAlt,
                 shift: isShift,
@@ -273,11 +278,16 @@ export class InputParser {
         }
 
         // Alt+key: ESC followed by a regular character
-        if (seq.length === 2 && seq[0] === '\x1b') {
+        if (
+            seq.length === 2 &&
+            seq[0] === '\x1b' &&
+            seq[1] !== '[' &&
+            seq[1] !== 'O'
+        ) {
             const ch = seq[1];
             this._events.emit('key', createKeyEvent({
                 key: ch,
-                raw: rawData,
+                raw: this._escapeBuffer,
                 ctrl: false,
                 alt: true,
                 shift: ch !== ch.toLowerCase() && ch === ch.toUpperCase(),

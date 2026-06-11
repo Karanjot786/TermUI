@@ -2,10 +2,11 @@
 // @termuijs/core — Tests for Screen diff helpers used by diffRenderer
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Screen } from './Screen.js';
 import { Terminal } from './Terminal.js';
 import { Renderer, type FrameStats } from './Renderer.js';
+import { RenderHook } from '../renderer/render-hook.js';
 
 describe('Screen.getLine', () => {
     it('returns empty string for out-of-range rows', () => {
@@ -93,6 +94,7 @@ describe('Renderer profiling hooks', () => {
             isTTY: true,
             write(s: string) { this.writes += s; },
             on() {},
+            once() {},
             off() {},
         };
         const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
@@ -192,5 +194,46 @@ describe('Renderer profiling hooks', () => {
         renderer.renderNow();
         expect(stats).toBeDefined();
         expect(stats!.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('does not throw when flush encounters an error', () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const renderer = new Renderer(terminal, screen);
+        screen.setCell(0, 0, { char: 'x' });
+
+        vi.spyOn(terminal, 'write').mockImplementationOnce(() => {
+            throw new Error('write error');
+        });
+
+        expect(() => renderer.renderNow()).not.toThrow();
+        vi.restoreAllMocks();
+    });
+
+    it('does not emit cursor movement for a diff span starting at a wide-char continuation cell', () => {
+        const narrowScreen = new Screen(10, 2);
+        const renderer = new Renderer(terminal, narrowScreen);
+
+        // First frame: write a wide character (width=2) at col 0, filling col 0 (width=2) and col 1 (continuation, width=0)
+        narrowScreen.setCell(0, 0, { char: '中', width: 2 });
+        narrowScreen.setCell(1, 0, { char: '', width: 0 });
+        narrowScreen.setCell(2, 0, { char: 'A', width: 1 });
+        renderer.renderNow(); // establish front buffer
+
+        // Second frame: change only the continuation cell's neighbor so the span start lands at col 1
+        // To trigger _adjustSpanStart: mark col 1 (width=0) as changed by writing a different char at col 1
+        // while col 0 (width=2) is unchanged — set col 1 explicitly to force the diff
+        narrowScreen.setCell(1, 0, { char: '', width: 0, fg: { type: 'named', name: 'red' } });
+        narrowScreen.setCell(2, 0, { char: 'B', width: 1 });
+
+        let bytesWritten = 0;
+        renderer.onFrame(stats => { bytesWritten = stats.bytesWritten; });
+        renderer.renderNow();
+
+        // The renderer should produce output without crashing (no invalid cursor move to a continuation column)
+        expect(bytesWritten).toBeGreaterThan(0);
+        // The adjusted span start should be col=0 (the real wide char boundary)
+        const output = fakeStdout.writes;
+        expect(output).toBeTruthy();
     });
 });

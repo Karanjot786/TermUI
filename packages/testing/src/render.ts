@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────
 
 import { Screen, type KeyEvent, type MouseEvent } from "@termuijs/core";
-import { Box, Text, Widget } from "@termuijs/widgets";
+import { Box, Text, Widget, _resetWidgetIdCounter } from "@termuijs/widgets";
 import {
     reconcile,
     reRenderComponent,
@@ -16,6 +16,7 @@ import {
     getRequestRender,
     collectInputHandlers,
     destroyFiber,
+    resetHooksGlobals,
     type VNode,
 } from "@termuijs/jsx";
 
@@ -46,9 +47,21 @@ export interface TestInstance {
     getAllByText(text: string): Widget[];
 
     /**
+     * Find a widget whose role prop matches the given string.
+     * Returns null if not found.
+     */
+    getByRole(role: string): Widget | null;
+
+    /**
+     * Find a widget whose label prop matches the given string.
+     * Returns null if not found.
+     */
+    getByLabelText(label: string): Widget | null;
+
+    /**
      * Find all widgets of a specific type (by constructor).
      */
-    getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[];
+    getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
 
     /**
      * Find the first widget whose text content includes the given string.
@@ -60,7 +73,18 @@ export interface TestInstance {
      * Find the first widget of a specific type (by constructor).
      * Returns null instead of throwing when nothing matches.
      */
-    queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null;
+    queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null; // any[] is required to accept widget constructors with varying signatures
+
+    /**
+     * Find all widgets whose text content includes the given string.
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByText(text: string): Widget[];
+    /**
+     * Find all widgets of a specific type (by constructor).
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
 
     /**
      * Simulate a key press event. This dispatches to useInput handlers.
@@ -321,6 +345,16 @@ export function render(
             return null;
         },
 
+        getByRole(role: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'role') === role);
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        getByLabelText(label: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'label') === label);
+            return matches.length > 0 ? matches[0] : null;
+        },
+
         getAllByText(text: string): Widget[] {
             return walkWidgets(container, (w) => {
                 if (w instanceof Text) {
@@ -347,6 +381,13 @@ export function render(
         queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null {
             const matches = walkWidgets(container, (w) => w instanceof type) as T[];
             return matches.length > 0 ? matches[0] : null;
+        },
+
+        queryAllByText(text: string): Widget[] {
+            return instance.getAllByText(text);
+        },
+        queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
+            return instance.getAllByType(type);
         },
 
         fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
@@ -507,6 +548,10 @@ export function render(
                 destroyFiber(rootInstance.fiber);
             }
             instances?.delete(rootWidget);
+            // Reset module globals to prevent cross-test pollution
+            resetHooksGlobals();
+            // Reset widget ID counter to prevent ID bloat across tests
+            _resetWidgetIdCounter();
         },
     };
 
@@ -522,6 +567,13 @@ export function createFixture(defaults: TestRenderOptions = {}): Fixture {
 
     return {
         render(element: VNode, options: TestRenderOptions = {}): TestInstance {
+            // Auto-cleanup previous renders to prevent cross-test state leakage
+            if (instances.length > 0) {
+                for (const inst of instances) {
+                    inst.unmount();
+                }
+                instances.length = 0;
+            }
             const instance = render(element, { ...defaults, ...options });
             instances.push(instance);
             return instance;

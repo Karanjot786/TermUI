@@ -48,11 +48,17 @@ export class FileWatcher {
                     else if (ext === '.tss') type = 'tss';
                     if (!type) return;
 
-                    // Debounce: coalesce rapid saves
-                    const existing = this._debounceTimers.get(filename);
+                    // Use a per-directory resolved path as the debounce key so files with
+                    // the same basename in different watched directories don't collide.
+                    const resolved = resolve(dir, filename);
+
+                    // Debounce: coalesce rapid saves for the same resolved file path
+                    const existing = this._debounceTimers.get(resolved);
                     if (existing) clearTimeout(existing);
-                    this._debounceTimers.set(filename, setTimeout(() => {
-                        this._debounceTimers.delete(filename);
+                    this._debounceTimers.set(resolved, setTimeout(() => {
+                        this._debounceTimers.delete(resolved);
+                        // Preserve the original filename in the emitted FileChange to
+                        // avoid changing the public API observed by callers/tests.
                         const change: FileChange = { filename, type: type!, timestamp: Date.now() };
                         for (const cb of this._onChangeCallbacks) cb(change);
                     }, 100));

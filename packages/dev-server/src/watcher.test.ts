@@ -15,10 +15,11 @@ describe('FileWatcher', () => {
         vi.useFakeTimers();
         mockWatcherEmitter = new EventEmitter();
         vi.mocked(watch).mockReturnValue(mockWatcherEmitter as any);
+        vi.mocked(existsSync).mockReturnValue(true);
     });
 
     afterEach(() => {
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
         vi.useRealTimers();
     });
 
@@ -313,6 +314,32 @@ describe('FileWatcher', () => {
         vi.advanceTimersByTime(100);
 
         expect(changeSpy).toHaveBeenCalledTimes(3);
+    });
+
+    it('does not collide when different watched dirs contain the same filename', () => {
+        // Simulate two separate watchers (different directories) both reporting
+        // a change for a file with the same basename. They should produce
+        // two independent onChange events, not be coalesced by the debounce map.
+        const emitters = [new EventEmitter(), new EventEmitter()];
+        let callCount = 0;
+        vi.mocked(watch).mockImplementation(() => emitters[callCount++] as any);
+
+        const watcher = new FileWatcher(['./src', './tests']);
+        const changeSpy = vi.fn();
+
+        watcher.onChange(changeSpy);
+        watcher.start();
+
+        // Both directories emit a change for "index.ts"
+        emitters[0].emit('change', 'change', 'index.ts');
+        emitters[1].emit('change', 'change', 'index.ts');
+
+        vi.advanceTimersByTime(100);
+
+        // Expect two separate events (one per directory/file), not one.
+        expect(changeSpy).toHaveBeenCalledTimes(2);
+        const filenames = changeSpy.mock.calls.map(([c]) => c.filename);
+        expect(filenames).toEqual(['index.ts', 'index.ts']);
     });
 
     it('skips non-existent directories but still watches valid ones', () => {

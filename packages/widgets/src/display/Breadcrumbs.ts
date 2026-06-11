@@ -32,6 +32,12 @@ export class Breadcrumbs extends Widget {
 
     /** Update the trail of segments. */
     setSegments(segments: string[]): void {
+        if (
+            this._segments.length === segments.length &&
+            this._segments.every((segment, index) => segment === segments[index])
+        ) {
+            return;
+        }
         this._segments = segments;
         this.markDirty();
     }

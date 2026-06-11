@@ -37,6 +37,7 @@ export class NotificationBadge extends Widget {
 
     /** Update the notification count. */
     setCount(count: number): void {
+        if (count === this._count) return;
         this._count = count;
         this.markDirty();
     }
@@ -48,6 +49,7 @@ export class NotificationBadge extends Widget {
 
     /** Update the badge position. */
     setPosition(position: BadgePosition): void {
+        if (position === this._position) return;
         this._position = position;
         this.markDirty();
     }

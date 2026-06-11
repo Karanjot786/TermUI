@@ -159,4 +159,26 @@ describe('StatusMessage', () => {
         expect(widget.isDirty).toBe(true);
     });
     
+    it('does not mark dirty when message is unchanged', () => {
+        const widget = new StatusMessage('Saved');
+    
+        widget.clearDirty();
+        widget.setMessage('Saved');
+    
+        expect(widget.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when variant is unchanged', () => {
+        const widget = new StatusMessage(
+            'Saved',
+            {},
+            { variant: 'success' },
+        );
+    
+        widget.clearDirty();
+        widget.setVariant('success');
+    
+        expect(widget.isDirty).toBe(false);
+    });
+
 });

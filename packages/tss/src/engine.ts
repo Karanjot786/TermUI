@@ -5,6 +5,8 @@
 import { tokenize } from './tokenizer.js';
 import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValue } from './parser.js';
 import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
+import { evalCalc } from './calc.js';
+import { matchesPseudo } from './pseudo.js';
 
 export function compile(source: string): string {
     const tokens = tokenize(source);
@@ -21,7 +23,7 @@ export function compile(source: string): string {
     function processRule(rule: TSSRule, parentSelStr: string) {
         const selStr = serializeSelector(rule.selector);
         const fullSelStr = parentSelStr ? `${parentSelStr} ${selStr}` : selStr;
-        
+
         if (rule.properties.length > 0) {
             let block = `${fullSelStr} {`;
             for (const prop of rule.properties) {
@@ -197,14 +199,21 @@ export class ThemeEngine {
             }
             case 'color': return value.value;
             case 'number': return String(value.value);
-            case 'literal': return value.value;
+            case 'literal': {
+                if (value.value.startsWith('calc(') && value.value.endsWith(')')) {
+                    return String(evalCalc(value.value, this._variables));
+                }
+                return value.value;
+            }
         }
     }
 
     private _matchesSelector(sel: TSSSelector, widgetType: string, className?: string, pseudo?: string): boolean {
+        // Widget type match (* = universal)
         if (sel.widget !== '*' && sel.widget.toLowerCase() !== widgetType.toLowerCase()) return false;
+        // Class name match
         if (sel.className && sel.className !== className) return false;
-        if (sel.pseudo && sel.pseudo !== pseudo) return false;
+        if (!matchesPseudo(sel.pseudo, pseudo)) return false;
         return true;
     }
 

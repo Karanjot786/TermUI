@@ -126,6 +126,33 @@ export function notify(text: string): string {
     return `${OSC}9;${safeText}${bell}`;
 }
 
+// ── Security: ANSI/control stripping ────────────────
+
+/**
+ * Strip ANSI escape sequences and dangerous C0/C1 control characters from a
+ * string, while keeping printable Unicode intact.
+ *
+ * Removes:
+ *  - All ESC-introduced sequences (CSI, OSC, DCS, PM, APC, SS2/SS3, etc.)
+ *  - Bare C0 controls (0x00-0x1F) except TAB (0x09) and LF (0x0A)
+ *  - C1 controls / DEL (0x7F-0x9F)
+ *
+ * Safe for use on user-supplied or file-read strings before they are rendered
+ * to the terminal.
+ */
+export function stripAnsiControl(str: string): string {
+    // Remove all ESC-introduced sequences (CSI, OSC, DCS, SS2/SS3, etc.)
+    // eslint-disable-next-line no-control-regex
+    let out = str.replace(
+        /\x1b(?:[@-Z\\-_]|\[[0-9;]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[PX^_][^\x1b]*\x1b\\|.)/g,
+        ''
+    );
+    // Remove remaining bare C0 controls (keep TAB=0x09, LF=0x0A) and C1/DEL
+    // eslint-disable-next-line no-control-regex
+    out = out.replace(/[\x00-\x08\x0B-\x1F\x7F-\x9F]/g, '');
+    return out;
+}
+
 // ── Clipboard ───────────────────────────────────────
 
 /**

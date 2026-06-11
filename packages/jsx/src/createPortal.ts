@@ -5,7 +5,7 @@
 import type { Widget } from '@termuijs/widgets';
 import type { VNode } from './vnode.js';
 import { createElement as h } from './createElement.js';
-import { useLayoutEffect } from './hooks.js';
+import { useLayoutEffect, currentFiber } from './hooks.js';
 import { reconcile } from './reconciler.js';
 
 interface PortalProps {
@@ -14,19 +14,25 @@ interface PortalProps {
 }
 
 function PortalComponent({ target, children }: PortalProps): VNode {
-    // We must call reconcile() inside the effect so we don't break the active Fiber stack 
-    // during the render phase. When the layout effect runs, the Fiber context is correctly
-    // restored, so Context and Hooks inside the portal children will work flawlessly!
-    useLayoutEffect(() => {
-        const childArray = Array.isArray(children) ? children : (children != null ? [children] : []);
-        const childWidgets = childArray.map((child: VNode) => reconcile(child, target));
+    const fiber = currentFiber();
+    const childArray = Array.isArray(children) ? children : (children != null ? [children] : []);
 
+    // Reconcile portal children during the render phase while the fiber context
+    // (_currentFiber / _parentFiber) is still active. This ensures correct fiber
+    // parent references, context propagation, and proper cleanup registration.
+    const childWidgets = childArray.map((child: VNode) => reconcile(child, target));
+
+    // Register portal children on the fiber so destroyFiber can clean them up
+    fiber.portalChildren = [{ widgets: childWidgets, target }];
+
+    // Use useLayoutEffect only for DOM-like side effects (adding/removing from target).
+    // The cleanup function from the previous render cycle removes old widgets before
+    // the new effect adds the new ones, matching React's effect lifecycle semantics.
+    useLayoutEffect(() => {
         for (const widget of childWidgets) {
             target.addChild(widget);
         }
 
-        // Cleanup: remove ONLY this portal's widgets from the target
-        // when the portal unmounts or re-renders.
         return () => {
             for (const widget of childWidgets) {
                 target.removeChild(widget);

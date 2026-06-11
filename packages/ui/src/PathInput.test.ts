@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@termuijs/testing';
 import { createElement, useRef } from '@termuijs/jsx';
 import { PathInput } from './PathInput.js';
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 // Mock fs module
-vi.mock('fs', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('fs')>();
+vi.mock('node:fs', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('node:fs')>();
     return {
         ...actual,
         readdirSync: vi.fn(),
@@ -86,5 +86,24 @@ describe('PathInput', () => {
         expect(screen.lastFrame().join('\n')).toContain(expectedVal);
         
         screen.unmount();
+    });
+
+    it('prevents default Tab focus navigation when completing', () => {
+        const input = new PathInput({}, { cwd: '/mock/dir' });
+        input.value = 's';
+        const event = {
+            key: 'tab',
+            ctrl: false,
+            shift: false,
+            alt: false,
+            raw: Buffer.from('\t'),
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as unknown as import('@termuijs/core').KeyEvent; // runtime-only test object with mocked event methods
+
+        input.handleKey(event);
+
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
     });
 });

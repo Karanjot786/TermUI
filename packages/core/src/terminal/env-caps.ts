@@ -17,6 +17,11 @@ export const caps = {
 
     return 'dark';
   },
+  get keybindingMode(): 'vim' | 'emacs' | 'default' {
+    const mode = process.env.TERMUI_KEYBINDINGS;
+    if (mode === 'vim' || mode === 'emacs') return mode;
+    return 'default';
+  },
 } as const;
 
 /**
@@ -38,4 +43,32 @@ export const caps = {
  */
 export function prefersReducedMotion(): boolean {
   return !caps.motion;
+}
+
+/**
+ * Returns `true` when color output should be used.
+ *
+ * Returns `false` when `NO_COLOR=1` is set or `TERM=dumb`,
+ * as per <https://no-color.org>.
+ *
+ * All widgets that emit ANSI color codes **must** check this function
+ * and emit plain text (no escape sequences) when it returns `false`.
+ *
+ * @example
+ * if (shouldUseColor()) {
+ *   output += colorToAnsiFg(cell.fg, depth);
+ * }
+ */
+export function shouldUseColor(): boolean {
+  return caps.color;
+}
+
+/**
+ * Returns `true` when the user prefers high-contrast output.
+ *
+ * Widgets that render text on colored backgrounds **may** check this
+ * to use more distinct color combinations.
+ */
+export function prefersHighContrast(): boolean {
+  return process.env.HIGH_CONTRAST === '1';
 }

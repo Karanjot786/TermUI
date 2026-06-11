@@ -33,6 +33,8 @@ export class LoadingDots extends Widget {
     }
 
     setLabel(label: string): void {
+        if (label === this._label) return;
+        
         this._label = label;
         this.markDirty();
     }
