@@ -30,6 +30,7 @@ function walkWidgets(
 
 /**
  * Extracts text content from a Text widget.
+ * Internal helper used by query functions.
  */
 function getTextContent(widget: Widget): string {
   if (widget instanceof Text) {
@@ -43,10 +44,7 @@ function getTextContent(widget: Widget): string {
  * Finds the first widget with a matching role attribute.
  * Throws an error if no widget is found.
  */
-export function getByRole(
-  tree: Widget,
-  role: string,
-): Widget {
+export function getByRole(tree: Widget, role: string): Widget {
   const match = walkWidgets(
     tree,
     (widget) => Reflect.get(widget, "role") === role,
@@ -63,10 +61,7 @@ export function getByRole(
  * Finds the first widget with a matching label attribute.
  * Throws an error if no widget is found.
  */
-export function getByLabel(
-  tree: Widget,
-  label: string,
-): Widget {
+export function getByLabel(tree: Widget, label: string): Widget {
   const match = walkWidgets(
     tree,
     (widget) => Reflect.get(widget, "label") === label,
@@ -91,7 +86,6 @@ export function queryByText(
     if (widget instanceof Text) {
       return getTextContent(widget).includes(text);
     }
-
     return false;
   })[0];
 
