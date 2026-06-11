@@ -1,11 +1,11 @@
 // ─────────────────────────────────────────────────────
 // Quiz App — built with @termuijs/core + @termuijs/widgets
 //
-// Showcases: static state, List widget for answer choices,
-// score tracking, multi-screen (question → summary)
+// Showcases: static state, SelectableList widget for answer
+// choices, score tracking, question → summary screens
 // ─────────────────────────────────────────────────────
 
-import { App, type KeyEvent, type Screen, type Style, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
+import { App, type KeyEvent, type Screen, type Style, styleToCellAttrs, truncate, caps } from '@termuijs/core';
 import { Widget, Box, Text, Center } from '@termuijs/widgets';
 
 // ── Types ─────────────────────────────────────────────
@@ -36,7 +36,7 @@ const QUESTIONS: Question[] = [
     },
     {
         question: 'What is the time complexity of binary search?',
-        choices: ['O(n)', 'O(n²)', 'O(log n)', 'O(1)'],
+        choices: ['O(n)', 'O(n^2)', 'O(log n)', 'O(1)'],
         correctIndex: 2,
     },
     {
@@ -57,7 +57,6 @@ const QUESTIONS: Question[] = [
 ];
 
 // ── SelectableList Widget ─────────────────────────────
-// A simple list with keyboard-driven selection
 
 class SelectableList extends Widget {
     private items: string[];
@@ -69,35 +68,32 @@ class SelectableList extends Widget {
         onConfirm: (index: number) => void,
         style: Partial<Style> = {}
     ) {
-        super({ flexGrow: 1, ...style });
+        super({ height: 4, ...style });
         this.items = items;
         this._selectedIndex = 0;
         this.onConfirm = onConfirm;
-        this.focusable = true;
     }
 
-    get selectedIndex(): number {
-        return this._selectedIndex;
-    }
-
-    setItems(items: string[]) {
+    setItems(items: string[]): void {
         this.items = items;
         this._selectedIndex = 0;
         this.markDirty();
     }
 
-    moveUp() {
+    moveUp(): void {
+        if (this.items.length === 0) return;
         this._selectedIndex = (this._selectedIndex - 1 + this.items.length) % this.items.length;
         this.markDirty();
     }
 
-    moveDown() {
+    moveDown(): void {
+        if (this.items.length === 0) return;
         this._selectedIndex = (this._selectedIndex + 1) % this.items.length;
         this.markDirty();
     }
 
-    confirm() {
-        this.onConfirm(this._selectedIndex);
+    confirm(): void {
+        if (this.items.length > 0) this.onConfirm(this._selectedIndex);
     }
 
     protected _renderSelf(screen: Screen): void {
@@ -106,7 +102,7 @@ class SelectableList extends Widget {
         if (width <= 0 || height <= 0) return;
 
         const baseAttrs = styleToCellAttrs(this._style);
-        const cursor = caps.unicode ? '▶ ' : '> ';
+        const cursor = caps.unicode ? '> ' : '> ';
         const blank  = '  ';
 
         for (let i = 0; i < this.items.length; i++) {
@@ -135,15 +131,20 @@ class SelectableList extends Widget {
 
 // ── QuizApp Widget ────────────────────────────────────
 
+// Total height = border(2) + padding top/bottom(2) + contents:
+//   header(1) + divider(1) + gap(1) + question(1) + gap(1)
+//   + choices(4) + gap(1) + feedback(1) + gap(1) + footer(1) = 13 content rows
+// Total = 2 + 2 + 13 = 17
+const WIDGET_WIDTH  = 72;
+const WIDGET_HEIGHT = 19;
+
 class QuizApp extends Widget {
-    // State
     private currentIndex = 0;
     private score = 0;
-    private answered = false;        // true while showing feedback before advancing
+    private answered = false;
     private lastCorrect = false;
     private done = false;
 
-    // Child widgets
     private _header: Text;
     private _questionText: Text;
     private _choiceList: SelectableList;
@@ -155,12 +156,11 @@ class QuizApp extends Widget {
             flexDirection: 'column',
             border: 'double',
             borderColor: { type: 'named', name: 'cyan' },
-            padding: { left: 2, right: 2, top: 1, bottom: 1 },
-            width: 70,
-            maxWidth: 70,
+            padding: { left: 2, right: 2, top: 0, bottom: 0 },
+            width:  WIDGET_WIDTH,
+            height: WIDGET_HEIGHT,
         });
 
-        // Header — title + progress
         this._header = new Text(
             this.headerText(),
             { bold: true, height: 1, fg: { type: 'named', name: 'cyan' } },
@@ -168,38 +168,36 @@ class QuizApp extends Widget {
         );
 
         const divider = new Text(
-            '─'.repeat(64),
+            '─'.repeat(66),
             { height: 1, fg: { type: 'named', name: 'brightBlack' } },
             { align: 'left' }
         );
 
-        // Question
+        const gap1 = new Box({ height: 1 });
+
         this._questionText = new Text(
             this.currentQuestion().question,
-            { bold: true, height: 2, fg: { type: 'named', name: 'white' } },
-            { align: 'left', wrap: true }
+            { bold: true, height: 1, fg: { type: 'named', name: 'white' } },
+            { align: 'left', wrap: false }
         );
 
-        const spacer1 = new Box({ height: 1 });
+        const gap2 = new Box({ height: 1 });
 
-        // Choices list
         this._choiceList = new SelectableList(
             this.currentQuestion().choices,
             (idx) => this.handleAnswer(idx)
         );
 
-        const spacer2 = new Box({ height: 1 });
+        const gap3 = new Box({ height: 1 });
 
-        // Feedback line (empty until answered)
         this._feedback = new Text(
             '',
-            { bold: true, height: 1 },
+            { bold: true, height: 1, fg: { type: 'named', name: 'green' } },
             { align: 'left' }
         );
 
-        const spacer3 = new Box({ height: 1 });
+        const gap4 = new Box({ height: 1 });
 
-        // Footer hint
         this._footer = new Text(
             this.footerHint(),
             { height: 1, fg: { type: 'named', name: 'brightBlack' } },
@@ -208,68 +206,54 @@ class QuizApp extends Widget {
 
         this.addChild(this._header);
         this.addChild(divider);
+        this.addChild(gap1);
         this.addChild(this._questionText);
-        this.addChild(spacer1);
+        this.addChild(gap2);
         this.addChild(this._choiceList);
-        this.addChild(spacer2);
+        this.addChild(gap3);
         this.addChild(this._feedback);
-        this.addChild(spacer3);
+        this.addChild(gap4);
         this.addChild(this._footer);
     }
-
-    // ── Helpers ────────────────────────────────────────
 
     private currentQuestion(): Question {
         return QUESTIONS[this.currentIndex];
     }
 
     private headerText(): string {
-        if (this.done) return caps.unicode
-            ? ' 🎉 Quiz Complete! '
-            : ' Quiz Complete! ';
-        return caps.unicode
-            ? ` ❓ Question ${this.currentIndex + 1} / ${QUESTIONS.length} `
-            : ` Question ${this.currentIndex + 1} / ${QUESTIONS.length} `;
+        if (this.done) return ' Quiz Complete! ';
+        return ` Question ${this.currentIndex + 1} / ${QUESTIONS.length} `;
     }
 
     private footerHint(): string {
         if (this.done) return '[ r ] restart   [ q / Ctrl+C ] quit';
-        if (this.answered) return '[ Enter / Space ] next question';
-        return '[ ↑ ↓ ] move   [ Enter / Space ] select   [ q / Ctrl+C ] quit';
+        if (this.answered) return '[ Enter / Space ] next question   [ q ] quit';
+        return '[ up/down ] move   [ Enter/Space ] select   [ a-d ] shortcut   [ q ] quit';
     }
 
-    private scorePercent(): number {
-        return Math.round((this.score / QUESTIONS.length) * 100);
-    }
-
-    // ── Actions ────────────────────────────────────────
-
-    private handleAnswer(choiceIndex: number) {
+    private handleAnswer(choiceIndex: number): void {
         if (this.answered || this.done) return;
 
         this.answered = true;
         this.lastCorrect = choiceIndex === this.currentQuestion().correctIndex;
         if (this.lastCorrect) this.score++;
 
-        const tick  = caps.unicode ? '✓' : '[correct]';
-        const cross = caps.unicode ? '✗' : '[wrong]';
         const correctLabel = String.fromCharCode(65 + this.currentQuestion().correctIndex);
+        const correctText  = this.currentQuestion().choices[this.currentQuestion().correctIndex];
 
         if (this.lastCorrect) {
-            this._feedback.setStyle({ fg: { type: 'named', name: 'green' } });
-            this._feedback.setContent(`  ${tick}  Correct!`);
+            this._feedback.setStyle({ fg: { type: 'named', name: 'green' }, bold: true, height: 1 });
+            this._feedback.setContent('  Correct!');
         } else {
-            this._feedback.setStyle({ fg: { type: 'named', name: 'red' } });
-            this._feedback.setContent(
-                `  ${cross}  Wrong — correct answer: ${correctLabel}) ${this.currentQuestion().choices[this.currentQuestion().correctIndex]}`
-            );
+            this._feedback.setStyle({ fg: { type: 'named', name: 'red' }, bold: true, height: 1 });
+            this._feedback.setContent(`  Wrong — correct: ${correctLabel}) ${correctText}`);
         }
 
         this._footer.setContent(this.footerHint());
         this.markDirty();
     }
 
-    private advance() {
+    private advance(): void {
         if (!this.answered) return;
 
         this.currentIndex++;
@@ -289,30 +273,24 @@ class QuizApp extends Widget {
         this.markDirty();
     }
 
-    private showSummary() {
+    private showSummary(): void {
         this.done = true;
-
-        const pct  = this.scorePercent();
-        const star  = caps.unicode ? '★' : '*';
-        const grade = pct >= 80 ? `${star} Excellent!`
-                    : pct >= 60 ? 'Good job!'
-                    : 'Keep practicing!';
+        const pct   = Math.round((this.score / QUESTIONS.length) * 100);
+        const grade = pct >= 80 ? 'Excellent!' : pct >= 60 ? 'Good job!' : 'Keep practicing!';
 
         this._header.setContent(this.headerText());
-        this._questionText.setContent(
-            `You scored  ${this.score} / ${QUESTIONS.length}  (${pct}%)   ${grade}`
-        );
+        this._questionText.setContent(`Score: ${this.score} / ${QUESTIONS.length}  (${pct}%)   ${grade}`);
         this._choiceList.setItems([]);
         this._feedback.setContent('');
         this._footer.setContent(this.footerHint());
         this.markDirty();
     }
 
-    private restart() {
+    private restart(): void {
         this.currentIndex = 0;
-        this.score = 0;
-        this.answered = false;
-        this.done = false;
+        this.score        = 0;
+        this.answered     = false;
+        this.done         = false;
 
         const q = this.currentQuestion();
         this._header.setContent(this.headerText());
@@ -323,46 +301,28 @@ class QuizApp extends Widget {
         this.markDirty();
     }
 
-    // ── Key handling ───────────────────────────────────
-
     handleKey(event: KeyEvent): boolean {
-        if (event.key === 'q' || (event.ctrl && event.key === 'c')) {
-            return false; // signal app to exit
-        }
+        if (event.key === 'q' || (event.ctrl && event.key === 'c')) return false;
 
         if (this.done) {
-            if (event.key === 'r') {
-                this.restart();
-            }
+            if (event.key === 'r') this.restart();
             return true;
         }
 
         if (this.answered) {
-            if (event.key === 'enter' || event.key === 'return' || event.key === 'space') {
-                this.advance();
-            }
+            if (event.key === 'enter' || event.key === 'space') this.advance();
             return true;
         }
 
-        // Navigate choices
-        if (event.key === 'up') {
-            this._choiceList.moveUp();
-            return true;
-        }
-        if (event.key === 'down') {
-            this._choiceList.moveDown();
-            return true;
-        }
-
-        // Confirm selection
-        if (event.key === 'enter' || event.key === 'return' || event.key === 'space') {
+        if (event.key === 'up')    { this._choiceList.moveUp();   return true; }
+        if (event.key === 'down')  { this._choiceList.moveDown(); return true; }
+        if (event.key === 'enter' || event.key === 'space') {
             this._choiceList.confirm();
             return true;
         }
 
-        // Letter shortcuts: a, b, c, d
-        const letter = event.key.toLowerCase();
-        const idx = letter.charCodeAt(0) - 97; // 'a' = 0, 'b' = 1, ...
+        // a/b/c/d shortcuts
+        const idx = event.key.toLowerCase().charCodeAt(0) - 97;
         if (idx >= 0 && idx < this.currentQuestion().choices.length) {
             this.handleAnswer(idx);
             return true;
@@ -381,24 +341,22 @@ class QuizApp extends Widget {
 async function main() {
     const quiz = new QuizApp();
 
-    const centerLayout = new Center({}, { horizontal: true, vertical: true });
-    centerLayout.addChild(quiz);
+    const center = new Center({}, { horizontal: true, vertical: true });
+    center.addChild(quiz);
 
-    const application = new App(centerLayout, {
+    const app = new App(center, {
         fullscreen: true,
         title: 'TermUI Quiz App',
         fps: 30,
     });
 
-    application.events.on('key', (event: KeyEvent) => {
+    app.events.on('key', (event: KeyEvent) => {
         const shouldContinue = quiz.handleKey(event);
-        if (!shouldContinue) {
-            application.exit(0);
-        }
-        application.requestRender();
+        if (!shouldContinue) app.exit(0);
+        app.requestRender();
     });
 
-    const exitCode = await application.mount();
+    const exitCode = await app.mount();
     process.exit(exitCode);
 }
 
