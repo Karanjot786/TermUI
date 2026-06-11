@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────────────
 
 import { App, type KeyEvent, type Screen, type Style, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
-import { Widget, Box, Text } from '@termuijs/widgets';
+import { Widget, Box, Text, Center } from '@termuijs/widgets';
 
 // ── Types ─────────────────────────────────────────────
 
@@ -376,31 +376,15 @@ class QuizApp extends Widget {
     }
 }
 
-// ── Center wrapper ────────────────────────────────────
-
-class Center extends Widget {
-    constructor() {
-        super({ flexGrow: 1, flexDirection: 'column' });
-    }
-
-    protected _renderSelf(_screen: Screen): void {}
-}
-
 // ── Application entry ─────────────────────────────────
 
 async function main() {
     const quiz = new QuizApp();
 
-    // Wrap in a centering box
-    const outer = new Box({
-        flexDirection: 'column',
-        flexGrow: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-    });
-    outer.addChild(quiz);
+    const centerLayout = new Center({}, { horizontal: true, vertical: true });
+    centerLayout.addChild(quiz);
 
-    const application = new App(outer, {
+    const application = new App(centerLayout, {
         fullscreen: true,
         title: 'TermUI Quiz App',
         fps: 30,
