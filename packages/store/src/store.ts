@@ -57,35 +57,61 @@ const _batchStores = new Map<Set<any>, BatchEntry<any>>();
  * });
  * ```
  */
-export function batch(fn: () => void): void {
+export function batch<T>(fn: () => T): T {
     _batchDepth++;
     let threw = false;
+    let res: any;
     try {
-        fn();
+        res = fn();
     } catch (err) {
         threw = true;
-        throw err;
-    } finally {
         _batchDepth--;
         if (_batchDepth === 0) {
-            if (threw) {
-                for (const [, { prevState, rollback }] of _batchStores) {
-                    rollback(prevState);
-                }
-                _batchStores.clear(); // Don't notify listeners with partial state
-            } else {
-                queueMicrotask(() => {
-                    const stores = Array.from(_batchStores.entries());
-                    _batchStores.clear();
-                    for (const [listeners, { prevState, nextState ,commit }] of stores) {
-                        commit();
-                        for (const listener of listeners) {
-                            listener(nextState, prevState);
-                        }
-                    }
-                });
-            }
+            flushBatch(threw);
         }
+        throw err;
+    }
+
+    if (res && typeof res.then === 'function') {
+        return (res as Promise<any>).then(
+            (val) => {
+                _batchDepth--;
+                if (_batchDepth === 0) flushBatch(false);
+                return val;
+            },
+            (err) => {
+                _batchDepth--;
+                if (_batchDepth === 0) flushBatch(true);
+                throw err;
+            }
+        ) as T;
+    } else {
+        _batchDepth--;
+        if (_batchDepth === 0) {
+            flushBatch(false);
+        }
+        return res;
+    }
+}
+
+function flushBatch(threw: boolean) {
+    if (threw) {
+        for (const [, { prevState, rollback }] of _batchStores) {
+            rollback(prevState);
+        }
+        _batchStores.clear(); // Don't notify listeners with partial state
+    } else {
+        if (_batchStores.size === 0) return;
+        queueMicrotask(() => {
+            const stores = Array.from(_batchStores.entries());
+            _batchStores.clear();
+            for (const [listeners, { prevState, nextState ,commit }] of stores) {
+                commit();
+                for (const listener of listeners) {
+                    listener(nextState, prevState);
+                }
+            }
+        });
     }
 }
 
