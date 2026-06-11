@@ -3,13 +3,33 @@ import { Terminal } from './Terminal.js';
 import { Screen } from './Screen.js';
 import { Renderer } from './Renderer.js';
 
+interface FakeStdout {
+    writes: string;
+    columns: number;
+    rows: number;
+    isTTY: boolean;
+    write(data: string): void;
+    on(event: string, listener: (...args: unknown[]) => void): void;
+    once(event: string, listener: (...args: unknown[]) => void): void;
+    off(event: string, listener: (...args: unknown[]) => void): void;
+}
+
+interface FakeStdin {
+    isTTY: boolean;
+    setRawMode(mode: boolean): void;
+    resume(): void;
+    pause(): void;
+    on(event: string, listener: (...args: unknown[]) => void): void;
+    off(event: string, listener: (...args: unknown[]) => void): void;
+}
+
 // Regression: ensure a resize does not leave stale style fingerprints
 // that would make the renderer skip redrawing rows after a resize.
 
 describe('Renderer — resize does not suppress redraw via stale style fingerprints', () => {
     it('renders after resize (no stale-style suppression)', () => {
         // fake stdout to capture writes
-        const fakeStdout: any = {
+        const fakeStdout: FakeStdout = {
             writes: '',
             columns: 80,
             rows: 24,
@@ -19,7 +39,14 @@ describe('Renderer — resize does not suppress redraw via stale style fingerpri
             once() {},
             off() {},
         };
-        const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
+        const fakeStdin: FakeStdin = {
+            isTTY: true,
+            setRawMode() {},
+            resume() {},
+            pause() {},
+            on() {},
+            off() {},
+        };
 
         const terminal = new Terminal({ stdout: fakeStdout, stdin: fakeStdin });
         const screen = new Screen(40, 5);
@@ -38,9 +65,9 @@ describe('Renderer — resize does not suppress redraw via stale style fingerpri
         // 3) Write new content and render again
         screen.writeString(0, 0, 'After');
         renderer.renderNow();
-        const afterWrites = fakeStdout.writes.length - beforeWrites;
+        const afterOutput = fakeStdout.writes.slice(beforeWrites);
 
-        // Expect at least some output was written after resize (i.e. no suppression)
-        expect(afterWrites).toBeGreaterThan(0);
+        // Expect the second render to include the new text, not just wrapper output.
+        expect(afterOutput).toContain('After');
     });
 });
