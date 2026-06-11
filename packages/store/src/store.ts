@@ -441,3 +441,15 @@ export interface UseStore<T> {
     reset(): void;
     getInitialState(): T;
 }
+
+// Persistent Store Helper
+export function createPersistentStore<T extends object>(
+    creator: StateCreator<T>,
+    key: string
+): UseStore<T> {
+    return createStore(creator, {
+        persist: {
+            key,
+        },
+    });
+}
