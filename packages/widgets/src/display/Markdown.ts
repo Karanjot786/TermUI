@@ -43,6 +43,10 @@ export class Markdown extends Widget {
     }
 
     private renderInline(screen: Screen, x: number, y: number, text: string): void {
+        text = text.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '$1 ($2)'
+);
     let bold = false;
     let italic = false;
     let code = false;
@@ -181,6 +185,19 @@ export class Markdown extends Widget {
                 });
                 screenRow++;
             }
+
+            else if (line.startsWith('> ')) {
+    screen.writeString(
+        rect.x,
+        rect.y + screenRow,
+        `│ ${line.slice(2)}`,
+        {
+            italic: true
+        }
+    );
+
+    screenRow++;
+}
             else if (line.startsWith('- ')) {
                 const bullet = caps.unicode ? '•' : '*';
 
