@@ -30,11 +30,11 @@ function walkWidgets(
 
 /**
  * Extracts text content from a Text widget.
- * Internal helper used by query functions.
+ * Uses public API instead of private fields.
  */
 function getTextContent(widget: Widget): string {
   if (widget instanceof Text) {
-    return (widget as any)._content ?? "";
+    return widget.getContent?.() ?? "";
   }
 
   return "";
