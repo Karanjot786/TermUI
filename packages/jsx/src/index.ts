@@ -31,6 +31,7 @@ export {
     useReducer,
 } from './hooks.js';
 export { useMediaQuery } from './hooks/useMediaQuery.js';
+export * from './hooks/useShortcuts.js';
 export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 export { useCounter } from './hooks/useCounter.js';
