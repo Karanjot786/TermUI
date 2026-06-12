@@ -69,8 +69,11 @@ export class Popover extends Widget {
             return;
         }
 
-        if (typeof (this.content as any).handleKey === 'function') {
-            (this.content as any).handleKey(event);
+        // `Widget` does not declare `handleKey`; only some concrete widgets implement it.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const focusable = this.content as any;
+        if (typeof focusable.handleKey === 'function') {
+            focusable.handleKey(event);
         }
     }
 
