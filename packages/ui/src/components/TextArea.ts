@@ -108,6 +108,17 @@ export function TextArea({ value = '', onChange, width, height }: TextAreaProps)
             onFocus: () => setFocused(true),
             onBlur: () => setFocused(false)
         },
-        value
+        createElement('col', { width: '100%', height: '100%' }, 
+            ...lines.map((lineStr, r) => {
+                if (r === cursor.row) {
+                    const before = lineStr.slice(0, cursor.col);
+                    const char = cursor.col < lineStr.length ? lineStr[cursor.col] : ' ';
+                    const after = cursor.col < lineStr.length ? lineStr.slice(cursor.col + 1) : '';
+                    
+                    return createElement('text', { key: r }, before + '\x1b[7m' + char + '\x1b[27m' + after);
+                }
+                return createElement('row', { key: r, gap: 0, width: '100%', height: 1 }, createElement('text', { width: lineStr.length || 1 }, lineStr || ' '));
+            })
+        )
     );
 }
