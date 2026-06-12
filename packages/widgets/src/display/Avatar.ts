@@ -2,7 +2,7 @@
 // @termuijs/widgets — Avatar widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface AvatarOptions {
@@ -64,10 +64,16 @@ export class Avatar extends Widget {
         if (!name) return '';
         const parts = name.trim().split(/\s+/);
         if (parts.length === 0 || parts[0] === '') return '';
+        let init = '';
         if (parts.length === 1) {
-            return parts[0].substring(0, 2).toUpperCase();
+            init = parts[0].substring(0, 2).toUpperCase();
+        } else {
+            init = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
         }
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        if (!caps.unicode) {
+            init = init.replace(/[^\x00-\x7F]/g, '?');
+        }
+        return init;
     }
 
     private _generateColor(name: string): Color {
@@ -104,7 +110,14 @@ export class Avatar extends Widget {
             text = `[${this._initials}]`;
         }
 
-        const renderText = text.substring(0, width);
+        let renderText = '';
+        let currentWidth = 0;
+        for (const char of text) {
+            const cw = stringWidth(char);
+            if (currentWidth + cw > width) break;
+            currentWidth += cw;
+            renderText += char;
+        }
 
         screen.writeString(x, y, renderText, {
             ...attrs,
