@@ -115,4 +115,11 @@ export { useTransition } from './hooks/useTransition.js';
 export { useStopwatch } from './hooks/useStopwatch.js';
 export type { UseStopwatchOptions, UseStopwatchControls } from './hooks/useStopwatch.js';
 export { useBell } from './hooks/useBell.js';
-
+export { useCountdown } from './hooks/useCountdown.js';
+export type { UseCountdownOptions, UseCountdownControls } from './hooks/useCountdown.js';
+export { useDeferredValue } from './hooks/useDeferredValue.js';
+export { useEventCallback } from './hooks/useEventCallback.js';
+export { useForceUpdate } from './hooks/useForceUpdate.js';
+export { useSet } from './hooks/useSet.js';
+export type { UseSetActions } from './hooks/useSet.js';
+export { useThrottle } from './hooks/useThrottle.js';
