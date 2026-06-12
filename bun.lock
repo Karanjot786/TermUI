@@ -210,6 +210,17 @@
         "typescript": "^5.9.3",
       },
     },
+    "examples/markdown-viewer": {
+      "name": "@termuijs/example-markdown-viewer",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/multi-screen-router": {
       "name": "@termuijs/example-multi-screen-router",
       "version": "0.1.0",
@@ -764,6 +775,8 @@
     "@termuijs/example-log-viewer": ["@termuijs/example-log-viewer@workspace:examples/log-viewer"],
 
     "@termuijs/example-markdown-editor": ["@termuijs/example-markdown-editor@workspace:examples/markdown-editor"],
+
+    "@termuijs/example-markdown-viewer": ["@termuijs/example-markdown-viewer@workspace:examples/markdown-viewer"],
 
     "@termuijs/example-multi-screen-router": ["@termuijs/example-multi-screen-router@workspace:examples/multi-screen-router"],
 
