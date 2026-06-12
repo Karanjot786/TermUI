@@ -74,3 +74,13 @@ it('extractKeyframes produces Record<string, Record<string, string>>', () => {
         '100%': { opacity: '1',   color: 'blue' },
     });
 });
+
+it('extractKeyframes merges properties from duplicate offsets', () => {
+    const ast = parse(tokenize(
+        `@keyframes pulse { 0% { opacity: 0; } 0% { scale: 1; } 100% { opacity: 1; } }`
+    ));
+    const decls = extractKeyframes(ast);
+    expect(decls).toHaveLength(1);
+    expect(decls[0].frames['0%']).toEqual({ opacity: '0', scale: '1' });
+    expect(decls[0].frames['100%']).toEqual({ opacity: '1' });
+});

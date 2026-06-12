@@ -26,17 +26,17 @@ export interface KeyframesDeclaration {
  *  // anims[0].frames → { '0%': { opacity: '0' }, '100%': { opacity: '1' } }
  */
 export function extractKeyframes(stylesheet: TSSStylesheet): KeyframesDeclaration[] {
-    return stylesheet.keyframes.map(kf => ({
-        name: kf.name,
-        frames: Object.fromEntries(
-            kf.frames.map(frame => [
-                frame.offset,
-                Object.fromEntries(
-                    frame.properties.map(p => [p.name, serializeValue(p.value)]),
-                ),
-            ]),
-        ),
-    }));
+    return stylesheet.keyframes.map(kf => {
+        const frames: Record<string, Record<string, string>> = {};
+        for (const frame of kf.frames) {
+            const props: Record<string, string> = {};
+            for (const p of frame.properties) {
+                props[p.name] = serializeValue(p.value);
+            }
+            frames[frame.offset] = { ...(frames[frame.offset] ?? {}), ...props };
+        }
+        return { name: kf.name, frames };
+    });
 }
 
 // ── Internal ──

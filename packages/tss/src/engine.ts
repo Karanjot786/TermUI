@@ -7,6 +7,7 @@ import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValu
 import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
 import { evalCalc } from './calc.js';
 import { matchesPseudo } from './pseudo.js';
+import { extractKeyframes, type KeyframesDeclaration } from './animations.js';
 
 export function compile(source: string): string {
     const tokens = tokenize(source);
@@ -105,6 +106,11 @@ export class ThemeEngine {
     /** Get list of available theme names */
     get availableThemes(): string[] {
         return this._stylesheet?.themes.map(t => t.name) ?? [];
+    }
+
+    /** Get parsed @keyframes declarations from the loaded stylesheet */
+    getKeyframes(): KeyframesDeclaration[] {
+        return this._stylesheet ? extractKeyframes(this._stylesheet) : [];
     }
 
     /** Subscribe to theme changes */
