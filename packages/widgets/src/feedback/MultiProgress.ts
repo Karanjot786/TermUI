@@ -66,7 +66,13 @@ export class MultiProgress extends Widget {
      */
     updateItem(index: number, value: number): void {
         if (index >= 0 && index < this._items.length) {
-            this._items[index].value = Math.max(0, Math.min(1, value));
+            const normalized = Math.max(0, Math.min(1, value));
+    
+            if (this._items[index].value === normalized) {
+                return;
+            }
+    
+            this._items[index].value = normalized;
             this.markDirty();
         }
     }

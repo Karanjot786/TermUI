@@ -58,6 +58,9 @@ export class Alert extends Widget {
 
     /** Set the alert message */
     setMessage(message: string): void {
+        if (message === this._message) {
+            return;
+        }
         this._message = message;
         this.markDirty();
     }
@@ -69,6 +72,9 @@ export class Alert extends Widget {
 
     /** Set the alert variant */
     setVariant(variant: StatusVariant): void {
+        if (variant === this._variant) {
+            return;
+        }
         this._variant = variant;
         this.markDirty();
     }

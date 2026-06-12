@@ -210,6 +210,7 @@ describe('TextInput', () => {
         const input = new TextInput();
         input.value = 'abc';
 
+        input.moveCursorEnd();
         input.clearDirty();
         input.moveCursorLeft();
         expect(input.isDirty).toBe(true);
@@ -225,5 +226,53 @@ describe('TextInput', () => {
         input.clearDirty();
         input.moveCursorEnd();
         expect(input.isDirty).toBe(true);
+    });
+});
+
+describe('Performance optimizations', () => {
+    it('does not mark dirty when moveCursorLeft is called at the start', () => {
+        const input = new TextInput();
+
+        input.moveCursorHome();
+        input.clearDirty();
+
+        input.moveCursorLeft();
+
+        expect(input.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when moveCursorRight is called at the end', () => {
+        const input = new TextInput();
+        input.value = 'abc';
+        input.moveCursorEnd();
+
+        input.clearDirty();
+
+        input.moveCursorRight();
+
+        expect(input.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when moveCursorHome is called at home position', () => {
+        const input = new TextInput();
+
+        input.moveCursorHome();
+        input.clearDirty();
+
+        input.moveCursorHome();
+
+        expect(input.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when moveCursorEnd is called at end position', () => {
+        const input = new TextInput();
+        input.value = 'abc';
+        input.moveCursorEnd();
+
+        input.clearDirty();
+
+        input.moveCursorEnd();
+
+        expect(input.isDirty).toBe(false);
     });
 });
