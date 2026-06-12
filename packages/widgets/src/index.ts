@@ -155,6 +155,8 @@ export type { BulletChartOptions, BulletRange } from './data/BulletChart.js';
 // ── New Display Widgets ───────────────────────────────
 export { Breadcrumbs } from './display/Breadcrumbs.js';
 export type { BreadcrumbsOptions } from './display/Breadcrumbs.js';
+export { Avatar } from './display/Avatar.js';
+export type { AvatarOptions } from './display/Avatar.js';
 
 export { BigText } from './display/BigText.js';
 export type { BigTextOptions } from './display/BigText.js';
