@@ -77,12 +77,13 @@ export class ThemeEngine {
 
     /** Load multiple .tss sources (merged) */
     loadAll(sources: string[]): void {
-        const merged: TSSStylesheet = { themes: [], rules: [], mixins: new Map() };
+        const merged: TSSStylesheet = { themes: [], rules: [], mixins: new Map(), keyframes: [] };
         for (const src of sources) {
             const tokens = tokenize(src);
             const ast = parse(tokens);
             merged.themes.push(...ast.themes);
             merged.rules.push(...ast.rules);
+            merged.keyframes.push(...ast.keyframes);
             for (const [name, props] of ast.mixins) {
                 merged.mixins.set(name, props);
             }

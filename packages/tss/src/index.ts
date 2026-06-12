@@ -49,3 +49,7 @@ export type { AutoThemeProviderProps } from './AutoThemeProvider.js';
 export * from './media.js';
 export * from './importer.js';
 export { lighten, darken, alpha, evalColorFunction } from './color-functions.js';
+
+// @keyframes support
+export { extractKeyframes } from './animations.js';
+export type { KeyframesDeclaration } from './animations.js';
