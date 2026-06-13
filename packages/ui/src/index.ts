@@ -104,6 +104,9 @@ export type { PasswordInputOptions } from './PasswordInput.js';
 export { NumberInput } from './NumberInput.js';
 export type { NumberInputOptions } from './NumberInput.js';
 
+export { TagInput } from './TagInput.js';
+export type { TagInputOptions } from './TagInput.js';
+
 export { MaskedInput } from './MaskedInput.js';
 export type { MaskedInputOptions } from './MaskedInput.js';
 
