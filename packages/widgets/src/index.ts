@@ -29,6 +29,8 @@ export type { ToolCallOptions, ToolApprovalOptions, ToolCallStatus } from './dis
 export { Canvas } from './display/Canvas.js';
 export { Rating } from './display/Rating.js';
 export type { RatingOptions } from './display/Rating.js';
+export { Pty } from './display/Pty.js';
+export type { PtyOptions } from './display/Pty.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
