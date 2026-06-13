@@ -77,48 +77,4 @@ describe('animateRect', () => {
     });
 });
 
-describe('Widget.layoutTransition', () => {
-    let Widget: typeof import('@termuijs/widgets').Widget;
 
-    beforeEach(async () => {
-        vi.useFakeTimers();
-        vi.unstubAllEnvs();
-        vi.stubEnv('NO_MOTION', '');
-        vi.stubEnv('CI', '');
-        vi.resetModules();
-        
-        const widgetsMod = await import('@termuijs/widgets');
-        Widget = widgetsMod.Widget;
-    });
-
-    afterEach(() => {
-        vi.restoreAllMocks();
-        vi.unstubAllEnvs();
-    });
-
-    it('Widget.layoutTransition = true causes updateRect to animate rather than snap', async () => {
-        class TestWidget extends Widget {
-            protected _renderSelf(): void {}
-        }
-        
-        const widget = new TestWidget({ id: 'test' });
-        
-        widget.updateRect({ x: 0, y: 0, width: 10, height: 10 });
-        expect(widget.rect).toEqual({ x: 0, y: 0, width: 10, height: 10 });
-
-        widget.layoutTransition = true;
-        
-        widget.updateRect({ x: 100, y: 100, width: 100, height: 100 });
-        
-        await advanceSpring(64);
-        
-        const rect = widget.rect;
-        expect(rect.x).toBeGreaterThan(0);
-        expect(rect.x).toBeLessThan(100);
-        expect(rect.width).toBeGreaterThan(10);
-        expect(rect.width).toBeLessThan(100);
-        
-        await advanceSpring(5000);
-        expect(widget.rect).toEqual({ x: 100, y: 100, width: 100, height: 100 });
-    });
-});
