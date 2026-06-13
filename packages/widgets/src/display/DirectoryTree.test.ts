@@ -97,4 +97,27 @@ describe('DirectoryTree', () => {
 
         expect(hasASCIIFile || hasASCIIDir).toBe(true);
     });
+
+    it('does not mark dirty when pressing up on the first item', () => {
+        const tree = new DirectoryTree({ tree: sampleTree });
+    
+        tree.clearDirty();
+    
+        tree.handleKey('up');
+    
+        expect(tree.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when pressing down on the last item', () => {
+        const tree = new DirectoryTree({ tree: sampleTree });
+    
+        tree.handleKey('down'); // move to last item
+    
+        tree.clearDirty();
+    
+        tree.handleKey('down'); // already at last item
+    
+        expect(tree.isDirty).toBe(false);
+    });
+
 });
