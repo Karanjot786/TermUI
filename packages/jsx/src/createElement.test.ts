@@ -71,7 +71,7 @@ describe('createElement', () => {
     });
 
     it('supports functional components', () => {
-        const MyComponent = (props: any) => createElement('Box', props);
+        const MyComponent = (props: { label: string }) => createElement('Box', props);
         const node = createElement(MyComponent, { label: 'test' }, 'child');
         expect(node).toEqual({
             type: MyComponent,
