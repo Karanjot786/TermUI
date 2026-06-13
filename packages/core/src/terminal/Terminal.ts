@@ -188,6 +188,11 @@ export class Terminal {
     hideCursor(): void { this.write(ansi.hideCursor); }
     showCursor(): void { this.write(ansi.showCursor); }
 
+    /** Set the cursor shape via DECSCUSR. Default blink = true. */
+    setCursorShape(shape: ansi.CursorShape, blink?: boolean): void {
+        this.write(ansi.cursorShape(shape, blink));
+    }
+
     /** Ring the terminal bell (BEL). */
     bell(): void { this.write(ansi.bell); }
 
