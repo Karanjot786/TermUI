@@ -132,3 +132,6 @@ export type { MultilineTextInputOptions } from './MultilineTextInput.js';
 
 export { Stepper } from './Stepper.js';
 export type { StepperOptions } from './Stepper.js';
+
+export { Announcer, announcer } from './Announcer.js';
+export type { AnnouncerOptions, Politeness } from './Announcer.js';
