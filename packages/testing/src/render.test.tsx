@@ -137,6 +137,34 @@ describe("render harness", () => {
     });
 
     describe("fireKey", () => {
+        describe("pressKey", () => {
+            it("aliases fireKey", () => {
+                const screen = render(<Counter />);
+
+                screen.pressKey("+");
+
+                expect(screen.renderToString()).toContain("Count: 1");
+            });
+        });
+
+        describe("pressKeys", () => {
+            it("fires multiple keys", () => {
+                const screen = render(<Counter />);
+
+                screen.pressKeys(["+", "+", "+"]);
+
+                expect(screen.renderToString()).toContain("Count: 3");
+            });
+        });
+
+        describe("getOutput", () => {
+            it("returns rendered output", () => {
+                const screen = render(<Hello />);
+
+                expect(screen.getOutput()).toContain("Hello World");
+            });
+        });
+        
         it("delivers key events to rendered components", () => {
             const screen = render(<Counter />);
 
