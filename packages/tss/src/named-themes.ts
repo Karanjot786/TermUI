@@ -1,5 +1,4 @@
-// ─────────────────────────────────────────────────────
-// Named ThemeTokens — 9 curated color schemes
+// Named ThemeTokens — 11 curated color schemes
 // ─────────────────────────────────────────────────────
 
 import type { ThemeTokens } from './tokens.js';
@@ -70,6 +69,19 @@ export const solarizedTheme: ThemeTokens = {
   highlight: '#073642',
 };
 
+export const solarizedLightTheme: ThemeTokens = {
+  bg: '#fdf6e3',
+  fg: '#657b83',
+  primary: '#268bd2',
+  secondary: '#2aa198',
+  success: '#859900',
+  warning: '#b58900',
+  error: '#dc322f',
+  muted: '#93a1a1',
+  border: '#93a1a1',
+  highlight: '#eee8d5',
+};
+
 export const tokyoNightTheme: ThemeTokens = {
   bg: '#1a1b26',
   fg: '#a9b1d6',
@@ -109,6 +121,19 @@ export const gruvboxTheme: ThemeTokens = {
   highlight: '#3c3836',
 };
 
+export const rosePineTheme: ThemeTokens = {
+  bg: '#191724',
+  fg: '#e0def4',
+  primary: '#c4a7e7',
+  secondary: '#ebbcba',
+  success: '#9ccfd8',
+  warning: '#f6c177',
+  error: '#eb6f92',
+  muted: '#6e6a86',
+  border: '#6e6a86',
+  highlight: '#26233a',
+};
+
 export const highContrastTheme: ThemeTokens = {
   bg: '#000000',
   fg: '#ffffff',
@@ -122,16 +147,33 @@ export const highContrastTheme: ThemeTokens = {
   highlight: '#1a1a1a',
 };
 
+export const everforestTheme: ThemeTokens = {
+  bg: '#2d353b',
+  fg: '#d3c6aa',
+  primary: '#a7c080',   // green
+  secondary: '#7fbbb3', // aqua
+  success: '#a7c080',   // green
+  warning: '#dbbc7f',   // yellow
+  error: '#e67e80',     // red
+  muted: '#859289',
+  border: '#859289',
+  highlight: '#343f44',
+};
+
 export const NAMED_THEMES: Record<string, ThemeTokens> = {
   dracula: draculaTheme,
   nord: nordTheme,
   catppuccin: catppuccinTheme,
   monokai: monokaiTheme,
   solarized: solarizedTheme,
+  solarizedLight: solarizedLightTheme,
   "tokyo-night": tokyoNightTheme,
+  tokyoNight: tokyoNightTheme,
   oneDark: oneDarkTheme,
   gruvbox: gruvboxTheme,
   highContrast: highContrastTheme,
+  everforest: everforestTheme,
+  "rose-pine": rosePineTheme,
 };
 
 /** Get a named theme by string key, falling back to defaultDark if not found. */

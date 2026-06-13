@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// Built-in Themes — 8 curated terminal color palettes
+// Built-in Themes — 12 curated terminal color palettes
 // ─────────────────────────────────────────────────────
 
 export const BUILTIN_THEMES: Record<string, string> = {
@@ -217,6 +217,33 @@ Table {
 }
 `,
 
+    solarizedLight: `
+@theme solarizedLight {
+    --primary: #268bd2;
+    --secondary: #2aa198;
+    --bg: #fdf6e3;
+    --surface: #eee8d5;
+    --text: #657b83;
+    --text-muted: #93a1a1;
+    --accent: #859900;
+    --error: #dc322f;
+    --warning: #b58900;
+    --success: #859900;
+    --border: single;
+    --border-color: #93a1a1;
+    --border-focus: #268bd2;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
+}
+`,
+
     highContrast: `
 @theme highContrast {
     --primary: #00ffff;
@@ -246,6 +273,60 @@ Table {
 
 Box:focused {
     border-color: var(--border-focus);
+}
+`,
+
+    everforest: `
+@theme everforest {
+    --primary: #a7c080;
+    --secondary: #7fbbb3;
+    --bg: #2d353b;
+    --surface: #343f44;
+    --text: #d3c6aa;
+    --text-muted: #859289;
+    --accent: #7fbbb3;
+    --error: #e67e80;
+    --warning: #dbbc7f;
+    --success: #a7c080;
+    --border: round;
+    --border-color: #859289;
+    --border-focus: #a7c080;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--primary);
+}
+`,
+
+    "rose-pine": `
+@theme rose-pine {
+    --primary: #c4a7e7;
+    --secondary: #ebbcba;
+    --bg: #191724;
+    --surface: #26233a;
+    --text: #e0def4;
+    --text-muted: #6e6a86;
+    --accent: #9ccfd8;
+    --error: #eb6f92;
+    --warning: #f6c177;
+    --success: #9ccfd8;
+    --border: #6e6a86;
+    --border-color: #6e6a86;
+    --border-focus: #c4a7e7;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
 }
 `,
 };

@@ -14,13 +14,16 @@ describe('Built-in Themes', () => {
         expect(names).toContain('dracula');
         expect(names).toContain('catppuccin');
         expect(names).toContain('solarized');
+        expect(names).toContain('solarizedLight');
         expect(names).toContain('highContrast');
         expect(names).toContain('gruvbox');
         expect(names).toContain('tokyo-night');
-        expect(names).toHaveLength(9);
+        expect(names).toContain('everforest');
+        expect(names).toContain('rose-pine');
+        expect(names).toHaveLength(12);
     });
 
-     it('tokyo-night theme contains expected palette values', () => {
+    it('tokyo-night theme contains expected palette values', () => {
         const src = getBuiltinTheme('tokyo-night');
 
         expect(src).toContain('--primary: #7aa2f7');
@@ -71,5 +74,43 @@ describe('Built-in Themes', () => {
         expect(src).toContain('--bg: #282828');
         expect(src).toContain('--text: #ebdbb2');
         expect(src).toContain('--primary: #458588');
+    });
+
+    it('solarized dark theme exposes correct Solarized base hex colors', () => {
+        const src = getBuiltinTheme('solarized');
+        expect(src).toContain('--bg: #002b36');
+        expect(src).toContain('--surface: #073642');
+        expect(src).toContain('--primary: #268bd2');
+        expect(src).toContain('--error: #dc322f');
+        expect(src).toContain('--warning: #b58900');
+    });
+
+    it('solarizedLight theme exposes correct Solarized light base hex colors', () => {
+        const src = getBuiltinTheme('solarizedLight');
+        expect(src).toBeDefined();
+        expect(src).toContain('@theme solarizedLight');
+        expect(src).toContain('--bg: #fdf6e3');
+        expect(src).toContain('--surface: #eee8d5');
+        expect(src).toContain('--text: #657b83');
+        expect(src).toContain('--primary: #268bd2');
+        expect(src).toContain('--border-focus: #268bd2');
+    });
+
+    it('everforest theme exposes correct Everforest base hex colors', () => {
+        const src = getBuiltinTheme('everforest');
+        expect(src).toBeDefined();
+        expect(src).toContain('@theme everforest');
+        expect(src).toContain('#a7c080');
+        expect(src).toContain('#2d353b');
+        expect(src).toContain('#e67e80');
+    });
+
+    it('rose-pine theme exposes correct Rosé Pine base hex colors', () => {
+        const src = getBuiltinTheme('rose-pine');
+        expect(src).toBeDefined();
+        expect(src).toContain('@theme rose-pine');
+        expect(src).toContain('#c4a7e7');
+        expect(src).toContain('#191724');
+        expect(src).toContain('#eb6f92');
     });
 });

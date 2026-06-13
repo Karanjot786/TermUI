@@ -4,6 +4,7 @@
 
 import type { Color } from '../style/Color.js';
 import { stringWidth } from '../utils/unicode.js';
+import { stripAnsiControl } from '../utils/ansi.js';
 import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
@@ -37,6 +38,8 @@ export interface Cell {
      * - 0 for continuation cells (second half of a wide char)
      */
     width: number;
+    /** Optional OSC 8 hyperlink target for this cell. */
+    link?: string;
 }
 
 /** Create a blank cell with default attributes */
@@ -52,6 +55,7 @@ export function emptyCell(): Cell {
         strikethrough: false,
         inverse: false,
         width: 1,
+        link: undefined,
     };
 }
 
@@ -67,6 +71,7 @@ export function resetCell(cell: Cell): void {
     cell.strikethrough = false;
     cell.inverse = false;
     cell.width = 1;
+    cell.link = undefined;
 }
 
 /** Check if two cells are visually identical */
@@ -80,6 +85,7 @@ export function cellsEqual(a: Cell, b: Cell): boolean {
         a.strikethrough === b.strikethrough &&
         a.inverse === b.inverse &&
         a.width === b.width &&
+        a.link === b.link &&
         colorsEqual(a.fg, b.fg) &&
         colorsEqual(a.bg, b.bg)
     );
@@ -92,7 +98,7 @@ function colorsEqual(a: Color, b: Color): boolean {
         case 'named': return a.name === (b as typeof a).name;
         case 'ansi256': return a.code === (b as typeof a).code;
         case 'rgb': return a.r === (b as typeof a).r && a.g === (b as typeof a).g && a.b === (b as typeof a).b;
-        case 'hex': return a.hex === (b as typeof a).hex;
+        case 'hex': return a.hex.toLowerCase() === (b as typeof a).hex.toLowerCase();
     }
 }
 
@@ -109,6 +115,15 @@ export class Screen {
     private _cols: number;
     private _rows: number;
     private _previousLines: string[] = [];
+    private _lastRenderedHeight = 0;
+
+     get lastRenderedHeight(): number {
+     return this._lastRenderedHeight;
+     }
+     set lastRenderedHeight(value: number) {
+     this._lastRenderedHeight = value;
+     }
+    private _previousStyleLines: string[] = [];
     front: Cell[][];
     back: Cell[][];
 
@@ -125,6 +140,14 @@ export class Screen {
         this.back = this._createGrid(cols, rows);
     }
 
+    /** Retrieve a read-only copy of the cell at (x, y) from the back buffer. */
+    getCell(x: number, y: number): Readonly<Cell> | undefined {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        if (!(x >= 0 && x < this._cols && y >= 0 && y < this._rows)) return undefined;
+        return this.back[y][x];
+    }
+
     /** Serialize a back-buffer row to a plain string (skips continuation cells). */
     getLine(row: number): string {
         if (row < 0 || row >= this._rows) return '';
@@ -134,16 +157,53 @@ export class Screen {
             .join('');
     }
 
+    /**
+     * Serialize the style attributes of a back-buffer row into a
+     * fingerprint string. When the characters are identical but the
+     * styles differ (color, bold, italic, etc.), this fingerprint
+     * changes, allowing the diff renderer to detect style-only updates.
+     */
+    getStyleLine(row: number): string {
+        if (row < 0 || row >= this._rows) return '';
+        let hash = 0;
+        for (const cell of this.back[row]) {
+            if (cell.width === 0) continue;
+            const fg = cell.fg.type;
+            const bg = cell.bg.type;
+            const bits =
+                (cell.bold ? 1 : 0) |
+                (cell.italic ? 2 : 0) |
+                (cell.underline ? 4 : 0) |
+                (cell.dim ? 8 : 0) |
+                (cell.strikethrough ? 16 : 0) |
+                (cell.inverse ? 32 : 0);
+            const seed = fg.charCodeAt(0) * 65536 + bg.charCodeAt(0) * 4096 + bits;
+            hash = ((hash << 7) - hash + seed) | 0;
+            if (cell.link) {
+                for (let i = 0; i < cell.link.length; i++)
+                    hash = ((hash << 5) - hash + cell.link.charCodeAt(i)) | 0;
+            }
+        }
+        return String(hash);
+    }
+
     /** Return the saved line string for the given row (empty before first saveLines call). */
     getPreviousLine(row: number): string {
         return this._previousLines[row] ?? '';
     }
 
+    /** Return the saved style fingerprint for the given row. */
+    getPreviousStyleLine(row: number): string {
+        return this._previousStyleLines[row] ?? '';
+    }
+
     /** Snapshot the current back-buffer line strings for use by diffRenderer. */
     saveLines(): void {
         this._previousLines = [];
+        this._previousStyleLines = [];
         for (let r = 0; r < this._rows; r++) {
             this._previousLines.push(this.getLine(r));
+            this._previousStyleLines.push(this.getStyleLine(r));
         }
     }
 
@@ -211,6 +271,9 @@ export class Screen {
         }
 
         const existing = this.back[row][col];
+        if (cell.char !== undefined) {
+            cell = { ...cell, char: stripAnsiControl(cell.char) };
+        }
         Object.assign(existing, cell);
     }
 
@@ -228,8 +291,10 @@ export class Screen {
         col = Math.floor(col);
         if (!(row >= 0 && row < this._rows)) return;
 
+        // Strip ANSI control sequences from user-supplied content to prevent escape injection
+        const safeStr = stripAnsiControl(str);
         let x = col;
-        for (const char of str) {
+        for (const char of safeStr) {
             if (x >= this._cols) break;
 
             let finalChar = char;
@@ -298,15 +363,18 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+        this._previousLines = [];
     }
 
     /**
      * Clear the front buffer (marks everything as "needs redraw").
+     * Mutates cells in-place to avoid GC pressure from object allocation.
      */
     invalidate(): void {
         for (let r = 0; r < this._rows; r++) {
             for (let c = 0; c < this._cols; c++) {
-                this.front[r][c] = { ...emptyCell(), char: '\0' }; // force diff
+                resetCell(this.front[r][c]);
+                this.front[r][c].char = '\0'; // force diff
             }
         }
     }

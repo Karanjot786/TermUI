@@ -1,0 +1,14 @@
+{
+  "name": "chat-thread",
+  "category": "data",
+  "description": "Displays chat messages with role badges and word-wrapped content.",
+  "files": [
+    "registry/components/chat-thread/index.ts"
+  ],
+  "deps": [
+    "@termuijs/core",
+    "@termuijs/widgets"
+  ],
+  "peerDeps": [],
+  "version": "0.1.0"
+}

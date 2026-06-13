@@ -35,6 +35,7 @@ export class StatusIndicator extends Widget {
 
     setStatus(isUp: boolean): void {
         this._isUp = isUp;
+        this.markDirty();
     }
 
     getStatus(): boolean {
@@ -43,6 +44,7 @@ export class StatusIndicator extends Widget {
 
     setLabel(label: string): void {
         this._label = label;
+        this.markDirty();
     }
 
     protected _renderSelf(screen: Screen): void {

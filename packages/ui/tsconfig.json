@@ -3,6 +3,8 @@
         "target": "ES2022",
         "module": "ESNext",
         "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "jsxImportSource": "@termuijs/jsx",
         "declaration": true,
         "outDir": "dist",
         "rootDir": "src",
