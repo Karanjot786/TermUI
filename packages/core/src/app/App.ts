@@ -138,6 +138,9 @@ export class App {
         // without unmount(), so constructor subscriptions would leak there.
         this._subscribeFocusEvents();
 
+        // Enable focus event emission and replay any queued auto-focus events
+        this.focus.start();
+
         const focusedId = this.focus.currentId;
         if (focusedId) {
             // Focusables may register before mount and auto-focus before the

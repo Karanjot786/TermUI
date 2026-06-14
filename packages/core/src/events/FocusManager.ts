@@ -50,6 +50,15 @@ export class FocusManager {
      */
     private _rects: Map<string, Rect> = new Map();
 
+    /** Monotonically increasing epoch for ordered event sequencing */
+    private _epoch = 0;
+
+    /** Queue of focus state changes accumulated before start() is called */
+    private _pendingQueue: Array<FocusEvent> = [];
+
+    /** True once start() has been called — enables event emission */
+    private _started = false;
+
     /** Currently focused widget ID, or null if none */
     get currentId(): string | null {
         if (this._currentIndex < 0 || this._currentIndex >= this._focusables.length) {
@@ -64,8 +73,24 @@ export class FocusManager {
     }
 
     /**
+     * Enable event emission and replay any queued focus events.
+     * Call this from App.mount() after _subscribeFocusEvents().
+     */
+    start(): void {
+        if (this._started) return;
+        this._started = true;
+        // Replay queued focus events
+        for (const evt of this._pendingQueue) {
+            this._events.emit(evt.type, evt);
+        }
+        this._pendingQueue = [];
+    }
+
+    /**
      * Register a focusable widget.
      * Widgets are ordered by tabIndex (ascending), then insertion order.
+     * Before start() is called, events are queued rather than emitted so
+     * they are not lost when App has not yet subscribed to them.
      */
     register(focusable: Focusable): void {
         this._focusables.push(focusable);
@@ -74,7 +99,12 @@ export class FocusManager {
         // Auto-focus the first widget if nothing is focused
         if (this._currentIndex < 0 && focusable.focusable) {
             this._currentIndex = this._focusables.indexOf(focusable);
-            this._events.emit('focus', { targetId: focusable.id, type: 'focus' });
+            const event: FocusEvent = { targetId: focusable.id, type: 'focus', epoch: this._epoch++ };
+            if (this._started) {
+                this._events.emit('focus', event);
+            } else {
+                this._pendingQueue.push(event);
+            }
         }
     }
 
@@ -92,19 +122,31 @@ export class FocusManager {
         this._focusables.splice(idx, 1);
 
         if (wasFocused) {
-            this._events.emit('blur', { targetId: id, type: 'blur' });
+            this._events.emit('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
             // Try to focus the next widget
             if (this._focusables.length > 0) {
                 this._currentIndex = Math.min(this._currentIndex, this._focusables.length - 1);
                 this._events.emit('focus', {
                     targetId: this._focusables[this._currentIndex].id,
                     type: 'focus',
+                    epoch: this._epoch++,
                 });
             } else {
                 this._currentIndex = -1;
             }
         } else if (idx < this._currentIndex) {
+            // Silent focus shift: the widget that preceded the removed item
+            // now occupies the focused position. Emit blur + focus to notify
+            // downstream so the visual focus state stays in sync.
             this._currentIndex--;
+            this._events.emit('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
+            if (this._currentIndex >= 0 && this._currentIndex < this._focusables.length) {
+                this._events.emit('focus', {
+                    targetId: this._focusables[this._currentIndex].id,
+                    type: 'focus',
+                    epoch: this._epoch++,
+                });
+            }
         }
     }
 
