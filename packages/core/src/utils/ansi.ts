@@ -21,6 +21,19 @@ export const showCursor = `${CSI}?25h`;
 export const saveCursorPosition = `${CSI}s`;
 export const restoreCursorPosition = `${CSI}u`;
 
+export type CursorShape = 'block' | 'bar' | 'underline';
+
+/** DECSCUSR: CSI Ps SP q. blink toggles steady vs blinking. */
+export function cursorShape(shape: CursorShape, blink = true): string {
+    const codes: Record<CursorShape, number> = {
+        block: 1,
+        underline: 3,
+        bar: 5,
+    };
+    const code = codes[shape] + (blink ? 0 : 1);
+    return `${CSI}${code} q`;
+}
+
 export function moveTo(col: number, row: number): string {
     return `${CSI}${row + 1};${col + 1}H`;
 }

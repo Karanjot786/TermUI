@@ -46,7 +46,7 @@ describe('DirectoryTree', () => {
     it('expands directory and renders children', () => {
         const tree = new DirectoryTree({ tree: sampleTree });
 
-        tree.handleKey('enter');
+        tree.handleKey({ key: 'enter', ctrl: false, alt: false, shift: false });
 
         const output = render(tree);
 
@@ -57,8 +57,8 @@ describe('DirectoryTree', () => {
     it('collapsing directory hides children', () => {
         const tree = new DirectoryTree({ tree: sampleTree });
 
-        tree.handleKey('enter'); // expand
-        tree.handleKey('enter'); // collapse
+        tree.handleKey({ key: 'enter', ctrl: false, alt: false, shift: false }); // expand
+        tree.handleKey({ key: 'enter', ctrl: false, alt: false, shift: false }); // collapse
 
         const output = render(tree);
 
@@ -78,8 +78,8 @@ describe('DirectoryTree', () => {
             },
         });
 
-        tree.handleKey('down');
-        tree.handleKey('space');
+        tree.handleKey({ key: 'down', ctrl: false, alt: false, shift: false });
+        tree.handleKey({ key: 'space', ctrl: false, alt: false, shift: false });
 
         expect(selectedNode).toBe('readme.md');
         expect(selectedPath).toBe('readme.md');
@@ -97,4 +97,27 @@ describe('DirectoryTree', () => {
 
         expect(hasASCIIFile || hasASCIIDir).toBe(true);
     });
+
+    it('does not mark dirty when pressing up on the first item', () => {
+        const tree = new DirectoryTree({ tree: sampleTree });
+    
+        tree.clearDirty();
+    
+        tree.handleKey('up');
+    
+        expect(tree.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when pressing down on the last item', () => {
+        const tree = new DirectoryTree({ tree: sampleTree });
+    
+        tree.handleKey('down'); // move to last item
+    
+        tree.clearDirty();
+    
+        tree.handleKey('down'); // already at last item
+    
+        expect(tree.isDirty).toBe(false);
+    });
+
 });

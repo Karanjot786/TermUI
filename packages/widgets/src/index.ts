@@ -29,6 +29,8 @@ export type { ToolCallOptions, ToolApprovalOptions, ToolCallStatus } from './dis
 export { Canvas } from './display/Canvas.js';
 export { Rating } from './display/Rating.js';
 export type { RatingOptions } from './display/Rating.js';
+export { Pty } from './display/Pty.js';
+export type { PtyOptions } from './display/Pty.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
@@ -39,7 +41,6 @@ export { List } from './input/List.js';
 export type { ListItem, ListProps } from './input/List.js';
 export { useListState } from './data/ListState.js';
 export type { ListState } from './data/ListState.js';
-export { TextInput } from './input/TextInput.js';
 export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
 export { CommandPalette } from './input/CommandPalette.js';
@@ -51,10 +52,11 @@ export { Slider } from "./input/Slider.js";
 export type { SliderOptions } from "./input/Slider.js";
 export { RangeInput } from "./input/RangeInput.js";
 export type { RangeInputOptions } from "./input/RangeInput.js";
-export { PinInput } from "./input/PinInput.js";
-export type { PinInputOptions } from "./input/PinInput.js";
+export { TextInput } from './input/TextInput.js';
 export { Knob } from "./input/Knob.js";
 export type { KnobOptions } from "./input/Knob.js";
+export { PinInput } from "./input/PinInput.js";
+export type { PinInputOptions } from "./input/PinInput.js";
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
@@ -155,6 +157,8 @@ export type { BulletChartOptions, BulletRange } from './data/BulletChart.js';
 // ── New Display Widgets ───────────────────────────────
 export { Breadcrumbs } from './display/Breadcrumbs.js';
 export type { BreadcrumbsOptions } from './display/Breadcrumbs.js';
+export { Avatar } from './display/Avatar.js';
+export type { AvatarOptions } from './display/Avatar.js';
 
 export { BigText } from './display/BigText.js';
 export type { BigTextOptions } from './display/BigText.js';
@@ -193,6 +197,12 @@ export type { LinkOptions } from './display/Link.js';
 
 export { ShortcutBar } from './display/ShortcutBar.js';
 export type { ShortcutItem, ShortcutBarOptions } from './display/ShortcutBar.js';
+
+export { Accordion } from './display/Accordion.js';
+export type { AccordionSection, AccordionOptions } from './display/Accordion.js';
+
+export { Stepper } from './display/Stepper.js';
+export type { StepperStep, StepperOptions, StepStatus, StepperOrientation } from './display/Stepper.js';
 
 
 // ── Missing layout elements restored ──

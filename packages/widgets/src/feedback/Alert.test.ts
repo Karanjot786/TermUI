@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// @termuijs/widgets — Tests for Alert widget
+// @termuijs/widgets — Tests for Alert widge
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -122,4 +122,51 @@ describe('Alert — Setters and Getters', () => {
         expect(alert.getVariant()).toBe('success');
         expect(alert.isDirty).toBe(true);
     });
+
+    it('does not mark dirty when setMessage receives the same value', () => {
+        const alert = new Alert({ message: 'Build complete' });
+
+        alert.clearDirty();
+
+        alert.setMessage('Build complete');
+
+        expect(alert.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setMessage receives a different value', () => {
+        const alert = new Alert({ message: 'Build complete' });
+
+        alert.clearDirty();
+
+        alert.setMessage('Build failed');
+
+        expect(alert.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when setVariant receives the same value', () => {
+        const alert = new Alert({
+            message: 'Test',
+            variant: 'success',
+        });
+
+        alert.clearDirty();
+
+        alert.setVariant('success');
+
+        expect(alert.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setVariant receives a different value', () => {
+        const alert = new Alert({
+            message: 'Test',
+            variant: 'info',
+        });
+
+        alert.clearDirty();
+
+        alert.setVariant('error');
+
+        expect(alert.isDirty).toBe(true);
+    });
+
 });

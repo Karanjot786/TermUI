@@ -31,6 +31,7 @@ export {
     useReducer,
 } from './hooks.js';
 export { useMediaQuery } from './hooks/useMediaQuery.js';
+export * from './hooks/useShortcuts.js';
 export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 export { useCounter } from './hooks/useCounter.js';
@@ -96,13 +97,16 @@ export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandle
 /** h() — shorthand for createElement */
 export { createElement as h } from './createElement.js';
 export { useMount } from './hooks/useMount.js';
-export { usePrevious } from './hooks/usePrevious.js';
-export { useLatest } from './hooks/useLatest.js';
+export { useTimeout } from './hooks/useTimeout.js';
+export { I18nContext, I18nProvider, useI18n } from './i18n.js';
+export type { I18nContextValue, I18nProviderProps } from './i18n.js';
 export { useFirstRender } from './hooks/useFirstRender.js';
 export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
 export { useHover } from './hooks/useHover.js';
 export { useElementSize } from './hooks/useElementSize.js';
 export type { ElementSize } from './hooks/useElementSize.js';
+export { usePrevious } from './hooks/usePrevious.js';
+export { useLatest } from './hooks/useLatest.js';
 export { useDebounce } from './hooks/useDebounce.js';
 export { useTerminalSize } from './hooks/useTerminalSize.js';
 export type { TerminalSize } from './hooks/useTerminalSize.js';
@@ -111,5 +115,13 @@ export { useUnmount } from './hooks/useUnmount.js';
 export { useTransition } from './hooks/useTransition.js';
 export { useStopwatch } from './hooks/useStopwatch.js';
 export type { UseStopwatchOptions, UseStopwatchControls } from './hooks/useStopwatch.js';
-export { useTimeout } from './hooks/useTimeout.js';
 export { useBell } from './hooks/useBell.js';
+export { useCountdown } from './hooks/useCountdown.js';
+export type { UseCountdownOptions, UseCountdownControls } from './hooks/useCountdown.js';
+export { useDeferredValue } from './hooks/useDeferredValue.js';
+export { useEventCallback } from './hooks/useEventCallback.js';
+export { useForceUpdate } from './hooks/useForceUpdate.js';
+export { useSet } from './hooks/useSet.js';
+export type { UseSetActions } from './hooks/useSet.js';
+export { useThrottle } from './hooks/useThrottle.js';
+export { useEventListener } from './hooks/useEventListener.js';

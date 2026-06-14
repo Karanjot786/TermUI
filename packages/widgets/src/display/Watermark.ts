@@ -12,6 +12,8 @@ export interface WatermarkOptions {
     angle?: 0 | 45;
 }
 
+const segmenter = new Intl.Segmenter();
+
 /**
  * Watermark - fills its area with faint repeating text.
  */
@@ -39,14 +41,26 @@ export class Watermark extends Widget {
 
         const attrs = { ...styleToCellAttrs(this._style), fg: this._color };
         const rowOffsetStep = this._angle === 45 ? 1 : 0;
+        
+        const segments = Array.from(segmenter.segment(this._text)).map(s => s.segment);
+        if (segments.length === 0) return;
 
         for (let row = 0; row < height; row++) {
-            for (let col = 0; col < width; col++) {
-                const index = (row * width + col + row * rowOffsetStep) % this._text.length;
+            let col = 0;
+            // row * rowOffsetStep produces the 45° horizontal offset per row
+            // row * width contributes to linearizing row/col into the segments index
+            let index = (row * width + row * rowOffsetStep) % segments.length;
+            
+            while (col < width) {
+                const char = segments[index];
                 screen.setCell(x + col, y + row, {
-                    char: this._text[index],
+                    char,
                     ...attrs,
                 });
+                // TODO: we should handle double-width characters by skipping the next column if width=2
+                // but since Watermark traditionally filled cell by cell, we just let it be.
+                col++;
+                index = (index + 1) % segments.length;
             }
         }
     }
