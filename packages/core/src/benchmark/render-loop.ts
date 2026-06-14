@@ -85,7 +85,6 @@ function main(): void {
     }
 
     const payload = {
-        benchmark: 'render-loop.ts',
         version: 1,
         benchmark: 'render-loop',
         runMs: RUN_MS,
