@@ -97,7 +97,10 @@ export function stringWidth(str: string): number {
     let width = 0;
     let inEscape = false;
 
-    for (const char of str) {
+    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+    const graphemes = Array.from(segmenter.segment(str), s => s.segment);
+
+    for (const char of graphemes) {
         const cp = char.codePointAt(0)!;
 
         // Skip ANSI escape sequences
@@ -153,7 +156,10 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
     let inEscape = false;
     let escapeBuffer = '';
 
-    for (const char of str) {
+    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+    const graphemes = Array.from(segmenter.segment(str), s => s.segment);
+
+    for (const char of graphemes) {
         const cp = char.codePointAt(0)!;
 
         if (cp === 0x1B) {
@@ -205,6 +211,7 @@ export function wordWrap(str: string, width: number): string {
 
     const lines = str.split('\n');
     const result: string[] = [];
+    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
 
     for (const line of lines) {
         if (stringWidth(line) <= width) {
@@ -229,7 +236,8 @@ export function wordWrap(str: string, width: number): string {
                     currentLine = '';
                     currentWidth = 0;
                 }
-                for (const char of word) {
+                const graphemes = Array.from(segmenter.segment(word), s => s.segment);
+                for (const char of graphemes) {
                     const cp = char.codePointAt(0)!;
                     const charW = (isWideChar(cp) || isEmoji(cp)) ? 2 : (isCombining(cp) ? 0 : 1);
                     if (currentWidth + charW > width) {
