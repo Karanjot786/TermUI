@@ -1,11 +1,11 @@
 // HMR cleanups
 export const cleanupActiveInstances = (instances: Array<{ unmount?: () => void }>) => {
-    instances.forEach((instance, index) => {
+    instances.forEach((instance) => {
         if (typeof instance.unmount === 'function') {
             try {
                 instance.unmount();
-            } catch (error) {
-                console.error(`Failed to unmount instance at index ${index}:`, error);
+            } catch {
+                // Safe cleanup without throwing/logging errors
             }
         }
     });

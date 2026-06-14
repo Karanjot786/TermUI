@@ -128,6 +128,34 @@ export async function render(
         }
     });
 
+    // Register the app instance globally for HMR cleanups
+    if (!(globalThis as any).__termuijs_apps) {
+        (globalThis as any).__termuijs_apps = [];
+    }
+    (globalThis as any).__termuijs_apps.push(appInstance);
+
+    if ((import.meta as any).hot) {
+        (import.meta as any).hot.accept();
+        (import.meta as any).hot.dispose(() => {
+            // Dynamically import dev-server to clean up apps, falling back to local inline cleanup if unavailable
+            const devServerPkg = '@termuijs/dev-server';
+            import(devServerPkg)
+                .then(({ cleanupActiveInstances }) => {
+                    cleanupActiveInstances((globalThis as any).__termuijs_apps || []);
+                    (globalThis as any).__termuijs_apps = [];
+                })
+                .catch(() => {
+                    const apps = (globalThis as any).__termuijs_apps;
+                    if (Array.isArray(apps)) {
+                        apps.forEach((app) => {
+                            try { app.unmount?.(); } catch {}
+                        });
+                        (globalThis as any).__termuijs_apps = [];
+                    }
+                });
+        });
+    }
+
     // Mount and run
     return appInstance.mount();
 }
