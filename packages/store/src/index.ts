@@ -30,3 +30,7 @@ export type { TemporalHistory, TemporalStoreActions } from './history.js'
 
 export { createLogger } from './logger.js';
 export type { LoggerOptions } from './logger.js';
+
+export { signal, mutate } from './mutate.js';
+export type { Signal } from './mutate.js';
+

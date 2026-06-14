@@ -84,6 +84,8 @@ export class App {
     private _unsubBlur: (() => void) | null = null;
     private _unsubSigInt: (() => void) | null = null;
     private _unsubSigTerm: (() => void) | null = null;
+    private _unsubUncaughtException: (() => void) | null = null;
+    private _unsubUnhandledRejection: (() => void) | null = null;
     private _widgetById = new Map<string, any>();
     private _pendingFocusState = new Map<string, boolean>();
 
@@ -227,6 +229,32 @@ export class App {
         this._unsubSigInt = () => process.off('SIGINT', onSigInt);
         this._unsubSigTerm = () => process.off('SIGTERM', onSigTerm);
 
+        // Register terminal cleanup to stop render hook on process exit
+        this.terminal.onCleanup(() => {
+            this.renderer.hook.stop();
+        });
+
+        // Handle uncaught exceptions — stop hook first so console works, then restore terminal
+        const onUncaughtException = (err: Error) => {
+            this.renderer.hook.stop();
+            this.renderer.hook.writeRaw(this.renderer.hook.flush());
+            this.renderer.hook.writeRaw(`Uncaught exception: ${err.message}\n${err.stack}\n`);
+            this.terminal.restore();
+            process.exit(1);
+        };
+        process.on('uncaughtException', onUncaughtException);
+        this._unsubUncaughtException = () => process.off('uncaughtException', onUncaughtException);
+
+        const onUnhandledRejection = (reason: any) => {
+            this.renderer.hook.stop();
+            this.renderer.hook.writeRaw(this.renderer.hook.flush());
+            this.renderer.hook.writeRaw(`Unhandled rejection: ${reason}\n`);
+            this.terminal.restore();
+            process.exit(1);
+        };
+        process.on('unhandledRejection', onUnhandledRejection);
+        this._unsubUnhandledRejection = () => process.off('unhandledRejection', onUnhandledRejection);
+
         // Start render loop — tick drives requestRender() so dirty widgets
         // (motion, timers) get redrawn without a separate setInterval.
         this.renderer.start(() => this.requestRender());
@@ -270,6 +298,10 @@ export class App {
         this._unsubBlur = null;
         this._unsubPaste?.();
         this._unsubPaste = null;
+        this._unsubUncaughtException?.();
+        this._unsubUncaughtException = null;
+        this._unsubUnhandledRejection?.();
+        this._unsubUnhandledRejection = null;
 
 
         // Stop the stdout interceptor to restore native console.log behavior

@@ -120,6 +120,9 @@ export class ContextMenu extends Widget {
      * Move the context menu to a new position
      */
     moveTo(x: number, y: number): void {
+        if (this._x === x && this._y === y) {
+            return;
+        }
         this._x = x;
         this._y = y;
         this._updateRect();

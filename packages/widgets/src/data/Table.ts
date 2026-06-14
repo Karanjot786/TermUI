@@ -2,7 +2,7 @@
 // @termuijs/widgets — Table widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
+import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type TableState } from './TableState.js';
 
@@ -131,20 +131,20 @@ export class Table extends Widget {
         }
     }
 
-    handleKey(key: string): void {
-    if (key === 'up') {
-        this._selectedRow = Math.max(0, this._selectedRow - 1);
-    }
+    handleKey(event: KeyEvent): void {
+        if (event.key === 'up') {
+            this._selectedRow = Math.max(0, this._selectedRow - 1);
+        }
 
-    if (key === 'down') {
-        this._selectedRow = Math.min(
-            this._rows.length - 1,
-            this._selectedRow + 1
-        );
-    }
+        if (event.key === 'down') {
+            this._selectedRow = Math.min(
+                this._rows.length - 1,
+                this._selectedRow + 1
+            );
+        }
 
-    this.markDirty();
-}
+        this.markDirty();
+    }
 
     // ── Rendering ─────────────────────────────────────
 
