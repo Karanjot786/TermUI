@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { validateThemeName } from '../../../scripts/install-theme.js';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 
 describe('scripts/install-theme validateThemeName (regression)', () => {
   it('allows supported themes', () => {
