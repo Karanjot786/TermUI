@@ -11,8 +11,8 @@ import { Badge } from './index';
 const badge = new Badge('online');
 
 // Create a badge with a specific variant
-const successBadge = new Badge('verified', { variant: 'success' });
-const errorBadge = new Badge('error', { variant: 'error' });
+const successBadge = new Badge('verified', {}, { variant: 'success' });
+const errorBadge = new Badge('error', {}, { variant: 'error' });
 
 // Available variants: 'info', 'success', 'warning', 'error', 'neutral'
 ```
@@ -29,7 +29,7 @@ const errorBadge = new Badge('error', { variant: 'error' });
 ### Constructor
 
 ```typescript
-constructor(text: string, opts?: BadgeOptions, style?: Partial<Style>)
+constructor(text: string, style?: Partial<Style>, opts?: BadgeOptions)
 ```
 
 ### Methods
@@ -43,6 +43,6 @@ constructor(text: string, opts?: BadgeOptions, style?: Partial<Style>)
 
 ```typescript
 const container = new Box({ height: 5, width: 40 });
-container.addChild(new Badge('online', { variant: 'success' }));
-container.addChild(new Badge('offline', { variant: 'error' }));
+container.addChild(new Badge('online', {}, { variant: 'success' }));
+container.addChild(new Badge('offline', {}, { variant: 'error' }));
 ```

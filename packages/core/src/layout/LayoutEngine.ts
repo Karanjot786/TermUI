@@ -32,6 +32,9 @@ export interface LayoutNode {
      *  so grandchildren are re-laid out when a parent recomputes this node's rect. */
     _lastComputedWidth: number;
     _lastComputedHeight: number;
+    /** Drag and drop support */
+    _draggable?: boolean;
+    _dragging?: boolean;
 }
 
 /**
@@ -48,6 +51,8 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
         _lastContainerHeight: 0,
         _lastComputedWidth: 0,
         _lastComputedHeight: 0,
+        _draggable: false,
+        _dragging: false,
     };
 }
 

@@ -215,37 +215,41 @@ describe('App', () => {
     });
 
     describe('constructor', () => {
-        it('registers uncaughtException and unhandledRejection handlers, cleans up on restore', () => {
+        it('does not register uncaughtException/unhandledRejection handlers before App.mount()', () => {
             const uncaughtBefore = process.listenerCount('uncaughtException');
             const rejectionBefore = process.listenerCount('unhandledRejection');
 
             const root = createMockRootWidget();
             const app = new App(root, { forceFallback: true });
 
-            // Terminal constructor now registers handlers for both events
-            expect(process.listenerCount('uncaughtException')).toBe(uncaughtBefore + 1);
-            expect(process.listenerCount('unhandledRejection')).toBe(rejectionBefore + 1);
-
-            // Clean up — explicitly restore to remove handlers
-            app.terminal.restore();
-
+            // Terminal no longer registers these handlers; App registers them in mount()
             expect(process.listenerCount('uncaughtException')).toBe(uncaughtBefore);
             expect(process.listenerCount('unhandledRejection')).toBe(rejectionBefore);
         });
 
-        it('registers and cleans up SIGINT/SIGTERM handlers on restore', () => {
+        it('removes SIGINT/SIGTERM handlers on restore when registered by App.mount()', () => {
             const sigintBefore = process.listenerCount('SIGINT');
             const sigtermBefore = process.listenerCount('SIGTERM');
 
             const root = createMockRootWidget();
-            const app = new App(root, { forceFallback: true });
+            const fakeStdout: any = { columns: 80, rows: 24, isTTY: true, write() { return true; }, on() {}, off() {}, once() {} };
+            const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
+            const app = new App(root, {
+                forceFallback: false,
+                skipFallback: true,
+                screenMode: 'main',
+                stdout: fakeStdout,
+                stdin: fakeStdin,
+            } as any);
 
-            // Handlers should be registered by Terminal constructor
+            const mountPromise = app.mount();
+            // App.mount() registers SIGINT/SIGTERM handlers
             expect(process.listenerCount('SIGINT')).toBeGreaterThan(sigintBefore);
             expect(process.listenerCount('SIGTERM')).toBeGreaterThan(sigtermBefore);
 
-            // Explicitly restore to remove handlers
-            app.terminal.restore();
+            // Unmount to remove handlers
+            app.exit(0);
+            mountPromise.catch(() => {});
             expect(process.listenerCount('SIGINT')).toBe(sigintBefore);
             expect(process.listenerCount('SIGTERM')).toBe(sigtermBefore);
         });

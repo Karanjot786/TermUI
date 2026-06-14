@@ -308,3 +308,59 @@ describe('Scrollbar Widget — Layout Operations', () => {
         expect(spy).toHaveBeenCalledTimes(3);
     });
 });
+
+describe('Scrollbar Widget — Performance optimizations', () => {
+    it('does not mark dirty when setPosition receives the same value', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+            position: 5,
+        });
+
+        bar.clearDirty();
+
+        bar.setPosition(5);
+
+        expect(bar.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setPosition receives a different value', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+            position: 5,
+        });
+
+        bar.clearDirty();
+
+        bar.setPosition(10);
+
+        expect(bar.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when setContentLength receives the same value', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+        });
+
+        bar.clearDirty();
+
+        bar.setContentLength(100);
+
+        expect(bar.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when setViewportLength receives the same value', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+        });
+
+        bar.clearDirty();
+
+        bar.setViewportLength(10);
+
+        expect(bar.isDirty).toBe(false);
+    });
+});

@@ -53,7 +53,13 @@ export class ProgressBar extends Widget {
 
     /** Set progress value (0–1) */
     setValue(value: number): void {
-        this._value = Math.max(0, Math.min(1, value));
+        const normalized = Math.max(0, Math.min(1, value));
+    
+        if (this._value === normalized) {
+            return;
+        }
+    
+        this._value = normalized;
         this.markDirty();
     }
 

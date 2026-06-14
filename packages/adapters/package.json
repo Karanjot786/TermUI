@@ -41,7 +41,8 @@
     "dotenv": "^16.0.0",
     "typescript": "^5.7.0",
     "tsup": "^8.3.0",
-    "zod": "^3.0.0"
+    "zod": "^3.0.0",
+    "execa": "^8.0.1"
   },
   "peerDependencies": {
     "@octokit/rest": "^21.0.0",
@@ -53,7 +54,8 @@
     "chalk": "^5.0.0",
     "dotenv": "^16.0.0",
     "simple-git": "^3.27.0",
-    "keytar": "^7.9.0"
+    "keytar": "^7.9.0",
+    "execa": "^8.0.0"
   },
   "peerDependenciesMeta": {
     "@octokit/rest": {
@@ -84,6 +86,9 @@
       "optional": true
     },
     "keytar": {
+      "optional": true
+    },
+    "execa": {
       "optional": true
     }
   },
