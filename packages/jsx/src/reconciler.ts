@@ -528,11 +528,22 @@ function renderComponent(
  */
 /** @internal exposed for testing */
 export function _pruneInstancesForWidget(widget: Widget): void {
-    const instance = _instanceMap.get(widget);
-    if (instance && _fiberToWidgetMap.get(instance.fiber) === widget) {
-        _fiberToWidgetMap.delete(instance.fiber);
+    const inst = _instanceMap.get(widget);
+    if (inst && _fiberToWidgetMap.get(inst.fiber) === widget) {
+        _fiberToWidgetMap.delete(inst.fiber);
     }
     _instanceMap.delete(widget);
+
+    // Recursively clean up portal children registered on the fiber
+    // so they are removed from their target widgets when the portal owner is destroyed.
+    if (inst?.fiber?.portalChildren) {
+        for (const entry of inst.fiber.portalChildren) {
+            for (const portalWidget of entry.widgets) {
+                _pruneInstancesForWidget(portalWidget);
+            }
+        }
+        inst.fiber.portalChildren = undefined;
+    }
 
     const children = widget.children;
     if (Array.isArray(children)) {
