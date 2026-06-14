@@ -1,0 +1,24 @@
+{
+    "name": "@termuijs/example-quiz-app",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Multiple-choice quiz app — built with @termuijs/widgets",
+    "type": "module",
+    "scripts": {
+        "start": "bun src/index.tsx",
+        "dev": "bun --watch src/index.tsx",
+        "build": "echo 'no build needed'",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/widgets": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.3",
+        "@types/node": "^22.0.0"
+    },
+    "engines": {
+        "bun": ">=1.3.0"
+    }
+}

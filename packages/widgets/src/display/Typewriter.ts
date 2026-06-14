@@ -16,6 +16,8 @@ export interface TypewriterOptions {
 // Typewriter
 // ─────────────────────────────────────────────────────────────────────────────
 
+const segmenter = new Intl.Segmenter();
+
 /**
  * Reveals static text character by character.
  *
@@ -58,8 +60,9 @@ export class Typewriter extends Widget {
 
   /** Advance the reveal head by `speed` characters. No-op once fully revealed. */
   tick(): void {
-    if (this._revealed >= this._text.length) return;
-    this._revealed = Math.min(this._revealed + this._speed, this._text.length);
+    const len = Array.from(segmenter.segment(this._text)).length;
+    if (this._revealed >= len) return;
+    this._revealed = Math.min(this._revealed + this._speed, len);
     this.markDirty();
   }
 
@@ -82,14 +85,15 @@ export class Typewriter extends Widget {
     const { x, y, width, height } = this._getContentRect();
     if (width <= 0 || height <= 0) return;
 
-    const fullyRevealed = this._revealed >= this._text.length;
+    const segments = Array.from(segmenter.segment(this._text));
+    const fullyRevealed = this._revealed >= segments.length;
 
     // Cursor glyph: caller-supplied string wins; otherwise caps-aware default.
     const cursorGlyph =
       this._cursor ?? (caps.unicode ? '▋' : '_');
 
-    // Visible text slice (by code-unit index, i.e. character count).
-    const visibleText = this._text.slice(0, this._revealed);
+    // Visible text slice (by grapheme cluster count).
+    const visibleText = segments.slice(0, this._revealed).map(s => s.segment).join('');
 
     // Append cursor when not yet fully revealed.
     const lineWithCursor = fullyRevealed
@@ -101,10 +105,11 @@ export class Typewriter extends Widget {
     // the content rect. stringWidth() counts terminal columns, not code units.
     let line = '';
     let cols = 0;
-    for (const char of lineWithCursor) {
-      const w = stringWidth(char);
+    const lineSegments = segmenter.segment(lineWithCursor);
+    for (const { segment } of lineSegments) {
+      const w = stringWidth(segment);
       if (cols + w > width) break;
-      line += char;
+      line += segment;
       cols += w;
     }
 

@@ -182,3 +182,43 @@ describe('Combobox', () => {
         expect(cb.filtered.length).toBe(1);
     });
 });
+
+describe('Performance optimizations', () => {
+    it('does not mark dirty when escape is pressed while already closed', () => {
+        const cb = new Combobox([
+            { label: 'Apple', value: 'a' }
+        ]);
+
+        cb.clearDirty();
+
+        cb.handleKey(makeKey('escape'));
+
+        expect(cb.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when backspace is pressed on empty input', () => {
+        const cb = new Combobox([
+            { label: 'Apple', value: 'a' }
+        ]);
+
+        cb.clearDirty();
+
+        cb.handleKey(makeKey('backspace'));
+
+        expect(cb.isDirty).toBe(false);
+    });
+
+    it('marks dirty when backspace removes a character', () => {
+        const cb = new Combobox([
+            { label: 'Apple', value: 'a' }
+        ]);
+
+        cb.handleKey(makeKey('a'));
+
+        cb.clearDirty();
+
+        cb.handleKey(makeKey('backspace'));
+
+        expect(cb.isDirty).toBe(true);
+    });
+});
