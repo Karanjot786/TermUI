@@ -15,6 +15,7 @@
 import { useEffect } from '../hooks.js';
 import { useContext } from '../context.js';
 import { FocusContext } from '../focus-context.js';
+import { autoBlurNode } from '../focus_cleanup.js';
 
 export interface UseFocusOptions {
     /** Unique identifier for this focusable element */
@@ -53,11 +54,14 @@ export function useFocus({ id, autoFocus }: UseFocusOptions): UseFocusResult {
     const ctx = useContext(FocusContext);
     const isFocused = ctx.focused === id;
 
-    // Auto-focus on mount if nothing is currently focused
+    // Auto-focus on mount if nothing is currently focused, clean up on unmount
     useEffect(() => {
         if (autoFocus && ctx.focused === null) {
             ctx.focus(id);
         }
+        return () => {
+            autoBlurNode(ctx, id);
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
