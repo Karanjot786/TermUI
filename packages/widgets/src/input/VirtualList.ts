@@ -13,9 +13,10 @@
 //   });
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, truncate, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, truncate, stringWidth, caps, prefersReducedMotion } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { computeRange } from './virtual-scroll.js';
+import { calculateSpringScroll, type ScrollSpringState } from '../scroll.js';
 
 export interface VirtualListOptions {
     /** Total number of items (the full dataset size) */
@@ -32,6 +33,8 @@ export interface VirtualListOptions {
     overscan?: number;
     /** Show scrollbar (default: true) */
     showScrollbar?: boolean;
+    /** Enable spring scroll animations (default: true, respects prefersReducedMotion) */
+    springScroll?: boolean;
 }
 
 /**
@@ -55,6 +58,13 @@ export class VirtualList extends Widget {
     private _overscan: number;
     private _showScrollbar: boolean;
 
+    // ── Spring scroll animation state ──
+    private _springScroll: boolean;
+    private _targetScrollOffset = 0;
+    private _spring: ScrollSpringState = { position: 0, velocity: 0 };
+    private _lastUpdateTime = 0;
+    private _isAnimating = false;
+
     constructor(options: VirtualListOptions) {
         super({ border: 'single', ...options.style });
         this._totalItems = options.totalItems;
@@ -63,6 +73,7 @@ export class VirtualList extends Widget {
         this._onSelect = options.onSelect;
         this._overscan = options.overscan ?? 2;
         this._showScrollbar = options.showScrollbar ?? true;
+        this._springScroll = options.springScroll ?? !prefersReducedMotion();
         this.focusable = true;
     }
 
@@ -159,6 +170,36 @@ export class VirtualList extends Widget {
         const { x, y, width, height } = rect;
         if (width <= 0 || height <= 0 || this._totalItems === 0) return;
 
+        // Update spring animation if active
+        if (this._springScroll && this._isAnimating) {
+            const now = performance.now();
+            let dt = this._lastUpdateTime > 0 ? (now - this._lastUpdateTime) / 1000 : 1 / 60;
+            if (dt <= 0 || dt > 0.1) {
+                dt = 1 / 60;
+            }
+            this._lastUpdateTime = now;
+
+            const nextSpring = calculateSpringScroll(this._spring, this._targetScrollOffset, dt);
+            this._spring = nextSpring;
+            this._scrollOffset = Math.round(nextSpring.position);
+
+            const posDiff = Math.abs(nextSpring.position - this._targetScrollOffset);
+            const velDiff = Math.abs(nextSpring.velocity);
+
+            if (posDiff < 0.05 && velDiff < 0.05) {
+                this._spring.position = this._targetScrollOffset;
+                this._spring.velocity = 0;
+                this._scrollOffset = this._targetScrollOffset;
+                this._isAnimating = false;
+                this._lastUpdateTime = 0;
+            } else {
+                // Request next frame update
+                setTimeout(() => {
+                    this.markDirty();
+                }, 16);
+            }
+        }
+
         const attrs = styleToCellAttrs(this._style);
         const visibleItemCount = Math.floor(height / this._itemHeight);
 
@@ -233,17 +274,35 @@ export class VirtualList extends Widget {
     private _clampScroll(): void {
         const rect = this._getContentRect();
         const visibleHeight = Math.floor(rect.height / this._itemHeight);
-        if (visibleHeight <= 0) { this._scrollOffset = 0; return; }
+        if (visibleHeight <= 0) {
+            this._scrollOffset = 0;
+            this._targetScrollOffset = 0;
+            return;
+        }
 
         // Keep selected item visible
-        if (this._selectedIndex < this._scrollOffset) {
-            this._scrollOffset = this._selectedIndex;
+        let target = this._targetScrollOffset;
+        if (this._selectedIndex < target) {
+            target = this._selectedIndex;
         }
-        if (this._selectedIndex >= this._scrollOffset + visibleHeight) {
-            this._scrollOffset = this._selectedIndex - visibleHeight + 1;
+        if (this._selectedIndex >= target + visibleHeight) {
+            target = this._selectedIndex - visibleHeight + 1;
         }
 
         // Clamp scroll offset
-        this._scrollOffset = Math.max(0, Math.min(this._scrollOffset, this._totalItems - visibleHeight));
+        target = Math.max(0, Math.min(target, this._totalItems - visibleHeight));
+        this._targetScrollOffset = target;
+
+        if (!this._springScroll) {
+            this._scrollOffset = target;
+            this._spring.position = target;
+            this._spring.velocity = 0;
+        } else {
+            if (!this._isAnimating && this._scrollOffset !== target) {
+                this._lastUpdateTime = performance.now();
+                this._isAnimating = true;
+                this.markDirty();
+            }
+        }
     }
 }

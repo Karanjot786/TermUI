@@ -138,4 +138,70 @@ describe('VirtualList', () => {
             expect(onSelect).not.toHaveBeenCalled();
         });
     });
+
+    describe('spring scrolling', () => {
+        it('instantly snaps when springScroll is false', () => {
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem: (i) => `Item ${i}`,
+                springScroll: false,
+                style: { width: 40, height: 10 }
+            });
+            // Mock content rect to have height 8 (10 height - 2 for borders)
+            vi.spyOn(list as any, '_getContentRect').mockReturnValue({ x: 0, y: 0, width: 40, height: 8 });
+
+            // Scroll to index 50
+            list.scrollTo(50);
+            expect(list.scrollOffset).toBe(43); // 50 - 8 + 1
+        });
+
+        it('animates gradually when springScroll is true', () => {
+            let mockTime = 1000;
+            const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => mockTime);
+
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem: (i) => `Item ${i}`,
+                springScroll: true,
+                style: { width: 40, height: 10 }
+            });
+            vi.spyOn(list as any, '_getContentRect').mockReturnValue({ x: 0, y: 0, width: 40, height: 8 });
+
+            // Initially at 0
+            expect(list.scrollOffset).toBe(0);
+
+            // Scroll to 50 -> should start animation, offset not immediately updated to target
+            list.scrollTo(50);
+            expect(list.scrollOffset).toBe(0); // Still at 0 on start
+
+            // Run first render pass
+            const mockScreen = {
+                writeString: vi.fn(),
+                setCell: vi.fn(),
+                pushClip: vi.fn(),
+                popClip: vi.fn(),
+            } as any;
+            list.render(mockScreen);
+
+            // Advance time by 100 frames of 16ms to allow the spring to accelerate and move
+            for (let i = 0; i < 100; i++) {
+                mockTime += 16;
+                list.render(mockScreen);
+            }
+
+            // Expect scroll offset to have started moving towards target (43)
+            expect(list.scrollOffset).toBeGreaterThan(0);
+
+            // Advance time completely to let it settle
+            let limit = 0;
+            while ((list as any)._isAnimating && limit < 2000) {
+                mockTime += 16;
+                list.render(mockScreen);
+                limit++;
+            }
+
+            expect(list.scrollOffset).toBe(43);
+            nowSpy.mockRestore();
+        });
+    });
 });
