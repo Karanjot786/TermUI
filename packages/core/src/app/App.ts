@@ -344,17 +344,13 @@ export class App {
         // pick up all dirty state when it eventually runs.
         if (this._isRenderPending) return;
 
-        // Skip full render pass if neither the widget tree nor overlay layers
-        // have reported any changes.
-        if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
-            return;
-        }
-
         this._isRenderPending = true;
 
         // Defer rendering to the end of the current macro-task poll pool.
         // This guarantees that multiple state updates called synchronously
-        // collapse into a single render frame.
+        // collapse into a single render frame. The dirty check is performed
+        // INSIDE the deferred callback, eliminating the race window between
+        // the check and the guard flag being set.
         setImmediate(() => {
             if (!this._mounted) {
                 this._isRenderPending = false;
@@ -362,6 +358,14 @@ export class App {
             }
 
             try {
+                // Skip full render pass if neither the widget tree nor overlay
+                // layers have reported any changes. Done inside the deferred
+                // callback so the dirty check and the _isRenderPending guard
+                // are never racy with concurrent requestRender() calls.
+                if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
+                    return;
+                }
+
                 if (this._rootWidget.isDirty !== false) {
                     // Compute layout
                     const layoutRoot = this._rootWidget.getLayoutNode();

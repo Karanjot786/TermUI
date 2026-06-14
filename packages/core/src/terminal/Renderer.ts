@@ -64,10 +64,6 @@ export class Renderer {
         const interval = Math.floor(1000 / this._fps);
         this._frameTimer = setInterval(() => {
             this._onTick?.();
-            if (this._renderRequested) {
-                this._renderRequested = false;
-                this._flush();
-            }
         }, interval);
     }
 
@@ -115,6 +111,12 @@ export class Renderer {
      * emit only changed cells.
      */
     private _flush(): void {
+        // Capture the current epoch; if swap() has already been called by a
+        // duplicate callback, skip this flush to prevent buffer corruption.
+        const epoch = this._screen.epoch;
+        if (this._screen.flushEpoch === epoch) return;
+        this._screen.flushEpoch = epoch;
+
         const start = this._callbacks.size > 0 ? performance.now() : 0;
 
         // 1. Grab any logs that console.log() caught while we were rendering

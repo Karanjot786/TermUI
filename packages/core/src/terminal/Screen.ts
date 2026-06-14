@@ -128,6 +128,19 @@ export class Screen {
     back: Cell[][];
 
     /**
+     * Render epoch counter. Incremented on every swap so downstream consumers
+     * (e.g. Renderer._flush) can detect and skip stale frames from a previous
+     * epoch, preventing double-swap corruption.
+     */
+    private _epoch = 0;
+
+    /** True while swap() is executing to prevent re-entrant double-swap corruption. */
+    private _swapping = false;
+
+    /** The epoch captured at the start of the current flush cycle. */
+    private _flushEpoch = 0;
+
+    /**
      * Stack of clipping regions. When non-empty, setCell/writeString
      * only write to cells within the topmost clip rectangle.
      */
@@ -363,13 +376,36 @@ export class Screen {
         }
     }
 
+    /** Current render epoch — incremented after each swap. */
+    get epoch(): number {
+        return this._epoch;
+    }
+
+    /** The epoch captured at the start of the current flush cycle. */
+    get flushEpoch(): number {
+        return this._flushEpoch;
+    }
+    set flushEpoch(value: number) {
+        this._flushEpoch = value;
+    }
+
     /**
      * Swap front and back buffers. Called after rendering diffs.
+     * Uses mutual exclusion to prevent double-swap corruption when
+     * _flush() is called concurrently (e.g. from duplicate setImmediate
+     * callbacks).
      */
     swap(): void {
-        const temp = this.front;
-        this.front = this.back;
-        this.back = temp;
+        if (this._swapping) return;
+        this._swapping = true;
+        try {
+            const temp = this.front;
+            this.front = this.back;
+            this.back = temp;
+            this._epoch++;
+        } finally {
+            this._swapping = false;
+        }
     }
 
     /**
