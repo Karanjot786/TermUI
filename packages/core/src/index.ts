@@ -17,6 +17,7 @@ export { bell } from './terminal/bell.js';
 // ── Renderer ──────────────────────────────────────────
 export { RenderHook } from './renderer/render-hook.js';
 export { mergeBorders } from './renderer/border-merge.js';
+export { Scheduler, scheduler } from './renderer/Scheduler.js';
 
 // ── Input ─────────────────────────────────────────────
 export { InputParser } from './input/InputParser.js';
