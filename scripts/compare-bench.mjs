@@ -42,13 +42,25 @@ if (!existsSync(mainPath)) {
 
 try {
     head = JSON.parse(readFileSync(headPath, 'utf8'));
-    main = JSON.parse(readFileSync(mainPath, 'utf8'));
 } catch (e) {
-    console.error(`Error parsing benchmark files: ${e.message}`);
-    const errMarkdown = `<!-- termui-bench-comment -->\n## Render-loop benchmark\n\n❌ **Error:** Failed to parse benchmark results. Check CI logs for details.`;
+    console.error(`Error parsing head benchmark file: ${e.message}`);
+    const errMarkdown = `<!-- termui-bench-comment -->\n## Render-loop benchmark\n\n❌ **Error:** Failed to parse HEAD benchmark results. Check CI logs for details.`;
     const outPath = process.env.BENCH_COMMENT_OUT ?? 'bench-comment.md';
     writeFileSync(outPath, errMarkdown + '\n', 'utf8');
     process.exit(2);
+}
+
+try {
+    const mainContent = readFileSync(mainPath, 'utf8').trim();
+    if (mainContent) {
+        main = JSON.parse(mainContent);
+    } else {
+        console.warn('Main benchmark file is empty. Assuming no baseline.');
+        main = null;
+    }
+} catch (e) {
+    console.warn(`Error parsing main benchmark file (ignoring baseline): ${e.message}`);
+    main = null;
 }
 
 function validateBench(data, name) {
@@ -96,9 +108,12 @@ function validateBench(data, name) {
 }
 
 validateBench(head, 'head benchmark');
-validateBench(main, 'main benchmark');
+if (main) {
+    validateBench(main, 'main benchmark');
+}
+
 const byKey = (r) => `${r.cols}x${r.rows}`;
-const mainBySize = new Map(main.results.map((r) => [byKey(r), r]));
+const mainBySize = new Map(main ? main.results.map((r) => [byKey(r), r]) : []);
 const headSizes = new Set(head.results.map(byKey));
 
 let regressed = false;
@@ -119,22 +134,27 @@ for (const r of head.results) {
     if (delta <= -threshold) regressed = true;
     rows.push(`| ${k} | ${(m.cellsPerSec / 1e6).toFixed(2)}M | ${(r.cellsPerSec / 1e6).toFixed(2)}M | ${deltaStr}${flag} |`);
 }
-for (const r of main.results) {
-    const k = byKey(r);
 
-    if (!headSizes.has(k)) {
-        rows.push(
-            `| ${k} | ${(r.cellsPerSec / 1e6).toFixed(2)}M | _missing_ | ❌ Removed |`
-        );
+if (main) {
+    for (const r of main.results) {
+        const k = byKey(r);
 
-        regressed = true;
+        if (!headSizes.has(k)) {
+            rows.push(
+                `| ${k} | ${(r.cellsPerSec / 1e6).toFixed(2)}M | _missing_ | ❌ Removed |`
+            );
+
+            regressed = true;
+        }
     }
 }
+
 const markdown = [
     '<!-- termui-bench-comment -->',
     '## Render-loop benchmark',
     '',
-    `Threshold: ≥${(threshold * 100).toFixed(0)}% regression on any size fails CI.`,
+    main ? `Threshold: ≥${(threshold * 100).toFixed(0)}% regression on any size fails CI.` : '⚠️ **Main benchmark baseline is unavailable.**',
+
     '',
     ...rows,
     '',
