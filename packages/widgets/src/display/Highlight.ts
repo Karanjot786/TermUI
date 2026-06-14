@@ -35,7 +35,7 @@ export class Highlight extends Box {
         }
     }
 
-    update(text: string, query: string | RegExp, style?: Partial<Style>): void {
+    setText(text: string, query: string | RegExp, style?: Partial<Style>): void {
         this.clearChildren();
         this._buildSegments(text, query, style);
     }
