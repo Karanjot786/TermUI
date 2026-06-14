@@ -1,9 +1,7 @@
-// ─────────────────────────────────────────────────────
-// @termuijs/widgets — TextInput widget
-// ─────────────────────────────────────────────────────
-
-import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
+import { type Screen, type Style, type KeyEvent, styleToCellAttrs, stringWidth, truncate, splitGraphemes } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+
+export type VimMode = 'normal' | 'insert' | 'visual';
 
 /**
  * TextInput — a single-line text input field.
@@ -23,6 +21,7 @@ export class TextInput extends Widget {
     private _maxLength: number;
     private _onChange?: (value: string) => void;
     private _onSubmit?: (value: string) => void;
+    private _vimMode: VimMode = process.env.TERMUI_KEYBINDINGS === 'vim' ? 'normal' : 'insert';
 
     constructor(
         style: Partial<Style> = {},
@@ -41,12 +40,28 @@ export class TextInput extends Widget {
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
         this.focusable = true;
+
+        this.events.on('key', (event: KeyEvent) => this.handleKey(event));
     }
 
     get value(): string { return this._value; }
     set value(v: string) {
-        this._value = v.slice(0, this._maxLength);
-        this._cursorPos = Math.min(this._cursorPos, this._value.length);
+        const graphemes = splitGraphemes(v);
+        if (graphemes.length > this._maxLength) {
+            this._value = graphemes.slice(0, this._maxLength).join('');
+        } else {
+            this._value = v;
+        }
+        this._cursorPos = Math.min(this._cursorPos, splitGraphemes(this._value).length);
+        this.markDirty();
+    }
+
+    get vimMode(): VimMode {
+        return this._vimMode;
+    }
+
+    set vimMode(mode: VimMode) {
+        this._vimMode = mode;
         this.markDirty();
     }
 
@@ -54,11 +69,10 @@ export class TextInput extends Widget {
      * Handle a typed character.
      */
     insertChar(char: string): void {
-        if (this._value.length >= this._maxLength) return;
-        this._value =
-            this._value.slice(0, this._cursorPos) +
-            char +
-            this._value.slice(this._cursorPos);
+        const graphemes = splitGraphemes(this._value);
+        if (graphemes.length >= this._maxLength) return;
+        graphemes.splice(this._cursorPos, 0, char);
+        this._value = graphemes.join('');
         this._cursorPos++;
         this._onChange?.(this._value);
         this.markDirty();
@@ -69,9 +83,9 @@ export class TextInput extends Widget {
      */
     deleteBack(): void {
         if (this._cursorPos > 0) {
-            this._value =
-                this._value.slice(0, this._cursorPos - 1) +
-                this._value.slice(this._cursorPos);
+            const graphemes = splitGraphemes(this._value);
+            graphemes.splice(this._cursorPos - 1, 1);
+            this._value = graphemes.join('');
             this._cursorPos--;
             this._onChange?.(this._value);
             this.markDirty();
@@ -82,30 +96,177 @@ export class TextInput extends Widget {
      * Delete the character after the cursor.
      */
     deleteForward(): void {
-        if (this._cursorPos < this._value.length) {
-            this._value =
-                this._value.slice(0, this._cursorPos) +
-                this._value.slice(this._cursorPos + 1);
+        const graphemes = splitGraphemes(this._value);
+        if (this._cursorPos < graphemes.length) {
+            graphemes.splice(this._cursorPos, 1);
+            this._value = graphemes.join('');
             this._onChange?.(this._value);
             this.markDirty();
         }
     }
 
-    moveCursorLeft(): void { this._cursorPos = Math.max(0, this._cursorPos - 1); 
+    moveCursorLeft(): void {
+        this._cursorPos = Math.max(0, this._cursorPos - 1);
         this.markDirty();
     }
-    moveCursorRight(): void { this._cursorPos = Math.min(this._value.length, this._cursorPos + 1); 
+    moveCursorRight(): void {
+        const graphemes = splitGraphemes(this._value);
+        this._cursorPos = Math.min(graphemes.length, this._cursorPos + 1);
         this.markDirty();
     }
-    moveCursorHome(): void { this._cursorPos = 0; 
+    moveCursorHome(): void {
+        this._cursorPos = 0;
         this.markDirty();
     }
-    moveCursorEnd(): void { this._cursorPos = this._value.length;
+    moveCursorEnd(): void {
+        const graphemes = splitGraphemes(this._value);
+        this._cursorPos = graphemes.length;
         this.markDirty();
-     }
+    }
     submit(): void { this._onSubmit?.(this._value); }
-    clear(): void { this._value = ''; this._cursorPos = 0; this._onChange?.(''); 
+    clear(): void {
+        this._value = '';
+        this._cursorPos = 0;
+        this._onChange?.('');
         this.markDirty();
+    }
+
+    handleKey(event: KeyEvent): void {
+        const isVim = process.env.TERMUI_KEYBINDINGS === 'vim';
+
+        if (isVim) {
+            if (this._vimMode === 'normal') {
+                switch (event.key) {
+                    case 'i':
+                        this._vimMode = 'insert';
+                        this.markDirty();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'a':
+                        this._vimMode = 'insert';
+                        this.moveCursorRight();
+                        this.markDirty();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'v':
+                        this._vimMode = 'visual';
+                        this.markDirty();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'h':
+                        this.moveCursorLeft();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'l':
+                        this.moveCursorRight();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'x': {
+                        const graphemes = splitGraphemes(this._value);
+                        if (this._cursorPos < graphemes.length) {
+                            graphemes.splice(this._cursorPos, 1);
+                            this._value = graphemes.join('');
+                            this._cursorPos = Math.min(this._cursorPos, graphemes.length - 1);
+                            this._cursorPos = Math.max(0, this._cursorPos);
+                            this._onChange?.(this._value);
+                            this.markDirty();
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    }
+                    case 'j':
+                        event.key = 'tab';
+                        event.shift = false;
+                        break;
+                    case 'k':
+                        event.key = 'tab';
+                        event.shift = true;
+                        break;
+                    case 'enter':
+                    case 'return':
+                        this.submit();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    default:
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                }
+                return;
+            } else if (this._vimMode === 'visual') {
+                if (event.key === 'escape') {
+                    this._vimMode = 'normal';
+                    this.markDirty();
+                    event.preventDefault();
+                    event.stopPropagation();
+                } else {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                return;
+            } else if (this._vimMode === 'insert') {
+                if (event.key === 'escape') {
+                    this._vimMode = 'normal';
+                    this.moveCursorLeft();
+                    this.markDirty();
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
+            }
+        }
+
+        switch (event.key) {
+            case 'backspace':
+                this.deleteBack();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'delete':
+                this.deleteForward();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'left':
+                this.moveCursorLeft();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'right':
+                this.moveCursorRight();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'home':
+                this.moveCursorHome();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'end':
+                this.moveCursorEnd();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'return':
+            case 'enter':
+                this.submit();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            default:
+                if (event.key && event.key.length === 1 && !event.ctrl && !event.alt) {
+                    this.insertChar(event.key);
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+        }
     }
 
     protected _renderSelf(screen: Screen): void {
@@ -116,39 +277,57 @@ export class TextInput extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         if (this._value.length === 0 && !this.isFocused) {
-            // Show placeholder
             screen.writeString(x, y, truncate(this._placeholder, width), { ...attrs, dim: true });
             return;
         }
 
-        // Display value (optionally masked)
-        const displayValue = this._mask
-            ? this._mask.repeat(this._value.length)
-            : this._value;
+        const graphemes = splitGraphemes(this._value);
+        const displayGraphemes = this._mask
+            ? Array(graphemes.length).fill(this._mask)
+            : graphemes;
 
-        // Scroll the view if cursor is beyond visible area
-        const visibleWidth = width - 1; // Leave room for cursor
+        let rightReserved = 0;
+        if (process.env.TERMUI_KEYBINDINGS === 'vim' && this.isFocused && width > 15) {
+            rightReserved = this._vimMode.length + 4;
+        }
+
+        const visibleWidth = width - 1 - rightReserved;
         let scrollX = 0;
         if (this._cursorPos > visibleWidth) {
             scrollX = this._cursorPos - visibleWidth;
         }
 
-        const visibleText = displayValue.slice(scrollX, scrollX + visibleWidth);
-        screen.writeString(x, y, visibleText, attrs);
+        const visibleGraphemes = displayGraphemes.slice(scrollX, scrollX + visibleWidth);
+        const visibleText = visibleGraphemes.join('');
+        const truncatedText = truncate(visibleText, width - rightReserved, '');
+        screen.writeString(x, y, truncatedText, attrs);
 
-        // Draw cursor when focused
         if (this.isFocused) {
-            const cursorScreenPos = x + this._cursorPos - scrollX;
-            if (cursorScreenPos >= x && cursorScreenPos < x + width) {
-                const cursorChar = this._cursorPos < displayValue.length
-                    ? displayValue[this._cursorPos]
+            let cursorOffset = 0;
+            for (let i = scrollX; i < this._cursorPos; i++) {
+                if (i < displayGraphemes.length) {
+                    cursorOffset += stringWidth(displayGraphemes[i]);
+                }
+            }
+            const cursorScreenPos = x + cursorOffset;
+            if (cursorScreenPos >= x && cursorScreenPos < x + width - rightReserved) {
+                const cursorChar = this._cursorPos < displayGraphemes.length
+                    ? displayGraphemes[this._cursorPos]
                     : ' ';
+                const isBlock = this._vimMode === 'normal' || this._vimMode === 'visual';
                 screen.setCell(cursorScreenPos, y, {
-                    char: cursorChar,
+                    char: cursorChar[0] || ' ',
                     ...attrs,
-                    inverse: true,
+                    inverse: isBlock,
+                    underline: !isBlock,
                 });
             }
         }
+
+        if (process.env.TERMUI_KEYBINDINGS === 'vim' && this.isFocused && width > 15) {
+            const modeIndicator = ` -- ${this._vimMode.toUpperCase()} -- `;
+            screen.writeString(x + width - modeIndicator.length, y, modeIndicator, { ...attrs, dim: true });
+        }
     }
 }
+
