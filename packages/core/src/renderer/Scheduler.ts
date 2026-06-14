@@ -8,7 +8,7 @@ import process from 'node:process';
  * where multiple high-frequency hooks trigger independent VDOM diffs.
  */
 export class Scheduler {
-    private _queue = new Set<() => void>();
+    private _queue: Array<() => void> = [];
     private _timer: ReturnType<typeof setTimeout> | null = null;
     private _fps = 30;
 
@@ -17,7 +17,7 @@ export class Scheduler {
      * If a frame is already scheduled, the task will be bundled with it.
      */
     enqueue(update: () => void): void {
-        this._queue.add(update);
+        this._queue.push(update);
         this.scheduleFrame();
     }
 
@@ -25,6 +25,9 @@ export class Scheduler {
      * Configures the maximum target framerate.
      */
     setFPS(fps: number): void {
+        if (fps <= 0 || !Number.isFinite(fps)) {
+            throw new Error(`Invalid FPS: ${fps}. FPS must be a positive finite number.`);
+        }
         this._fps = fps;
     }
 
@@ -49,13 +52,13 @@ export class Scheduler {
             this._timer = null;
         }
 
-        if (this._queue.size === 0) return;
+        if (this._queue.length === 0) return;
 
         // Take a snapshot of the current queue and clear it immediately.
         // This ensures the scheduler is ready for the next frame and 
         // remains resilient even if an update throws an error.
-        const tasks = Array.from(this._queue);
-        this._queue.clear();
+        const tasks = this._queue;
+        this._queue = [];
 
         for (const update of tasks) {
             try {

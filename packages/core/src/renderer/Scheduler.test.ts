@@ -12,6 +12,7 @@ describe('Scheduler', () => {
 
     afterEach(() => {
         vi.restoreAllMocks();
+        vi.useRealTimers();
     });
 
     it('should not execute tasks immediately upon enqueue', () => {
@@ -26,9 +27,9 @@ describe('Scheduler', () => {
         const update = () => { callCount++; };
 
         // Simulate 3 rapid state updates from different hooks
-        scheduler.enqueue(() => update());
-        scheduler.enqueue(() => update());
-        scheduler.enqueue(() => update());
+        scheduler.enqueue(update);
+        scheduler.enqueue(update);
+        scheduler.enqueue(update);
 
         // Fast-forward past the 30 FPS window (~33ms)
         vi.advanceTimersByTime(34);
@@ -50,9 +51,17 @@ describe('Scheduler', () => {
     });
 
     it('should clear the queue after flushing', () => {
-        scheduler.enqueue(() => {});
+        let count = 0;
+        scheduler.enqueue(() => { count++; });
+
         scheduler.flush();
-        // Internal check: size should be 0, next flush shouldn't trigger logic
+        expect(count).toBe(1);
+
+        // Verify queue is empty and timer is cancelled by ensuring 
+        // neither manual flush nor advancing time triggers the task again.
+        scheduler.flush();
+        vi.advanceTimersByTime(34);
+        expect(count).toBe(1);
     });
 
     it('should continue executing remaining tasks if one task throws an error', () => {
@@ -68,5 +77,23 @@ describe('Scheduler', () => {
 
         expect(executed).toBe(true);
         expect(stderrSpy).toHaveBeenCalled();
+    });
+
+    it('should not deduplicate identical function references', () => {
+        let count = 0;
+        const task = () => { count++; };
+        
+        scheduler.enqueue(task);
+        scheduler.enqueue(task);
+        
+        scheduler.flush();
+        expect(count).toBe(2);
+    });
+
+    it('should throw an error for invalid FPS values', () => {
+        expect(() => scheduler.setFPS(0)).toThrow();
+        expect(() => scheduler.setFPS(-10)).toThrow();
+        expect(() => scheduler.setFPS(NaN)).toThrow();
+        expect(() => scheduler.setFPS(Infinity)).toThrow();
     });
 });
