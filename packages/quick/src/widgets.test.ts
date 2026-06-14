@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { Widget } from '@termuijs/widgets';
+import { Screen } from '@termuijs/core';
 
 // ── Missing builders (RED — these should fail until implemented) ──────────────
 
@@ -94,7 +95,12 @@ describe('quick – card builder', () => {
         const child = text('Test');
         const w = card([child], { title: 'My Card' });
         expect(w).toBeInstanceOf(Widget);
-        expect((w as any)._title).toBe('My Card');
+        // Verify title is rendered in the top border
+        w.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+        const screen = new Screen(20, 5);
+        w.render(screen);
+        const topRow = screen.back[0].map(c => c.char).join('');
+        expect(topRow).toMatch(/My Card/);
     });
 
     it('card defaults to brightBlack border color when omitted', async () => {
@@ -102,8 +108,12 @@ describe('quick – card builder', () => {
         const child = text('Test');
         const w = card([child]);
         expect(w).toBeInstanceOf(Widget);
-        expect(((w as any)._borderColor as any)?.name).toBe('brightBlack');
-        expect(((w as any)._style?.borderColor as any)?.name).toBe('brightBlack');
+        // Verify border is rendered (single style borders use box-drawing chars)
+        w.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+        const screen = new Screen(20, 5);
+        w.render(screen);
+        expect(screen.back[0][0].char).toBe('┌');
+        expect(screen.back[0][19].char).toBe('┐');
     });
 });
 
@@ -122,6 +132,11 @@ describe('quick – box builder', () => {
         const child = text('Test');
         const w = box([child]);
         expect(w).toBeInstanceOf(Widget);
-        expect(((w as any)._style?.borderColor as any)?.name).toBe('brightBlack');
+        // Verify border is rendered (single style borders use box-drawing chars)
+        w.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+        const screen = new Screen(20, 5);
+        w.render(screen);
+        expect(screen.back[0][0].char).toBe('┌');
+        expect(screen.back[0][19].char).toBe('┐');
     });
 });

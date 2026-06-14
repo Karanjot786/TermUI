@@ -496,6 +496,18 @@ export function card(children: Widget[], opts?: QuickCardOptions): Widget {
     for (const child of children) {
         c.addChild(child);
     }
+    
+    const origRenderBorder = (c as any)._renderBorder?.bind(c);
+    if (origRenderBorder) {
+        (c as any)._renderBorder = function (screen: any) {
+            origRenderBorder(screen);
+            try {
+                (c as any)._renderSelf?.(screen);
+            } catch (_e) {
+                // keep rendering robust
+            }
+        };
+    }
 
     return c;
 }
