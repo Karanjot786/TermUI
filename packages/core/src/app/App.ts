@@ -84,6 +84,8 @@ export class App {
     private _unsubBlur: (() => void) | null = null;
     private _unsubSigInt: (() => void) | null = null;
     private _unsubSigTerm: (() => void) | null = null;
+    private _unsubUncaughtException: (() => void) | null = null;
+    private _unsubUnhandledRejection: (() => void) | null = null;
     private _widgetById = new Map<string, any>();
     private _pendingFocusState = new Map<string, boolean>();
 
@@ -135,6 +137,9 @@ export class App {
         // Focus subscriptions are interactive-only; fallback mount returns
         // without unmount(), so constructor subscriptions would leak there.
         this._subscribeFocusEvents();
+
+        // Enable focus event emission and replay any queued auto-focus events
+        this.focus.start();
 
         const focusedId = this.focus.currentId;
         if (focusedId) {
@@ -227,6 +232,32 @@ export class App {
         this._unsubSigInt = () => process.off('SIGINT', onSigInt);
         this._unsubSigTerm = () => process.off('SIGTERM', onSigTerm);
 
+        // Register terminal cleanup to stop render hook on process exit
+        this.terminal.onCleanup(() => {
+            this.renderer.hook.stop();
+        });
+
+        // Handle uncaught exceptions — stop hook first so console works, then restore terminal
+        const onUncaughtException = (err: Error) => {
+            this.renderer.hook.stop();
+            this.renderer.hook.writeRaw(this.renderer.hook.flush());
+            this.renderer.hook.writeRaw(`Uncaught exception: ${err.message}\n${err.stack}\n`);
+            this.terminal.restore();
+            process.exit(1);
+        };
+        process.on('uncaughtException', onUncaughtException);
+        this._unsubUncaughtException = () => process.off('uncaughtException', onUncaughtException);
+
+        const onUnhandledRejection = (reason: any) => {
+            this.renderer.hook.stop();
+            this.renderer.hook.writeRaw(this.renderer.hook.flush());
+            this.renderer.hook.writeRaw(`Unhandled rejection: ${reason}\n`);
+            this.terminal.restore();
+            process.exit(1);
+        };
+        process.on('unhandledRejection', onUnhandledRejection);
+        this._unsubUnhandledRejection = () => process.off('unhandledRejection', onUnhandledRejection);
+
         // Start render loop — tick drives requestRender() so dirty widgets
         // (motion, timers) get redrawn without a separate setInterval.
         this.renderer.start(() => this.requestRender());
@@ -270,6 +301,10 @@ export class App {
         this._unsubBlur = null;
         this._unsubPaste?.();
         this._unsubPaste = null;
+        this._unsubUncaughtException?.();
+        this._unsubUncaughtException = null;
+        this._unsubUnhandledRejection?.();
+        this._unsubUnhandledRejection = null;
 
 
         // Stop the stdout interceptor to restore native console.log behavior
@@ -312,17 +347,13 @@ export class App {
         // pick up all dirty state when it eventually runs.
         if (this._isRenderPending) return;
 
-        // Skip full render pass if neither the widget tree nor overlay layers
-        // have reported any changes.
-        if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
-            return;
-        }
-
         this._isRenderPending = true;
 
         // Defer rendering to the end of the current macro-task poll pool.
         // This guarantees that multiple state updates called synchronously
-        // collapse into a single render frame.
+        // collapse into a single render frame. The dirty check is performed
+        // INSIDE the deferred callback, eliminating the race window between
+        // the check and the guard flag being set.
         setImmediate(() => {
             if (!this._mounted) {
                 this._isRenderPending = false;
@@ -330,6 +361,14 @@ export class App {
             }
 
             try {
+                // Skip full render pass if neither the widget tree nor overlay
+                // layers have reported any changes. Done inside the deferred
+                // callback so the dirty check and the _isRenderPending guard
+                // are never racy with concurrent requestRender() calls.
+                if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
+                    return;
+                }
+
                 if (this._rootWidget.isDirty !== false) {
                     // Compute layout
                     const layoutRoot = this._rootWidget.getLayoutNode();

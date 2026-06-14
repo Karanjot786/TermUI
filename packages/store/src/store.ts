@@ -27,15 +27,16 @@ import * as os from 'node:os';
 
 // ── Batch Mechanism ──
 
-let _batchDepth = 0;
-// Map store instance to { listeners, prevState, nextState }
 interface BatchEntry<T> {
     prevState: T;
     nextState: T;
     commit: () => void;
-    rollback: (s: T) => void;
+    rollback: () => void;
 }
 
+let _batchDepth = 0;
+// Map store instance to batch entry. Using any for listener set type because
+// the batch mechanism operates on the raw Set<Listener<T>> without knowing T at this level.
 const _batchStores = new Map<Set<any>, BatchEntry<any>>();
 /**
  * Batch multiple state updates into a single render pass.
@@ -57,35 +58,61 @@ const _batchStores = new Map<Set<any>, BatchEntry<any>>();
  * });
  * ```
  */
-export function batch(fn: () => void): void {
+export function batch<T>(fn: () => T): T {
     _batchDepth++;
     let threw = false;
+    let res: any;
     try {
-        fn();
+        res = fn();
     } catch (err) {
         threw = true;
-        throw err;
-    } finally {
         _batchDepth--;
         if (_batchDepth === 0) {
-            if (threw) {
-                for (const [, { prevState, rollback }] of _batchStores) {
-                    rollback(prevState);
-                }
-                _batchStores.clear(); // Don't notify listeners with partial state
-            } else {
-                queueMicrotask(() => {
-                    const stores = Array.from(_batchStores.entries());
-                    _batchStores.clear();
-                    for (const [listeners, { prevState, nextState ,commit }] of stores) {
-                        commit();
-                        for (const listener of listeners) {
-                            listener(nextState, prevState);
-                        }
-                    }
-                });
-            }
+            flushBatch(threw);
         }
+        throw err;
+    }
+
+    if (res && typeof res.then === 'function') {
+        return (res as Promise<any>).then(
+            (val) => {
+                _batchDepth--;
+                if (_batchDepth === 0) flushBatch(false);
+                return val;
+            },
+            (err) => {
+                _batchDepth--;
+                if (_batchDepth === 0) flushBatch(true);
+                throw err;
+            }
+        ) as T;
+    } else {
+        _batchDepth--;
+        if (_batchDepth === 0) {
+            flushBatch(false);
+        }
+        return res;
+    }
+}
+
+function flushBatch(threw: boolean) {
+    if (threw) {
+        for (const [, { prevState, rollback }] of _batchStores) {
+            rollback();
+        }
+        _batchStores.clear(); // Don't notify listeners with partial state
+    } else {
+        if (_batchStores.size === 0) return;
+        queueMicrotask(() => {
+            const stores = Array.from(_batchStores.entries());
+            _batchStores.clear();
+            for (const [listeners, { prevState, nextState ,commit }] of stores) {
+                commit();
+                for (const listener of listeners) {
+                    listener(nextState, prevState);
+                }
+            }
+        });
     }
 }
 
@@ -123,8 +150,11 @@ export interface StoreOptions<T> {
     persist?: PersistOptions;
 }
 
+// Using any for logger middleware because it's a debug utility that needs to work with any state type
 export const logger: Middleware<any> = (prevState, update, next) => {
-    return next(update);
+    // console.log is forbidden in TermUI source files.
+    // To debug state changes, write to a file instead.
+    const nextState = next(update);
 };
 
 export interface Computed<U> {
@@ -132,6 +162,8 @@ export interface Computed<U> {
     get(): U;
     /** Subscribe to changes — listener fires only when the derived value changes */
     subscribe(listener: (value: U) => void): () => void;
+    /** Remove the internal store subscription and clear all computed listeners — call when done to prevent memory leaks */
+    dispose(): void;
 }
 
 export interface Store<T> {
@@ -200,6 +232,7 @@ export function createStore<T extends object>(
 ): UseStore<T>;
 
 export function createStore<T extends object>(
+    // Using any to accept both StateCreator<T> function and plain T object (overloaded below)
     creator: any,
     options?: StoreOptions<T>
 ): UseStore<T> {
@@ -236,6 +269,7 @@ export function createStore<T extends object>(
                 if (!fs.existsSync(dir)) {
                     fs.mkdirSync(dir, { recursive: true });
                 }
+                // Using any because we filter out functions and only persist serializable data
                 const dataToSave: any = {};
                 for (const [key, val] of Object.entries(state)) {
                     if (typeof val !== 'function') {
@@ -256,11 +290,14 @@ export function createStore<T extends object>(
             : partial;
 
         const applyUpdate = (finalPartial: Partial<T>): T => {
-            const nextState = { ...state, ...finalPartial };
+            // When in a batch, compute nextState from pending batch state if available
+            const baseState = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
+            const nextState = { ...baseState, ...finalPartial };
 
             // Only notify if at least one key's value actually changed
+            // Type assertion needed because Object.keys returns string[] but state access requires keyof T
             const hasChanged = Object.keys(finalPartial).some(
-                key => !Object.is((state as any)[key], (nextState as any)[key])
+                key => !Object.is((baseState as any)[key], (nextState as any)[key])
             );
             if (hasChanged) {
                 if (_batchDepth > 0) {
@@ -271,7 +308,7 @@ export function createStore<T extends object>(
                             prevState,
                             nextState,
                             commit: () => { state = nextState; persistState(); },
-                            rollback: (s) => { state = s; },
+                            rollback: () => { state = prevState; },
                         });
                     } else {
                         // Update to the new nextState, but keep the original prevState
@@ -334,6 +371,7 @@ export function createStore<T extends object>(
     // Initialize state (supports creator functions or plain objects)
     state = typeof creator === 'function'
         ? (creator as StateCreator<T>)(setState, getState)
+        // Type assertion needed because spread loses precise type information
         : { ...(creator as any) } as T;
     
     // Capture initial state BEFORE persist rehydration
@@ -373,7 +411,7 @@ export function createStore<T extends object>(
 
         // Piggyback on the store's own subscribe — recompute on every state change
         // but only notify computed subscribers when the derived value actually changes
-        subscribe((newState) => {
+        const storeUnsub = subscribe((newState) => {
             const newValue = selector(newState);
             if (!Object.is(cachedValue, newValue)) {
                 cachedValue = newValue;
@@ -388,6 +426,10 @@ export function createStore<T extends object>(
             subscribe: (listener) => {
                 computedListeners.add(listener);
                 return () => { computedListeners.delete(listener); };
+            },
+            dispose: () => {
+                storeUnsub();
+                computedListeners.clear();
             },
         };
     };
@@ -417,6 +459,7 @@ export function createStore<T extends object>(
     }
 
     // Attach store methods to the hook for direct access
+    // Type assertion needed to attach methods to the hook function beyond its call signature
     (useStore as any).getState = getState;
     (useStore as any).setState = setState;
     (useStore as any).subscribe = subscribe;
@@ -440,4 +483,16 @@ export interface UseStore<T> {
     computed<U>(selector: Selector<T, U>): Computed<U>;
     reset(): void;
     getInitialState(): T;
+}
+
+// Persistent Store Helper
+export function createPersistentStore<T extends object>(
+    creator: StateCreator<T>,
+    key: string
+): UseStore<T> {
+    return createStore(creator, {
+        persist: {
+            key,
+        },
+    });
 }

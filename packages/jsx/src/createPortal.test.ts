@@ -8,6 +8,7 @@ import { createPortal } from './createPortal.js';
 import { createElement as h } from './createElement.js';
 import { setRequestRender, resetHooksGlobals } from './hooks.js';
 import { unmountAll } from './reconciler.js';
+import { isVElement } from './vnode.js';
 
 beforeEach(() => {
     setRequestRender(() => {});
@@ -24,7 +25,10 @@ describe('createPortal', () => {
         const node = h('text', {}, 'Hello Portal');
         const portal = createPortal(node, target);
         expect(portal).toBeDefined();
-        expect(typeof (portal as { type: unknown }).type).toBe('function');
+        expect(isVElement(portal)).toBe(true);
+        if (isVElement(portal)) {
+            expect(typeof portal.type).toBe('function');
+        }
     });
 
     it('accepts an array of children without throwing', () => {
@@ -32,7 +36,10 @@ describe('createPortal', () => {
         const nodes = [h('text', {}, 'Line 1'), h('text', {}, 'Line 2')];
         const portal = createPortal(nodes, target);
         expect(portal).toBeDefined();
-        expect(typeof (portal as { type: unknown }).type).toBe('function');
+        expect(isVElement(portal)).toBe(true);
+        if (isVElement(portal)) {
+            expect(typeof portal.type).toBe('function');
+        }
     });
 
     it('portal type is PortalComponent (a function)', () => {
@@ -40,14 +47,20 @@ describe('createPortal', () => {
         const node = h('text', {}, 'Single');
         const portal = createPortal(node, target);
         // PortalComponent is an internal function — verify portal is a functional component VNode
-        expect(typeof (portal as { type: unknown }).type).toBe('function');
+        expect(isVElement(portal)).toBe(true);
+        if (isVElement(portal)) {
+            expect(typeof portal.type).toBe('function');
+        }
     });
 
     it('portal props contain the target widget reference', () => {
         const target = new Box();
         const node = h('text', {}, 'Overlay');
         const portal = createPortal(node, target);
-        expect((portal as { props: { target: unknown } }).props.target).toBe(target);
+        expect(isVElement(portal)).toBe(true);
+        if (isVElement(portal)) {
+            expect(portal.props.target).toBe(target);
+        }
     });
 
     it('portal renders into a real Screen without throwing', () => {

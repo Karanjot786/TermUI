@@ -121,5 +121,3 @@ export function ShortcutHelpOverlay({ shortcuts = DEFAULT_SHORTCUTS }: ShortcutH
     if (!visible) return null as any;
     return <ShortcutHelpOverlayContent shortcuts={shortcuts} onClose={() => setVisible(false)} />;
 }
-
-export default ShortcutHelpOverlay;

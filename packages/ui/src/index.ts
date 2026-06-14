@@ -7,7 +7,6 @@
 
 // ── Re-exports from @termuijs/widgets (base components) ──
 // Note: do not augment '@termuijs/widgets' here — it resolves to an untyped module.
-
 export {
     Box,
     Text,
@@ -50,6 +49,9 @@ export type { DrawerOptions, DrawerPosition } from './Drawer.js';
 
 export { Select } from './Select.js';
 export type { SelectOption, SelectOptions } from './Select.js';
+
+export { Combobox } from './Combobox.js';
+export type { ComboboxOption, ComboboxOptions } from './Combobox.js';
 
 export { LinearPrompt } from './LinearPrompt.js';
 export type { LinearPromptOption, LinearPromptOptions } from './LinearPrompt.js';
@@ -100,6 +102,9 @@ export type { PasswordInputOptions } from './PasswordInput.js';
 
 export { NumberInput } from './NumberInput.js';
 export type { NumberInputOptions } from './NumberInput.js';
+
+export { TagInput } from './TagInput.js';
+export type { TagInputOptions } from './TagInput.js';
 
 export { MaskedInput } from './MaskedInput.js';
 export type { MaskedInputOptions } from './MaskedInput.js';
@@ -214,3 +219,12 @@ export { validateInput } from './validation.js';
 export type { InputValidator } from './validation.js';
 export { ContextMenu } from './components/ContextMenu.js';
 export type { ContextMenuProps } from './components/ContextMenu.js';
+
+export { Popover } from './Popover.js';
+export type { PopoverOptions, PopoverPlacement } from './Popover.js'
+
+export { FormBuilder, useForm } from './components/FormBuilder.js';
+export type { FormBuilderProps } from './components/FormBuilder.js';
+
+// -- External Theme / Stylesheet Engine --
+export * from '@termuijs/tss';

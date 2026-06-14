@@ -35,6 +35,8 @@ export interface RouterOptions {
     initialPath?: string;
     /** Maximum history entries (default: 100) */
     maxHistory?: number;
+    /** Component rendered when no route matches */
+    notFound?: (path: string) => VNode;
 }
 
 export class Router {
@@ -43,11 +45,13 @@ export class Router {
     private _forwardStack: string[] = [];
     private _currentMatch: RouteMatch | null = null;
     private _maxHistory: number;
+    private _notFound?: (path: string) => VNode;
     private _pendingInitialPath: string | null = null;
     readonly events = new EventEmitter<RouterEvents>();
 
     constructor(options: RouterOptions = {}) {
         this._maxHistory = options.maxHistory ?? 100;
+        this._notFound = options.notFound;
 
         if (options.initialPath) {
             this._pendingInitialPath = options.initialPath;
@@ -186,6 +190,22 @@ export class Router {
         return createElement(ErrorBoundary, { fallback: defaultErrorScreen }, withProvider);
     }
 
+    private _createNotFoundMatch(path: string): RouteMatch {
+        const route: Route = {
+            path,
+            component: () => this._notFound?.(path),
+            meta: {},
+        };
+
+        return {
+            route,
+            chain: [route],
+            params: {},
+            meta: {},
+            query: {},
+        };
+    }
+
     private _resolveRedirect(path: string, depth = 0): string | null {
         if (depth > 10) {
             this.events.emit('error', new Error(`Max redirect depth exceeded for path: ${path}`));
@@ -222,6 +242,38 @@ export class Router {
         const match = matchRoute(resolvedPath, this._routes);
 
         if (!match) {
+            if (this._notFound) {
+                if (options.clearForwardStack) {
+                    this._forwardStack = [];
+                }
+
+                const { modifyHistory = 'push', direction = 'push' } = options;
+
+                if (modifyHistory === 'push') {
+                    this._history.push(resolvedPath);
+
+                    if (this._history.length > this._maxHistory) {
+                        this._history = this._history.slice(-this._maxHistory);
+                    }
+                } else if (modifyHistory === 'replace') {
+                    if (this._history.length > 0) {
+                        this._history[this._history.length - 1] = resolvedPath;
+                    } else {
+                        this._history.push(resolvedPath);
+                    }
+                }
+
+                const notFoundMatch = this._createNotFoundMatch(resolvedPath);
+                this._currentMatch = notFoundMatch;
+
+                unmountAll();
+
+                const screen = this._wrapScreen(notFoundMatch);
+                const emitEvent = direction === 'back' ? 'back' : 'navigate';
+                this.events.emit(emitEvent, { match: notFoundMatch, screen, direction });
+                return;
+            }
+
             this.events.emit('error', new Error(`No route found for path: ${resolvedPath}`));
             return;
         }

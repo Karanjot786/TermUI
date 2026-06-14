@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import type { Color } from '../style/Color.js';
-import { stringWidth } from '../utils/unicode.js';
+import { stringWidth, segmenter } from '../utils/unicode.js';
 import { stripAnsiControl } from '../utils/ansi.js';
 import { caps } from './env-caps.js';
 
@@ -128,10 +128,26 @@ export class Screen {
     back: Cell[][];
 
     /**
+     * Render epoch counter. Incremented on every swap so downstream consumers
+     * (e.g. Renderer._flush) can detect and skip stale frames from a previous
+     * epoch, preventing double-swap corruption.
+     */
+    private _epoch = 0;
+
+    /** True while swap() is executing to prevent re-entrant double-swap corruption. */
+    private _swapping = false;
+
+    /** The epoch captured at the start of the current flush cycle. */
+    private _flushEpoch = -1;
+
+    /**
      * Stack of clipping regions. When non-empty, setCell/writeString
      * only write to cells within the topmost clip rectangle.
      */
     private _clipStack: Array<{ x: number; y: number; width: number; height: number }> = [];
+
+    private _translateYStack: number[] = [];
+    private _translateY = 0;
 
     constructor(cols: number, rows: number) {
         this._cols = cols;
@@ -251,6 +267,16 @@ export class Screen {
             : null;
     }
 
+    pushTranslateY(offset: number): void {
+        this._translateYStack.push(offset);
+        this._translateY += offset;
+    }
+
+    popTranslateY(): void {
+        const offset = this._translateYStack.pop() ?? 0;
+        this._translateY -= offset;
+    }
+
     /**
      * Write a cell to the back buffer at position (col, row).
      */
@@ -258,6 +284,8 @@ export class Screen {
         // Floor to integers — layout engine may produce fractional values
         col = Math.floor(col);
         row = Math.floor(row);
+        // Apply Y translation before bounds/clip checks
+        row += this._translateY;
         // Use positive range check (NaN fails >= 0, preventing NaN indices)
         if (!(col >= 0 && col < this._cols && row >= 0 && row < this._rows)) return;
 
@@ -294,12 +322,14 @@ export class Screen {
         // Strip ANSI control sequences from user-supplied content to prevent escape injection
         const safeStr = stripAnsiControl(str);
         let x = col;
-        for (const char of safeStr) {
+        
+        const segments = segmenter.segment(safeStr);
+        for (const { segment } of segments) {
             if (x >= this._cols) break;
 
-            let finalChar = char;
+            let finalChar = segment;
             // Measure the visual width with the shared unicode utility
-            let width = stringWidth(char);
+            let width = stringWidth(segment);
 
             // Advance past off-screen-left cells by the real width
             if (x < 0) { x += width; continue; }
@@ -346,13 +376,36 @@ export class Screen {
         }
     }
 
+    /** Current render epoch — incremented after each swap. */
+    get epoch(): number {
+        return this._epoch;
+    }
+
+    /** The epoch captured at the start of the current flush cycle. */
+    get flushEpoch(): number {
+        return this._flushEpoch;
+    }
+    set flushEpoch(value: number) {
+        this._flushEpoch = value;
+    }
+
     /**
      * Swap front and back buffers. Called after rendering diffs.
+     * Uses mutual exclusion to prevent double-swap corruption when
+     * _flush() is called concurrently (e.g. from duplicate setImmediate
+     * callbacks).
      */
     swap(): void {
-        const temp = this.front;
-        this.front = this.back;
-        this.back = temp;
+        if (this._swapping) return;
+        this._swapping = true;
+        try {
+            const temp = this.front;
+            this.front = this.back;
+            this.back = temp;
+            this._epoch++;
+        } finally {
+            this._swapping = false;
+        }
     }
 
     /**
@@ -378,6 +431,33 @@ export class Screen {
             }
         }
     }
+
+    /**
+ * Export current screen as ANSI snapshot text.
+ */
+exportANSI(): string {
+    const lines: string[] = [];
+
+    for (let r = 0; r < this._rows; r++) {
+        lines.push(this.getLine(r));
+    }
+
+    return lines.join('\n');
+}
+
+/**
+ * Export current screen as SVG.
+ */
+exportSVG(): string {
+    return `
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${this._cols * 8}"
+     height="${this._rows * 16}">
+    <text x="10" y="20">
+        Terminal Export
+    </text>
+</svg>`;
+}
 
     private _createGrid(cols: number, rows: number): Cell[][] {
         const grid: Cell[][] = [];

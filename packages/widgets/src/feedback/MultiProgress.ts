@@ -66,9 +66,58 @@ export class MultiProgress extends Widget {
      */
     updateItem(index: number, value: number): void {
         if (index >= 0 && index < this._items.length) {
-            this._items[index].value = Math.max(0, Math.min(1, value));
+            const normalized = Math.max(0, Math.min(1, value));
+    
+            if (this._items[index].value === normalized) {
+                return;
+            }
+    
+            this._items[index].value = normalized;
             this.markDirty();
         }
+    }
+
+    /**
+     * Test-only getter for items array
+     * @internal
+     */
+    getItemsForTest(): ProgressItem[] {
+        return this._items;
+    }
+
+    /**
+     * Test-only getter for labelWidth
+     * @internal
+     */
+    getLabelWidthForTest(): number {
+        return this._labelWidth;
+    }
+
+    /**
+     * Test-only getter for showValues
+     * @internal
+     */
+    getShowValuesForTest(): boolean {
+        return this._showValues;
+    }
+
+    /**
+     * Test-only getter for style height
+     * @internal
+     */
+    getHeightForTest(): number {
+        // Height is always set as number in constructor (options.items.length)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return this._style.height as number;
+    }
+
+    /**
+     * Test-only setter for dirty state
+     * @internal
+     */
+    setDirtyForTest(value: boolean): void {
+        // _dirty is protected in Widget base class; accessible directly from subclass
+        this._dirty = value;
     }
 
     protected _renderSelf(screen: Screen): void {

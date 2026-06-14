@@ -2,82 +2,43 @@
 // @termuijs/core — Renderer Hook & Batching Scheduler
 // ─────────────────────────────────────────────────────
 
+type ConsoleMethod = 'log' | 'warn' | 'error';
+
 export class RenderHook {
-    private static _originalWrite: typeof process.stdout.write | null = null;
-    private static _refCount = 0;
-    private static _suspended = false;
-    private static _instances: RenderHook[] = [];
     private _buffer: string[] = [];
     private _isActive = false;
+    private _originalConsole: Partial<Record<ConsoleMethod, (...args: any[]) => void>> = {};
 
-    /** Check if the hook is currently intercepting stdout */
+    /** Check if the hook is currently intercepting console output */
     get isActive(): boolean {
         return this._isActive;
     }
 
-    /** Hijack stdout to buffer external logs */
+    /** Wrap console.log/warn/error to buffer external logs instead of writing to stdout */
     start(): void {
         if (this._isActive) return;
         this._isActive = true;
-        RenderHook._instances.push(this);
-        RenderHook._refCount++;
-        if (RenderHook._refCount > 1) return;
 
-        if (RenderHook._originalWrite === null) {
-            RenderHook._originalWrite = process.stdout.write;
+        const methods: ConsoleMethod[] = ['log', 'warn', 'error'];
+        for (const method of methods) {
+            this._originalConsole[method] = console[method];
+            const hook = this;
+            console[method] = function (...args: any[]): void {
+                const text = args.map(a => typeof a === 'string' ? a : String(a)).join(' ');
+                hook._buffer.push(text + '\n');
+            };
         }
-
-        const write = (
-            chunk: any,
-            encodingOrCb?: any,
-            cb?: any
-        ): boolean => {
-            const text = Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
-            if (!RenderHook._suspended && RenderHook._instances.length > 0) {
-                for (const inst of RenderHook._instances) {
-                    inst._buffer.push(text);
-                }
-                const callback = typeof encodingOrCb === 'function' ? encodingOrCb : cb;
-                if (typeof callback === 'function') {
-                    callback();
-                }
-                return true;
-            }
-            return RenderHook._originalWrite!.call(process.stdout, chunk);
-        };
-        process.stdout.write = write;
     }
 
-    /** Restore original stdout behavior */
+    /** Restore original console methods */
     stop(): void {
-        if (!this._isActive || !RenderHook._originalWrite) return;
+        if (!this._isActive) return;
         this._isActive = false;
-        const idx = RenderHook._instances.indexOf(this);
-        if (idx >= 0) RenderHook._instances.splice(idx, 1);
-        RenderHook._refCount--;
-        if (RenderHook._refCount > 0) return;
-        process.stdout.write = RenderHook._originalWrite;
-    }
 
-    /** Restore stdout globally regardless of which instance hijacked it */
-    static globalRestore(): void {
-        RenderHook._instances = [];
-        RenderHook._refCount = 0;
-        RenderHook._suspended = false;
-        if (RenderHook._originalWrite) {
-            process.stdout.write = RenderHook._originalWrite;
-            RenderHook._originalWrite = null;
+        for (const [method, original] of Object.entries(this._originalConsole)) {
+            console[method as ConsoleMethod] = original as (...args: any[]) => void;
         }
-    }
-
-    /** Temporarily bypass buffering so render output goes directly to stdout */
-    static suspendAll(): void {
-        RenderHook._suspended = true;
-    }
-
-    /** Re-enable buffering after suspendAll */
-    static resumeAll(): void {
-        RenderHook._suspended = false;
+        this._originalConsole = {};
     }
 
     /** Retrieve and clear the buffered logs */
@@ -88,13 +49,9 @@ export class RenderHook {
         return out;
     }
 
-    /** Write directly to the terminal, bypassing the buffer */
+    /** Write directly to process.stdout, bypassing any buffering */
     writeRaw(text: string): void {
-        if (RenderHook._originalWrite) {
-            RenderHook._originalWrite.call(process.stdout, text);
-        } else {
-            process.stdout.write(text);
-        }
+        process.stdout.write(text);
     }
 }
 
