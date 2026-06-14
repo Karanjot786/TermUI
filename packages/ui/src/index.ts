@@ -20,6 +20,7 @@ export {
     ProgressBar,
     Spinner,
     Widget,
+    ContextMenu,
 } from '@termuijs/widgets';
 
 // ── New components ──
@@ -217,11 +218,14 @@ export type { ListbarOptions, ListbarItem } from './Listbar.js';
 
 export { validateInput } from './validation.js';
 export type { InputValidator } from './validation.js';
+<<<<<<< HEAD
 export { ContextMenu } from './components/ContextMenu.js';
 export type { ContextMenuProps } from './components/ContextMenu.js';
+=======
+>>>>>>> ab913685d1bcc2873bd56237f598852e4d833afc
 
 export { Popover } from './Popover.js';
-export type { PopoverOptions, PopoverPlacement } from './Popover.js'
+export type { PopoverOptions, PopoverPlacement } from './Popover.js';
 
 export { FormBuilder, useForm } from './components/FormBuilder.js';
 export type { FormBuilderProps } from './components/FormBuilder.js';

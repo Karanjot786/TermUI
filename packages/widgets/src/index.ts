@@ -192,6 +192,9 @@ export type { CarouselOptions } from './display/Carousel.js';
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 
+export { ContextMenu } from './display/ContextMenu.js';
+export type { ContextMenuOptions } from './display/ContextMenu.js';
+
 export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
