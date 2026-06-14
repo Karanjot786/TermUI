@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────
 
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, truncate, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
 
 export interface TagInputOptions {
     placeholder?: string;
@@ -121,18 +121,35 @@ export class TagInput extends Widget {
         display += this._draft;
 
         // Handle horizontal scrolling if content exceeds width
+        const displayWidth = stringWidth(display);
         const visibleWidth = width;
-        let scrollX = 0;
-        if (display.length > visibleWidth) {
-            scrollX = display.length - visibleWidth;
+        let scrollCols = 0;
+        if (displayWidth > visibleWidth) {
+            scrollCols = displayWidth - visibleWidth;
         }
 
-        const visibleText = display.slice(scrollX, scrollX + visibleWidth);
+        // Width-aware slice: iterate graphemes and accumulate until
+        // we have skipped scrollCols columns and collected visibleWidth columns.
+        const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+        let skipped = 0;
+        let accumulated = 0;
+        let visibleText = '';
+        for (const { segment } of segmenter.segment(display)) {
+            const w = stringWidth(segment);
+            if (skipped < scrollCols) {
+                skipped += w;
+                continue;
+            }
+            if (accumulated + w > visibleWidth) break;
+            visibleText += segment;
+            accumulated += w;
+        }
+
         screen.writeString(x, y, visibleText, attrs);
 
         // Show cursor at draft position when focused
         if (this.isFocused) {
-            const cursorPos = x + display.length - scrollX;
+            const cursorPos = x + displayWidth - scrollCols;
             if (cursorPos >= x && cursorPos < x + width) {
                 screen.setCell(cursorPos, y, {
                     char: ' ',
