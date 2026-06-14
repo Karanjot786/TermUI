@@ -32,13 +32,10 @@ export {
     toolCall,
     commandPalette,
     multiProgress,
-<<<<<<< HEAD
-    card,
-    box,
-=======
     tabs,
     select,
->>>>>>> upstream/main
+    card,
+    box,
 } from './widgets.js';
 
 export type {
@@ -65,13 +62,10 @@ export type {
     QuickCommand,
     DiffLine,
     ToolCallStatus,
-<<<<<<< HEAD
-    QuickCardOptions,
-    QuickBoxOptions,
-=======
     QuickTabsOptions,
     QuickSelectOptions,
->>>>>>> upstream/main
+    QuickCardOptions,
+    QuickBoxOptions,
 } from './widgets.js';
 
 // ── Store (re-exported for convenience) ───────────────
