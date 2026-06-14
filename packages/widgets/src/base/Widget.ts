@@ -295,6 +295,24 @@ export abstract class Widget {
     protected abstract _renderSelf(screen: Screen): void;
 
     /**
+     * Update the widget with previous props/state.
+     * Subclasses override this with a specific type parameter
+     * to receive typed previous state instead of `any`.
+     *
+     * @example
+     * ```ts
+     * update(previousProps: MyWidgetProps): void {
+     *   if (previousProps.label !== this.props.label) {
+     *     this.markDirty();
+     *   }
+     * }
+     * ```
+     */
+    update<T = unknown>(_previousProps: T): void {
+        this.markDirty();
+    }
+
+    /**
      * Update the computed rect from layout results.
      */
     updateRect(rect: Rect): void {
