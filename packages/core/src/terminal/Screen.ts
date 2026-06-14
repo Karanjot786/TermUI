@@ -138,7 +138,7 @@ export class Screen {
     private _swapping = false;
 
     /** The epoch captured at the start of the current flush cycle. */
-    private _flushEpoch = 0;
+    private _flushEpoch = -1;
 
     /**
      * Stack of clipping regions. When non-empty, setCell/writeString
