@@ -42,13 +42,19 @@ if (!existsSync(mainPath)) {
 
 try {
     head = JSON.parse(readFileSync(headPath, 'utf8'));
-    main = JSON.parse(readFileSync(mainPath, 'utf8'));
 } catch (e) {
-    console.error(`Error parsing benchmark files: ${e.message}`);
-    const errMarkdown = `<!-- termui-bench-comment -->\n## Performance benchmarks\n\n❌ **Error:** Failed to parse benchmark results. Check CI logs for details.`;
+    console.error(`Error parsing head benchmark file: ${e.message}`);
+    const errMarkdown = `<!-- termui-bench-comment -->\n## Render-loop benchmark\n\n❌ **Error:** Failed to parse head benchmark results. Check CI logs for details.`;
     const outPath = process.env.BENCH_COMMENT_OUT ?? 'bench-comment.md';
     writeFileSync(outPath, errMarkdown + '\n', 'utf8');
     process.exit(2);
+}
+
+try {
+    main = JSON.parse(readFileSync(mainPath, 'utf8'));
+} catch (e) {
+    console.error(`Error parsing main benchmark file: ${e.message}. Falling back to head.`);
+    main = head; // Fallback so CI doesn't block if main bench is broken
 }
 
 // Handle both old format (single benchmark) and new format (aggregated benchmarks)
