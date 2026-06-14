@@ -36,7 +36,7 @@ export interface RouterOptions {
     /** Maximum history entries (default: 100) */
     maxHistory?: number;
     /** Component rendered when no route matches */
-    notFound?: (path: string) => any;
+    notFound?: (path: string) => VNode;
 }
 
 export class Router {
@@ -45,7 +45,7 @@ export class Router {
     private _forwardStack: string[] = [];
     private _currentMatch: RouteMatch | null = null;
     private _maxHistory: number;
-    private _notFound?: (path: string) => any;
+    private _notFound?: (path: string) => VNode;
     private _pendingInitialPath: string | null = null;
     readonly events = new EventEmitter<RouterEvents>();
 
