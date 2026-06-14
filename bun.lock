@@ -401,6 +401,18 @@
         "zod",
       ],
     },
+    "packages/charts": {
+      "name": "@termuijs/charts",
+      "version": "0.1.5",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0",
+      },
+    },
     "packages/core": {
       "name": "@termuijs/core",
       "version": "0.1.5",
@@ -472,7 +484,6 @@
         "@termuijs/core": "workspace:*",
       },
       "devDependencies": {
-        "@termuijs/widgets": "workspace:*",
         "tsup": "^8.0.0",
         "typescript": "^5.3.0",
       },
@@ -744,6 +755,8 @@
     "@standard-schema/spec": ["@standard-schema/spec@1.1.0", "", {}, "sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w=="],
 
     "@termuijs/adapters": ["@termuijs/adapters@workspace:packages/adapters"],
+
+    "@termuijs/charts": ["@termuijs/charts@workspace:packages/charts"],
 
     "@termuijs/core": ["@termuijs/core@workspace:packages/core"],
 
