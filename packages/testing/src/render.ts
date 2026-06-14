@@ -47,6 +47,18 @@ export interface TestInstance {
     getAllByText(text: string): Widget[];
 
     /**
+     * Find a widget whose role prop matches the given string.
+     * Returns null if not found.
+     */
+    getByRole(role: string): Widget | null;
+
+    /**
+     * Find a widget whose label prop matches the given string.
+     * Returns null if not found.
+     */
+    getByLabelText(label: string): Widget | null;
+
+    /**
      * Find all widgets of a specific type (by constructor).
      */
     getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
@@ -81,6 +93,18 @@ export interface TestInstance {
         key: string,
         modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
     ): void;
+
+    pressKey(
+        key: string,
+        modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
+    ): void;
+
+    pressKeys(
+        keys: string[],
+        modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
+    ): void;
+
+    getOutput(): string;
 
     /** Simulate a mouse event at (x, y). */
     fireMouse(x: number, y: number, init?: Partial<MouseEvent>): void;
@@ -333,6 +357,16 @@ export function render(
             return null;
         },
 
+        getByRole(role: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'role') === role);
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        getByLabelText(label: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'label') === label);
+            return matches.length > 0 ? matches[0] : null;
+        },
+
         getAllByText(text: string): Widget[] {
             return walkWidgets(container, (w) => {
                 if (w instanceof Text) {
@@ -383,6 +417,8 @@ export function render(
                 },
             };
 
+        
+
             const instances: Map<Widget, any> = (globalThis as any)
                 .__termuijs_instances;
             const rootInstance = instances?.get(rootWidget);
@@ -398,6 +434,16 @@ export function render(
                 container.addChild(newRoot);
                 rootWidget = newRoot;
                 renderToScreen(container, screen);
+            }
+        },
+
+        pressKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
+            instance.fireKey(key, modifiers);
+        },
+
+        pressKeys(keys: string[], modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
+            for (const key of keys) {
+                instance.fireKey(key, modifiers);
             }
         },
 
@@ -507,6 +553,10 @@ export function render(
 
         renderToString(): string {
             return this.toString();
+        },
+
+        getOutput(): string {
+            return this.renderToString();
         },
 
         fireResize(cols: number, rows: number): void {

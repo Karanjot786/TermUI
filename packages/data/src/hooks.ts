@@ -359,6 +359,9 @@ export interface UseFetchOptions {
 
     /** Base backoff in ms. Delay = retryDelay * 2 ** attempt */
     retryDelay?: number;
+
+    /** An arbitrary key that, when changed, triggers a refetch. */
+    key?: unknown;
 }
 
 export interface UseFetchResult<T> {
@@ -373,7 +376,7 @@ export interface UseFetchResult<T> {
  * @param url - The URL to fetch.
  * @param options - Options including `staleTime` in milliseconds.
  */
-export function useFetch<T = any>(url: string, options?: UseFetchOptions): UseFetchResult<T> {
+export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): UseFetchResult<T> {
     const staleTime = options?.staleTime ?? 0;
     const retry = options?.retry ?? 0;
     const retryDelay = options?.retryDelay ?? 300;
@@ -469,7 +472,7 @@ export function useFetch<T = any>(url: string, options?: UseFetchOptions): UseFe
             isMounted = false;
             clearRetryTimer();
         };
-    }, [url, staleTime, retry, retryDelay]);
+    }, [url, staleTime, retry, retryDelay, options?.key]);
 
     return { data, error, loading };
 }

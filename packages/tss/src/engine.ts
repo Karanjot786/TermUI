@@ -6,6 +6,8 @@ import { tokenize } from './tokenizer.js';
 import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValue } from './parser.js';
 import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
 import { evalCalc } from './calc.js';
+import { matchesPseudo } from './pseudo.js';
+import { extractKeyframes, type KeyframesDeclaration } from './animations.js';
 
 export function compile(source: string): string {
     const tokens = tokenize(source);
@@ -76,12 +78,13 @@ export class ThemeEngine {
 
     /** Load multiple .tss sources (merged) */
     loadAll(sources: string[]): void {
-        const merged: TSSStylesheet = { themes: [], rules: [], mixins: new Map() };
+        const merged: TSSStylesheet = { themes: [], rules: [], mixins: new Map(), keyframes: [] };
         for (const src of sources) {
             const tokens = tokenize(src);
             const ast = parse(tokens);
             merged.themes.push(...ast.themes);
             merged.rules.push(...ast.rules);
+            merged.keyframes.push(...ast.keyframes);
             for (const [name, props] of ast.mixins) {
                 merged.mixins.set(name, props);
             }
@@ -103,6 +106,11 @@ export class ThemeEngine {
     /** Get list of available theme names */
     get availableThemes(): string[] {
         return this._stylesheet?.themes.map(t => t.name) ?? [];
+    }
+
+    /** Get parsed @keyframes declarations from the loaded stylesheet */
+    getKeyframes(): KeyframesDeclaration[] {
+        return this._stylesheet ? extractKeyframes(this._stylesheet) : [];
     }
 
     /** Subscribe to theme changes */
@@ -208,9 +216,11 @@ export class ThemeEngine {
     }
 
     private _matchesSelector(sel: TSSSelector, widgetType: string, className?: string, pseudo?: string): boolean {
+        // Widget type match (* = universal)
         if (sel.widget !== '*' && sel.widget.toLowerCase() !== widgetType.toLowerCase()) return false;
+        // Class name match
         if (sel.className && sel.className !== className) return false;
-        if (sel.pseudo && sel.pseudo !== pseudo) return false;
+        if (!matchesPseudo(sel.pseudo, pseudo)) return false;
         return true;
     }
 

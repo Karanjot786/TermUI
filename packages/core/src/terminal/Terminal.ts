@@ -50,10 +50,6 @@ export class Terminal {
     // Stored handler references for proper cleanup
     private _resizeHandler: (() => void) | null = null;
     private _exitHandler: (() => void) | null = null;
-    private _sigintHandler: (() => void) | null = null;
-    private _sigtermHandler: (() => void) | null = null;
-    private _uncaughtExceptionHandler: ((err: Error) => void) | null = null;
-    private _unhandledRejectionHandler: (() => void) | null = null;
     private _restored = false;
     private _restoring = false;
 
@@ -188,6 +184,11 @@ export class Terminal {
     hideCursor(): void { this.write(ansi.hideCursor); }
     showCursor(): void { this.write(ansi.showCursor); }
 
+    /** Set the cursor shape via DECSCUSR. Default blink = true. */
+    setCursorShape(shape: ansi.CursorShape, blink?: boolean): void {
+        this.write(ansi.cursorShape(shape, blink));
+    }
+
     /** Ring the terminal bell (BEL). */
     bell(): void { this.write(ansi.bell); }
 
@@ -210,6 +211,16 @@ export class Terminal {
         if (this._isWriting) return;
 
         this._processWriteQueue();
+    }
+
+    /**
+     * Writes data to stdout synchronously, bypassing the write queue.
+     * Used by the renderer during frame flush to avoid races with the
+     * async queue lifecycle. Only use for render-path output.
+     */
+    writeSync(data: string): void {
+        if (!data) return;
+        this.stdout.write(data);
     }
 
     /**
@@ -284,18 +295,8 @@ export class Terminal {
         this._writeQueue = [];
         this._isWriting = false;
 
-        // Remove process-level signal handlers to prevent leaks
+        // Remove process-level handlers to prevent leaks
         if (this._exitHandler) process.off('exit', this._exitHandler);
-        if (this._sigintHandler) process.off('SIGINT', this._sigintHandler);
-        if (this._sigtermHandler) process.off('SIGTERM', this._sigtermHandler);
-        if (this._uncaughtExceptionHandler) {
-            process.off('uncaughtException', this._uncaughtExceptionHandler);
-            this._uncaughtExceptionHandler = null;
-        }
-        if (this._unhandledRejectionHandler) {
-            process.off('unhandledRejection', this._unhandledRejectionHandler);
-            this._unhandledRejectionHandler = null;
-        }
 
         // Remove resize listener
         if (this._resizeHandler) {
@@ -338,23 +339,7 @@ export class Terminal {
         };
 
         this._exitHandler = runCleanupHandlers;
-        this._sigintHandler = () => { runCleanupHandlers(); process.exit(130); };
-        this._sigtermHandler = () => { runCleanupHandlers(); process.exit(143); };
 
         process.on('exit', this._exitHandler);
-        process.on('SIGINT', this._sigintHandler);
-        process.on('SIGTERM', this._sigtermHandler);
-
-        this._uncaughtExceptionHandler = (err: Error) => {
-            this.restore();
-            process.exit(1);
-        };
-        this._unhandledRejectionHandler = () => {
-            this.restore();
-            process.exit(1);
-        };
-        
-        process.on('uncaughtException', this._uncaughtExceptionHandler);
-        process.on('unhandledRejection', this._unhandledRejectionHandler);
     }
 }

@@ -37,4 +37,15 @@ describe('Tabs', () => {
         tabs.prevTab(); // wraps to 2
         expect(tabs.activeIndex).toBe(2);
     });
+
+    it('safe with no tabs', () => {
+        const tabs = new Tabs([]);
+        tabs.selectTab(0);
+        tabs.nextTab();
+        tabs.nextTab();
+        tabs.prevTab();
+        tabs.prevTab();
+        expect(tabs.activeIndex).toBe(0);
+        expect(Number.isFinite(tabs.activeIndex)).toBe(true);
+    });
 });

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, resolve, relative, isAbsolute } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 
 const ALLOWED_EXTENSIONS = ['.tss', '.json', '.yaml', '.yml'];
 
@@ -14,20 +14,18 @@ const ALLOWED_EXTENSIONS = ['.tss', '.json', '.yaml', '.yml'];
  */
 export function resolveImports(source: string, basePath: string, visited = new Set<string>()): string {
     const importRegex = /@import\s+(?:'([^']+)'|"([^"]+)");?/g;
+    const baseDir = dirname(basePath);
 
     return source.replace(importRegex, (match, singleQuotePath, doubleQuotePath) => {
         const importPath = singleQuotePath || doubleQuotePath;
         if (!importPath) return match;
 
-        const baseDir = dirname(basePath);
         const fullPath = resolve(baseDir, importPath);
 
-        // Path traversal protection: reject any path that escapes the base directory.
-        // startsWith() is NOT safe here — "/themes-evil" starts with "/themes".
-        // path.relative() correctly detects traversal via ".." segments.
-        const rel = relative(baseDir, fullPath);
-        if (rel.startsWith('..') || isAbsolute(rel)) {
-            return `/* Error: Path traversal blocked */`;
+        // Security: Prevent path traversal — use path.relative() instead of startsWith()
+        // so that paths like "../base/../../" that normalize to escape baseDir are caught.
+        if (relative(baseDir, fullPath).startsWith('..')) {
+            return `/* Error: Path traversal blocked: ${importPath} */`;
         }
 
         // Only allow known theme file extensions

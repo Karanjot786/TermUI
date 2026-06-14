@@ -317,6 +317,46 @@ describe('middleware', () => {
 
         logSpy.mockRestore()
     })
+
+    it('functional updaters chain correctly inside a batch', async () => {
+        const useStore = createStore((set) => ({
+            a: 0,
+            b: 0,
+        }))
+
+        batch(() => {
+            useStore.setState((s) => ({ a: s.a + 1 })) // a: 0 → 1
+            useStore.setState((s) => ({ a: s.a + 1 })) // a: 1 → 2
+            useStore.setState((s) => ({ b: s.a * 10 })) // b: 2 * 10 = 20
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState()).toEqual({ a: 2, b: 20 })
+    })
+
+    it('batch rolls back state and getState returns pre-batch snapshot on throw', () => {
+        const useStore = createStore((set) => ({
+            x: 0,
+            y: 0,
+            z: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        try {
+            batch(() => {
+                useStore.setState({ x: 1 })
+                useStore.setState({ y: 2 })
+                throw new Error('abort')
+            })
+        } catch {}
+
+        // State must be fully rolled back
+        expect(useStore.getState()).toEqual({ x: 0, y: 0, z: 0 })
+        // No listeners should have fired
+        expect(spy).not.toHaveBeenCalled()
+    })
 })
 
 describe('persistence', () => {
@@ -324,6 +364,7 @@ describe('persistence', () => {
     const testFile = path.join(testDir, 'test-store.json')
 
     afterEach(() => {
+        vi.restoreAllMocks()
         vi.useRealTimers()
         if (fs.existsSync(testFile)) {
             try {

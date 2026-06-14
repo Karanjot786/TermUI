@@ -88,6 +88,48 @@ describe("Gradient Widget — Rendering & Colors", () => {
         // Should fall back to default style's fg color (green)
         expect(screen.back[0][0].fg).toEqual({ type: 'named', name: 'green' });
     });
+
+    it('interpolates midpoint color between start and end', () => {
+        vi.spyOn(caps, 'color', 'get').mockReturnValue(true);
+        const widget = new Gradient('abc', {}, { startColor: '#ff0000', endColor: '#0000ff' });
+        const screen = new Screen(20, 1);
+        widget.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        widget.render(screen);
+
+        const mid = screen.back[0][1].fg;
+        expect(mid).toBeDefined();
+        expect(mid?.type).toBe('rgb');
+        if (mid?.type === 'rgb') {
+            // Midpoint of red->blue: r should be between 0 and 255, b should be between 0 and 255
+            expect(mid.r).toBeGreaterThan(0);
+            expect(mid.r).toBeLessThan(255);
+            expect(mid.b).toBeGreaterThan(0);
+            expect(mid.b).toBeLessThan(255);
+        }
+    });
+
+    it('assigns start color to a single character', () => {
+        vi.spyOn(caps, 'color', 'get').mockReturnValue(true);
+        const widget = new Gradient('X', {}, { startColor: '#ff0000', endColor: '#0000ff' });
+        const screen = new Screen(20, 1);
+        widget.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        widget.render(screen);
+
+        // Single char: t=0, so color should be startColor
+        expect(screen.back[0][0].fg).toEqual({ type: 'rgb', r: 255, g: 0, b: 0 });
+        expect(screen.back[0][0].char).toBe('X');
+    });
+
+    it('truncates text to available width', () => {
+        vi.spyOn(caps, 'color', 'get').mockReturnValue(true);
+        const widget = new Gradient('abcdef', {}, { startColor: '#ff0000', endColor: '#0000ff' });
+        const screen = new Screen(3, 1);
+        widget.updateRect({ x: 0, y: 0, width: 3, height: 1 });
+        widget.render(screen);
+
+        const row = screen.back[0].map(c => c.char).join('');
+        expect(row).toBe('abc');
+    });
 });
 
 describe("Gradient Widget — Layout & Alignment", () => {

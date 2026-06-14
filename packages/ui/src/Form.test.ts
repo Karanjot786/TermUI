@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, createKeyEvent } from '@termuijs/core';
 import { render } from '@termuijs/testing';
 import { createElement, useRef } from '@termuijs/jsx';
 import { Form, type FormField } from './Form.js';
@@ -206,6 +206,38 @@ describe('Form — text editing', () => {
         form.insertChar('i');
         form.deleteBack();
         expect(form.values.first).toBe('Al');
+    });
+
+    it('printable key events insert characters via event system', () => {
+        const { form } = makeForm(TEXT_FIELDS);
+        const ev = createKeyEvent({ key: 'a', ctrl: false, alt: false, shift: false, raw: Buffer.from('a') });
+        form.events.emit('key', ev);
+        expect(form.values.first).toBe('a');
+    });
+
+    it('backspace key event removes characters via event system', () => {
+        const { form } = makeForm(TEXT_FIELDS);
+        // seed a character then send backspace
+        form.insertChar('Z');
+        const ev = createKeyEvent({ key: 'backspace', ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0) });
+        form.events.emit('key', ev);
+        expect(form.values.first).toBe('');
+    });
+
+    it('modified key events do not change field values', () => {
+        const { form } = makeForm(TEXT_FIELDS);
+        form.insertChar('X');
+        const ev = createKeyEvent({ key: 'a', ctrl: true, alt: false, shift: false, raw: Buffer.from('a') });
+        form.events.emit('key', ev);
+        expect(form.values.first).toBe('X');
+    });
+
+    it('multi-character key events do not change field values', () => {
+        const { form } = makeForm(TEXT_FIELDS);
+        form.insertChar('Y');
+        const ev = createKeyEvent({ key: 'enter', ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0) });
+        form.events.emit('key', ev);
+        expect(form.values.first).toBe('Y');
     });
 
     it('backspace at position 0 is safe and leaves value unchanged', () => {

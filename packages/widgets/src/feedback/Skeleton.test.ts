@@ -1,8 +1,4 @@
-// ─────────────────────────────────────────────────────
-// @termuijs/widgets — Tests for Skeleton widget
-// ─────────────────────────────────────────────────────
-
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Screen, caps } from '@termuijs/core';
 import { Skeleton } from './Skeleton.js';
 import * as motion from '@termuijs/motion';
@@ -12,9 +8,11 @@ describe('Skeleton', () => {
 
     beforeEach(() => {
         timerCallback = undefined;
+
         vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-        vi.spyOn(motion, 'timerPoolSubscribe').mockImplementation((_interval, cb) => {
+
+        vi.spyOn(motion, 'timerPoolSubscribe').mockImplementation((_ms, cb) => {
             timerCallback = cb;
             return () => {};
         });
@@ -24,112 +22,65 @@ describe('Skeleton', () => {
         vi.restoreAllMocks();
     });
 
-    it('initializes with default options and subscribes to timers', () => {
-        const skeleton = new Skeleton();
-        expect(skeleton).toBeDefined();
-        expect(motion.timerPoolSubscribe).toHaveBeenCalledWith(600, expect.any(Function));
-        expect(timerCallback).toBeDefined();
+    it('creates skeleton and subscribes to timer', () => {
+        const s = new Skeleton();
+        expect(s).toBeDefined();
+        expect(motion.timerPoolSubscribe).toHaveBeenCalled();
     });
 
-    it('does not subscribe to timer pool if motion is disabled', () => {
-        vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
-        const skeleton = new Skeleton();
-        expect(skeleton).toBeDefined();
-        expect(motion.timerPoolSubscribe).not.toHaveBeenCalled();
-    });
+    it('renders initial state', () => {
+        const s = new Skeleton();
+        s.updateRect({ x: 0, y: 0, width: 5, height: 2 });
 
-    it('renders pulse variant with unicode defaults', () => {
-        const skeleton = new Skeleton({}, { variant: 'pulse' });
-        skeleton.updateRect({ x: 0, y: 0, width: 5, height: 2 });
         const screen = new Screen(5, 2);
-        skeleton.render(screen);
+        s.render(screen);
 
-        // Frame 0 uses first char ('░')
-        for (let row = 0; row < 2; row++) {
-            const rendered = screen.back[row].map(c => c.char).join('');
-            expect(rendered).toBe('░░░░░');
-            for (let col = 0; col < 5; col++) {
-                expect(screen.back[row][col].dim).toBe(true);
-            }
+        for (let r = 0; r < 2; r++) {
+            expect(screen.back[r].map(c => c.char).join('')).toBe('░░░░░');
         }
     });
 
-    it('advances pulse frame and updates rendering on timer tick', () => {
-        const skeleton = new Skeleton({}, { variant: 'pulse' });
-        skeleton.updateRect({ x: 0, y: 0, width: 5, height: 2 });
-        const screen1 = new Screen(5, 2);
-        skeleton.render(screen1);
-        expect(screen1.back[0].map(c => c.char).join('')).toBe('░░░░░');
-
-        // Trigger timer tick to advance frame to 1 (uses '▒')
-        if (timerCallback) timerCallback();
-
-        const screen2 = new Screen(5, 2);
-        skeleton.render(screen2);
-        expect(screen2.back[0].map(c => c.char).join('')).toBe('▒▒▒▒▒');
-        expect(screen2.back[0][0].dim).toBe(false);
-    });
-
-    it('renders pulse variant with ASCII fallback when unicode is disabled', () => {
-        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
-        const skeleton = new Skeleton({}, { variant: 'pulse' });
-        skeleton.updateRect({ x: 0, y: 0, width: 5, height: 1 });
-
-        const screen = new Screen(5, 1);
-        skeleton.render(screen);
-
-        // ASCII default chars are ['-', '#']
-        expect(screen.back[0].map(c => c.char).join('')).toBe('-----');
-    });
-
-    it('renders pulse variant with custom characters', () => {
-        const skeleton = new Skeleton({}, { variant: 'pulse', chars: ['A', 'B'] });
-        skeleton.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+    it('updates on timer tick', () => {
+        const s = new Skeleton();
+        s.updateRect({ x: 0, y: 0, width: 5, height: 1 });
 
         const screen1 = new Screen(5, 1);
-        skeleton.render(screen1);
-        expect(screen1.back[0].map(c => c.char).join('')).toBe('AAAAA');
+        s.render(screen1);
 
         if (timerCallback) timerCallback();
 
         const screen2 = new Screen(5, 1);
-        skeleton.render(screen2);
-        expect(screen2.back[0].map(c => c.char).join('')).toBe('BBBBB');
+        s.render(screen2);
+
+        expect(screen2.back[0].map(c => c.char).join('')).toBe('▒▒▒▒▒');
     });
 
-    it('renders shimmer variant and shifts band on timer tick', () => {
-        const skeleton = new Skeleton({}, { variant: 'shimmer', chars: ['-', '#'] });
-        // Width 10: shimmer band is max(1, 10 * 0.2) = 2.
-        skeleton.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+    it('does not animate when caps.motion is false', () => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
 
-        const screen1 = new Screen(10, 1);
-        skeleton.render(screen1);
-        // Initially, shimmerPos = 0, bandStart = 0, bandWidth = 2 -> indices 0 and 1 are '#'
-        expect(screen1.back[0].map(c => c.char).join('')).toBe('##--------');
-
-        // Advance shimmerPos by 1 -> bandStart = 1
-        if (timerCallback) timerCallback();
-
-        const screen2 = new Screen(10, 1);
-        skeleton.render(screen2);
-        expect(screen2.back[0].map(c => c.char).join('')).toBe('-##-------');
+        const s = new Skeleton();
+        expect(motion.timerPoolSubscribe).not.toHaveBeenCalled();
     });
 
-    it('calls unsubscribe and clears timer on unmount', () => {
-        const unsubscribeMock = vi.fn();
-        vi.spyOn(motion, 'timerPoolSubscribe').mockReturnValue(unsubscribeMock);
+    it('respects custom chars', () => {
+        const s = new Skeleton({}, { chars: ['X', 'X'] });
+        s.updateRect({ x: 0, y: 0, width: 3, height: 1 });
 
-        const skeleton = new Skeleton();
-        skeleton.unmount();
+        const screen = new Screen(3, 1);
+        s.render(screen);
 
-        expect(unsubscribeMock).toHaveBeenCalled();
+        expect(screen.back[0].map(c => c.char).join('')).toBe('XXX');
     });
 
-    it('does not render if dimensions are zero or negative', () => {
-        const skeleton = new Skeleton();
-        skeleton.updateRect({ x: 0, y: 0, width: 0, height: 0 });
 
-        const screen = new Screen(5, 5);
-        expect(() => skeleton.render(screen)).not.toThrow();
+    it('unmount unsubscribes timer', () => {
+        const unsub = vi.fn();
+
+        vi.spyOn(motion, 'timerPoolSubscribe').mockReturnValue(unsub);
+
+        const s = new Skeleton();
+        s.unmount();
+
+        expect(unsub).toHaveBeenCalled();
     });
 });

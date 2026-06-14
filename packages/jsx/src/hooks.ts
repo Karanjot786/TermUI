@@ -9,6 +9,7 @@
 import type { KeyEvent } from '@termuijs/core';
 import { caps } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
+import type { Widget } from '@termuijs/widgets';
 import type { FC } from './vnode.js';
 
 // ── Fiber — per-component-instance state ──
@@ -30,6 +31,8 @@ export interface Fiber {
     intervals: ReturnType<typeof setInterval>[];
     /** Context values provided by this fiber's component */
     contextValues: Map<symbol, any>;
+    contextSubscribers?: Map<symbol, Set<Fiber>>;
+    contextDependencies?: Set<Set<Fiber>>;
     /** Parent fiber for context lookup */
     parent?: Fiber;
     // ── ErrorBoundary fields ──
@@ -44,6 +47,9 @@ export interface Fiber {
     _prevChildFibers?: Map<string, ChildFiberEntry>;
     /** Next child render index, reset by setCurrentFiber each render pass */
     _nextChildIdx?: number;
+    // ── Portal tracking ──
+    /** Widgets created via createPortal and their target, for proper teardown */
+    portalChildren?: Array<{ widgets: Widget[]; target: Widget }>;
 }
 
 interface HookState {
@@ -163,7 +169,7 @@ export function registerCleanup(fn: () => void): () => void {
  * Schedule a re-render. Multiple setState calls within the same
  * microtask are batched into a single re-render cycle.
  */
-function scheduleRender(fiber?: Fiber): void {
+export function scheduleRender(fiber?: Fiber): void {
     if (fiber) {
         _pendingUpdates.add(fiber);
     }
@@ -176,8 +182,15 @@ function scheduleRender(fiber?: Fiber): void {
 /** Flush all pending state updates in a single render pass */
 function flushUpdates(): void {
     _flushScheduled = false;
-    _pendingUpdates.clear();
-    _requestRender?.();
+    const pending = _pendingUpdates;
+    _pendingUpdates = new Set<Fiber>();
+    if (!_requestRender) {
+        for (const fiber of pending) {
+            _pendingUpdates.add(fiber);
+        }
+        return;
+    }
+    _requestRender();
 }
 
 // ── Hooks ──
@@ -602,13 +615,29 @@ export function destroyFiber(fiber: Fiber): void {
             destroyFiber(entry.fiber);
         }
     }
-    // Clean up global _instanceMap entries pointing to this fiber
-    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
-    if (termuiInstances instanceof Map) {
-        for (const [widget, inst] of termuiInstances) {
-            if (inst.fiber === fiber) {
+    // Clean up portal children - remove portal widgets from their targets
+    // This is critical to prevent ghost widgets remaining in the target widget tree and causing a memory leak
+    if (fiber.portalChildren) {
+        for (const entry of fiber.portalChildren) {
+            // Guard against stale target: skip if target was already destroyed
+            if (entry.target.parent !== null) {
+                for (const widget of entry.widgets) {
+                    entry.target.removeChild(widget);
+                }
+            }
+        }
+        fiber.portalChildren = undefined;
+    }
+    // Clean up global _instanceMap via reverse fiber→widget mapping (O(1))
+    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
+    if (_fiberToWidget instanceof Map) {
+        const widget = _fiberToWidget.get(fiber);
+        if (widget) {
+            const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+            if (termuiInstances instanceof Map) {
                 termuiInstances.delete(widget);
             }
+            _fiberToWidget.delete(fiber);
         }
     }
     fiber.hooks = [];
@@ -617,6 +646,14 @@ export function destroyFiber(fiber: Fiber): void {
     fiber.cleanups = [];
     fiber.intervals = [];
     fiber.contextValues.clear();
+    
+    if (fiber.contextDependencies) {
+        for (const subs of fiber.contextDependencies) {
+            subs.delete(fiber);
+        }
+        fiber.contextDependencies.clear();
+    }
+    
     fiber.childFibers = undefined;
     fiber._prevChildFibers = undefined;
 }
@@ -633,6 +670,17 @@ export function resetHooksGlobals(): void {
     _globalCleanups = [];
     for (const fn of cleanups) {
         try { fn(); } catch { /* ignore cleanup errors */ }
+    }
+    
+    // Clear global instance map
+    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+    if (termuiInstances instanceof Map) {
+        termuiInstances.clear();
+    }
+    // Clear reverse fiber→widget map
+    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
+    if (_fiberToWidget instanceof Map) {
+        _fiberToWidget.clear();
     }
 }
 

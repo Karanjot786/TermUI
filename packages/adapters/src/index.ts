@@ -1,5 +1,7 @@
 export { useCommander } from './commander/index.js'
 export type { CommanderResult } from './commander/index.js'
+export { useGit } from './git/index.js'
+export type { GitAdapter, GitStatusResult } from './git/index.js'
 export { useConf } from './conf/index.js'
 export type { SetConfValue, UseConfResult } from './conf/index.js'
 export { useGitHub } from './github/index.js'
@@ -30,6 +32,15 @@ export type {
   AIProvider,
 } from './ai/index.js'
 
+export { LocalVectorStore, indexDirectory, chunkText } from './ai/vectorStore.js'
+export type { DocumentChunk, VectorStoreOptions } from './ai/vectorStore.js'
+export { RAGChat } from './ai/RAGChat.js'
+export type { RAGChatOptions } from './ai/RAGChat.js'
+
 export { useDotenv } from './dotenv/index.js'
 export type { DotenvValues, UseDotenvResult } from './dotenv/index.js'
+export { useLocalStorage } from './localStorage/index.js'
+export type { LocalStorageAdapter } from './localStorage/index.js'
 
+export { useExeca, useShell } from './execa/index.js'
+export type { UseExecaResult } from './execa/index.js'

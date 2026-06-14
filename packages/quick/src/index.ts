@@ -19,14 +19,12 @@ export {
     sparkline,
     status,
     logView,
-    // Sprint 1.5/2 additions
     tree,
     skeleton,
     gridWidget,
     barChart,
     progressBar,
     spinner,
-    // Sprint 3 additions
     jsonView,
     diffView,
     streamingText,
@@ -34,8 +32,13 @@ export {
     toolCall,
     commandPalette,
     multiProgress,
+<<<<<<< HEAD
     card,
     box,
+=======
+    tabs,
+    select,
+>>>>>>> upstream/main
 } from './widgets.js';
 
 export type {
@@ -47,7 +50,6 @@ export type {
     QuickSparklineOptions,
     QuickStatusOptions,
     QuickLogViewOptions,
-    // Sprint 1.5/2 additions
     QuickTreeOptions,
     QuickSkeletonOptions,
     QuickGridOptions,
@@ -57,15 +59,19 @@ export type {
     TreeNode,
     BarGroup,
     BarChartOptions,
-    // Sprint 3 additions
     QuickJSONViewOptions,
     QuickDiffViewOptions,
     QuickToolCallOptions,
     QuickCommand,
     DiffLine,
     ToolCallStatus,
+<<<<<<< HEAD
     QuickCardOptions,
     QuickBoxOptions,
+=======
+    QuickTabsOptions,
+    QuickSelectOptions,
+>>>>>>> upstream/main
 } from './widgets.js';
 
 // ── Store (re-exported for convenience) ───────────────

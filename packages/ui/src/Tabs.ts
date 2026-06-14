@@ -24,9 +24,19 @@ export class Tabs extends Widget {
     }
 
     get activeIndex(): number { return this._activeIndex; }
-    selectTab(i: number): void { if (i >= 0 && i < this._tabs.length) { this._activeIndex = i; this.markDirty(); } }
-    nextTab(): void { this._activeIndex = (this._activeIndex + 1) % this._tabs.length; this.markDirty(); }
-    prevTab(): void { this._activeIndex = (this._activeIndex - 1 + this._tabs.length) % this._tabs.length; this.markDirty(); }
+    selectTab(i: number): void {
+        if (i >= 0 && i < this._tabs.length) { this._activeIndex = i; this.markDirty(); }
+    }
+    nextTab(): void {
+        if (this._tabs.length === 0) return;
+        this._activeIndex = (this._activeIndex + 1) % this._tabs.length;
+        this.markDirty();
+    }
+    prevTab(): void {
+        if (this._tabs.length === 0) return;
+        this._activeIndex = (this._activeIndex - 1 + this._tabs.length) % this._tabs.length;
+        this.markDirty();
+    }
     get activeContent(): Widget | undefined { return this._tabs[this._activeIndex]?.content; }
 
     protected _renderSelf(screen: Screen): void {

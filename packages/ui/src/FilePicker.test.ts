@@ -292,7 +292,7 @@ describe('FilePicker', () => {
             const picker = new FilePicker({ startPath: '/project' });
 
             const fileEntry = picker.entries.find(e => e.name === 'index.ts');
-            expect(fileEntry!.fullPath).toBe(nodePath.join('/project', 'index.ts'));
+            expect(fileEntry!.fullPath).toBe(nodePath.resolve('/project', 'index.ts'));
         });
     });
 
@@ -759,7 +759,7 @@ describe('FilePicker', () => {
             // entries[0] == '..'
             picker.confirm(); // navigate via '..'
 
-            expect(picker.currentPath).toBe('/project');
+            expect(picker.currentPath).toBe(nodePath.resolve('/project'));
         });
 
         it('goUp() navigates to the parent directory', async () => {

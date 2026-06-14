@@ -48,6 +48,10 @@ export class Text extends Widget {
         return this._content;
     }
 
+    toString(): string {
+        return this._content;
+    }
+
     /** Set vertical scroll offset (lines to skip). */
     setScrollY(offset: number): void {
         const normalized = Math.max(0, offset);

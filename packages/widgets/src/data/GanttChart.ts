@@ -109,9 +109,17 @@ export class GanttChart extends Widget {
 
         // Render label only on the first row of a task
         if (row === 0 && task.label) {
-          const labelStr = task.label.slice(0, maxLabelWidth);
-          // Pad to right align or left align. We'll left align for simplicity.
-          const padded = labelStr.padEnd(maxLabelWidth);
+          // Truncate by column width (not codepoints) to handle multi-byte chars
+          let truncated = '';
+          let cols = 0;
+          for (const ch of task.label) {
+            const w = stringWidth(ch);
+            if (cols + w > maxLabelWidth) break;
+            truncated += ch;
+            cols += w;
+          }
+          // Pad with spaces to fill maxLabelWidth columns
+          const padded = truncated + ' '.repeat(maxLabelWidth - stringWidth(truncated));
           screen.writeString(x, cellY, padded, { fg: this._labelColor });
         }
 

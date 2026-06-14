@@ -2,9 +2,9 @@
 // @termuijs/widgets — Tests for Tree widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Tree, type TreeNode } from './Tree.js';
-import { Screen } from '@termuijs/core';
+import { Screen, caps } from '@termuijs/core';
 
 // ── Helpers ──────────────────────────────────────────
 
@@ -154,11 +154,13 @@ describe('Tree', () => {
         });
 
         it('j moves cursor down (vim keybinding)', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
             const nodes = makeNodes();
             const tree = makeTree(nodes);
 
             tree.handleKey('j');
             expect(tree.selectedIndex).toBe(1);
+            vi.restoreAllMocks();
         });
 
         it('up moves cursor up', () => {
@@ -171,12 +173,14 @@ describe('Tree', () => {
         });
 
         it('k moves cursor up (vim keybinding)', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
             const nodes = makeNodes();
             const tree = makeTree(nodes);
 
             tree.handleKey('j'); // → 1
             tree.handleKey('k'); // → 0
             expect(tree.selectedIndex).toBe(0);
+            vi.restoreAllMocks();
         });
 
         it('up at first item is a no-op', () => {
@@ -207,12 +211,14 @@ describe('Tree', () => {
         });
 
         it('l expands collapsed parent (vim keybinding)', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
             const nodes = makeNodes();
             const tree = makeTree(nodes);
 
             tree.handleKey('l');
 
             expect(nodes[0].expanded).toBe(true);
+            vi.restoreAllMocks();
         });
 
         it('right on already-expanded parent is a no-op', () => {
@@ -242,6 +248,7 @@ describe('Tree', () => {
         });
 
         it('h collapses expanded parent (vim keybinding)', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
             const nodes = makeNodes();
             nodes[0].expanded = true;
             const tree = makeTree(nodes);
@@ -249,6 +256,7 @@ describe('Tree', () => {
             tree.handleKey('h');
 
             expect(nodes[0].expanded).toBe(false);
+            vi.restoreAllMocks();
         });
 
         it('left on collapsed node moves to parent', () => {

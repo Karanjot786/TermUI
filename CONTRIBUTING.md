@@ -4,6 +4,17 @@ Thanks for your contribution. Bug fixes, new widgets, improved docs, typo fixes.
 
 > 🎯 **GSSoC 2026 contributors:** jump to the [GSSoC section](#gssoc-2026) below. Read it before you open any PR.
 
+## Prerequisites
+
+Before you start, make sure you have:
+
+| Requirement | Version | Notes |
+|-------------|---------|-------|
+| **Bun** | >= 1.3.0 | [Install Bun](https://bun.sh/docs/installation) — `bun --version` to check |
+| **Node.js** | >= 18.0.0 | Only needed if you consume published `@termuijs/*` packages from npm — [Install Node.js](https://nodejs.org/) |
+| **Git** | Latest | `git --version` to check |
+| **Terminal** | — | Must support ANSI escape codes (most modern terminals do) |
+
 ## Getting started
 
 ```bash

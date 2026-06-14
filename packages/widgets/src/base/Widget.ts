@@ -19,6 +19,7 @@ import {
     containsPoint,
     caps,
 } from '@termuijs/core';
+import { animateRect, type SpringConfig, type SpringPresetName } from '@termuijs/motion';
 
 /**
  * Event map for widgets.
@@ -105,6 +106,11 @@ export abstract class Widget {
      */
     protected _dirty = true;
 
+    /** Enable animated layout transitions for size/position changes */
+    public layoutTransition: Partial<SpringConfig> | SpringPresetName | boolean = false;
+    private _layoutCancel: (() => void) | null = null;
+    private _targetRect: Rect | null = null;
+
     constructor(style: Partial<Style> = {}) {
         this.id = `widget_${++_widgetIdCounter}`;
         this._style = mergeStyles(defaultStyle(), style);
@@ -138,16 +144,33 @@ export abstract class Widget {
         const idx = this._children.indexOf(child);
         if (idx >= 0) {
             this._children.splice(idx, 1);
-            child.parent = null;
+            child.destroy();
         }
     }
 
     /** Remove all children */
     clearChildren(): void {
-        for (const child of this._children) {
-            child.parent = null;
-        }
+        const children = [...this._children];
         this._children = [];
+        for (const child of children) {
+            child.destroy();
+        }
+    }
+
+    /**
+     * Destroy this widget and all its descendants.
+     * Cleans up event handlers, removes parent references, and clears children.
+     * Fiber-level cleanup is handled by the reconciler's _pruneInstancesForWidget.
+     */
+    destroy(): void {
+        const children = [...this._children];
+        this._children = [];
+        for (const child of children) {
+            child.destroy();
+        }
+        this.events.emit('unmount', undefined as any);
+        this.events.removeAll();
+        this.parent = null;
     }
 
     /** Get all children */
@@ -178,7 +201,7 @@ export abstract class Widget {
      */
     syncLayout(): void {
         if (this._layoutNode) {
-            this._rect = { ...this._layoutNode.computed };
+            this._applyRect({ ...this._layoutNode.computed });
         }
 
         // Sync children (match visible children to layout node children)
@@ -247,7 +270,63 @@ export abstract class Widget {
      * Update the computed rect from layout results.
      */
     updateRect(rect: Rect): void {
-        this._rect = rect;
+        this._applyRect(rect);
+    }
+
+    private _applyRect(newRect: Rect): void {
+        if (this._rect.width === 0 && this._rect.height === 0) {
+            // First render, do not animate
+            this._rect = newRect;
+            return;
+        }
+
+        if (!this.layoutTransition) {
+            if (this._layoutCancel) {
+                this._layoutCancel();
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+            this._rect = newRect;
+            return;
+        }
+        
+        // If target is same, ignore
+        if (this._targetRect && 
+            this._targetRect.x === newRect.x && 
+            this._targetRect.y === newRect.y && 
+            this._targetRect.width === newRect.width && 
+            this._targetRect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._rect.x === newRect.x && 
+            this._rect.y === newRect.y && 
+            this._rect.width === newRect.width && 
+            this._rect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._layoutCancel) {
+            this._layoutCancel();
+        }
+        
+        this._targetRect = { ...newRect };
+        
+        const config = typeof this.layoutTransition === 'boolean' 
+            ? 'default' 
+            : this.layoutTransition;
+            
+        this._layoutCancel = animateRect(this._rect, newRect, {
+            config,
+            onFrame: (rect) => {
+                this._rect = rect;
+                this.markDirty();
+            },
+            onComplete: () => {
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+        });
     }
 
     /**

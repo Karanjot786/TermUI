@@ -169,6 +169,18 @@ export class LayerManager {
     }
 
     /**
+     * Check whether any visible layer has pending dirty changes.
+     */
+    hasDirtyLayers(): boolean {
+        for (const layer of this._layers.values()) {
+            if (layer.visible && layer.dirtyRegion) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Clear all cells in a specific layer.
      */
     clearLayer(id: string): void {
@@ -180,7 +192,7 @@ export class LayerManager {
                 layer.cells[r][c] = emptyCell();
             }
         }
-        layer.dirtyRegion = null;
+        layer.dirtyRegion = { x: 0, y: 0, width: this._cols, height: this._rows };
     }
 
     /**

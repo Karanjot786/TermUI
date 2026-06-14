@@ -12,6 +12,8 @@ export { Text } from './display/Text.js';
 export type { TextProps } from './display/Text.js';
 export { LogView } from './display/LogView.js';
 export type { LogViewOptions } from './display/LogView.js';
+export { ProgressString } from './ProgressBar/ProgressBar.js';
+export type { ProgressStringProps, ProgressBarStyle } from './ProgressBar/ProgressBar.js';
 export { Tree } from './display/Tree.js';
 export type { TreeNode, TreeOptions } from './display/Tree.js';
 export { JSONView, jsonToTree } from './display/JSONView.js';
@@ -24,6 +26,11 @@ export { ChatMessage } from './display/ChatMessage.js';
 export type { ChatMessageOptions, MessageRole } from './display/ChatMessage.js';
 export { ToolCall, ToolApproval } from './display/ToolCall.js';
 export type { ToolCallOptions, ToolApprovalOptions, ToolCallStatus } from './display/ToolCall.js';
+export { Canvas } from './display/Canvas.js';
+export { Rating } from './display/Rating.js';
+export type { RatingOptions } from './display/Rating.js';
+export { Pty } from './display/Pty.js';
+export type { PtyOptions } from './display/Pty.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
@@ -34,7 +41,6 @@ export { List } from './input/List.js';
 export type { ListItem, ListProps } from './input/List.js';
 export { useListState } from './data/ListState.js';
 export type { ListState } from './data/ListState.js';
-export { TextInput } from './input/TextInput.js';
 export { VirtualList } from './input/VirtualList.js';
 export type { VirtualListOptions } from './input/VirtualList.js';
 export { CommandPalette } from './input/CommandPalette.js';
@@ -46,10 +52,11 @@ export { Slider } from "./input/Slider.js";
 export type { SliderOptions } from "./input/Slider.js";
 export { RangeInput } from "./input/RangeInput.js";
 export type { RangeInputOptions } from "./input/RangeInput.js";
-export { PinInput } from "./input/PinInput.js";
-export type { PinInputOptions } from "./input/PinInput.js";
+export { TextInput } from './input/TextInput.js';
 export { Knob } from "./input/Knob.js";
 export type { KnobOptions } from "./input/Knob.js";
+export { PinInput } from "./input/PinInput.js";
+export type { PinInputOptions } from "./input/PinInput.js";
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
@@ -70,6 +77,13 @@ export { StatusIndicator } from './data/StatusIndicator.js';
 export type { StatusIndicatorOptions } from './data/StatusIndicator.js';
 export { BarChart } from './data/BarChart.js';
 export type { Bar, BarGroup, BarChartDirection, BarChartOptions } from './data/BarChart.js';
+
+export { Histogram } from './data/Histogram.js';
+export type { HistogramOptions } from './data/Histogram.js';
+
+export { StackedBarChart } from './data/StackedBarChart.js';
+export type { StackedBarChartOptions, StackedSeries } from './data/StackedBarChart.js';
+
 export { GanttChart } from './data/GanttChart.js';
 export type { GanttChartOptions, GanttTask } from './data/GanttChart.js';
 
@@ -106,6 +120,7 @@ export { TaskList } from './feedback/TaskList.js';
 export type { TaskItem, TaskStatus, TaskListOptions } from './feedback/TaskList.js';
 export { Scrollbar } from './feedback/Scrollbar.js';
 export type { ScrollbarOrientation, ScrollbarOptions } from './feedback/Scrollbar.js';
+
 export { Skeleton } from './feedback/Skeleton.js';
 export type { SkeletonOptions } from './feedback/Skeleton.js';
 export { StatusMessage } from './feedback/StatusMessage.js';
@@ -142,6 +157,8 @@ export type { BulletChartOptions, BulletRange } from './data/BulletChart.js';
 // ── New Display Widgets ───────────────────────────────
 export { Breadcrumbs } from './display/Breadcrumbs.js';
 export type { BreadcrumbsOptions } from './display/Breadcrumbs.js';
+export { Avatar } from './display/Avatar.js';
+export type { AvatarOptions } from './display/Avatar.js';
 
 export { BigText } from './display/BigText.js';
 export type { BigTextOptions } from './display/BigText.js';
@@ -158,6 +175,10 @@ export { Kbd } from './display/Kbd.js';
 export type { KbdOptions } from './display/Kbd.js';
 export { Tag } from './display/Tag.js';
 export type { TagOptions, TagVariant } from './display/Tag.js';
+export { Placeholder } from './display/Placeholder.js';
+export type { PlaceholderOptions } from './display/Placeholder.js';
+export { Watermark } from './display/Watermark.js';
+export type { WatermarkOptions } from './display/Watermark.js';
 export { NotificationBadge } from './display/NotificationBadge.js';
 export type { NotificationBadgeOptions, BadgePosition } from './display/NotificationBadge.js';
 
@@ -176,6 +197,12 @@ export type { LinkOptions } from './display/Link.js';
 
 export { ShortcutBar } from './display/ShortcutBar.js';
 export type { ShortcutItem, ShortcutBarOptions } from './display/ShortcutBar.js';
+
+export { Accordion } from './display/Accordion.js';
+export type { AccordionSection, AccordionOptions } from './display/Accordion.js';
+
+export { Stepper } from './display/Stepper.js';
+export type { StepperStep, StepperOptions, StepStatus, StepperOrientation } from './display/Stepper.js';
 
 
 // ── Missing layout elements restored ──
@@ -209,6 +236,7 @@ export type { MarqueeDirection, MarqueeOptions } from './display/Marquee.js';
 export { DataGrid } from './data/DataGrid.js';
 export { DataGrid as DataGridView } from './data/DataGrid.js';
 export type { DataGridColumn, DataGridRow, DataGridOptions, SortDirection } from './data/DataGrid.js';
+export { ScrollAcceleration } from './layout/scroll-acceleration.js';
 export { PieChart } from './data/PieChart.js';
 export type { PieSlice, PieChartOptions } from './data/PieChart.js';
 

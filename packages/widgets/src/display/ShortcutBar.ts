@@ -71,6 +71,17 @@ export class ShortcutBar extends Widget {
      * @param items The new list of shortcut items.
      */
     setItems(items: ShortcutItem[]): void {
+        if (
+            this._items.length === items.length &&
+            this._items.every(
+                (item, index) =>
+                    item.key === items[index]?.key &&
+                    item.label === items[index]?.label &&
+                    item.action === items[index]?.action,
+            )
+        ) {
+            return;
+        }
         this._items = items;
         this.markDirty();
     }
@@ -88,6 +99,7 @@ export class ShortcutBar extends Widget {
      * @param separator The new separator string.
      */
     setSeparator(separator: string): void {
+        if (this._separator === separator) return;
         this._separator = separator;
         this.markDirty();
     }

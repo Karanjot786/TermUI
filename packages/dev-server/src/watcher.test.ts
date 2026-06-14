@@ -15,10 +15,11 @@ describe('FileWatcher', () => {
         vi.useFakeTimers();
         mockWatcherEmitter = new EventEmitter();
         vi.mocked(watch).mockReturnValue(mockWatcherEmitter as any);
+        vi.mocked(existsSync).mockReturnValue(true);
     });
 
     afterEach(() => {
-        vi.restoreAllMocks();
+        vi.clearAllMocks();
         vi.useRealTimers();
     });
 

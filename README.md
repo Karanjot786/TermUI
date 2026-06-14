@@ -24,6 +24,41 @@
 
 > 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). Not sure which API to use? Read our [Choosing your API guide](./docs/choosing-your-api.md). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
 
+## Table of Contents
+
+- [Available Scripts](#available-scripts)
+- [What is TermUI?](#what-is-termui)
+  - [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Manual Setup](#manual-setup)
+- [Packages](#packages)
+- [Features](#features)
+  - [useKeymap](#usekeymap)
+  - [Focus Management](#focus-management)
+  - [ErrorBoundary](#errorboundary)
+  - [Capability Flags](#capability-flags)
+  - [Notifications](#notifications)
+  - [Imperative Prompts](#imperative-prompts)
+  - [Global State with Batch Updates](#global-state-with-batch-updates)
+  - [Theming](#theming)
+  - [AI Widgets](#ai-widgets)
+  - [VirtualList](#virtuallist)
+  - [Reactive System Data](#reactive-system-data)
+  - [Testing](#testing)
+- [Architecture](#architecture)
+- [Examples](#examples)
+  - [Running the Examples](#running-the-examples)
+    - [Available Examples](#available-examples)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Requirements](#requirements)
+- [Roadmap](#roadmap)
+- [Community](#community)
+- [Contributors](#contributors)
+- [License](#license)
+- [Troubleshooting](#troubleshooting)
+  - [Build Cache and Dependency Synchronization Issues](#build-cache-and-dependency-synchronization-issues)
+
 ## Available Scripts
 
 - `clean` → Clears build cache and node_modules
@@ -165,7 +200,7 @@ import { ErrorBoundary } from '@termuijs/jsx'
 
 ### Capability flags
 
-TermUI checks the terminal environment before rendering unicode or animations. Set environment variables to get ASCII output in CI or reduced-motion output for accessibility.
+TermUI checks the terminal environment before rendering unicode or animations. Set environment variables to get ASCII output in CI or reduced-motion output for accessibility. You can also configure standard keyboard navigation schemes.
 
 ```bash
 NO_UNICODE=1  # ASCII fallbacks for all widgets
@@ -173,10 +208,17 @@ NO_MOTION=1   # Skip all animations; static output
 NO_COLOR=1    # Disable ANSI color sequences
 ```
 
+Configure global navigation modes (`default` arrow keys, `vim` j/k/h/l, or `emacs` ctrl+n/p):
+```bash
+TERMUI_KEYBINDINGS=vim
+TERMUI_KEYBINDINGS=emacs
+```
+
 ```typescript
 import { caps } from '@termuijs/core'
 
 const bullet = caps.unicode ? '●' : '*'
+// caps.keybindingMode → "default", "vim", or "emacs"
 ```
 
 ### Notifications
@@ -440,7 +482,8 @@ examples/
 ```bash
 bun install
 bun run build      # Build all 14 packages
-bun run test       # Run all 1394 tests
+bun run test        # Run all 1394 tests
+bun run coverage    # Generate test coverage report
 bun run typecheck  # Type-check all packages
 ```
 

@@ -73,6 +73,9 @@ export class TaskList extends Widget {
 
     /** Replace the task list and schedule a re-render. */
     setTasks(tasks: TaskItem[]): void {
+        if (tasks === this._tasks) {
+            return;
+        }
         this._tasks = tasks;
         this.markDirty();
     }
@@ -91,8 +94,9 @@ export class TaskList extends Widget {
         this._elapsed += dt;
         if (this._elapsed >= SPINNER_INTERVAL) {
             const frames = caps.unicode ? SPINNER_FRAMES_UNICODE : SPINNER_FRAMES_ASCII;
-            this._frameIndex = (this._frameIndex + 1) % frames.length;
-            this._elapsed = 0;
+            const steps = Math.floor(this._elapsed / SPINNER_INTERVAL);
+            this._frameIndex = (this._frameIndex + steps) % frames.length;
+            this._elapsed %= SPINNER_INTERVAL;
             this.markDirty();
         }
     }

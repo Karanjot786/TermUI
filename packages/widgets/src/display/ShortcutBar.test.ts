@@ -108,4 +108,51 @@ describe('ShortcutBar', () => {
         bar.setStyles({ fg: { type: 'named', name: 'red' } });
         expect(bar.isDirty).toBe(true);
     });
+
+    it('does not mark dirty when setItems receives identical items', () => {
+        const items = [{ key: 'F1', label: 'Help' }];
+    
+        const bar = new ShortcutBar(items);
+    
+        bar.clearDirty();
+    
+        bar.setItems([{ key: 'F1', label: 'Help' }]);
+    
+        expect(bar.isDirty).toBe(false);
+    });
+    
+    it('marks dirty when setItems receives different items', () => {
+        const bar = new ShortcutBar([
+            { key: 'F1', label: 'Help' },
+        ]);
+    
+        bar.clearDirty();
+    
+        bar.setItems([
+            { key: 'F2', label: 'Save' },
+        ]);
+    
+        expect(bar.isDirty).toBe(true);
+    });
+    
+    it('does not mark dirty when setSeparator receives the same value', () => {
+        const bar = new ShortcutBar([]);
+    
+        bar.clearDirty();
+    
+        bar.setSeparator('   ');
+    
+        expect(bar.isDirty).toBe(false);
+    });
+    
+    it('marks dirty when setSeparator receives a different value', () => {
+        const bar = new ShortcutBar([]);
+    
+        bar.clearDirty();
+    
+        bar.setSeparator(' | ');
+    
+        expect(bar.isDirty).toBe(true);
+    });
+
 });
