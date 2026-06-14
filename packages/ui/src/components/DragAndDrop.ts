@@ -1,5 +1,6 @@
 import { createElement } from '@termuijs/jsx';
 import type { VNode } from '@termuijs/jsx';
+import { DraggableWidget, DroppableWidget } from '@termuijs/widgets';
 
 export interface DraggableProps {
     id: string;
@@ -7,15 +8,14 @@ export interface DraggableProps {
     children?: VNode | VNode[];
 }
 
-export function Draggable({ id, onDragStart, children }: DraggableProps) {
+export function Draggable(props: DraggableProps) {
     return createElement(
-        'box',
+        DraggableWidget as any,
         {
-            onMouseDown: () => {
-                if (onDragStart) onDragStart();
-            }
+            id: props.id,
+            onDragStart: props.onDragStart,
         },
-        children
+        props.children
     );
 }
 
@@ -25,16 +25,13 @@ export interface DroppableProps {
     children?: VNode | VNode[];
 }
 
-export function Droppable({ id, onDrop, children }: DroppableProps) {
+export function Droppable(props: DroppableProps) {
     return createElement(
-        'box',
+        DroppableWidget as any,
         {
-            onMouseUp: () => {
-                // In a real implementation we would track the currently dragged item.
-                // This is a minimal stub for the drop zone.
-                if (onDrop) onDrop('mock-dragged-id');
-            }
+            id: props.id,
+            onDrop: props.onDrop,
         },
-        children
+        props.children
     );
 }

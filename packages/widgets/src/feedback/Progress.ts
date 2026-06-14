@@ -11,7 +11,7 @@ import {
     SpeedColumn,
     PercentageColumn,
 } from './ProgressColumn.js';
-import type { Screen } from '@termuijs/core';
+import type { Screen, Style } from '@termuijs/core';
 export interface ProgressTask {
     label?: string;
     value?: number;
@@ -75,9 +75,9 @@ export class Progress extends Widget {
 
     constructor(
         props: ProgressProps = {},
-        style: Record<string, unknown> = {},
+        style: Partial<Style> = {},
     ) {
-        super(style as any);
+        super(style);
 
         this._tasks = props.tasks ?? [];
         

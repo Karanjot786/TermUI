@@ -26,6 +26,9 @@ export { ChatMessage } from './display/ChatMessage.js';
 export type { ChatMessageOptions, MessageRole } from './display/ChatMessage.js';
 export { ToolCall, ToolApproval } from './display/ToolCall.js';
 export type { ToolCallOptions, ToolApprovalOptions, ToolCallStatus } from './display/ToolCall.js';
+export { Canvas } from './display/Canvas.js';
+export { Rating } from './display/Rating.js';
+export type { RatingOptions } from './display/Rating.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
@@ -83,8 +86,6 @@ export { GanttChart } from './data/GanttChart.js';
 export type { GanttChartOptions, GanttTask } from './data/GanttChart.js';
 
 // ── Layout Widgets ────────────────────────────────────
-
-
 export { Grid } from './layout/Grid.js';
 export type { GridOptions } from './layout/Grid.js';
 export { ScrollView } from './layout/ScrollView.js';
@@ -103,6 +104,8 @@ export { Divider } from './layout/Divider.js';
 export type { DividerOptions, DividerOrientation } from './layout/Divider.js';
 export { AspectRatio } from './layout/AspectRatio.js';
 export type { AspectRatioOptions } from './layout/AspectRatio.js';
+export { DraggableWidget, DroppableWidget, DragState } from './layout/DragAndDrop.js';
+export type { DraggableOptions, DroppableOptions } from './layout/DragAndDrop.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';

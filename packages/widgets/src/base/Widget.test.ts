@@ -142,6 +142,67 @@ describe('Widget', () => {
         expect(w.callCount).toBe(2);
     });
 
+    describe('destroy() lifecycle', () => {
+        it('emits unmount and removes event listeners', () => {
+            const w = new TestWidget();
+            const unmountHandler = vi.fn();
+            w.events.on('unmount', unmountHandler);
+            w.destroy();
+            expect(unmountHandler).toHaveBeenCalledOnce();
+            // After destroy, events are removed — further emissions are no-ops
+            w.events.emit('unmount', undefined as any);
+            expect(unmountHandler).toHaveBeenCalledOnce();
+        });
+
+        it('nulls parent reference', () => {
+            const parent = new TestWidget();
+            const child = new TestWidget();
+            parent.addChild(child);
+            child.destroy();
+            expect(child.parent).toBeNull();
+        });
+
+        it('destroys children recursively', () => {
+            const parent = new TestWidget();
+            const child = new TestWidget();
+            const grandchild = new TestWidget();
+            parent.addChild(child);
+            child.addChild(grandchild);
+            const grandchildUnmount = vi.fn();
+            grandchild.events.on('unmount', grandchildUnmount);
+            parent.destroy();
+            expect(grandchildUnmount).toHaveBeenCalledOnce();
+            expect(grandchild.parent).toBeNull();
+        });
+
+        it('removeChild calls destroy on the removed child', () => {
+            const parent = new TestWidget();
+            const child = new TestWidget();
+            parent.addChild(child);
+            const unmountHandler = vi.fn();
+            child.events.on('unmount', unmountHandler);
+            parent.removeChild(child);
+            expect(unmountHandler).toHaveBeenCalledOnce();
+        });
+
+        it('clearChildren calls destroy on all children', () => {
+            const parent = new TestWidget();
+            const c1 = new TestWidget();
+            const c2 = new TestWidget();
+            parent.addChild(c1);
+            parent.addChild(c2);
+            const u1 = vi.fn();
+            const u2 = vi.fn();
+            c1.events.on('unmount', u1);
+            c2.events.on('unmount', u2);
+            parent.clearChildren();
+            expect(u1).toHaveBeenCalledOnce();
+            expect(u2).toHaveBeenCalledOnce();
+            expect(c1.parent).toBeNull();
+            expect(c2.parent).toBeNull();
+        });
+    });
+
     describe('isActive() Lifecycle', () => {
         class FocusableTestWidget extends Widget {
             focusable = true;
