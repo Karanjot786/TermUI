@@ -30,6 +30,7 @@ describe('render-loop benchmark', () => {
         const payload = JSON.parse(jsonStr);
 
         expect(payload.version).toBe(1);
+        expect(payload.benchmark).toBe('render-loop');
         expect(payload.runMs).toBe(1000);
         expect(payload.results).toHaveLength(3);
 
