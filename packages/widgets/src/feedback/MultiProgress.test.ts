@@ -46,6 +46,22 @@ describe('MultiProgress', () => {
         expect(mp.isDirty).toBe(true);
     });
 
+    it('does not mark dirty when updateItem receives the same value', () => {
+        const mp = new MultiProgress({ items });
+        mp.setDirtyForTest(false);
+
+        mp.updateItem(0, 0.53);
+        expect(mp.isDirty).toBe(false);
+    });
+    
+    it('marks dirty when updateItem receives a different value', () => {
+        const mp = new MultiProgress({ items });
+        mp.setDirtyForTest(false);
+        
+        mp.updateItem(0, 0.75);
+        expect(mp.isDirty).toBe(true);
+    });
+
     it('updateItem() clamps values to [0, 1]', () => {
         const mp = new MultiProgress({ items });
 

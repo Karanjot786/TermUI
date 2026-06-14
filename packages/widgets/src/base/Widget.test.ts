@@ -3,6 +3,14 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('@termuijs/core', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('@termuijs/core')>();
+    return {
+        ...actual,
+        prefersReducedMotion: () => false,
+    };
+});
 import { Widget } from './Widget.js';
 import { Screen, computeLayout } from '@termuijs/core';
 
@@ -229,3 +237,52 @@ describe('Widget', () => {
         });
     });
 });
+
+async function advanceSpring(ms: number) {
+    const steps = Math.ceil(ms / 16);
+    for (let i = 0; i < steps; i++) {
+        vi.advanceTimersByTime(16);
+        await Promise.resolve();
+    }
+}
+
+describe('Widget.layoutTransition', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.unstubAllEnvs();
+        vi.stubEnv('NO_MOTION', '');
+        vi.stubEnv('CI', '');
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.unstubAllEnvs();
+    });
+
+    it('Widget.layoutTransition = true causes updateRect to animate rather than snap', async () => {
+        class TransitionTestWidget extends Widget {
+            protected _renderSelf(): void {}
+        }
+        
+        const widget = new TransitionTestWidget({ id: 'test' });
+        
+        widget.updateRect({ x: 0, y: 0, width: 10, height: 10 });
+        expect(widget.rect).toEqual({ x: 0, y: 0, width: 10, height: 10 });
+
+        widget.layoutTransition = true;
+        
+        widget.updateRect({ x: 100, y: 100, width: 100, height: 100 });
+        
+        await advanceSpring(64);
+        
+        const rect = widget.rect;
+        expect(rect.x).toBeGreaterThan(0);
+        expect(rect.x).toBeLessThan(100);
+        expect(rect.width).toBeGreaterThan(10);
+        expect(rect.width).toBeLessThan(100);
+        
+        await advanceSpring(5000);
+        expect(widget.rect).toEqual({ x: 100, y: 100, width: 100, height: 100 });
+    });
+});
+
