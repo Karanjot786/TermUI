@@ -4,13 +4,26 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { TextInput } from './TextInput.js';
-import { Screen } from '@termuijs/core';
+import { Screen, type KeyEvent } from '@termuijs/core';
 
 function renderTextInput(input: TextInput, width = 20, height = 3) {
     const screen = new Screen(width, height);
     input.updateRect({ x: 0, y: 0, width, height });
     input.render(screen);
     return screen;
+}
+
+// Helper to create mock key events for testing handleKey
+function createMockKeyEvent(key: string, ctrl = false, alt = false, shift = false): KeyEvent {
+    return {
+        key,
+        raw: Buffer.from([]),
+        ctrl,
+        alt,
+        shift,
+        stopPropagation: vi.fn(),
+        preventDefault: vi.fn(),
+    };
 }
 
 describe('TextInput', () => {
@@ -226,6 +239,69 @@ describe('TextInput', () => {
         input.clearDirty();
         input.moveCursorEnd();
         expect(input.isDirty).toBe(true);
+    });
+});
+
+describe('handleKey', () => {
+    it('inserts printable characters', () => {
+        const input = new TextInput();
+        input.handleKey(createMockKeyEvent('a'));
+        input.handleKey(createMockKeyEvent('b'));
+        expect(input.value).toBe('ab');
+    });
+
+    it('ignores single characters with modifiers', () => {
+        const input = new TextInput();
+        input.handleKey(createMockKeyEvent('c', true)); // ctrl+c
+        expect(input.value).toBe('');
+    });
+
+    it('handles backspace', () => {
+        const input = new TextInput();
+        input.value = 'hello';
+        input.moveCursorEnd();
+        input.handleKey(createMockKeyEvent('backspace'));
+        expect(input.value).toBe('hell');
+    });
+
+    it('handles delete', () => {
+        const input = new TextInput();
+        input.value = 'hello';
+        input.moveCursorHome();
+        input.handleKey(createMockKeyEvent('delete'));
+        expect(input.value).toBe('ello');
+    });
+
+    it('handles left and right arrow keys', () => {
+        const input = new TextInput();
+        input.value = 'abc';
+        input.moveCursorEnd();
+        
+        input.handleKey(createMockKeyEvent('left'));
+        input.handleKey(createMockKeyEvent('delete'));
+        expect(input.value).toBe('ab');
+    });
+
+    it('handles home and end keys', () => {
+        const input = new TextInput();
+        input.value = 'abc';
+        
+        input.handleKey(createMockKeyEvent('home'));
+        input.handleKey(createMockKeyEvent('delete'));
+        expect(input.value).toBe('bc');
+        
+        input.handleKey(createMockKeyEvent('end'));
+        input.handleKey(createMockKeyEvent('backspace'));
+        expect(input.value).toBe('b');
+    });
+
+    it('handles enter key to submit', () => {
+        const onSubmitSpy = vi.fn();
+        const input = new TextInput({}, { onSubmit: onSubmitSpy });
+        input.value = 'done';
+        
+        input.handleKey(createMockKeyEvent('enter'));
+        expect(onSubmitSpy).toHaveBeenCalledWith('done');
     });
 });
 

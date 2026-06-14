@@ -41,3 +41,6 @@ export { useDotenv } from './dotenv/index.js'
 export type { DotenvValues, UseDotenvResult } from './dotenv/index.js'
 export { useLocalStorage } from './localStorage/index.js'
 export type { LocalStorageAdapter } from './localStorage/index.js'
+
+export { useExeca, useShell } from './execa/index.js'
+export type { UseExecaResult } from './execa/index.js'

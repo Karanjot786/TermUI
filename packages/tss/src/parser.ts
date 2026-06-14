@@ -10,6 +10,7 @@ export interface TSSStylesheet {
     themes: TSSTheme[];
     rules: TSSRule[];
     mixins: Map<string, TSSProperty[]>;
+    keyframes: TSSKeyframes[];
 }
 
 export interface TSSTheme {
@@ -41,11 +42,23 @@ export interface TSSRule {
     nested?: TSSRule[];
 }
 
+export interface TSSAnimationFrame {
+    /** Percentage string, e.g. '0%', '50%', '100%' */
+    offset: string;
+    /** Property declarations at this keyframe */
+    properties: TSSProperty[];
+}
+
+export interface TSSKeyframes {
+    name: string;
+    frames: TSSAnimationFrame[];
+}
+
 // ── Parser ──
 
 export function parse(tokens: Token[]): TSSStylesheet {
     let pos = 0;
-    const stylesheet: TSSStylesheet = { themes: [], rules: [], mixins: new Map() };
+    const stylesheet: TSSStylesheet = { themes: [], rules: [], mixins: new Map(), keyframes: [] };
 
     const peek = () => tokens[pos] ?? { type: TokenType.EOF, value: '', line: 0, col: 0 };
     const advance = () => tokens[pos++];
@@ -61,6 +74,8 @@ export function parse(tokens: Token[]): TSSStylesheet {
         } else if (peek().type === TokenType.AtMixin) {
             const { name, properties } = parseMixin();
             stylesheet.mixins.set(name, properties);
+        } else if (peek().type === TokenType.AtKeyframes) {
+            stylesheet.keyframes.push(parseKeyframes());
         } else if (peek().type === TokenType.Ident || peek().type === TokenType.Dot || peek().type === TokenType.PseudoClass) {
             stylesheet.rules.push(parseRule());
         } else {
@@ -108,6 +123,36 @@ export function parse(tokens: Token[]): TSSStylesheet {
         }
         expect(TokenType.RBrace);
         return { name, properties };
+    }
+
+    function parseKeyframes(): TSSKeyframes {
+        expect(TokenType.AtKeyframes);
+        const name = expect(TokenType.Ident).value;
+        expect(TokenType.LBrace);
+        const frames: TSSAnimationFrame[] = [];
+        while (peek().type !== TokenType.RBrace && peek().type !== TokenType.EOF) {
+            const offsetNum = expect(TokenType.Number).value;
+            expect(TokenType.Percent);
+            const offset = offsetNum + '%';
+            expect(TokenType.LBrace);
+            const properties: TSSProperty[] = [];
+            while (peek().type !== TokenType.RBrace && peek().type !== TokenType.EOF) {
+                if (peek().type === TokenType.Ident && tokens[pos + 1]?.type === TokenType.Colon) {
+                    const propName = advance().value;
+                    advance(); // skip Colon
+                    const value = parseValue();
+                    properties.push({ name: propName, value });
+                    if (peek().type === TokenType.Semicolon) advance();
+                } else {
+                    advance();
+                }
+            }
+            expect(TokenType.RBrace);
+            frames.push({ offset, properties });
+        }
+
+        expect(TokenType.RBrace);
+        return { name, frames };
     }
 
     function parseRule(): TSSRule {
