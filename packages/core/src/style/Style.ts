@@ -66,6 +66,16 @@ export interface Style {
     flexWrap?: 'nowrap' | 'wrap';
     gap?: number;
 
+    // ── Grid Layout ─────────
+    display?: 'flex' | 'grid';
+    gridTemplateColumns?: string;
+    gridTemplateRows?: string;
+    gridColumnStart?: number | string;
+    gridColumnEnd?: number | string;
+    gridRowStart?: number | string;
+    gridRowEnd?: number | string;
+    gridGap?: number;
+
     // ── Overflow ────────────
     overflow?: 'visible' | 'hidden' | 'scroll';
 
@@ -141,6 +151,7 @@ export const LAYOUT_PROPS: ReadonlySet<keyof Style> = new Set<keyof Style>([
     'width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
     'padding', 'margin', 'border',
     'flexDirection', 'justifyContent', 'alignItems', 'flexGrow', 'flexShrink', 'flexWrap', 'gap',
+    'display', 'gridTemplateColumns', 'gridTemplateRows', 'gridColumnStart', 'gridColumnEnd', 'gridRowStart', 'gridRowEnd', 'gridGap',
     'overflow', 'visible',
 ]);
 
