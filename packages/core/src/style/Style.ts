@@ -158,6 +158,8 @@ export function hasLayoutChanges(oldStyle: Style, newStyle: Style): boolean {
  * Extract the cell-level style attributes from a Style object.
  * Used when rendering text into the screen buffer.
  */
+import { adjustForContrast } from './contrast.js';
+
 export function styleToCellAttrs(style: Style): {
     fg: Color;
     bg: Color;
@@ -168,9 +170,17 @@ export function styleToCellAttrs(style: Style): {
     strikethrough: boolean;
     inverse: boolean;
 } {
+    let fg = style.fg ?? { type: 'none' };
+    let bg = style.bg ?? { type: 'none' };
+
+    const env = typeof globalThis !== 'undefined' ? (globalThis as any).process?.env : undefined;
+    if (env?.TERMUI_ACCESSIBILITY_STRICT === '1' && fg.type !== 'none' && bg.type !== 'none') {
+        fg = adjustForContrast(fg, bg);
+    }
+
     return {
-        fg: style.fg ?? { type: 'none' },
-        bg: style.bg ?? { type: 'none' },
+        fg,
+        bg,
         bold: style.bold ?? false,
         italic: style.italic ?? false,
         underline: style.underline ?? false,

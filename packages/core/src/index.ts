@@ -65,6 +65,7 @@ export {
     relativeLuminance, contrastRatio, wcagLevel, validateThemeContrast,
 } from './style/Color.js';
 export type { Color, NamedColor, ContrastFailure } from './style/Color.js';
+export { adjustForContrast } from './style/contrast.js';
 
 // ── Symbols ───────────────────────────────────────────
 export {

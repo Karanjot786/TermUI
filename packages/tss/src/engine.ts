@@ -4,7 +4,7 @@
 
 import { tokenize } from './tokenizer.js';
 import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValue } from './parser.js';
-import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
+import { type Style, type Color, type BorderStyle, parseColor, adjustForContrast } from '@termuijs/core';
 import { evalCalc } from './calc.js';
 import { matchesPseudo } from './pseudo.js';
 
@@ -119,6 +119,12 @@ export class ThemeEngine {
             if (!this._matchesSelector(rule.selector, widgetType, className, pseudo)) continue;
             this._applyProperties(rule.properties, style);
         }
+
+        const env = typeof globalThis !== 'undefined' ? (globalThis as any).process?.env : undefined;
+        if (env?.TERMUI_ACCESSIBILITY_STRICT === '1' && style.fg && style.bg) {
+            style.fg = adjustForContrast(style.fg, style.bg);
+        }
+
         return style;
     }
 
