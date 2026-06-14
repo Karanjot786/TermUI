@@ -619,19 +619,25 @@ export function destroyFiber(fiber: Fiber): void {
     // This is critical to prevent ghost widgets remaining in the target widget tree and causing a memory leak
     if (fiber.portalChildren) {
         for (const entry of fiber.portalChildren) {
-            for (const widget of entry.widgets) {
-                entry.target.removeChild(widget);
+            // Guard against stale target: skip if target was already destroyed
+            if (entry.target.parent !== null) {
+                for (const widget of entry.widgets) {
+                    entry.target.removeChild(widget);
+                }
             }
         }
         fiber.portalChildren = undefined;
     }
-    // Clean up global _instanceMap entries pointing to this fiber
-    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
-    if (termuiInstances instanceof Map) {
-        for (const [widget, inst] of termuiInstances) {
-            if (inst.fiber === fiber) {
+    // Clean up global _instanceMap via reverse fiber→widget mapping (O(1))
+    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
+    if (_fiberToWidget instanceof Map) {
+        const widget = _fiberToWidget.get(fiber);
+        if (widget) {
+            const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+            if (termuiInstances instanceof Map) {
                 termuiInstances.delete(widget);
             }
+            _fiberToWidget.delete(fiber);
         }
     }
     fiber.hooks = [];
@@ -670,6 +676,11 @@ export function resetHooksGlobals(): void {
     const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
     if (termuiInstances instanceof Map) {
         termuiInstances.clear();
+    }
+    // Clear reverse fiber→widget map
+    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
+    if (_fiberToWidget instanceof Map) {
+        _fiberToWidget.clear();
     }
 }
 

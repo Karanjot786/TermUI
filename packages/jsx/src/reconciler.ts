@@ -35,8 +35,11 @@ interface ComponentInstance {
 }
 
 const _instanceMap = new Map<Widget, ComponentInstance>();
-// Expose globally so render() and @termuijs/testing can dispatch to useInput handlers
+/** Reverse map: Fiber → Widget for O(1) cleanup in destroyFiber */
+const _fiberToWidgetMap = new Map<Fiber, Widget>();
+// Expose globally so render() and @termuijs/testing can dispatch to useInput handlers and destroyFiber
 (globalThis as any).__termuijs_instances = _instanceMap;
+(globalThis as any).__termuijs_fiberToWidget = _fiberToWidgetMap;
 
 // ── Parent fiber tracking ──
 // Tracks the currently-rendering fiber so child components
@@ -445,26 +448,27 @@ function renderComponent(
     let vnode: VNode | Widget;
     try {
         vnode = component({ ...props, children: children.length === 1 ? children[0] : children });
-    } catch (err) {
-        clearCurrentFiber();
-        _parentFiber = prevParent;
+        } catch (err) {
+            clearCurrentFiber();
+            _parentFiber = prevParent;
 
-        if (err instanceof Promise) {
-            throw err;
-        }
+            if (err instanceof Promise) {
+                throw err;
+            }
 
-        const error = err instanceof Error ? err : new Error(String(err));
-        const boundary = findErrorBoundary(fiber);
-        if (boundary?.errorFallback) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            const boundary = findErrorBoundary(fiber);
+            if (boundary?.errorFallback) {
+                destroyFiber(fiber);
+                _parentFiber = boundary;
+                const fallbackVNode = boundary.errorFallback(error);
+                return reconcile(fallbackVNode);
+            }
+            // No boundary found — destroy fiber and show default error widget
             destroyFiber(fiber);
-            _parentFiber = boundary;
-            const fallbackVNode = boundary.errorFallback(error);
-            return reconcile(fallbackVNode);
+            console.error('[TermUI] Unhandled component error:', error);
+            return reconcile(defaultErrorVNode(error));
         }
-        // No boundary found — show default error widget and log
-        console.error('[TermUI] Unhandled component error:', error);
-        return reconcile(defaultErrorVNode(error));
-    }
 
     clearCurrentFiber();
 
@@ -484,6 +488,7 @@ function renderComponent(
             childInstances: [],
             lastVNode: vnode,
         });
+        _fiberToWidgetMap.set(fiber, vnode);
 
         return vnode;
     }
@@ -511,6 +516,7 @@ function renderComponent(
         childInstances: [],
         lastVNode: vnode,
     });
+    _fiberToWidgetMap.set(fiber, widget);
 
     return widget;
 }
@@ -522,6 +528,10 @@ function renderComponent(
  */
 /** @internal exposed for testing */
 export function _pruneInstancesForWidget(widget: Widget): void {
+    const instance = _instanceMap.get(widget);
+    if (instance && _fiberToWidgetMap.get(instance.fiber) === widget) {
+        _fiberToWidgetMap.delete(instance.fiber);
+    }
     _instanceMap.delete(widget);
 
     const children = widget.children;
@@ -567,6 +577,10 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
             _parentFiber = boundary;
             return reconcile(boundary.errorFallback(err));
         }
+        // No error boundary found — destroy fiber and prune old widget
+        destroyFiber(fiber);
+        _pruneInstancesForWidget(instance.widget);
+        invalidateLayout(instance.widget.getLayoutNode());
         console.error('[TermUI] Unhandled component error:', err);
         return reconcile(defaultErrorVNode(err));
     }
@@ -588,6 +602,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         instance.widget = vnode;
         instance.lastVNode = vnode;
         _instanceMap.set(vnode, instance);
+        _fiberToWidgetMap.set(fiber, vnode);
 
         return vnode;
     }
@@ -625,6 +640,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
 
     // Re-register with new widget
     _instanceMap.set(newWidget, instance);
+    _fiberToWidgetMap.set(fiber, newWidget);
 
     return newWidget;
 }
@@ -637,4 +653,5 @@ export function unmountAll(): void {
         destroyFiber(instance.fiber);
     }
     _instanceMap.clear();
+    _fiberToWidgetMap.clear();
 }
