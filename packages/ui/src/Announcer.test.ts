@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen } from '@termuijs/core';
 import { Announcer, announcer } from './Announcer.js';
 
 describe('Announcer', () => {
     afterEach(() => {
+        announcer.clear();
         vi.restoreAllMocks();
     });
 
@@ -55,7 +56,7 @@ describe('Announcer', () => {
         a.render(screen);
 
         const row0 = screen.back[0].map(c => c.char).join('');
-        expect(row0).toBe('This is a ');
+        expect(row0).toBe('This is a…');
     });
 
     it('should use the shared singleton announcer correctly', () => {
@@ -65,9 +66,9 @@ describe('Announcer', () => {
         expect(announcer.current).toBe('Singleton Hello');
     });
 
-    it('can spy on caps.unicode without mutating caps', () => {
-        const spy = vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-        expect(caps.unicode).toBe(true);
-        expect(spy).toHaveBeenCalled();
+    it('rejects non-positive history option', () => {
+        expect(() => new Announcer({ history: 0 })).toThrow(RangeError);
+        expect(() => new Announcer({ history: -1 })).toThrow(RangeError);
+        expect(() => new Announcer({ history: 1.5 })).toThrow(RangeError);
     });
 });

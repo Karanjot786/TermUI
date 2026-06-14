@@ -1,6 +1,6 @@
 // Announcer — screen reader announcer live region
 import { Widget } from '@termuijs/widgets';
-import { type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Screen, mergeStyles, defaultStyle, styleToCellAttrs, truncate } from '@termuijs/core';
 
 export type Politeness = 'polite' | 'assertive';
 
@@ -16,7 +16,11 @@ export class Announcer extends Widget {
 
     constructor(options: AnnouncerOptions = {}) {
         super(mergeStyles(defaultStyle(), {}));
-        this._history = options.history ?? 1;
+        const history = options.history ?? 1;
+        if (!Number.isInteger(history) || history < 1) {
+            throw new RangeError('AnnouncerOptions.history must be a positive integer');
+        }
+        this._history = history;
     }
 
     /** Queue a message. Assertive messages replace any pending polite ones. */
@@ -65,8 +69,8 @@ export class Announcer extends Widget {
 
         for (let i = 0; i < visible.length; i++) {
             const msg = visible[i];
-            // Truncate render output to the rect width
-            const text = msg.slice(0, width);
+            // Truncate render output to the display width (handles multi-byte/emoji)
+            const text = truncate(msg, width);
             screen.writeString(x, y + i, text, attrs);
         }
     }
