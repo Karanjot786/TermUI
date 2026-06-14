@@ -8,6 +8,7 @@ import { createKeyEvent } from '../events/types.js';
 import { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './KeyMap.js';
 import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
+import { splitGraphemes } from './grapheme.js';
 
 export interface CursorPosition {
     row: number;
@@ -157,8 +158,8 @@ export class InputParser {
             return;
         }
 
-        // Process each code point for non-escape input
-        for (const ch of str) {
+        // Process each grapheme for non-escape input
+        for (const ch of splitGraphemes(str)) {
             const code = ch.codePointAt(0)!;
             const raw = Buffer.from(ch, 'utf8');
 
