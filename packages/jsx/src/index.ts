@@ -131,3 +131,5 @@ export { useSet } from './hooks/useSet.js';
 export type { UseSetActions } from './hooks/useSet.js';
 export { useThrottle } from './hooks/useThrottle.js';
 export { useEventListener } from './hooks/useEventListener.js';
+export { useViewMeta } from './hooks/useViewMeta.js';
+export type { ViewMeta, ViewMetaCursor, ViewMetaMouseMode } from './hooks/useViewMeta.js';
