@@ -133,3 +133,6 @@ export { Stopwatch } from './display/Stopwatch.js';
 export type { StopwatchOptions } from './display/Stopwatch.js';
 export { OrderedList } from './display/OrderedList.js';
 export type { OrderedListItem, OrderedListOptions } from './display/OrderedList.js';
+
+export { Avatar } from './display/Avatar.js';
+export type { AvatarOptions } from './display/Avatar.js';
