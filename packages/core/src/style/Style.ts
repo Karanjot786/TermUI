@@ -173,6 +173,7 @@ export function styleToCellAttrs(style: Style): {
     let fg = style.fg ?? { type: 'none' };
     let bg = style.bg ?? { type: 'none' };
 
+    // globalThis does not include the process property in TypeScript type definitions (as it is Node.js-specific), which requires the type assertion (globalThis as any) to access the env variable at runtime.
     const env = typeof globalThis !== 'undefined' ? (globalThis as any).process?.env : undefined;
     if (env?.TERMUI_ACCESSIBILITY_STRICT === '1' && fg.type !== 'none' && bg.type !== 'none') {
         fg = adjustForContrast(fg, bg);

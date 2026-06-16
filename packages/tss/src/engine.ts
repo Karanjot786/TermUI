@@ -120,6 +120,7 @@ export class ThemeEngine {
             this._applyProperties(rule.properties, style);
         }
 
+        // globalThis does not include the process property in TypeScript type definitions (as it is Node.js-specific), which requires the type assertion (globalThis as any) to access the env variable at runtime.
         const env = typeof globalThis !== 'undefined' ? (globalThis as any).process?.env : undefined;
         if (env?.TERMUI_ACCESSIBILITY_STRICT === '1' && style.fg && style.bg) {
             style.fg = adjustForContrast(style.fg, style.bg);
