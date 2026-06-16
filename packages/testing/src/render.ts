@@ -6,12 +6,19 @@
 // rendered output and simulating user interactions.
 // ─────────────────────────────────────────────────────
 
-import { Screen, type KeyEvent } from '@termuijs/core';
-import { Box, Text, Widget } from '@termuijs/widgets';
+import { Screen, type KeyEvent, type MouseEvent } from "@termuijs/core";
+import { Box, Text, Widget, _resetWidgetIdCounter } from "@termuijs/widgets";
 import {
-    reconcile, reRenderComponent, unmountAll, setRequestRender, getRequestRender,
-    collectInputHandlers, destroyFiber, type VNode,
-} from '@termuijs/jsx';
+    reconcile,
+    reRenderComponent,
+    unmountAll,
+    setRequestRender,
+    getRequestRender,
+    collectInputHandlers,
+    destroyFiber,
+    resetHooksGlobals,
+    type VNode,
+} from "@termuijs/jsx";
 
 /**
  * The result of rendering a component tree for testing.
@@ -40,19 +47,80 @@ export interface TestInstance {
     getAllByText(text: string): Widget[];
 
     /**
+     * Find a widget whose role prop matches the given string.
+     * Returns null if not found.
+     */
+    getByRole(role: string): Widget | null;
+
+    /**
+     * Find a widget whose label prop matches the given string.
+     * Returns null if not found.
+     */
+    getByLabelText(label: string): Widget | null;
+
+    /**
      * Find all widgets of a specific type (by constructor).
      */
-    getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[];
+    getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
+
+    /**
+     * Find the first widget whose text content includes the given string.
+     * Returns null instead of throwing when nothing matches.
+     */
+    queryByText(text: string): Widget | null;
+
+    /**
+     * Find the first widget of a specific type (by constructor).
+     * Returns null instead of throwing when nothing matches.
+     */
+    queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null; // any[] is required to accept widget constructors with varying signatures
+
+    /**
+     * Find all widgets whose text content includes the given string.
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByText(text: string): Widget[];
+    /**
+     * Find all widgets of a specific type (by constructor).
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
 
     /**
      * Simulate a key press event. This dispatches to useInput handlers.
      */
-    fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void;
+    fireKey(
+        key: string,
+        modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
+    ): void;
+
+    pressKey(
+        key: string,
+        modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
+    ): void;
+
+    pressKeys(
+        keys: string[],
+        modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
+    ): void;
+
+    getOutput(): string;
+
+    /** Simulate a mouse event at (x, y). */
+    fireMouse(x: number, y: number, init?: Partial<MouseEvent>): void;
+
+    /** Simulate a full click (mousedown + mouseup) at (x, y). */
+    click(x: number, y: number): void;
 
     /**
      * Type a string — fires each character as a key event.
      */
     typeText(text: string): void;
+
+    /**
+     * Simulate a terminal resize. Re-renders the widget tree at the new dimensions.
+     */
+    fireResize(cols: number, rows: number): void;
 
     /**
      * Force a re-render of the component tree.
@@ -63,7 +131,10 @@ export interface TestInstance {
      * Wait for an assertion to pass within a timeout.
      * Retries fn every interval ms until it stops throwing or the timeout elapses.
      */
-    waitFor(fn: () => void, opts?: { timeout?: number; interval?: number }): Promise<void>;
+    waitFor(
+        fn: () => void,
+        opts?: { timeout?: number; interval?: number },
+    ): Promise<void>;
 
     /**
      * Render the current screen buffer to a plain string.
@@ -87,17 +158,30 @@ export interface TestRenderOptions {
     height?: number;
 }
 
+/**
+ * A scoped render helper for tests that share default render options.
+ */
+export interface Fixture {
+    /** Render a tree with the fixture defaults; tracked for auto-unmount. */
+    render(element: VNode, options?: TestRenderOptions): TestInstance;
+    /** Unmount every instance this fixture created. Call in afterEach. */
+    cleanup(): void;
+}
+
 // ── Helpers ──
 
 /** Recursively walk a widget tree, collecting matching widgets */
-function walkWidgets(root: Widget, predicate: (w: Widget) => boolean): Widget[] {
+function walkWidgets(
+    root: Widget,
+    predicate: (w: Widget) => boolean,
+): Widget[] {
     const result: Widget[] = [];
     const stack: Widget[] = [root];
     while (stack.length > 0) {
         const w = stack.pop()!;
         if (predicate(w)) result.push(w);
         // Push children in reverse so we process left-to-right
-        const children: Widget[] = (w as any)._children ?? [];
+        const children: Widget[] = (w as any)._children ?? []; // as any: Widget._children is private; accessed for test renderer tree walk
         for (let i = children.length - 1; i >= 0; i--) {
             stack.push(children[i]);
         }
@@ -108,29 +192,44 @@ function walkWidgets(root: Widget, predicate: (w: Widget) => boolean): Widget[] 
 /** Extract text content from a Text widget */
 function getTextContent(widget: Widget): string {
     if (widget instanceof Text) {
-        return (widget as any)._content ?? '';
+        return (widget as any)._content ?? ""; // as any: Text._content is private; accessed for test renderer content inspection
     }
-    return '';
+    return "";
 }
 
 /** Render the widget tree to the screen buffer */
 function renderToScreen(container: Box, screen: Screen): void {
     // Set the root rect to fill the screen
-    (container as any)._rect = { x: 0, y: 0, width: screen.cols, height: screen.rows };
+    (container as any)._rect = { // as any: Widget private fields accessed by test renderer; no public inspection API
+        x: 0,
+        y: 0,
+        width: screen.cols,
+        height: screen.rows,
+    };
 
     // Simple vertical stacking layout for testing
     assignRects(container, 0, 0, screen.cols, screen.rows);
 
     // Clear and render
     screen.clear();
-    (container as any)._renderSelf?.(screen);
+    (container as any)._renderSelf?.(screen); // as any: Widget private fields accessed by test renderer; no public inspection API
     renderChildren(container, screen);
 }
 
-/** Simple recursive layout: stack children vertically */
-function assignRects(widget: Widget, x: number, y: number, width: number, height: number): void {
-    (widget as any)._rect = { x, y, width, height };
-    const children: Widget[] = (widget as any)._children ?? [];
+/**
+ * Simplified layout: divides height equally among children using integer division.
+ * Does NOT match ConstraintLayout's real output — do not assert pixel-perfect
+ * coordinates in tests using this renderer. Only assert cell content (text, chars).
+ */
+function assignRects(
+    widget: Widget,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+): void {
+    (widget as any)._rect = { x, y, width, height }; // as any: Widget private fields accessed by test renderer; no public inspection API
+    const children: Widget[] = (widget as any)._children ?? []; // as any: Widget private fields accessed by test renderer; no public inspection API
     if (children.length === 0) return;
     const childHeight = Math.max(1, Math.floor(height / children.length));
     let currentY = y;
@@ -141,9 +240,9 @@ function assignRects(widget: Widget, x: number, y: number, width: number, height
 }
 
 function renderChildren(parent: Widget, screen: Screen): void {
-    const children: Widget[] = (parent as any)._children ?? [];
+    const children: Widget[] = (parent as any)._children ?? []; // as any: Widget private fields accessed by test renderer; no public inspection API
     for (const child of children) {
-        (child as any)._renderSelf?.(screen);
+        (child as any)._renderSelf?.(screen); // as any: Widget private fields accessed by test renderer; no public inspection API
         renderChildren(child, screen);
     }
 }
@@ -152,10 +251,10 @@ function renderChildren(parent: Widget, screen: Screen): void {
 function readScreenLines(screen: Screen): string[] {
     const lines: string[] = [];
     for (let row = 0; row < screen.rows; row++) {
-        let line = '';
+        let line = "";
         for (let col = 0; col < screen.cols; col++) {
             const cell = screen.back[row]?.[col];
-            line += cell?.char ?? ' ';
+            line += cell?.char ?? " ";
         }
         lines.push(line.trimEnd());
     }
@@ -184,10 +283,13 @@ function readScreenLines(screen: Screen): string[] {
  * t.unmount();
  * ```
  */
-export function render(element: VNode, options: TestRenderOptions = {}): TestInstance {
+export function render(
+    element: VNode,
+    options: TestRenderOptions = {},
+): TestInstance {
     const width = options.width ?? 80;
     const height = options.height ?? 24;
-    const screen = new Screen(width, height);
+    const screenRef = { current: new Screen(width, height) };
 
     let currentElement = element;
 
@@ -196,9 +298,9 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
 
     // Wrap in a root container
     const container = new Box({
-        flexDirection: 'column',
-        width: '100%',
-        height: '100%',
+        flexDirection: "column",
+        width: "100%",
+        height: "100%",
     });
     container.addChild(rootWidget);
 
@@ -207,7 +309,8 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
 
     // Set up re-render callback — use fiber-preserving reRenderComponent
     setRequestRender(() => {
-        const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+        const instances: Map<Widget, any> = (globalThis as any) // as any: set by @termuijs/jsx reconciler at runtime; not in globalThis type
+            .__termuijs_instances;
         const rootInstance = instances?.get(rootWidget);
         if (rootInstance) {
             const newRoot = reRenderComponent(rootInstance);
@@ -220,22 +323,24 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
             container.addChild(newRoot);
             rootWidget = newRoot;
         }
-        renderToScreen(container, screen);
+        renderToScreen(container, screenRef.current);
     });
 
     // Initial render
-    renderToScreen(container, screen);
+    renderToScreen(container, screenRef.current);
 
     const instance: TestInstance = {
         container,
-        screen,
+        screen: screenRef.current,
 
         toString(): string {
-            return readScreenLines(screen).filter(l => l.length > 0).join('\n');
+            return readScreenLines(screenRef.current)
+                .filter((l) => l.length > 0)
+                .join("\n");
         },
 
         lastFrame(): string[] {
-            return readScreenLines(screen);
+            return readScreenLines(screenRef.current);
         },
 
         getByText(text: string): Widget | null {
@@ -249,11 +354,21 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
             if (matches.length > 0) return matches[0];
 
             // Fallback: check screen buffer
-            const screenText = readScreenLines(screen).join('\n');
+            const screenText = readScreenLines(screenRef.current).join("\n");
             if (screenText.includes(text)) {
                 return container;
             }
             return null;
+        },
+
+        getByRole(role: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'role') === role);
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        getByLabelText(label: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'label') === label);
+            return matches.length > 0 ? matches[0] : null;
         },
 
         getAllByText(text: string): Widget[] {
@@ -265,8 +380,30 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
             });
         },
 
-        getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
+        getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] { // any[]: required to accept widget constructors with varying signatures
             return walkWidgets(container, (w) => w instanceof type) as T[];
+        },
+
+        queryByText(text: string): Widget | null {
+            const matches = walkWidgets(container, (w) => {
+                if (w instanceof Text) {
+                    return getTextContent(w).includes(text);
+                }
+                return false;
+            });
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null { // any[]: required to accept widget constructors with varying signatures
+            const matches = walkWidgets(container, (w) => w instanceof type) as T[];
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        queryAllByText(text: string): Widget[] {
+            return instance.getAllByText(text);
+        },
+        queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] { // any[]: required to accept widget constructors with varying signatures
+            return instance.getAllByType(type);
         },
 
         fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
@@ -276,17 +413,86 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
                 shift: modifiers?.shift ?? false,
                 alt: modifiers?.alt ?? false,
                 raw: Buffer.from(key),
-                stopPropagation() { this._propagationStopped = true; },
-                preventDefault() { this._defaultPrevented = true; },
+                stopPropagation() {
+                    this._propagationStopped = true;
+                },
+                preventDefault() {
+                    this._defaultPrevented = true;
+                },
             };
 
-            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+        
+
+            const instances: Map<Widget, any> = (globalThis as any)
+                .__termuijs_instances;
             const rootInstance = instances?.get(rootWidget);
             if (rootInstance?.fiber) {
-                for (const handler of collectInputHandlers(rootInstance.fiber)) {
+                for (const handler of collectInputHandlers(
+                    rootInstance.fiber,
+                )) {
                     handler(event);
                 }
+                // Re-render and flush any sync state updates
+                const newRoot = reRenderComponent(rootInstance);
+                container.clearChildren();
+                container.addChild(newRoot);
+                rootWidget = newRoot;
+                renderToScreen(container, screenRef.current);
             }
+        },
+
+        pressKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
+            instance.fireKey(key, modifiers);
+        },
+
+        pressKeys(keys: string[], modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
+            for (const key of keys) {
+                instance.fireKey(key, modifiers);
+            }
+        },
+
+        fireMouse(x: number, y: number, init?: Partial<MouseEvent>) {
+            // Normalize the mouse event
+            const event: MouseEvent = {
+                x,
+                y,
+                type: init?.type ?? 'mousedown',
+                button: init?.button ?? 'left',
+            };
+
+            // Hit-test the widget tree
+            let target: Widget | undefined;
+            walkWidgets(rootWidget, (w) => {
+                if (w.hitTest(x, y)) {
+                    target = w;
+                }
+                return false; // walkWidgets result doesn't matter here
+            });
+
+            if (target) {
+                // Dispatch to the widget
+                if (typeof (target as any).handleMouse === 'function') { // as any: handleMouse not on Widget base type but implemented on interactive subclasses
+                    (target as any).handleMouse(event); // as any: handleMouse not on Widget base type but implemented on interactive subclasses
+                } else {
+                    target.events.emit('mouse', event);
+                }
+            }
+
+            // Re-render and flush any sync state updates
+            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+            const rootInstance = instances?.get(rootWidget);
+            if (rootInstance) {
+                const newRoot = reRenderComponent(rootInstance);
+                container.clearChildren();
+                container.addChild(newRoot);
+                rootWidget = newRoot;
+            }
+            renderToScreen(container, screenRef.current);
+        },
+
+        click(x: number, y: number) {
+            this.fireMouse(x, y, { type: 'mousedown' });
+            this.fireMouse(x, y, { type: 'mouseup' });
         },
 
         typeText(text: string): void {
@@ -296,27 +502,38 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
         },
 
         rerender(el?: VNode): void {
-            if (el) currentElement = el;
-            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
-            const rootInstance = instances?.get(rootWidget);
-            if (rootInstance) {
-                const newRoot = reRenderComponent(rootInstance);
-                container.clearChildren();
-                container.addChild(newRoot);
-                rootWidget = newRoot;
-                renderToScreen(container, screen);
-            } else if (el) {
+            if (el) {
+                // New element provided: reconcile fresh so new props take effect.
+                // reRenderComponent re-uses stored props and would ignore the new element.
+                currentElement = el;
                 const newRoot = reconcile(currentElement);
                 container.clearChildren();
                 container.addChild(newRoot);
                 rootWidget = newRoot;
-                renderToScreen(container, screen);
+                renderToScreen(container, screenRef.current);
             } else {
-                console.warn('[testing] rerender() called but no fiber instance or element available');
+                // No new element: re-render existing fiber, preserving state.
+                const instances: Map<Widget, any> = (globalThis as any)
+                    .__termuijs_instances;
+                const rootInstance = instances?.get(rootWidget);
+                if (rootInstance) {
+                    const newRoot = reRenderComponent(rootInstance);
+                    container.clearChildren();
+                    container.addChild(newRoot);
+                    rootWidget = newRoot;
+                    renderToScreen(container, screenRef.current);
+                } else {
+                    console.warn(
+                        "[testing] rerender() called but no fiber instance or element available",
+                    );
+                }
             }
         },
 
-        async waitFor(fn: () => void, opts = { timeout: 1000, interval: 10 }): Promise<void> {
+        async waitFor(
+            fn: () => void,
+            opts = { timeout: 1000, interval: 10 },
+        ): Promise<void> {
             const timeout = opts.timeout ?? 1000;
             const interval = opts.interval ?? 10;
             const deadline = Date.now() + timeout;
@@ -327,11 +544,14 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
                     return;
                 } catch (err) {
                     lastError = err;
-                    await new Promise(r => setTimeout(r, interval));
+                    await new Promise((r) => setTimeout(r, interval));
                 }
             }
             // Wrap with timeout context
-            const msg = lastError instanceof Error ? lastError.message : String(lastError);
+            const msg =
+                lastError instanceof Error
+                    ? lastError.message
+                    : String(lastError);
             throw new Error(`waitFor timed out after ${timeout}ms: ${msg}`);
         },
 
@@ -339,18 +559,63 @@ export function render(element: VNode, options: TestRenderOptions = {}): TestIns
             return this.toString();
         },
 
+        getOutput(): string {
+            return this.renderToString();
+        },
+
+        fireResize(cols: number, rows: number): void {
+            screenRef.current = new Screen(cols, rows);
+            instance.screen = screenRef.current;
+            renderToScreen(container, screenRef.current);
+        },
+
         unmount(): void {
             // Restore the caller's render callback (don't leave a stale test callback)
             setRequestRender(prevRender);
             // Destroy only this test's root fiber — don't wipe the whole app
-            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+            const instances: Map<Widget, any> = (globalThis as any)
+                .__termuijs_instances;
             const rootInstance = instances?.get(rootWidget);
             if (rootInstance?.fiber) {
                 destroyFiber(rootInstance.fiber);
             }
             instances?.delete(rootWidget);
+            // Reset module globals to prevent cross-test pollution
+            resetHooksGlobals();
+            // Reset widget ID counter to prevent ID bloat across tests
+            _resetWidgetIdCounter();
         },
     };
 
     return instance;
+}
+
+/**
+ * Create a render fixture with default options merged into every render().
+ * Tracks each TestInstance so cleanup() unmounts them all.
+ */
+export function createFixture(defaults: TestRenderOptions = {}): Fixture {
+    const instances: TestInstance[] = [];
+
+    return {
+        render(element: VNode, options: TestRenderOptions = {}): TestInstance {
+            // Auto-cleanup previous renders to prevent cross-test state leakage
+            if (instances.length > 0) {
+                for (const inst of instances) {
+                    inst.unmount();
+                }
+                instances.length = 0;
+            }
+            const instance = render(element, { ...defaults, ...options });
+            instances.push(instance);
+            return instance;
+        },
+
+        cleanup(): void {
+            for (const instance of instances) {
+                instance.unmount();
+            }
+            instances.length = 0;
+        },
+    };
 }

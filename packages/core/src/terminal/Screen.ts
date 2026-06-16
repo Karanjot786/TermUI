@@ -3,6 +3,9 @@
 // ─────────────────────────────────────────────────────
 
 import type { Color } from '../style/Color.js';
+import { stringWidth, segmenter } from '../utils/unicode.js';
+import { stripAnsiControl } from '../utils/ansi.js';
+import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
 
@@ -35,6 +38,8 @@ export interface Cell {
      * - 0 for continuation cells (second half of a wide char)
      */
     width: number;
+    /** Optional OSC 8 hyperlink target for this cell. */
+    link?: string;
 }
 
 /** Create a blank cell with default attributes */
@@ -50,6 +55,7 @@ export function emptyCell(): Cell {
         strikethrough: false,
         inverse: false,
         width: 1,
+        link: undefined,
     };
 }
 
@@ -65,6 +71,7 @@ export function resetCell(cell: Cell): void {
     cell.strikethrough = false;
     cell.inverse = false;
     cell.width = 1;
+    cell.link = undefined;
 }
 
 /** Check if two cells are visually identical */
@@ -78,6 +85,7 @@ export function cellsEqual(a: Cell, b: Cell): boolean {
         a.strikethrough === b.strikethrough &&
         a.inverse === b.inverse &&
         a.width === b.width &&
+        a.link === b.link &&
         colorsEqual(a.fg, b.fg) &&
         colorsEqual(a.bg, b.bg)
     );
@@ -90,7 +98,7 @@ function colorsEqual(a: Color, b: Color): boolean {
         case 'named': return a.name === (b as typeof a).name;
         case 'ansi256': return a.code === (b as typeof a).code;
         case 'rgb': return a.r === (b as typeof a).r && a.g === (b as typeof a).g && a.b === (b as typeof a).b;
-        case 'hex': return a.hex === (b as typeof a).hex;
+        case 'hex': return a.hex.toLowerCase() === (b as typeof a).hex.toLowerCase();
     }
 }
 
@@ -106,8 +114,31 @@ function colorsEqual(a: Color, b: Color): boolean {
 export class Screen {
     private _cols: number;
     private _rows: number;
+    private _previousLines: string[] = [];
+    private _lastRenderedHeight = 0;
+
+     get lastRenderedHeight(): number {
+     return this._lastRenderedHeight;
+     }
+     set lastRenderedHeight(value: number) {
+     this._lastRenderedHeight = value;
+     }
+    private _previousStyleLines: string[] = [];
     front: Cell[][];
     back: Cell[][];
+
+    /**
+     * Render epoch counter. Incremented on every swap so downstream consumers
+     * (e.g. Renderer._flush) can detect and skip stale frames from a previous
+     * epoch, preventing double-swap corruption.
+     */
+    private _epoch = 0;
+
+    /** True while swap() is executing to prevent re-entrant double-swap corruption. */
+    private _swapping = false;
+
+    /** The epoch captured at the start of the current flush cycle. */
+    private _flushEpoch = -1;
 
     /**
      * Stack of clipping regions. When non-empty, setCell/writeString
@@ -115,11 +146,81 @@ export class Screen {
      */
     private _clipStack: Array<{ x: number; y: number; width: number; height: number }> = [];
 
+    private _translateYStack: number[] = [];
+    private _translateY = 0;
+
     constructor(cols: number, rows: number) {
         this._cols = cols;
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+    }
+
+    /** Retrieve a read-only copy of the cell at (x, y) from the back buffer. */
+    getCell(x: number, y: number): Readonly<Cell> | undefined {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        if (!(x >= 0 && x < this._cols && y >= 0 && y < this._rows)) return undefined;
+        return this.back[y][x];
+    }
+
+    /** Serialize a back-buffer row to a plain string (skips continuation cells). */
+    getLine(row: number): string {
+        if (row < 0 || row >= this._rows) return '';
+        return this.back[row]
+            .filter(cell => cell.width !== 0)
+            .map(cell => cell.char || ' ')
+            .join('');
+    }
+
+    /**
+     * Serialize the style attributes of a back-buffer row into a
+     * fingerprint string. When the characters are identical but the
+     * styles differ (color, bold, italic, etc.), this fingerprint
+     * changes, allowing the diff renderer to detect style-only updates.
+     */
+    getStyleLine(row: number): string {
+        if (row < 0 || row >= this._rows) return '';
+        let hash = 0;
+        for (const cell of this.back[row]) {
+            if (cell.width === 0) continue;
+            const fg = cell.fg.type;
+            const bg = cell.bg.type;
+            const bits =
+                (cell.bold ? 1 : 0) |
+                (cell.italic ? 2 : 0) |
+                (cell.underline ? 4 : 0) |
+                (cell.dim ? 8 : 0) |
+                (cell.strikethrough ? 16 : 0) |
+                (cell.inverse ? 32 : 0);
+            const seed = fg.charCodeAt(0) * 65536 + bg.charCodeAt(0) * 4096 + bits;
+            hash = ((hash << 7) - hash + seed) | 0;
+            if (cell.link) {
+                for (let i = 0; i < cell.link.length; i++)
+                    hash = ((hash << 5) - hash + cell.link.charCodeAt(i)) | 0;
+            }
+        }
+        return String(hash);
+    }
+
+    /** Return the saved line string for the given row (empty before first saveLines call). */
+    getPreviousLine(row: number): string {
+        return this._previousLines[row] ?? '';
+    }
+
+    /** Return the saved style fingerprint for the given row. */
+    getPreviousStyleLine(row: number): string {
+        return this._previousStyleLines[row] ?? '';
+    }
+
+    /** Snapshot the current back-buffer line strings for use by diffRenderer. */
+    saveLines(): void {
+        this._previousLines = [];
+        this._previousStyleLines = [];
+        for (let r = 0; r < this._rows; r++) {
+            this._previousLines.push(this.getLine(r));
+            this._previousStyleLines.push(this.getStyleLine(r));
+        }
     }
 
     get cols(): number { return this._cols; }
@@ -166,6 +267,16 @@ export class Screen {
             : null;
     }
 
+    pushTranslateY(offset: number): void {
+        this._translateYStack.push(offset);
+        this._translateY += offset;
+    }
+
+    popTranslateY(): void {
+        const offset = this._translateYStack.pop() ?? 0;
+        this._translateY -= offset;
+    }
+
     /**
      * Write a cell to the back buffer at position (col, row).
      */
@@ -173,6 +284,8 @@ export class Screen {
         // Floor to integers — layout engine may produce fractional values
         col = Math.floor(col);
         row = Math.floor(row);
+        // Apply Y translation before bounds/clip checks
+        row += this._translateY;
         // Use positive range check (NaN fails >= 0, preventing NaN indices)
         if (!(col >= 0 && col < this._cols && row >= 0 && row < this._rows)) return;
 
@@ -186,6 +299,9 @@ export class Screen {
         }
 
         const existing = this.back[row][col];
+        if (cell.char !== undefined) {
+            cell = { ...cell, char: stripAnsiControl(cell.char) };
+        }
         Object.assign(existing, cell);
     }
 
@@ -203,32 +319,48 @@ export class Screen {
         col = Math.floor(col);
         if (!(row >= 0 && row < this._rows)) return;
 
+        // Strip ANSI control sequences from user-supplied content to prevent escape injection
+        const safeStr = stripAnsiControl(str);
         let x = col;
-        for (const char of str) {
+        
+        const segments = segmenter.segment(safeStr);
+        for (const { segment } of segments) {
             if (x >= this._cols) break;
-            if (x < 0) { x++; continue; }
 
-            const cp = char.codePointAt(0)!;
-            const isWide = this._isWideCodePoint(cp);
-            const width = isWide ? 2 : 1;
+            let finalChar = segment;
+            // Measure the visual width with the shared unicode utility
+            let width = stringWidth(segment);
+
+            // Advance past off-screen-left cells by the real width
+            if (x < 0) { x += width; continue; }
+
+            // Fallback for terminals without wide-character support
+            if (width > 1 && !caps.unicode) {
+                finalChar = '*'; // safe single-cell substitute
+                width = 1;
+            }
+
+            // Skip zero-width characters (combining marks) so they do not overwrite
+            if (width === 0) continue;
 
             this.setCell(x, row, {
-                char,
+                char: finalChar,
                 width,
                 ...style,
             });
 
-            // If wide char, mark the next cell as a continuation
-            if (isWide && x + 1 < this._cols) {
-                this.setCell(x + 1, row, {
-                    char: '',
-                    width: 0,
-                    ...style,
-                });
-                x += 2;
-            } else {
-                x += 1;
+            // Mark continuation cells for wide characters
+            for (let i = 1; i < width; i++) {
+                if (x + i < this._cols) {
+                    this.setCell(x + i, row, {
+                        char: '',
+                        width: 0,
+                        ...style,
+                    });
+                }
             }
+
+            x += width;
         }
     }
 
@@ -244,13 +376,36 @@ export class Screen {
         }
     }
 
+    /** Current render epoch — incremented after each swap. */
+    get epoch(): number {
+        return this._epoch;
+    }
+
+    /** The epoch captured at the start of the current flush cycle. */
+    get flushEpoch(): number {
+        return this._flushEpoch;
+    }
+    set flushEpoch(value: number) {
+        this._flushEpoch = value;
+    }
+
     /**
      * Swap front and back buffers. Called after rendering diffs.
+     * Uses mutual exclusion to prevent double-swap corruption when
+     * _flush() is called concurrently (e.g. from duplicate setImmediate
+     * callbacks).
      */
     swap(): void {
-        const temp = this.front;
-        this.front = this.back;
-        this.back = temp;
+        if (this._swapping) return;
+        this._swapping = true;
+        try {
+            const temp = this.front;
+            this.front = this.back;
+            this.back = temp;
+            this._epoch++;
+        } finally {
+            this._swapping = false;
+        }
     }
 
     /**
@@ -261,17 +416,47 @@ export class Screen {
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+        this._previousLines = [];
     }
 
     /**
      * Clear the front buffer (marks everything as "needs redraw").
+     * Mutates cells in-place to avoid GC pressure from object allocation.
      */
     invalidate(): void {
         for (let r = 0; r < this._rows; r++) {
             for (let c = 0; c < this._cols; c++) {
-                this.front[r][c] = { ...emptyCell(), char: '\0' }; // force diff
+                resetCell(this.front[r][c]);
+                this.front[r][c].char = '\0'; // force diff
             }
         }
+    }
+
+    /**
+     * Export current screen as ANSI snapshot text.
+     */
+    exportANSI(): string {
+        const lines: string[] = [];
+
+        for (let r = 0; r < this._rows; r++) {
+            lines.push(this.getLine(r));
+        }
+
+        return lines.join('\n');
+    }
+
+    /**
+     * Export current screen as SVG.
+     */
+    exportSVG(): string {
+        return `
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${this._cols * 8}"
+     height="${this._rows * 16}">
+    <text x="10" y="20">
+        Terminal Export
+    </text>
+</svg>`;
     }
 
     private _createGrid(cols: number, rows: number): Cell[][] {
@@ -284,24 +469,5 @@ export class Screen {
             grid.push(row);
         }
         return grid;
-    }
-
-    private _isWideCodePoint(cp: number): boolean {
-        return (
-            (cp >= 0x4E00 && cp <= 0x9FFF) ||
-            (cp >= 0x3400 && cp <= 0x4DBF) ||
-            (cp >= 0xF900 && cp <= 0xFAFF) ||
-            (cp >= 0xAC00 && cp <= 0xD7AF) ||
-            (cp >= 0x30A0 && cp <= 0x30FF) ||
-            (cp >= 0x3000 && cp <= 0x303F) ||
-            (cp >= 0x3040 && cp <= 0x309F) ||
-            (cp >= 0xFF01 && cp <= 0xFF60) ||
-            (cp >= 0xFFE0 && cp <= 0xFFE6) ||
-            (cp >= 0x1F600 && cp <= 0x1F64F) ||
-            (cp >= 0x1F300 && cp <= 0x1F5FF) ||
-            (cp >= 0x1F680 && cp <= 0x1F6FF) ||
-            (cp >= 0x1F900 && cp <= 0x1F9FF) ||
-            (cp >= 0x20000 && cp <= 0x2A6DF)
-        );
     }
 }

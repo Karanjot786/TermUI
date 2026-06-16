@@ -32,6 +32,33 @@ jobs:
             // Skip bots
             if (user.endsWith('[bot]')) return;
 
+            // Cap: max 2 open issues assigned per contributor.
+            // Force them to open and merge a PR before claiming more.
+            const MAX_OPEN = 2;
+            const { owner, repo } = context.repo;
+            const search = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${owner}/${repo} is:issue is:open assignee:${user}`,
+              per_page: 100,
+            });
+            const openAssigned = search.data.items
+              .filter(i => i.number !== number)
+              .map(i => `#${i.number}`);
+            if (openAssigned.length >= MAX_OPEN) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: number,
+                body: [
+                  `Hi @${user}. You already have ${openAssigned.length} open issues assigned: ${openAssigned.join(', ')}.`,
+                  ``,
+                  `Open and merge a PR from one of those first. Then comment here again to claim this one.`,
+                  ``,
+                  `This keeps work moving and gives every contributor a fair chance.`,
+                ].join('\n'),
+              });
+              core.info(`@${user} at cap (${openAssigned.length}); not assigning.`);
+              return;
+            }
+
             // Already assigned?
             const currentAssignees = (issue.assignees || []).map(a => a.login);
             if (currentAssignees.length > 0) {

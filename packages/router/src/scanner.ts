@@ -2,7 +2,7 @@
 // Scanner — discovers routes from filesystem
 // ─────────────────────────────────────────────────────
 
-import { readdirSync, statSync, existsSync } from 'node:fs';
+import * as fs from 'node:fs';
 import { join, relative, extname, basename } from 'node:path';
 
 export interface ScannedRoute {
@@ -25,15 +25,15 @@ export interface ScannedRoute {
  *   screens/tasks/[id].tsx  → /tasks/[id]
  */
 export function scanRoutes(screensDir: string): ScannedRoute[] {
-    if (!existsSync(screensDir)) return [];
+    if (!fs.existsSync(screensDir)) return [];
     const routes: ScannedRoute[] = [];
     const validExts = new Set(['.tsx', '.ts', '.jsx', '.js']);
 
     function walk(dir: string) {
-        const entries = readdirSync(dir);
+        const entries = fs.readdirSync(dir);
         for (const entry of entries) {
             const fullPath = join(dir, entry);
-            const stat = statSync(fullPath);
+            const stat = fs.statSync(fullPath);
             if (stat.isDirectory()) {
                 walk(fullPath);
             } else if (validExts.has(extname(entry))) {

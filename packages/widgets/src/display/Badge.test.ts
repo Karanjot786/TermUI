@@ -2,19 +2,20 @@
 // @termuijs/widgets — Tests for Badge widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
-import { Badge } from './Badge.js';
+import { describe, it, expect, vi } from 'vitest';
+import { Badge, type BadgeOptions } from './Badge.js';
 import { Screen, caps } from '@termuijs/core';
+import type { Style } from '@termuijs/core';
 
 /** Helper: create widget, set rect, render to a screen, return both. */
 function renderBadge(
     text: string,
-    opts: ConstructorParameters<typeof Badge>[1] = {},
-    style: ConstructorParameters<typeof Badge>[2] = {},
+    style: Partial<Style> = {},
+    opts: BadgeOptions = {},
     width = 20,
     height = 3,
 ) {
-    const badge = new Badge(text, opts, style);
+    const badge = new Badge(text, style, opts);
     const screen = new Screen(width, height);
     badge.updateRect({ x: 0, y: 0, width, height });
     badge.render(screen);
@@ -49,29 +50,29 @@ describe('Badge', () => {
 
     // ── 2. Variant colors ────────────────────────────────────────────────
     it('applies cyan background for info variant', () => {
-        const { screen } = renderBadge('info', { variant: 'info' });
+        const { screen } = renderBadge('info', {}, { variant: 'info' });
         // Content cell (row 1, col 1 = first char of padded text " info ")
         // The space char at col 1 should have the cyan background
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'cyan' });
     });
 
     it('applies green background for success variant', () => {
-        const { screen } = renderBadge('ok', { variant: 'success' });
+        const { screen } = renderBadge('ok', {}, { variant: 'success' });
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'green' });
     });
 
     it('applies yellow background for warning variant', () => {
-        const { screen } = renderBadge('warn', { variant: 'warning' });
+        const { screen } = renderBadge('warn', {}, { variant: 'warning' });
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'yellow' });
     });
 
     it('applies red background for error variant', () => {
-        const { screen } = renderBadge('err', { variant: 'error' });
+        const { screen } = renderBadge('err', {}, { variant: 'error' });
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'red' });
     });
 
     it('applies white background for neutral variant', () => {
-        const { screen } = renderBadge('ok', { variant: 'neutral' });
+        const { screen } = renderBadge('ok', {}, { variant: 'neutral' });
         expect(screen.back[1][1].bg).toEqual({ type: 'named', name: 'white' });
     });
 
@@ -118,4 +119,51 @@ describe('Badge', () => {
     it('handles zero-size rect without error', () => {
         expect(() => renderBadge('test', {}, {}, 0, 0)).not.toThrow();
     });
+
+    // ── 6. Constructor signature ────────────────────────────────────────────
+    it('canonical signature Badge(text, style, opts) works correctly', () => {
+        const { badge } = renderBadge('test', {}, { variant: 'info' });
+        expect(badge.getText()).toBe('test');
+        expect(badge.getVariant()).toBe('info');
+    });
+
+    it('does not mark dirty when text is unchanged', () => {
+        const badge = new Badge('same');
+
+        badge.clearDirty();
+        badge.setText('same');
+
+        expect(badge.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when variant is unchanged', () => {
+        const badge = new Badge('ok', {}, { variant: 'success' });
+
+        badge.clearDirty();
+        badge.setVariant('success');
+
+        expect(badge.isDirty).toBe(false);
+    });
+
+    // ── 7. Mutation regression tests ─────────────────────────────────────────
+    describe('Badge – mutation regression tests', () => {
+        it('setText updates text across multiple mutations', () => {
+            const badge = new Badge('one');
+
+            badge.setText('two');
+            badge.setText('three');
+
+            expect(badge.getText()).toBe('three');
+        });
+
+        it('setVariant updates variant across multiple mutations', () => {
+            const badge = new Badge('ok');
+
+            badge.setVariant('warning');
+            badge.setVariant('error');
+
+            expect(badge.getVariant()).toBe('error');
+        });
+    });
+
 });

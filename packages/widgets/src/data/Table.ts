@@ -2,8 +2,9 @@
 // @termuijs/widgets — Table widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
+import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { type TableState } from './TableState.js';
 
 export interface TableColumn {
     /** Column header label */
@@ -31,6 +32,17 @@ export interface TableOptions {
     separator?: string;
 }
 
+export interface TableProps {
+    columns: TableColumn[];
+    rows?: TableRow[];
+    style?: Partial<Style>;
+    options?: TableOptions;
+    /** External state object – if provided, Table syncs rows through it */
+    state?: TableState;
+    /** Called whenever rows change via setRows */
+    onStateChange?: (state: TableState) => void;
+}
+
 /**
  * Table — renders tabular data with columns, headers, and optional zebra-striping.
  *
@@ -41,22 +53,43 @@ export interface TableOptions {
  * - Zebra striping
  * - Text alignment per column
  * - Truncation for overflow
+ * - External state via `state` prop and `useTableState` hook
  */
 export class Table extends Widget {
-    private _columns: TableColumn[];
-    private _rows: TableRow[];
-    private _showHeader: boolean;
-    private _headerColor: Color;
-    private _stripe: boolean;
-    private _stripeColor: Color;
-    private _separator: string;
+    protected _columns: TableColumn[];
+    protected _rows: TableRow[];
+    protected _showHeader: boolean;
+    protected _headerColor: Color;
+    protected _stripe: boolean;
+    protected _stripeColor: Color;
+    protected _separator: string;
+    private _state?: TableState;
+    private _onStateChange?: (state: TableState) => void;
+    private _selectedRow = 0;
+    private _sortColumn = '';
 
     constructor(
-        columns: TableColumn[],
-        rows: TableRow[],
+        columnsOrProps: TableColumn[] | TableProps,
+        rows: TableRow[] = [],
         style: Partial<Style> = {},
         options: TableOptions = {},
     ) {
+        let columns: TableColumn[];
+        let state: TableState | undefined;
+        let onStateChange: ((s: TableState) => void) | undefined;
+
+        if (Array.isArray(columnsOrProps)) {
+            columns = columnsOrProps;
+        } else {
+            const props = columnsOrProps as TableProps;
+            columns = props.columns;
+            rows = props.rows ?? [];
+            style = props.style ?? style;
+            options = props.options ?? options;
+            state = props.state;
+            onStateChange = props.onStateChange;
+        }
+
         super(style);
         this._columns = columns;
         this._rows = rows;
@@ -65,12 +98,55 @@ export class Table extends Widget {
         this._stripe = options.stripe ?? true;
         this._stripeColor = options.stripeColor ?? { type: 'named', name: 'brightBlack' };
         this._separator = options.separator ?? ' │ ';
+        this._state = state;
+        this._onStateChange = onStateChange;
     }
+
+    // ── Mutations ─────────────────────────────────────
 
     setRows(rows: TableRow[]): void {
         this._rows = rows;
         this.markDirty();
+        this._pushState();
     }
+
+    sortByColumn(columnKey: string): void {
+    this._sortColumn = columnKey;
+
+    this._rows.sort((a, b) =>
+        String(a[columnKey] ?? '').localeCompare(
+            String(b[columnKey] ?? '')
+        )
+    );
+
+    this.markDirty();
+}
+
+    // ── External state sync ───────────────────────────
+
+    private _pushState(): void {
+        if (this._state) {
+            this._state.rows = this._rows;
+            this._onStateChange?.(this._state);
+        }
+    }
+
+    handleKey(event: KeyEvent): void {
+        if (event.key === 'up') {
+            this._selectedRow = Math.max(0, this._selectedRow - 1);
+        }
+
+        if (event.key === 'down') {
+            this._selectedRow = Math.min(
+                this._rows.length - 1,
+                this._selectedRow + 1
+            );
+        }
+
+        this.markDirty();
+    }
+
+    // ── Rendering ─────────────────────────────────────
 
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
@@ -118,6 +194,7 @@ export class Table extends Widget {
         for (let r = 0; r < this._rows.length && row < height; r++) {
             const dataRow = this._rows[r];
             const isStripe = this._stripe && r % 2 === 1;
+            const isSelected = r === this._selectedRow;
             let cx = x;
 
             for (let c = 0; c < this._columns.length; c++) {
@@ -126,9 +203,13 @@ export class Table extends Widget {
                 const cellText = this._alignText(rawValue, colWidths[c], col.align ?? 'left');
 
                 screen.writeString(cx, y + row, cellText, {
-                    ...attrs,
-                    bg: isStripe ? this._stripeColor : attrs.bg,
-                });
+    ...attrs,
+    bg: isSelected
+        ? { type: 'named', name: 'blue' }
+        : isStripe
+            ? this._stripeColor
+            : attrs.bg,
+});
                 cx += colWidths[c];
                 if (c < this._columns.length - 1) {
                     screen.writeString(cx, y + row, this._separator, {
@@ -151,18 +232,18 @@ export class Table extends Widget {
         }
     }
 
-    private _computeColumnWidths(totalWidth: number): number[] {
+    protected _computeColumnWidths(totalWidth: number): number[] {
         const fixedCols = this._columns.filter(c => c.width !== undefined);
         const flexCols = this._columns.filter(c => c.width === undefined);
 
-        let usedWidth = fixedCols.reduce((sum, c) => sum + (c.width ?? 0), 0);
+        const usedWidth = fixedCols.reduce((sum, c) => sum + (c.width ?? 0), 0);
         const remainingWidth = Math.max(0, totalWidth - usedWidth);
         const flexWidth = flexCols.length > 0 ? Math.floor(remainingWidth / flexCols.length) : 0;
 
         return this._columns.map(c => c.width ?? flexWidth);
     }
 
-    private _alignText(text: string, width: number, align: 'left' | 'center' | 'right'): string {
+    protected _alignText(text: string, width: number, align: 'left' | 'center' | 'right'): string {
         const truncated = truncate(text, width);
         const textWidth = stringWidth(truncated);
         const pad = Math.max(0, width - textWidth);

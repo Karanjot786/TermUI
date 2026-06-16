@@ -7,9 +7,10 @@
 // ─────────────────────────────────────────────────────
 
 import type { Style, Color } from '@termuijs/core';
+import type { Widget } from '@termuijs/widgets';
 
-/** A functional component — takes props, returns VNode tree */
-export type FC<P = {}> = (props: P & { children?: VNode | VNode[] }) => VNode;
+/** A functional component — takes props, returns a renderable node or widget */
+export type FC<P = {}> = (props: P & { children?: VNode | VNode[] }) => VNode | Widget;
 
 /** The basic building block of the component tree */
 export type VNode =
@@ -47,8 +48,12 @@ export interface IntrinsicProps {
     // Common
     flexGrow?: number;
     flexShrink?: number;
-    width?: number | string;
-    height?: number | string;
+    width?: number | string | any;  // any for now because we don't import Dim here to avoid circular dep or we can import from core
+    height?: number | string | any;
+    x?: number | any;
+    y?: number | any;
+    groupId?: string;
+    constraints?: any[]; // any: constraint shapes vary per widget type; no shared interface
     padding?: number;
     margin?: number;
 }
@@ -64,7 +69,7 @@ export function isVFragment(node: VNode): node is VFragment {
 }
 
 /** Flatten children — handles arrays, nulls, booleans */
-export function flattenChildren(children: any[]): VNode[] {
+export function flattenChildren(children: any[]): VNode[] { // any: VNode union includes primitives
     const result: VNode[] = [];
     for (const child of children) {
         if (child == null || typeof child === 'boolean') continue;

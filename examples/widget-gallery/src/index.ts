@@ -2,20 +2,10 @@
 // Widget Gallery — Main Entry Point
 // ─────────────────────────────────────────────────────
 //
-// Run with:  npx tsx src/index.ts
-//
-// Sprint 1.5 widgets:
-//   Tree, JSONView, DiffView
-//   StreamingText, ChatMessage, ToolCall
-//   MultiProgress, CommandPalette
-//   VirtualList (virtualization)
-//
-// Sprint 2 widgets:
-//   ErrorBoundary, useKeymap, Named Themes
-//   writeClipboard, Skeleton, Grid, NotificationCenter
+// Run with:  bun run examples/widget-gallery/src/index.ts
 //
 // Controls:
-//   1-5       Switch tabs
+//   1-6       Switch tabs
 //   q/Ctrl+C  Quit
 //   Other     Forward to focused widget
 //
@@ -29,10 +19,20 @@ import { AITab } from './tabs/ai-tab.js';
 import { FeedbackTab } from './tabs/feedback-tab.js';
 import { EnvTab } from './tabs/env-tab.js';
 import { Sprint2Tab } from './tabs/sprint2-tab.js';
+import { MultilineTab } from './tabs/multiline-tab.js';
 
 // ── Tab labels ─────────────────────────────────────────
 
-const TAB_LABELS = ['[1] Widgets', '[2] AI', '[3] Feedback', '[4] Environment', '[5] Sprint 2'];
+const TAB_LABELS = [
+    '[1] Widgets',
+    '[2] AI',
+    '[3] Feedback',
+    '[4] Environment',
+    '[5] Sprint 2',
+    '[6] Multiline',
+];
+
+const TAB_NAMES = ['Widgets', 'AI', 'Feedback', 'Environment', 'Sprint 2', 'Multiline'];
 
 // ── Root Widget ───────────────────────────────────────
 
@@ -48,6 +48,7 @@ class WidgetGalleryApp extends Widget {
     private _feedbackTab: FeedbackTab;
     private _envTab: EnvTab;
     private _sprint2Tab: Sprint2Tab;
+    private _multilineTab: MultilineTab;
 
     constructor() {
         super({ flexDirection: 'column' });
@@ -91,11 +92,12 @@ class WidgetGalleryApp extends Widget {
         });
 
         // ── Tab panels ─────────────────────────────────
-        this._widgetsTab  = new WidgetsTab();
-        this._aiTab       = new AITab();
+        this._widgetsTab = new WidgetsTab();
+        this._aiTab = new AITab();
         this._feedbackTab = new FeedbackTab();
-        this._envTab      = new EnvTab();
-        this._sprint2Tab  = new Sprint2Tab();
+        this._envTab = new EnvTab();
+        this._sprint2Tab = new Sprint2Tab();
+        this._multilineTab = new MultilineTab();
 
         this._tabPanels = [
             this._widgetsTab,
@@ -103,11 +105,12 @@ class WidgetGalleryApp extends Widget {
             this._feedbackTab,
             this._envTab,
             this._sprint2Tab,
+            this._multilineTab,
         ];
 
         // ── Status bar ─────────────────────────────────
         this._statusBar = new Text(
-            '  1-5 Tabs  •  q Quit  │  Active: Widgets',
+            '  1-6 Tabs  •  q Quit  │  Active: Widgets',
             { height: 1, fg: { type: 'named', name: 'brightBlack' } },
         );
 
@@ -125,31 +128,21 @@ class WidgetGalleryApp extends Widget {
             return false;
         }
 
-        // Tab switching: 1-5
+        // Tab switching: 1-6
         const num = parseInt(event.key);
-        if (num >= 1 && num <= 5) {
+        if (num >= 1 && num <= 6) {
             this._switchTab(num - 1);
             return true;
         }
 
         // Forward interactive keys to the active tab
-        const key = event.key;
         switch (this._activeTab) {
-            case 0:
-                this._widgetsTab.handleKey(key);
-                break;
-            case 1:
-                this._aiTab.handleKey(key);
-                break;
-            case 2:
-                this._feedbackTab.handleKey(key);
-                break;
-            case 3:
-                this._envTab.handleKey(key);
-                break;
-            case 4:
-                this._sprint2Tab.handleKey(key);
-                break;
+            case 0: this._widgetsTab.handleKey(event.key); break;
+            case 1: this._aiTab.handleKey(event.key); break;
+            case 2: this._feedbackTab.handleKey(event.key); break;
+            case 3: this._envTab.handleKey(event.key); break;
+            case 4: this._sprint2Tab.handleKey(event.key); break;
+            case 5: this._multilineTab.handleKey(event); break;
         }
 
         return true;
@@ -181,9 +174,8 @@ class WidgetGalleryApp extends Widget {
         this.addChild(this._tabPanels[index]);
         this.addChild(this._statusBar);
 
-        const tabNames = ['Widgets', 'AI', 'Feedback', 'Environment', 'Sprint 2'];
         this._statusBar.setContent(
-            `  1-5 Tabs  •  q Quit  │  Active: ${tabNames[index]}`,
+            `  1-6 Tabs  •  q Quit  │  Active: ${TAB_NAMES[index]}`,
         );
     }
 

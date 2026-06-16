@@ -1,89 +1,115 @@
+// ─────────────────────────────────────────────────────
+// @termuijs/widgets — Tests for Avatar widget
+// ─────────────────────────────────────────────────────
+
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Avatar } from './Avatar.js';
-import { Screen, caps } from '@termuijs/core';
 
-/** Helper: create widget, set rect, render to a screen, return both. */
-function renderAvatar(
-    initials: string,
-    opts: ConstructorParameters<typeof Avatar>[2] = {},
-    width = 10,
-    height = 5
-) {
-    const avatar = new Avatar(initials, {}, opts);
-    const screen = new Screen(width, height);
-    avatar.updateRect({ x: 0, y: 0, width, height });
-    avatar.render(screen);
-    return { avatar, screen };
-}
+afterEach(() => {
+    vi.unstubAllEnvs();
+});
 
-describe('Avatar Widget', () => {
-
-    afterEach(() => {
-        vi.restoreAllMocks();
+describe('Avatar', () => {
+    it('initializes and extracts initials correctly', async () => {
+        const { Avatar } = await import('./Avatar.js');
+        const a1 = new Avatar('John Doe');
+        expect(a1.getName()).toBe('John Doe');
+        // We can check render output to verify initials
+        const { Screen } = await import('@termuijs/core');
+        a1.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        a1.render(screen);
+        
+        const rendered = screen.back[0].map(c => c.char).join('').trim();
+        expect(rendered).toContain('[JD]');
     });
 
-    it('renders initials centered in the widget area', () => {
-        const { screen } = renderAvatar('AB', { border: 'none' }, 10, 5);
+    it('setName updates name and initials', async () => {
+        const { Avatar } = await import('./Avatar.js');
+        const a = new Avatar('Alice');
+        a.setName('Bob Smith');
+        expect(a.getName()).toBe('Bob Smith');
         
-        // 10 width center is index 4. 'AB' takes 4 and 5. Height 5 center is index 2.
-        // screen.back[row][col].char
-        expect(screen.back[2][4].char).toBe('A');
-        expect(screen.back[2][5].char).toBe('B');
+        const { Screen } = await import('@termuijs/core');
+        a.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        a.render(screen);
+        
+        const rendered = screen.back[0].map(c => c.char).join('').trim();
+        expect(rendered).toContain('[BS]');
     });
 
-    it('truncates long initials to 2 characters', () => {
-        const { screen } = renderAvatar('XYZ', { border: 'none' }, 10, 5);
+    it('shape rendering matches square/circle format', async () => {
+        const { Avatar } = await import('./Avatar.js');
+        const { Screen } = await import('@termuijs/core');
         
-        expect(screen.back[2][4].char).toBe('X');
-        expect(screen.back[2][5].char).toBe('Y');
+        const a = new Avatar('Charlie', {}, { shape: 'circle' });
+        a.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        a.render(screen);
         
-        // Ensure the third character 'Z' didn't bleed into the buffer
-        // Note: Unless a background color was provided, 'none' borders leave the cell undefined/empty
-        const nextCell = screen.back[2][6];
-        expect(nextCell ? nextCell.char : ' ').not.toBe('Z'); 
+        let rendered = screen.back[0].map(c => c.char).join('').trim();
+        expect(rendered).toContain('(CH)');
+        expect(a.getShape()).toBe('circle');
+
+        a.setShape('square');
+        a.render(screen);
+        rendered = screen.back[0].map(c => c.char).join('').trim();
+        expect(rendered).toContain('[CH]');
+        expect(a.getShape()).toBe('square');
     });
 
-    it('setInitials updates the rendered text and calls markDirty', () => {
-        const { avatar, screen } = renderAvatar('AB', { border: 'none' }, 10, 5);
+    it('deterministic color generation for identical names', async () => {
+        const { Avatar } = await import('./Avatar.js');
+        const { Screen } = await import('@termuijs/core');
         
-        // Clear dirty flag set during initialization
-        // @ts-ignore: Accessing base widget method if not strictly typed
-        if(typeof avatar.clearDirty === 'function') avatar.clearDirty();
+        const a1 = new Avatar('Eve');
+        const a2 = new Avatar('Eve');
         
-        avatar.setInitials('CD');
+        a1.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        a2.updateRect({ x: 0, y: 0, width: 10, height: 1 });
         
-        // @ts-ignore
-        expect(avatar.isDirty).toBe(true);
+        const screen1 = new Screen(10, 1);
+        const screen2 = new Screen(10, 1);
         
-        // Re-render to catch changes
-        avatar.render(screen);
-
-        expect(screen.back[2][4].char).toBe('C');
-        expect(screen.back[2][5].char).toBe('D');
+        a1.render(screen1);
+        a2.render(screen2);
+        
+        // Find the fg color of the first non-empty cell
+        const cell1 = screen1.back[0].find(c => c.char !== ' ' && c.char !== '');
+        const cell2 = screen2.back[0].find(c => c.char !== ' ' && c.char !== '');
+        
+        expect(cell1?.fg).toEqual(cell2?.fg);
     });
 
-    it('renders standard unicode borders by default', () => {
-        const { screen } = renderAvatar('AB', { border: 'single' }, 10, 5);
-
-        // Check Top-Left corner for '┌'
-        expect(screen.back[0][0].char).toBe('┌');
-        // Check Bottom-Right corner for '┘'
-        expect(screen.back[4][9].char).toBe('┘');
+    it('explicit color override is respected', async () => {
+        const { Avatar } = await import('./Avatar.js');
+        const { Screen } = await import('@termuijs/core');
+        
+        const a = new Avatar('Frank', {}, { color: { type: 'named', name: 'red' } });
+        a.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        a.render(screen);
+        
+        const cell = screen.back[0].find(c => c.char !== ' ' && c.char !== '');
+        expect(cell?.fg).toEqual({ type: 'named', name: 'red' });
+        
+        a.setColor({ type: 'named', name: 'blue' });
+        a.render(screen);
+        const cellBlue = screen.back[0].find(c => c.char !== ' ' && c.char !== '');
+        expect(cellBlue?.fg).toEqual({ type: 'named', name: 'blue' });
+        expect(a.getColor()).toEqual({ type: 'named', name: 'blue' });
     });
 
-    it('uses ASCII fallback for border characters when caps.unicode is false', () => {
-        // Spy on caps.unicode to simulate an ASCII-only terminal securely per the spec
-        const unicodeSpy = vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
-
-        const { screen } = renderAvatar('AB', { border: 'single' }, 10, 5);
-
-        // Check Top-Left corner for ASCII '+'
-        expect(screen.back[0][0].char).toBe('+');
-        // Check horizontal line for ASCII '-'
-        expect(screen.back[0][1].char).toBe('-');
-        // Check vertical line for ASCII '|'
-        expect(screen.back[1][0].char).toBe('|');
+    it('handles empty strings gracefully', async () => {
+        const { Avatar } = await import('./Avatar.js');
+        const { Screen } = await import('@termuijs/core');
         
-        unicodeSpy.mockRestore();
+        const a = new Avatar('');
+        a.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        expect(() => a.render(screen)).not.toThrow();
+        
+        const rendered = screen.back[0].map(c => c.char).join('').trim();
+        expect(rendered).toBe('[]');
     });
 });

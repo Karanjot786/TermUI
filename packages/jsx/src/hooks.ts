@@ -9,6 +9,7 @@
 import type { KeyEvent } from '@termuijs/core';
 import { caps } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
+import type { Widget } from '@termuijs/widgets';
 import type { FC } from './vnode.js';
 
 // ── Fiber — per-component-instance state ──
@@ -25,10 +26,13 @@ export interface Fiber {
     isDirty: boolean;
     onInput?: (event: KeyEvent) => void;
     effects: EffectRecord[];
+    layoutEffects: EffectRecord[];
     cleanups: (() => void)[];
     intervals: ReturnType<typeof setInterval>[];
     /** Context values provided by this fiber's component */
     contextValues: Map<symbol, any>;
+    contextSubscribers?: Map<symbol, Set<Fiber>>;
+    contextDependencies?: Set<Set<Fiber>>;
     /** Parent fiber for context lookup */
     parent?: Fiber;
     // ── ErrorBoundary fields ──
@@ -43,11 +47,14 @@ export interface Fiber {
     _prevChildFibers?: Map<string, ChildFiberEntry>;
     /** Next child render index, reset by setCurrentFiber each render pass */
     _nextChildIdx?: number;
+    // ── Portal tracking ──
+    /** Widgets created via createPortal and their target, for proper teardown */
+    portalChildren?: Array<{ widgets: Widget[]; target: Widget }>;
 }
 
 interface HookState {
-    value: any;
-    deps?: any[];
+    value: any; // any: hook slots hold heterogeneous values
+    deps?: any[]; // any: hook slots hold heterogeneous values
 }
 
 interface EffectRecord {
@@ -61,7 +68,21 @@ interface EffectRecord {
 
 let _currentFiber: Fiber | null = null;
 let _requestRender: (() => void) | null = null;
+let _insertBefore: ((line: string) => (() => void) | void) | null = null;
 let _nextFiberId = 0;
+let _nextHookId = 0;
+export function useId(): string {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    if (idx >= fiber.hooks.length) {
+        fiber.hooks.push({
+            value: `id-${++_nextHookId}`,
+        });
+    }
+
+    return fiber.hooks[idx].value;
+}
 
 /** Get or throw the current fiber (hooks must be called inside a component) */
 export function currentFiber(): Fiber {
@@ -98,6 +119,7 @@ export function createFiber(parent?: Fiber): Fiber {
         hookIndex: 0,
         isDirty: true,
         effects: [],
+        layoutEffects: [],
         cleanups: [],
         intervals: [],
         contextValues: new Map(),
@@ -115,16 +137,39 @@ export function getRequestRender(): (() => void) | null {
     return _requestRender;
 }
 
+/** Set the insertBefore callback for inline rendering */
+export function setInsertBefore(fn: ((line: string) => (() => void) | void) | null): void {
+    _insertBefore = fn;
+}
+
 // ── Batched State Updates ──
 
 let _pendingUpdates = new Set<Fiber>();
 let _flushScheduled = false;
 
+// ── Global Cleanup Registry ──
+// Used by singleton stores (NotificationStore, etc.) to register
+// cleanup functions that are called during test teardown.
+
+let _globalCleanups: Array<() => void> = [];
+
+/**
+ * Register a global cleanup function. Returns an unregister function.
+ * Registered cleanups are called when resetHooksGlobals() is invoked.
+ */
+export function registerCleanup(fn: () => void): () => void {
+    _globalCleanups.push(fn);
+    return () => {
+        const idx = _globalCleanups.indexOf(fn);
+        if (idx >= 0) _globalCleanups.splice(idx, 1);
+    };
+}
+
 /**
  * Schedule a re-render. Multiple setState calls within the same
  * microtask are batched into a single re-render cycle.
  */
-function scheduleRender(fiber?: Fiber): void {
+export function scheduleRender(fiber?: Fiber): void {
     if (fiber) {
         _pendingUpdates.add(fiber);
     }
@@ -137,8 +182,15 @@ function scheduleRender(fiber?: Fiber): void {
 /** Flush all pending state updates in a single render pass */
 function flushUpdates(): void {
     _flushScheduled = false;
-    _pendingUpdates.clear();
-    _requestRender?.();
+    const pending = _pendingUpdates;
+    _pendingUpdates = new Set<Fiber>();
+    if (!_requestRender) {
+        for (const fiber of pending) {
+            _pendingUpdates.add(fiber);
+        }
+        return;
+    }
+    _requestRender();
 }
 
 // ── Hooks ──
@@ -215,6 +267,30 @@ export function useEffect(effect: () => void | (() => void), deps?: any[]): void
     }
 }
 
+export function useLayoutEffect(effect: () => void | (() => void), deps?: any[]): void {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    // Initialize or check deps
+    if (idx >= fiber.hooks.length) {
+        const record: EffectRecord = { effect, deps, ran: false };
+        fiber.hooks.push({ value: record, deps });
+        fiber.layoutEffects.push(record);
+    } else {
+        const prev = fiber.hooks[idx];
+        const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
+
+        if (shouldRun) {
+            prev.deps = deps;
+            // Update the existing record in-place (avoids duplicates)
+            const record = prev.value as EffectRecord;
+            record.effect = effect;
+            record.deps = deps;
+            record.ran = false;
+        }
+    }
+}
+
 /**
  * useInput — handle keyboard input in the component.
  *
@@ -267,10 +343,7 @@ export function useKeymap(bindings: KeyBinding[]): void {
             for (const b of bindings) {
                 const key = `${b.key}|${b.ctrl ?? false}|${b.alt ?? false}|${b.shift ?? false}`;
                 if (seen.has(key)) {
-                    console.warn(
-                        `[useKeymap] Conflicting keybinding for key "${b.key}" ` +
-                        `(ctrl=${b.ctrl ?? false}, alt=${b.alt ?? false}, shift=${b.shift ?? false})`
-                    );
+                    // Conflicting keybinding — silently ignore in dev mode
                 }
                 seen.set(key, b);
             }
@@ -294,6 +367,17 @@ export function useKeymap(bindings: KeyBinding[]): void {
             }
         }
     };
+}
+
+/**
+ * useInsertBefore — register a persistent line above the inline viewport.
+ * The line is added when the component mounts and removed on unmount or when
+ * the value changes.
+ */
+export function useInsertBefore(line: string): void {
+    useEffect(() => {
+        return _insertBefore?.(line) as (() => void) | void;
+    }, [line]);
 }
 
 export interface MotionPreferences {
@@ -411,10 +495,66 @@ export function useRef<T>(initialValue: T): { current: T } {
 }
 
 /**
+ * useImperativeHandle — expose an imperative handle through a ref.
+ *
+ * ```tsx
+ * useImperativeHandle(ref, () => ({ focus: () => input.focus() }), []);
+ * ```
+ */
+export function useImperativeHandle<T>(
+    ref: { current: T | null } | null | undefined,
+    createHandle: () => T,
+    deps: any[],
+): void {
+    const handle = useMemo(createHandle, deps);
+
+    if (ref) {
+        ref.current = handle;
+    }
+}
+
+/**
  * useCallback — memoize a callback function.
  */
 export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: any[]): T {
     return useMemo(() => callback, deps);
+}
+
+/**
+ * useReducer — manage state with a reducer function.
+ *
+ * ```tsx
+ * const [state, dispatch] = useReducer((state, action) => {
+ *     if (action === 'inc') return state + 1;
+ *     if (action === 'dec') return state - 1;
+ *     return state;
+ * }, 0);
+ * dispatch('inc');
+ * ```
+ */
+export function useReducer<S, A>(
+    reducer: (state: S, action: A) => S,
+    initialState: S,
+): [S, (action: A) => void] {
+    const fiber = currentFiber();
+    const idx = fiber.hookIndex++;
+
+    if (idx >= fiber.hooks.length) {
+        fiber.hooks.push({ value: initialState });
+    }
+
+    const hookState = fiber.hooks[idx];
+
+    const dispatch = (action: A): void => {
+        const next = reducer(hookState.value, action);
+        if (!Object.is(hookState.value, next)) {
+            hookState.value = next;
+            fiber.isDirty = true;
+            scheduleRender(fiber);
+        }
+    };
+
+    return [hookState.value, dispatch];
 }
 
 /** Run all pending effects for a fiber */
@@ -432,9 +572,27 @@ export function runEffects(fiber: Fiber): void {
     }
 }
 
+export function runLayoutEffects(fiber: Fiber): void {
+    for (const record of fiber.layoutEffects) {
+        if (!record.ran) {
+            // Run cleanup from previous effect
+            record.cleanup?.();
+            const cleanup = record.effect();
+            if (typeof cleanup === 'function') {
+                record.cleanup = cleanup;
+            }
+            record.ran = true;
+        }
+    }
+}
+
+
 /** Clean up all effects and intervals for a fiber, including child fibers */
 export function destroyFiber(fiber: Fiber): void {
     for (const record of fiber.effects) {
+        record.cleanup?.();
+    }
+    for (const record of fiber.layoutEffects) {
         record.cleanup?.();
     }
     for (const cleanup of fiber.cleanups) {
@@ -454,13 +612,73 @@ export function destroyFiber(fiber: Fiber): void {
             destroyFiber(entry.fiber);
         }
     }
+    // Clean up portal children - remove portal widgets from their targets
+    // This is critical to prevent ghost widgets remaining in the target widget tree and causing a memory leak
+    if (fiber.portalChildren) {
+        for (const entry of fiber.portalChildren) {
+            // Guard against stale target: skip if target was already destroyed
+            if (entry.target.parent !== null) {
+                for (const widget of entry.widgets) {
+                    entry.target.removeChild(widget);
+                }
+            }
+        }
+        fiber.portalChildren = undefined;
+    }
+    // Clean up global _instanceMap via reverse fiber→widget mapping (O(1))
+    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
+    if (_fiberToWidget instanceof Map) {
+        const widget = _fiberToWidget.get(fiber);
+        if (widget) {
+            const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+            if (termuiInstances instanceof Map) {
+                termuiInstances.delete(widget);
+            }
+            _fiberToWidget.delete(fiber);
+        }
+    }
     fiber.hooks = [];
     fiber.effects = [];
+    fiber.layoutEffects = [];
     fiber.cleanups = [];
     fiber.intervals = [];
     fiber.contextValues.clear();
+    
+    if (fiber.contextDependencies) {
+        for (const subs of fiber.contextDependencies) {
+            subs.delete(fiber);
+        }
+        fiber.contextDependencies.clear();
+    }
+    
     fiber.childFibers = undefined;
     fiber._prevChildFibers = undefined;
+}
+
+/** Reset all module-level globals for test isolation */
+export function resetHooksGlobals(): void {
+    _currentFiber = null;
+    _requestRender = null;
+    _insertBefore = null;
+    _pendingUpdates.clear();
+    _flushScheduled = false;
+    // Run all registered global cleanups (singleton stores, etc.)
+    const cleanups = _globalCleanups;
+    _globalCleanups = [];
+    for (const fn of cleanups) {
+        try { fn(); } catch { /* ignore cleanup errors */ }
+    }
+    
+    // Clear global instance map
+    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+    if (termuiInstances instanceof Map) {
+        termuiInstances.clear();
+    }
+    // Clear reverse fiber→widget map
+    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
+    if (_fiberToWidget instanceof Map) {
+        _fiberToWidget.clear();
+    }
 }
 
 /**

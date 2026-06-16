@@ -1,11 +1,12 @@
 // Form — compound input container with validation
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs } from '@termuijs/core';
+import { validateInput, type InputValidator } from './validation.js';
 
 export interface FormField {
     name: string; label: string; type: 'text' | 'select' | 'checkbox';
     placeholder?: string; required?: boolean; options?: string[];
-    validate?: (value: string) => string | null;
+    validate?: InputValidator;
 }
 export interface FormOptions {
     labelColor?: Style['fg']; errorColor?: Style['fg']; activeColor?: Style['fg'];
@@ -32,6 +33,9 @@ export class Form extends Widget {
         this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSubmit = options.onSubmit;
         for (const f of fields) this._values.set(f.name, '');
+        // Wire key events from the App/event system into this widget's handlers.
+        // Minimal: only route printable chars and backspace to existing methods.
+        this.events.on('key', (event: KeyEvent) => this.handleKey(event));
     }
 
     get values(): Record<string, string> { const r: Record<string, string> = {}; for (const [k, v] of this._values) r[k] = v; return r; }
@@ -53,10 +57,25 @@ export class Form extends Widget {
         for (const f of this._fields) {
             const v = this._values.get(f.name) ?? '';
             if (f.required && !v.trim()) { this._errors.set(f.name, `${f.label} is required`); hasErr = true; }
-            if (f.validate) { const e = f.validate(v); if (e) { this._errors.set(f.name, e); hasErr = true; } }
+            const e = validateInput(f.validate, v);
+            if (e) {
+                this._errors.set(f.name, e);
+                hasErr = true;}
         }
         if (!hasErr) this._onSubmit?.(this.values);
         this.markDirty();
+    }
+
+    /** Minimal key router — printable chars -> insertChar, backspace -> deleteBack */
+    handleKey(event: KeyEvent): void {
+        if (event.key === 'backspace') {
+            this.deleteBack();
+            return;
+        }
+
+        if (event.key && event.key.length === 1 && !event.ctrl && !event.alt) {
+            this.insertChar(event.key);
+        }
     }
 
     protected _renderSelf(screen: Screen): void {
@@ -70,7 +89,9 @@ export class Form extends Widget {
             screen.writeString(x, y + row, `${f.label}${f.required ? ' *' : ''}:`.slice(0, width), { ...attrs, fg: err ? this._errorColor : this._labelColor, bold: active }); row++;
             if (row >= height) break;
             const display = val || (f.placeholder ?? '');
-            screen.writeString(x, y + row, `${active ? '❯ ' : '  '}${display}`.slice(0, width), { ...attrs, fg: active ? this._activeColor : attrs.fg, dim: !val && !!f.placeholder }); row++;
+            const msg = err ? `  - ${err}` : '';
+            const displayText = `${active ? '❯ ' : '  '}${display}${msg}`;
+            screen.writeString(x, y + row, displayText.slice(0, width), { ...attrs, fg: active ? this._activeColor : attrs.fg, dim: !val && !!f.placeholder }); row++;
         }
         if (row < height) {
             const isSub = this._activeField >= this._fields.length;

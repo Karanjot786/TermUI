@@ -1,87 +1,128 @@
+// ─────────────────────────────────────────────────────
+// @termuijs/widgets — Avatar widget
+// ─────────────────────────────────────────────────────
+
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
-import { type Style, type Color, type Screen, caps } from '@termuijs/core';
 
 export interface AvatarOptions {
-    /** Background color of the avatar box */
-    bgColor?: Color;
-    /** Foreground color of the initials/icon */
-    fgColor?: Color;
-    /** Border style. Default: 'single' */
-    border?: 'none' | 'single' | 'double' | 'rounded';
+    /** Override the dynamically generated color */
+    color?: Color;
+    /** Shape of the avatar */
+    shape?: 'square' | 'circle';
 }
 
-const BORDER_CHARS = {
-    single: { tl: '┌', tr: '┐', bl: '└', br: '┘', h: '─', v: '│' },
-    double: { tl: '╔', tr: '╗', bl: '╚', br: '╝', h: '═', v: '║' },
-    rounded: { tl: '╭', tr: '╮', bl: '╰', br: '╯', h: '─', v: '│' },
-    ascii:  { tl: '+', tr: '+', bl: '+', br: '+', h: '-', v: '|' }
-};
-
+/**
+ * Avatar — a widget that displays user initials with a generated color.
+ */
 export class Avatar extends Widget {
+    private _name: string;
+    private _color?: Color;
+    private _shape: 'square' | 'circle';
     private _initials: string;
-    private _opts: AvatarOptions;
+    private _fallbackColor: Color;
 
-    // Notice the specific parameter order based on your API contract
-    constructor(initials: string, style?: Partial<Style>, opts?: AvatarOptions) {
+    constructor(name: string, style: Partial<Style> = {}, opts: AvatarOptions = {}) {
         super(style);
-        this._opts = { border: 'single', ...opts };
-        this._initials = initials.substring(0, 2);
+        this._name = name;
+        this._color = opts.color;
+        this._shape = opts.shape ?? 'square';
+        this._initials = this._extractInitials(name);
+        this._fallbackColor = this._generateColor(name);
     }
 
-    public setInitials(initials: string): void {
-        this._initials = initials.substring(0, 2);
+    setName(name: string): void {
+        this._name = name;
+        this._initials = this._extractInitials(name);
+        this._fallbackColor = this._generateColor(name);
         this.markDirty();
     }
 
-    protected _renderSelf(screen: Screen): void {
-        const { x, y, width, height } = this._rect;
+    getName(): string {
+        return this._name;
+    }
+
+    setColor(color: Color): void {
+        this._color = color;
+        this.markDirty();
+    }
+
+    getColor(): Color | undefined {
+        return this._color;
+    }
+
+    setShape(shape: 'square' | 'circle'): void {
+        this._shape = shape;
+        this.markDirty();
+    }
+
+    getShape(): 'square' | 'circle' {
+        return this._shape;
+    }
+
+    private _extractInitials(name: string): string {
+        if (!name) return '';
+        const parts = name.trim().split(/\s+/);
+        if (parts.length === 0 || parts[0] === '') return '';
+        let init = '';
+        if (parts.length === 1) {
+            init = parts[0].substring(0, 2).toUpperCase();
+        } else {
+            init = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+        if (!caps.unicode) {
+            init = init.replace(/[^\x00-\x7F]/g, '?');
+        }
+        return init;
+    }
+
+    private _generateColor(name: string): Color {
+        if (!name) {
+            return { type: 'named', name: 'white' };
+        }
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
         
+        // Stable palette of colors
+        const colors = [
+            'red', 'green', 'yellow', 'blue', 'magenta', 'cyan',
+            'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightMagenta', 'brightCyan'
+        ] as const;
+        
+        const index = Math.abs(hash) % colors.length;
+        return { type: 'named', name: colors[index] };
+    }
+
+    protected _renderSelf(screen: Screen): void {
+        const rect = this._getContentRect();
+        const { x, y, width, height } = rect;
         if (width <= 0 || height <= 0) return;
 
-        const attrs: { fg?: Color; bg?: Color } = {};
-        if (this._opts.fgColor) attrs.fg = this._opts.fgColor;
-        if (this._opts.bgColor) attrs.bg = this._opts.bgColor;
+        const attrs = styleToCellAttrs(this._style);
+        const avatarColor = this._color ?? this._fallbackColor;
 
-        const borderStyle = this._opts.border || 'single';
-        const hasBorder = borderStyle !== 'none';
-        
-        let bType = BORDER_CHARS.ascii;
-        if (caps.unicode && borderStyle !== 'none') {
-            bType = BORDER_CHARS[borderStyle];
+        let text = '';
+        if (this._shape === 'circle') {
+            text = `(${this._initials})`;
+        } else {
+            text = `[${this._initials}]`;
         }
 
-        // 1. Draw Background and Borders First
-        for (let dy = 0; dy < height; dy++) {
-            for (let dx = 0; dx < width; dx++) {
-                let char = ' ';
-                let isBorder = false;
-
-                if (hasBorder) {
-                    if (dy === 0 && dx === 0) { char = bType.tl; isBorder = true; }
-                    else if (dy === 0 && dx === width - 1) { char = bType.tr; isBorder = true; }
-                    else if (dy === height - 1 && dx === 0) { char = bType.bl; isBorder = true; }
-                    else if (dy === height - 1 && dx === width - 1) { char = bType.br; isBorder = true; }
-                    else if (dy === 0 || dy === height - 1) { char = bType.h; isBorder = true; }
-                    else if (dx === 0 || dx === width - 1) { char = bType.v; isBorder = true; }
-                }
-
-                // Only render cells that have a border, or if we have a background fill color
-                if (isBorder || attrs.bg) {
-                    screen.setCell(x + dx, y + dy, { char, ...attrs });
-                }
-            }
+        let renderText = '';
+        let currentWidth = 0;
+        for (const char of text) {
+            const cw = stringWidth(char);
+            if (currentWidth + cw > width) break;
+            currentWidth += cw;
+            renderText += char;
         }
 
-        // 2. Draw Initials Centered over the Background
-        if (this._initials) {
-            const textLen = this._initials.length;
-            const centerX = Math.floor((width - textLen) / 2);
-            const centerY = Math.floor(height / 2);
-
-            // Ensure we don't draw outside the widget bounds
-            if (centerX >= 0 && centerY >= 0 && centerX + textLen <= width && centerY < height) {
-                screen.writeString(x + centerX, y + centerY, this._initials, attrs);
-            }
-        }
+        screen.writeString(x, y, renderText, {
+            ...attrs,
+            fg: avatarColor,
+            bold: true,
+        });
     }
 }

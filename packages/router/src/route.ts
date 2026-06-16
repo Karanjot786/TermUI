@@ -2,34 +2,83 @@
 // Route — defines a screen route entry
 // ─────────────────────────────────────────────────────
 
+export type LazyLoader = () => Promise<any>;
+
+export type BeforeEnterGuard = (to: string) => boolean | string;
+
+export type AfterEnterGuard = (to: string) => void;
+
+export type RouteMeta = Record<string, unknown>;
+
 export interface RouteParams {
     [key: string]: string;
 }
+
+export interface QueryParams {
+    [key: string]: string;
+}
+
+export function parseQuery(queryString: string): QueryParams {
+    const query: QueryParams = {};
+    if (!queryString) return query;
+    const searchParams = new URLSearchParams(queryString);
+    for (const [key, val] of searchParams.entries()) {
+        query[key] = val;
+    }
+    return query;
+}
+
+export function serializeQuery(query: QueryParams): string {
+    const searchParams = new URLSearchParams();
+    for (const [key, val] of Object.entries(query)) {
+        searchParams.append(key, val);
+    }
+    return searchParams.toString();
+}
+
+export type RedirectTarget =
+    | string
+    | ((params: RouteParams) => string);
 
 export interface Route {
     /** URL-like path, e.g. "/settings/theme" */
     path: string;
     /** Pattern for matching (compiled from path) */
-    pattern: RegExp;
+    pattern?: RegExp;
     /** Parameter names from dynamic segments */
-    paramNames: string[];
+    paramNames?: string[];
     /** Screen component loader */
     component: () => any;
     /** Optional layout component */
     layout?: () => any;
+    /** Nested child routes */
+    children?: Route[];
+    /** Lazy component loader */
+    lazy?: LazyLoader;
+    /** Navigation guard — return false to block, return a string to redirect */
+    beforeEnter?: BeforeEnterGuard;
+    /** Hook called after successful navigation */
+    afterEnter?: AfterEnterGuard;
+    /** Optional metadata object */
+    meta?: RouteMeta;
+    /** Declarative redirect target */
+    redirect?: RedirectTarget;
 }
 
 export interface RouteMatch {
     route: Route;
+    chain: Route[];
     params: RouteParams;
+    meta: RouteMeta;
+    query: QueryParams;
 }
 
 /**
  * Compile a file-based path pattern into a RegExp.
- * 
+ *
  * Examples:
  *   "/"                → matches "/"
- *   "/settings"        → matches "/settings"  
+ *   "/settings"        → matches "/settings"
  *   "/tasks/[id]"      → matches "/tasks/123" with params.id = "123"
  *   "/[...slug]"       → matches "/a/b/c" with params.slug = "a/b/c"
  */
@@ -45,13 +94,12 @@ export function compilePattern(path: string): { pattern: RegExp; paramNames: str
 
     for (const seg of segments) {
         regStr += '\\/';
+
         if (seg.startsWith('[...') && seg.endsWith(']')) {
-            // Catch-all: [...slug]
             const name = seg.slice(4, -1);
             paramNames.push(name);
             regStr += '(.+)';
         } else if (seg.startsWith('[') && seg.endsWith(']')) {
-            // Dynamic: [id]
             const name = seg.slice(1, -1);
             paramNames.push(name);
             regStr += '([^/]+)';
@@ -61,22 +109,68 @@ export function compilePattern(path: string): { pattern: RegExp; paramNames: str
     }
 
     regStr += '\\/?$';
+
     return { pattern: new RegExp(regStr), paramNames };
 }
 
-/**
- * Match a path against a list of routes.
- */
-export function matchRoute(path: string, routes: Route[]): RouteMatch | null {
+function normalizePath(path: string): string {
+    return path.replace(/^\/+|\/+$/g, '');
+}
+
+function buildFullPath(parent: string, child: string): string {
+    const p = normalizePath(parent);
+    const c = normalizePath(child);
+    if (!p) return '/' + c;
+    if (!c) return '/' + p;
+    return `/${p}/${c}`;
+}
+
+function matchNested(
+    path: string,
+    routes: Route[],
+    parentPath = '',
+    chain: Route[] = [],
+): RouteMatch | null {
     for (const route of routes) {
-        const match = route.pattern.exec(path);
+        const fullPath = route.path.startsWith('/')
+            ? route.path
+            : buildFullPath(parentPath, route.path);
+
+        const { pattern, paramNames } = compilePattern(fullPath);
+        const match = pattern.exec(path);
+
         if (match) {
             const params: RouteParams = {};
-            for (let i = 0; i < route.paramNames.length; i++) {
-                params[route.paramNames[i]] = match[i + 1] ?? '';
+            for (let i = 0; i < paramNames.length; i++) {
+                params[paramNames[i]] = match[i + 1] ?? '';
             }
-            return { route, params };
+            return {
+                route,
+                chain: [...chain, route],
+                params,
+                meta: route.meta ?? {},
+                query: {},
+            };
         }
+
+        if (route.children?.length) {
+            const childMatch = matchNested(path, route.children, fullPath, [...chain, route]);
+            if (childMatch) return childMatch;
+        }
+    }
+
+    return null;
+}
+
+export function matchRoute(path: string, routes: Route[]): RouteMatch | null {
+    const questionIdx = path.indexOf('?');
+    const pathname = questionIdx === -1 ? path : path.substring(0, questionIdx);
+    const queryString = questionIdx === -1 ? '' : path.substring(questionIdx + 1);
+
+    const match = matchNested(pathname, routes);
+    if (match) {
+        match.query = parseQuery(queryString);
+        return match;
     }
     return null;
 }

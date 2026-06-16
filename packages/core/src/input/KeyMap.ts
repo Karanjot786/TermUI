@@ -2,6 +2,8 @@
 // @termuijs/core — Key mapping constants
 // ─────────────────────────────────────────────────────
 
+import { caps } from '../terminal/env-caps.js';
+
 /**
  * Maps raw byte sequences to human-readable key names.
  * These are standard VT100/xterm escape sequences.
@@ -88,3 +90,27 @@ export const SPECIAL_KEYS: Record<number, string> = {
     0x0A: 'enter',
     0x20: 'space',
 };
+
+/**
+ * Normalizes navigation key names based on the active keybinding mode.
+ * Useful for mapping vim (j/k/h/l) or emacs (ctrl+n/ctrl+p) keys to standard
+ * arrow key intents (up/down/left/right).
+ * 
+ * @param keyName The raw key name from KeyEvent.name
+ * @returns The normalized directional key name, or the original key name
+ */
+export function normalizeNavigationKey(keyName: string): string {
+    const mode = caps.keybindingMode;
+    
+    if (mode === 'vim') {
+        if (keyName === 'k') return 'up';
+        if (keyName === 'j') return 'down';
+        if (keyName === 'h') return 'left';
+        if (keyName === 'l') return 'right';
+    } else if (mode === 'emacs') {
+        if (keyName === 'ctrl+p') return 'up';
+        if (keyName === 'ctrl+n') return 'down';
+    }
+    
+    return keyName;
+}

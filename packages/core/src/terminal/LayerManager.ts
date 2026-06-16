@@ -6,6 +6,7 @@ import type { Cell } from './Screen.js';
 import { emptyCell, type Screen } from './Screen.js';
 import type { Color } from '../style/Color.js';
 import type { Rect } from '../layout/Rect.js';
+import { segmenter, segmentWidth } from '../utils/unicode.js';
 
 /**
  * A rendering layer. Each layer has its own cell grid and z-index.
@@ -59,10 +60,13 @@ export class LayerManager {
     private _layers: Map<string, Layer> = new Map();
     private _cols: number;
     private _rows: number;
+    private _hitWidgetGrid!: (string | null)[][];
+    private _hitZGrid!: number[][];
 
     constructor(cols: number, rows: number) {
         this._cols = cols;
         this._rows = rows;
+        this._allocateHitGrids();
     }
 
     get cols(): number { return this._cols; }
@@ -156,13 +160,31 @@ export class LayerManager {
         if (!(row >= 0 && row < this._rows)) return;
 
         let x = col;
-        for (const char of str) {
+        for (const { segment: char } of segmenter.segment(str)) {
             if (x >= this._cols) break;
-            if (x < 0) { x++; continue; }
+            const charWidth = segmentWidth(char);
+            if (x < 0) { x += charWidth; continue; }
 
-            this.setCell(layerId, x, row, { char, width: 1, ...style });
-            x++;
+            this.setCell(layerId, x, row, { char, width: charWidth, ...style });
+            // For wide characters, fill the next cell with a placeholder space
+            // so the grid stays coherent (no stale character bleeds through).
+            if (charWidth === 2 && x + 1 < this._cols) {
+                this.setCell(layerId, x + 1, row, { char: ' ', width: 1, ...style });
+            }
+            x += charWidth;
         }
+    }
+
+    /**
+     * Check whether any visible layer has pending dirty changes.
+     */
+    hasDirtyLayers(): boolean {
+        for (const layer of this._layers.values()) {
+            if (layer.visible && layer.dirtyRegion) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -177,7 +199,7 @@ export class LayerManager {
                 layer.cells[r][c] = emptyCell();
             }
         }
-        layer.dirtyRegion = null;
+        layer.dirtyRegion = { x: 0, y: 0, width: this._cols, height: this._rows };
     }
 
     /**
@@ -193,33 +215,33 @@ export class LayerManager {
      * Composite all overlay layers onto the Screen's back buffer.
      * Layers are applied in z-index order (lowest first).
      * Transparent cells (empty with no colors) are skipped.
+     * Writes directly to screen.back to avoid setCell overhead
+     * (bounds/clip checks are already satisfied by dirtyRegion).
      */
     composite(screen: Screen): void {
         const sorted = this.getSortedLayers();
 
         for (const layer of sorted) {
-            if (!layer.dirtyRegion) continue; // Nothing to composite
+            if (!layer.dirtyRegion) continue;
 
             const { x: dx, y: dy, width: dw, height: dh } = layer.dirtyRegion;
+            const maxRow = Math.min(dy + dh, this._rows);
+            const maxCol = Math.min(dx + dw, this._cols);
 
-            for (let r = dy; r < dy + dh && r < this._rows; r++) {
-                for (let c = dx; c < dx + dw && c < this._cols; c++) {
-                    const cell = layer.cells[r][c];
-                    if (isCellTransparent(cell)) continue;
+            for (let r = dy; r < maxRow; r++) {
+                const backRow = screen.back[r];
+                const layerRow = layer.cells[r];
+                if (!backRow || !layerRow) continue;
 
-                    // Write non-transparent overlay cell to the screen's back buffer
-                    screen.setCell(c, r, {
-                        char: cell.char,
-                        fg: cell.fg,
-                        bg: cell.bg,
-                        bold: cell.bold,
-                        italic: cell.italic,
-                        underline: cell.underline,
-                        dim: cell.dim,
-                        strikethrough: cell.strikethrough,
-                        inverse: cell.inverse,
-                        width: cell.width,
-                    });
+                let c = dx;
+                while (c < maxCol) {
+                    const cell = layerRow[c];
+                    if (isCellTransparent(cell)) {
+                        c++;
+                        continue;
+                    }
+                    Object.assign(backRow[c], cell);
+                    c++;
                 }
             }
         }
@@ -236,6 +258,47 @@ export class LayerManager {
             layer.cells = this._createGrid();
             layer.dirtyRegion = null;
         }
+
+        this._allocateHitGrids();
+    }
+
+    /** Reset the hit grid. Call once at the start of each frame. */
+    clearHitGrid(): void {
+        this._allocateHitGrids();
+    }
+
+    /**
+     * Mark a rectangular region as owned by a widget at a given z-index.
+     * Higher z wins when regions overlap.
+     */
+    setHitRegion(widgetId: string, x: number, y: number, w: number, h: number, z?: number): void {
+        const zVal = z ?? 0;
+        const startX = Math.floor(x);
+        const startY = Math.floor(y);
+        const width = Math.floor(w);
+        const height = Math.floor(h);
+
+        for (let r = startY; r < startY + height; r++) {
+            if (r < 0 || r >= this._rows) continue;
+            for (let c = startX; c < startX + width; c++) {
+                if (c < 0 || c >= this._cols) continue;
+
+                if (zVal >= this._hitZGrid[r][c]) {
+                    this._hitWidgetGrid[r][c] = widgetId;
+                    this._hitZGrid[r][c] = zVal;
+                }
+            }
+        }
+    }
+
+    /** Return the topmost widget id at a cell, or null. */
+    hitTest(col: number, row: number): string | null {
+        const c = Math.floor(col);
+        const r = Math.floor(row);
+        if (c < 0 || c >= this._cols || r < 0 || r >= this._rows) {
+            return null;
+        }
+        return this._hitWidgetGrid[r][c];
     }
 
     /**
@@ -251,6 +314,24 @@ export class LayerManager {
             grid.push(row);
         }
         return grid;
+    }
+
+    /**
+     * Allocate parallel hit grid and z-index grid.
+     */
+    private _allocateHitGrids(): void {
+        this._hitWidgetGrid = [];
+        this._hitZGrid = [];
+        for (let r = 0; r < this._rows; r++) {
+            const widgetRow: (string | null)[] = [];
+            const zRow: number[] = [];
+            for (let c = 0; c < this._cols; c++) {
+                widgetRow.push(null);
+                zRow.push(-Infinity);
+            }
+            this._hitWidgetGrid.push(widgetRow);
+            this._hitZGrid.push(zRow);
+        }
     }
 
     /**

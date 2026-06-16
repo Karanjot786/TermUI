@@ -8,8 +8,8 @@
 //   Escape    Fire onCancel
 // ─────────────────────────────────────────────────────
 
-import * as fs from 'fs';
-import * as nodePath from 'path';
+import * as fs from 'node:fs';
+import * as nodePath from 'node:path';
 import { Widget } from '@termuijs/widgets';
 import {
     type Style,
