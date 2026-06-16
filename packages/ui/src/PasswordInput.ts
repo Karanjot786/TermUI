@@ -258,7 +258,7 @@ export class PasswordInput extends Widget {
                 event.stopPropagation();
                 break;
             default:
-                if (event.key && event.key.length === 1 && !event.ctrl && !event.alt) {
+                if (event.key && splitGraphemes(event.key).length === 1 && !event.ctrl && !event.alt) {
                     this.insertChar(event.key);
                     event.preventDefault();
                     event.stopPropagation();
@@ -284,30 +284,47 @@ export class PasswordInput extends Widget {
             : Array(graphemes.length).fill(this._maskChar);
 
         let rightReserved = 0;
+        let modeIndicator = '';
+        let showTextIndicator = '';
         if (process.env.TERMUI_KEYBINDINGS === 'vim' && this.isFocused && width > 15) {
-            rightReserved = this._vimMode.length + 4;
+            modeIndicator = ` -- ${this._vimMode.toUpperCase()} -- `;
+            rightReserved = modeIndicator.length;
+        } else if (this._showText && width > 4) {
+            showTextIndicator = caps.unicode ? ' 👁' : '[v]';
+            rightReserved = showTextIndicator.length;
         }
 
-        const visibleWidth = width - 1 - rightReserved;
-        let scrollX = 0;
-        if (this._cursorPos > visibleWidth) {
-            scrollX = this._cursorPos - visibleWidth;
+        const maxVisibleWidth = width - rightReserved;
+        if (maxVisibleWidth <= 0) return;
+
+        // Calculate visual width prefix sums
+        const prefixWidths: number[] = [0];
+        for (let i = 0; i < displayGraphemes.length; i++) {
+            prefixWidths.push(prefixWidths[i] + stringWidth(displayGraphemes[i]));
         }
 
-        const visibleGraphemes = displayGraphemes.slice(scrollX, scrollX + visibleWidth);
+        let scrollGraphemeIndex = 0;
+        const targetVisualEnd = this._cursorPos < displayGraphemes.length
+            ? prefixWidths[this._cursorPos + 1]
+            : prefixWidths[this._cursorPos];
+
+        while (scrollGraphemeIndex < this._cursorPos && targetVisualEnd - prefixWidths[scrollGraphemeIndex] > maxVisibleWidth) {
+            scrollGraphemeIndex++;
+        }
+
+        let endGraphemeIndex = scrollGraphemeIndex;
+        while (endGraphemeIndex < displayGraphemes.length && prefixWidths[endGraphemeIndex + 1] - prefixWidths[scrollGraphemeIndex] <= maxVisibleWidth) {
+            endGraphemeIndex++;
+        }
+
+        const visibleGraphemes = displayGraphemes.slice(scrollGraphemeIndex, endGraphemeIndex);
         const visibleText = visibleGraphemes.join('');
-        const truncatedText = truncate(visibleText, width - rightReserved, '');
-        screen.writeString(x, y, truncatedText, attrs);
+        screen.writeString(x, y, visibleText, attrs);
 
         if (this.isFocused) {
-            let cursorOffset = 0;
-            for (let i = scrollX; i < this._cursorPos; i++) {
-                if (i < displayGraphemes.length) {
-                    cursorOffset += stringWidth(displayGraphemes[i]);
-                }
-            }
+            const cursorOffset = prefixWidths[this._cursorPos] - prefixWidths[scrollGraphemeIndex];
             const cursorScreenPos = x + cursorOffset;
-            if (cursorScreenPos >= x && cursorScreenPos < x + width - rightReserved) {
+            if (cursorScreenPos >= x && cursorScreenPos < x + maxVisibleWidth) {
                 const cursorChar = this._cursorPos < displayGraphemes.length
                     ? displayGraphemes[this._cursorPos]
                     : ' ';
@@ -321,12 +338,10 @@ export class PasswordInput extends Widget {
             }
         }
 
-        if (process.env.TERMUI_KEYBINDINGS === 'vim' && this.isFocused && width > 15) {
-            const modeIndicator = ` -- ${this._vimMode.toUpperCase()} -- `;
+        if (modeIndicator) {
             screen.writeString(x + width - modeIndicator.length, y, modeIndicator, { ...attrs, dim: true });
-        } else if (this._showText && width > 4) {
-            const indicator = caps.unicode ? ' 👁' : '[v]';
-            screen.writeString(x + width - indicator.length, y, indicator, { ...attrs, dim: true });
+        } else if (showTextIndicator) {
+            screen.writeString(x + width - showTextIndicator.length, y, showTextIndicator, { ...attrs, dim: true });
         }
     }
 }
