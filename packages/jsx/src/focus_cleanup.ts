@@ -32,14 +32,18 @@ export const autoBlurNode = (focusManager: FocusContextValue, nodeId: string) =>
     if (ancestorId) {
         focusManager.focus(ancestorId);
     } else {
-        // Fallback: try to find the first other focusable widget in the tree
+        // Fallback: try to find the first other focusable widget in the tree deterministically (sorted alphabetically by ID)
         let fallbackId: string | null = null;
         if (instances instanceof Map) {
+            const candidates: string[] = [];
             for (const w of instances.keys()) {
                 if (w.focusable && w.id !== nodeId) {
-                    fallbackId = w.id;
-                    break;
+                    candidates.push(w.id);
                 }
+            }
+            if (candidates.length > 0) {
+                candidates.sort();
+                fallbackId = candidates[0];
             }
         }
         if (fallbackId) {
