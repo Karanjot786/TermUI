@@ -129,8 +129,7 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
             return new Grid({ ...style }, {
                 columns: props.columns ?? 12,
                 gap: props.gap,
-                rowGap: props.rowGap,
-                colGap: props.colGap,
+                rows: props.rows,
             });
         }
 

@@ -209,10 +209,12 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
             const colInfo = getSpan(s.gridColumnStart, s.gridColumnEnd);
             const rowInfo = getSpan(s.gridRowStart, s.gridRowEnd);
 
+            const clampedColSpan = Math.max(1, Math.min(colInfo.span, numCols));
+
             while (true) {
                 let available = true;
                 for (let r = currentAutoRow; r < currentAutoRow + rowInfo.span; r++) {
-                    for (let c = currentAutoCol; c < currentAutoCol + colInfo.span; c++) {
+                    for (let c = currentAutoCol; c < currentAutoCol + clampedColSpan; c++) {
                         if (c >= numCols) {
                             available = false;
                             break;
@@ -231,16 +233,16 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
                         row: currentAutoRow,
                         col: currentAutoCol,
                         rowSpan: rowInfo.span,
-                        colSpan: colInfo.span
+                        colSpan: clampedColSpan
                     });
 
                     for (let r = currentAutoRow; r < currentAutoRow + rowInfo.span; r++) {
-                        for (let c = currentAutoCol; c < currentAutoCol + colInfo.span; c++) {
+                        for (let c = currentAutoCol; c < currentAutoCol + clampedColSpan; c++) {
                             setOccupied(r, c, true);
                         }
                     }
 
-                    currentAutoCol += colInfo.span;
+                    currentAutoCol += clampedColSpan;
                     if (currentAutoCol >= numCols) {
                         currentAutoCol = 0;
                         currentAutoRow++;
@@ -610,6 +612,8 @@ function getSpan(start: number | string | undefined, end: number | string | unde
         if (startIdx !== null) {
             span = Math.max(1, end - 1 - startIdx);
         } else {
+            // Note: When start is undefined, the numeric end value is interpreted as
+            // a span count rather than a grid line number.
             span = end;
         }
     } else if (typeof end === 'string') {

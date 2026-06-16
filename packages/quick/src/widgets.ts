@@ -276,8 +276,6 @@ export function skeleton(opts: QuickSkeletonOptions = {}): Widget {
 
 export interface QuickGridOptions {
     gap?: number;
-    rowGap?: number;
-    colGap?: number;
 }
 
 /**
@@ -288,8 +286,6 @@ export function gridWidget(columns: number, items: Widget[], opts: QuickGridOpti
     const gridOpts: GridOptions = {
         columns,
         gap: opts.gap,
-        rowGap: opts.rowGap,
-        colGap: opts.colGap,
     };
     const g = new GridWidget({ flexGrow: 1 }, gridOpts);
     for (const item of items) {

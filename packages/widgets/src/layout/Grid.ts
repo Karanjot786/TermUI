@@ -58,6 +58,7 @@ export class Grid extends Widget {
             child.parent = null;
         }
         this._children = [];
+        this.markDirty();
     }
 
     protected _renderSelf(_screen: Screen): void {
