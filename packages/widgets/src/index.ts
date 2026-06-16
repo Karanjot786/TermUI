@@ -43,10 +43,6 @@ export { Table } from './data/Table.js';
 export type { TableColumn, TableRow, TableOptions } from './data/Table.js';
 export { Gauge } from './data/Gauge.js';
 export type { GaugeOptions } from './data/Gauge.js';
-export { LineGauge } from './data/LineGauge.js';
-export type { LineGaugeOptions } from './data/LineGauge.js';
-export { Calendar } from './data/Calendar.js';
-export type { CalendarOptions } from './data/Calendar.js';
 export { Sparkline } from './data/Sparkline.js';
 export type { SparklineOptions } from './data/Sparkline.js';
 export { StatusIndicator } from './data/StatusIndicator.js';
@@ -73,8 +69,6 @@ export { MultiProgress } from './feedback/MultiProgress.js';
 export type { ProgressItem, MultiProgressOptions } from './feedback/MultiProgress.js';
 export { Spinner, SPINNER_FRAMES } from './feedback/Spinner.js';
 export type { SpinnerOptions } from './feedback/Spinner.js';
-export { TaskList } from './feedback/TaskList.js';
-export type { TaskItem, TaskStatus, TaskListOptions } from './feedback/TaskList.js';
 export { Scrollbar } from './feedback/Scrollbar.js';
 export type { ScrollbarOrientation, ScrollbarOptions } from './feedback/Scrollbar.js';
 export { Skeleton } from './feedback/Skeleton.js';
@@ -113,26 +107,6 @@ export type { NotificationBadgeOptions, BadgePosition } from './display/Notifica
 
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
-
-export { Panel } from './layout/Panel.js';
-export { Clock } from './display/Clock.js';
-export type { ClockOptions } from './display/Clock.js';
-
-export { Stack } from './layout/Stack.js';
-export type { StackOptions } from './layout/Stack.js';
-export { ScatterPlot } from './data/ScatterPlot.js';
-export type { ScatterPlotOptions, ScatterPoint } from './data/ScatterPlot.js';
-export { RadarChart } from './data/RadarChart.js';
-export type { RadarChartOptions, RadarSeries } from './data/RadarChart.js';
-
-export { CandlestickChart } from './data/CandlestickChart.js';
-export type { CandlestickChartOptions, Candle } from './data/CandlestickChart.js';
-export { Timer } from './display/Timer.js';
-export type { TimerOptions } from './display/Timer.js';
-export { Stopwatch } from './display/Stopwatch.js';
-export type { StopwatchOptions } from './display/Stopwatch.js';
-export { OrderedList } from './display/OrderedList.js';
-export type { OrderedListItem, OrderedListOptions } from './display/OrderedList.js';
 
 export { Avatar } from './display/Avatar.js';
 export type { AvatarOptions } from './display/Avatar.js';
