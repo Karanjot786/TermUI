@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { VirtualList } from './VirtualList.js';
+import { Screen } from '@termuijs/core';
 
 function createList(totalItems = 100, options = {}) {
     return new VirtualList({
@@ -174,19 +175,14 @@ describe('VirtualList', () => {
             list.scrollTo(50);
             expect(list.scrollOffset).toBe(0); // Still at 0 on start
 
-            // Run first render pass
-            const mockScreen = {
-                writeString: vi.fn(),
-                setCell: vi.fn(),
-                pushClip: vi.fn(),
-                popClip: vi.fn(),
-            } as any;
-            list.render(mockScreen);
+            // Run first render pass using a real Screen instance for type safety
+            const realScreen = new Screen(80, 25);
+            list.render(realScreen);
 
             // Advance time by 100 frames of 16ms to allow the spring to accelerate and move
             for (let i = 0; i < 100; i++) {
                 mockTime += 16;
-                list.render(mockScreen);
+                list.render(realScreen);
             }
 
             // Expect scroll offset to have started moving towards target (43)
@@ -196,7 +192,7 @@ describe('VirtualList', () => {
             let limit = 0;
             while ((list as any)._isAnimating && limit < 2000) {
                 mockTime += 16;
-                list.render(mockScreen);
+                list.render(realScreen);
                 limit++;
             }
 
