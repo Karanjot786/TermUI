@@ -6,7 +6,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-
+import { globSync } from 'glob';
 /**
  * Validate documentation target to prevent command injection
  * Allows: lowercase letters, numbers, hyphens, underscores, forward slashes
@@ -71,11 +71,17 @@ function generateDocs(target) {
 
     // Use execFileSync with argument array (safe from injection)
     // Run TypeScript compiler on source
-    execFileSync('tsc', ['--noEmit'], {
-      stdio: 'inherit',
-      encoding: 'utf-8',
-      timeout: 300000,
-    });
+    const files = globSync('src/**/*.ts');
+
+    execFileSync(
+      'jsdoc',
+      ['-d', join('docs', target), ...files],
+      {
+        stdio: 'inherit',
+        encoding: 'utf-8',
+        timeout: 300000,
+      }
+    );
 
     // Generate documentation using typedoc (if available)
     try {
