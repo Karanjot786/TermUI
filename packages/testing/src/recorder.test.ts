@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ScreenRecorder } from './recorder.js';
-import * as fs from 'fs';
 
 describe('ScreenRecorder', () => {
     beforeEach(() => {
@@ -132,5 +131,27 @@ describe('ScreenRecorder', () => {
         expect(svg).toContain('line1');
         expect(svg).toContain('line2');
         expect(svg).toContain('</svg>');
+    });
+
+    it('validates maxFrames option as a positive integer', () => {
+        expect(() => new ScreenRecorder({ maxFrames: 0 })).toThrow('maxFrames must be a positive integer');
+        expect(() => new ScreenRecorder({ maxFrames: -5 })).toThrow('maxFrames must be a positive integer');
+        expect(() => new ScreenRecorder({ maxFrames: 3.5 })).toThrow('maxFrames must be a positive integer');
+        expect(() => new ScreenRecorder({ maxFrames: 10 })).not.toThrow();
+    });
+
+    it('returns a deep copy of frame objects from getFrames()', () => {
+        const recorder = new ScreenRecorder();
+        recorder.recordFrame('frame1');
+        
+        const frames = recorder.getFrames();
+        expect(frames[0].buffer).toBe('frame1');
+        
+        // Mutate the returned frame object
+        frames[0].buffer = 'modified';
+        
+        // Verify internal state is not modified
+        const freshFrames = recorder.getFrames();
+        expect(freshFrames[0].buffer).toBe('frame1');
     });
 });

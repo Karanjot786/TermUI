@@ -1,4 +1,5 @@
-import * as fs from 'fs';
+import { readFileSync } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 
 // Screen Recorder Frame Data
 export interface FrameData {
@@ -17,7 +18,11 @@ export class ScreenRecorder {
     private enabled = true;
 
     constructor(options?: { maxFrames?: number; enabled?: boolean }) {
-        this.maxFrames = options?.maxFrames;
+        const maxFrames = options?.maxFrames;
+        if (maxFrames !== undefined && (!Number.isInteger(maxFrames) || maxFrames <= 0)) {
+            throw new Error("maxFrames must be a positive integer");
+        }
+        this.maxFrames = maxFrames;
         // Enabled by default unless set to false or RECORD_DISABLED=1 env is present
         this.enabled = options?.enabled ?? (process.env.RECORD_DISABLED !== '1');
     }
@@ -63,7 +68,7 @@ export class ScreenRecorder {
      * Returns a shallow copy of the frames array.
      */
     public getFrames(): FrameData[] {
-        return [...this.frames];
+        return this.frames.map((frame) => ({ ...frame }));
     }
 
     /**
@@ -114,7 +119,7 @@ export class ScreenRecorder {
      */
     public async exportCastToFile(filePath: string, options?: { title?: string; width?: number; height?: number }): Promise<void> {
         const content = this.toAsciicast(options);
-        await fs.promises.writeFile(filePath, content, 'utf8');
+        await writeFile(filePath, content, 'utf8');
     }
 
     /**
