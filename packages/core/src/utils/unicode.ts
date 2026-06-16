@@ -84,6 +84,8 @@ function isEmoji(codePoint: number): boolean {
     );
 }
 
+const GRAPHEME_SEGMENTER = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
 /**
  * Calculate the visual width of a string in terminal columns.
  *
@@ -97,10 +99,7 @@ export function stringWidth(str: string): number {
     let width = 0;
     let inEscape = false;
 
-    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
-    const graphemes = Array.from(segmenter.segment(str), s => s.segment);
-
-    for (const char of graphemes) {
+    for (const { segment: char } of GRAPHEME_SEGMENTER.segment(str)) {
         const cp = char.codePointAt(0)!;
 
         // Skip ANSI escape sequences
@@ -156,10 +155,7 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
     let inEscape = false;
     let escapeBuffer = '';
 
-    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
-    const graphemes = Array.from(segmenter.segment(str), s => s.segment);
-
-    for (const char of graphemes) {
+    for (const { segment: char } of GRAPHEME_SEGMENTER.segment(str)) {
         const cp = char.codePointAt(0)!;
 
         if (cp === 0x1B) {
@@ -211,7 +207,6 @@ export function wordWrap(str: string, width: number): string {
 
     const lines = str.split('\n');
     const result: string[] = [];
-    const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
 
     for (const line of lines) {
         if (stringWidth(line) <= width) {
@@ -236,12 +231,13 @@ export function wordWrap(str: string, width: number): string {
                     currentLine = '';
                     currentWidth = 0;
                 }
-                const graphemes = Array.from(segmenter.segment(word), s => s.segment);
-                for (const char of graphemes) {
+                for (const { segment: char } of GRAPHEME_SEGMENTER.segment(word)) {
                     const cp = char.codePointAt(0)!;
                     const charW = (isWideChar(cp) || isEmoji(cp)) ? 2 : (isCombining(cp) ? 0 : 1);
                     if (currentWidth + charW > width) {
-                        result.push(currentLine);
+                        if (currentLine) {
+                            result.push(currentLine);
+                        }
                         currentLine = '';
                         currentWidth = 0;
                     }
