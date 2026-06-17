@@ -30,6 +30,13 @@ export type { DividerOptions } from './Divider.js';
 export { ShortcutManager } from "./ShortcutManager.js";
 export type { Shortcut } from "./ShortcutManager.js";
 
+export { NotificationHistory } from "./NotificationHistory.js";
+
+export type {
+    Notification,
+    NotificationType
+} from "./NotificationHistory.js";
+
 export { Spacer } from './Spacer.js';
 
 export { Tabs } from './Tabs.js';
