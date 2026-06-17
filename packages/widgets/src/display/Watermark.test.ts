@@ -99,6 +99,15 @@ describe('Watermark', () => {
         expect(screen.back[0][1].width).toBe(0);
     });
 
+    it('does not write a double-width character when it would overflow the row', () => {
+        const { screen } = renderWatermark('A你', {}, {}, 2, 1);
+
+        expect(screen.back[0][0].char).toBe('A');
+        expect(screen.back[0][0].width).toBe(1);
+        expect(screen.back[0][1].char).toBe(' ');
+        expect(screen.back[0][1].width).toBe(1);
+    });
+
     it('renders nothing for empty text', () => {
         const { screen } = renderWatermark('', {}, {}, 4, 1);
 
