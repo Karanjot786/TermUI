@@ -36,3 +36,7 @@ export type { VirtualClock } from './virtual-clock.js'
 export { mapRange, interpolate } from './interpolate.js';
 export type { InterpolateOptions } from './interpolate.js';
 
+// Layout transitions
+export { animateRect } from './layout-transition.js';
+export type { LayoutTransitionOptions } from './layout-transition.js';
+

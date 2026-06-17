@@ -46,4 +46,39 @@ describe("Progress", () => {
         
         expect(screen.back[0].map(c => c.char).join('')).toContain('100%')
     })
+
+    it("does not mark dirty when setTasks receives the same array reference", () => {
+        const tasks = [
+            { label: 'Downloading', value: 0.5 }
+        ];
+    
+        const widget = new Progress({
+            tasks,
+            columns: [TextColumn(), PercentageColumn()]
+        });
+    
+        widget.clearDirty();
+    
+        widget.setTasks(tasks);
+    
+        expect(widget.isDirty).toBe(false);
+    });
+    
+    it("marks dirty when setTasks receives a different array", () => {
+        const widget = new Progress({
+            tasks: [
+                { label: 'Downloading', value: 0.5 }
+            ],
+            columns: [TextColumn(), PercentageColumn()]
+        });
+    
+        widget.clearDirty();
+    
+        widget.setTasks([
+            { label: 'Downloading', value: 0.75 }
+        ]);
+    
+        expect(widget.isDirty).toBe(true);
+    });
+
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen } from '@termuijs/core';
 import { EmptyState } from './EmptyState.js';
 
 afterEach(() => {
@@ -106,4 +106,72 @@ describe('EmptyState', () => {
         expect(es.isDirty).toBe(false);
     });
     
+    it('setIcon marks widget dirty', () => {
+        const es = new EmptyState('Title');
+    
+        es.clearDirty();
+        es.setIcon('📦');
+    
+        expect(es.isDirty).toBe(true);
+    });
+    
+    it('setHint marks widget dirty', () => {
+        const es = new EmptyState('Title');
+    
+        es.clearDirty();
+        es.setHint('Press Enter');
+    
+        expect(es.isDirty).toBe(true);
+    });
+    
+    it('does not mark dirty when icon is unchanged', () => {
+        const es = new EmptyState(
+            'Title',
+            {},
+            { icon: '📦' },
+        );
+    
+        es.clearDirty();
+        es.setIcon('📦');
+    
+        expect(es.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when hint is unchanged', () => {
+        const es = new EmptyState(
+            'Title',
+            {},
+            { hint: 'Press Enter' },
+        );
+    
+        es.clearDirty();
+        es.setHint('Press Enter');
+    
+        expect(es.isDirty).toBe(false);
+    });
+    
+    it('setHint updates rendered hint', () => {
+        const es = new EmptyState('No data');
+    
+        es.setHint('Press Enter');
+        es.updateRect({ x: 0, y: 0, width: 40, height: 7 });
+    
+        const screen = new Screen(40, 7);
+        es.render(screen);
+    
+        expect(row(screen, 6).trim()).toContain('Press Enter');
+    });
+    
+    it('setIcon updates rendered icon', () => {
+        const es = new EmptyState('No data');
+    
+        es.setIcon('📦');
+        es.updateRect({ x: 0, y: 0, width: 30, height: 5 });
+    
+        const screen = new Screen(30, 5);
+        es.render(screen);
+    
+        expect(row(screen, 1).trim()).toBe('📦');
+    });
+
 });

@@ -3,11 +3,13 @@
 // ─────────────────────────────────────────────────────
 
 import { Buffer } from 'node:buffer';
+import { StringDecoder } from 'node:string_decoder';
 import type { KeyEvent, MouseEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './KeyMap.js';
 import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
+import { splitGraphemes } from './grapheme.js';
 
 export interface CursorPosition {
     row: number;
@@ -28,6 +30,9 @@ interface InputEvents {
 export class InputParser {
     private _events = new EventEmitter<InputEvents>();
     private _stdin: NodeJS.ReadStream;
+    private _decoder = new StringDecoder('utf8');
+    private _graphemeBuffer = '';
+    private _graphemeTimeout: ReturnType<typeof setTimeout> | null = null;
     private _handler: ((data: Buffer) => void) | null = null;
     private _escapeTimeout: ReturnType<typeof setTimeout> | null = null;
     private _escapeBuffer: Buffer = Buffer.alloc(0);
@@ -97,7 +102,13 @@ export class InputParser {
             clearTimeout(this._escapeTimeout);
             this._escapeTimeout = null;
         }
+        if (this._graphemeTimeout) {
+            clearTimeout(this._graphemeTimeout);
+            this._graphemeTimeout = null;
+        }
         this._escapeBuffer = Buffer.alloc(0);
+        this._graphemeBuffer = '';
+        this._decoder.end();
         for (const req of this._cursorRequests) {
             clearTimeout(req.timeout);
             req.reject(new Error('InputParser stopped'));
@@ -109,6 +120,17 @@ export class InputParser {
      * Process a chunk of raw input bytes.
      */
     private _processInput(data: Buffer): void {
+        // If we are currently collecting an escape sequence, continue collecting it
+        if (this._escapeBuffer.length > 0) {
+            this._escapeBuffer = Buffer.concat([this._escapeBuffer, data]);
+            if (this._escapeTimeout) {
+                clearTimeout(this._escapeTimeout);
+                this._escapeTimeout = null;
+            }
+            this._tryParseEscape();
+            return;
+        }
+
         const str = data.toString('utf8');
         const PASTE_START = '\x1b[200~';
         const PASTE_END = '\x1b[201~';
@@ -119,16 +141,6 @@ export class InputParser {
                 .replace(PASTE_END, '');
 
             this._events.emit('paste', pastedText);
-            return;
-        }
-        // If we're collecting an escape sequence
-        if (this._escapeBuffer.length > 0) {
-            this._escapeBuffer = Buffer.concat([this._escapeBuffer, data]);
-            if (this._escapeTimeout) {
-                clearTimeout(this._escapeTimeout);
-                this._escapeTimeout = null;
-            }
-            this._tryParseEscape();
             return;
         }
 
@@ -157,8 +169,37 @@ export class InputParser {
             return;
         }
 
-        // Process each code point for non-escape input
-        for (const ch of str) {
+        // Decode input and append to grapheme buffer
+        const decoded = this._decoder.write(data);
+        this._graphemeBuffer += decoded;
+
+        if (this._graphemeTimeout) {
+            clearTimeout(this._graphemeTimeout);
+            this._graphemeTimeout = null;
+        }
+
+        // Process after a short 10ms delay to merge split chunks (like modifiers or ZWJ sequences)
+        this._graphemeTimeout = setTimeout(() => {
+            this._processGraphemeBuffer();
+            this._graphemeTimeout = null;
+        }, 10);
+    }
+
+    private _processGraphemeBuffer(): void {
+        if (!this._graphemeBuffer) return;
+
+        const graphemes = splitGraphemes(this._graphemeBuffer);
+        if (graphemes.length === 0) return;
+
+        let processCount = graphemes.length;
+        // Check if the last grapheme is potentially incomplete
+        const lastGrapheme = graphemes[graphemes.length - 1];
+        if (this._isPossiblyIncompleteGrapheme(lastGrapheme)) {
+            processCount = graphemes.length - 1;
+        }
+
+        for (let i = 0; i < processCount; i++) {
+            const ch = graphemes[i];
             const code = ch.codePointAt(0)!;
             const raw = Buffer.from(ch, 'utf8');
 
@@ -199,6 +240,38 @@ export class InputParser {
                 }));
             }
         }
+
+        // Update the remaining buffer
+        this._graphemeBuffer = graphemes.slice(processCount).join('');
+    }
+
+    private _isPossiblyIncompleteGrapheme(ch: string): boolean {
+        if (!ch) return false;
+        // ZWJ sequence continuation check
+        if (ch.endsWith('\u200D')) return true;
+        // Surrogate pair incomplete check (last char is high surrogate)
+        const lastCharCode = ch.charCodeAt(ch.length - 1);
+        if (lastCharCode >= 0xD800 && lastCharCode <= 0xDBFF) return true;
+        
+        // Regional Indicator Symbols (flags: U+1F1E6 to U+1F1FF)
+        // Check if there's an odd number of regional indicator symbols in this grapheme
+        const codePoints = Array.from(ch);
+        const lastCpVal = codePoints[codePoints.length - 1].codePointAt(0)!;
+        if (lastCpVal >= 0x1F1E6 && lastCpVal <= 0x1F1FF) {
+            let riCount = 0;
+            for (let i = codePoints.length - 1; i >= 0; i--) {
+                const cp = codePoints[i].codePointAt(0)!;
+                if (cp >= 0x1F1E6 && cp <= 0x1F1FF) {
+                    riCount++;
+                } else {
+                    break;
+                }
+            }
+            if (riCount % 2 !== 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
