@@ -138,4 +138,82 @@ describe('VirtualList', () => {
             expect(onSelect).not.toHaveBeenCalled();
         });
     });
+
+    describe('performance optimizations', () => {
+        it('supports fixedItemHeight configuration', () => {
+            const list = new VirtualList({
+                totalItems: 10,
+                fixedItemHeight: 3,
+                renderItem: (i) => `Item ${i}`,
+            });
+            expect((list as any)._itemHeight).toBe(3);
+        });
+
+        it('bypasses layout engine dirtying on scrolling when memoizeLayout is true', () => {
+            const list = new VirtualList({
+                totalItems: 10,
+                memoizeLayout: true,
+                renderItem: (i) => `Item ${i}`,
+            });
+
+            const layoutNode = list.getLayoutNode();
+            layoutNode._dirty = false;
+            (list as any)._dirty = false;
+
+            list.selectNext();
+
+            expect((list as any)._dirty).toBe(true);
+            expect(layoutNode._dirty).toBe(false);
+        });
+
+        it('does NOT bypass layout engine dirtying on scrolling when memoizeLayout is false', () => {
+            const list = new VirtualList({
+                totalItems: 10,
+                memoizeLayout: false,
+                renderItem: (i) => `Item ${i}`,
+            });
+
+            const layoutNode = list.getLayoutNode();
+            layoutNode._dirty = false;
+            (list as any)._dirty = false;
+
+            list.selectNext();
+
+            expect((list as any)._dirty).toBe(true);
+            expect(layoutNode._dirty).toBe(true);
+        });
+
+        it('clears render cache when data/style changes', () => {
+            const list = new VirtualList({
+                totalItems: 10,
+                renderItem: (i) => `Item ${i}`,
+            });
+
+            const mockScreen = {
+                writeString: vi.fn(),
+                setCell: vi.fn(),
+                pushClip: vi.fn(),
+                popClip: vi.fn(),
+            } as any;
+            list.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+            list.render(mockScreen);
+
+            expect((list as any)._renderCache.size).toBeGreaterThan(0);
+
+            list.setRenderItem((i) => `New ${i}`);
+            expect((list as any)._renderCache.size).toBe(0);
+
+            list.render(mockScreen);
+            expect((list as any)._renderCache.size).toBeGreaterThan(0);
+
+            list.setTotalItems(5);
+            expect((list as any)._renderCache.size).toBe(0);
+
+            list.render(mockScreen);
+            expect((list as any)._renderCache.size).toBeGreaterThan(0);
+
+            list.setStyle({ bold: true });
+            expect((list as any)._renderCache.size).toBe(0);
+        });
+    });
 });
