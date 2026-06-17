@@ -2,7 +2,7 @@
 // @termuijs/widgets — Breadcrumbs widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, stringWidth, caps, styleToCellAttrs } from '@termuijs/core';
+import { type Screen, type Style, type Color, stringWidth, caps, styleToCellAttrs, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface BreadcrumbsOptions {
@@ -105,8 +105,8 @@ export class Breadcrumbs extends Widget {
                 itemAttrs.fg = activeColor;
             }
             
-            screen.writeString(currentX, y, str.slice(0, remainingWidth), itemAttrs);
-            currentX += stringWidth(str.slice(0, remainingWidth));
+            screen.writeString(currentX, y, truncate(str, remainingWidth, ''), itemAttrs);
+            currentX += stringWidth(truncate(str, remainingWidth, ''));
         }
     }
 }

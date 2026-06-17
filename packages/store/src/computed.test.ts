@@ -136,4 +136,39 @@ describe('computed', () => {
         expect(sum.get()).toBe(10);
         expect(spy).toHaveBeenCalledWith(10);
     });
+
+    it('selector is no longer called after dispose()', () => {
+        const selector = vi.fn((s: { count: number }) => s.count * 2);
+        const useStore = createStore((set) => ({
+            count: 0,
+            inc: () => set((s) => ({ count: s.count + 1 })),
+        }));
+        const doubled = useStore.computed(selector);
+
+        // Selector is called once to seed the initial cached value
+        const callsBeforeDispose = selector.mock.calls.length;
+
+        doubled.dispose();
+
+        // setState after dispose — selector must NOT be called again
+        useStore.getState().inc();
+        useStore.getState().inc();
+
+        expect(selector.mock.calls.length).toBe(callsBeforeDispose);
+    });
+
+    it('dispose() clears all computed listeners', () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            inc: () => set((s) => ({ count: s.count + 1 })),
+        }));
+        const doubled = useStore.computed((s) => s.count * 2);
+        const spy = vi.fn();
+        doubled.subscribe(spy);
+
+        doubled.dispose();
+
+        useStore.getState().inc();
+        expect(spy).not.toHaveBeenCalled();
+    });
 });

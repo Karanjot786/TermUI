@@ -5,7 +5,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, relative, sep } from 'node:path';
 
 /**
  * Validate documentation target to prevent command injection
@@ -56,7 +56,13 @@ function generateDocs(target) {
     // Defense-in-depth: ensure the output path stays inside the docs directory
     const docsRoot = resolve('docs');
     const targetOut = resolve(join('docs', target));
-    if (!targetOut.startsWith(docsRoot + '/') && targetOut !== docsRoot) {
+
+    const rel = relative(docsRoot, targetOut);
+
+    if (
+      rel.startsWith('..') ||
+      rel.includes('..' + sep)
+    ) {
       throw new Error(
         `Documentation output path "${targetOut}" escapes the docs directory.`
       );

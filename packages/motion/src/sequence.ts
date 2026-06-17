@@ -1,3 +1,7 @@
+import type { VirtualClock } from './virtual-clock.js';
+
+export type { VirtualClock };
+
 export type AnimatableValue = number | string
 
 export interface SequenceStep {
@@ -6,13 +10,6 @@ export interface SequenceStep {
 }
 
 export type AnimationRunner = (done: () => void) => () => void
-
-export type VirtualClock = {
-  now(): number
-  advance(ms: number): void
-  tick(): void
-  _setInterval(delayMs: number, cb: () => void): () => void
-}
 
 export function sequence(
   runners: AnimationRunner[] | SequenceStep[],

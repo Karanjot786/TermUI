@@ -10,9 +10,17 @@ afterEach(() => {
 
 describe('BulletChart', () => {
     it('initializes with 0 value and target', async () => {
+        const { Screen } = await import('@termuijs/core');
         const { BulletChart } = await import('./BulletChart.js');
         const chart = new BulletChart();
-        expect(chart).toBeDefined();
+        chart.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        chart.render(screen);
+        const row = screen.back[0].map((c: { char: string }) => c.char).join('');
+        // At 0 value with default max=1, value bar has no fill; target marker may appear at position 0
+        expect(row.length).toBe(10);
+        // The rest of the bar (positions 1–9) should be empty — no fill rendered
+        expect(row.slice(1)).toBe(' '.repeat(9));
     });
 
     it('setValue and setTarget clamp and independently call markDirty', async () => {

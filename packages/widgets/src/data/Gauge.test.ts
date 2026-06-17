@@ -28,9 +28,14 @@ describe('Gauge', () => {
 
     it('setLabel updates the label', async () => {
         const { Gauge } = await import('./Gauge.js');
+        const { Screen } = await import('@termuijs/core');
         const g = new Gauge('CPU');
         g.setLabel('Memory');
-        expect(g).toBeDefined();
+        g.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        const screen = new Screen(20, 1);
+        g.render(screen);
+        const row = screen.back[0].map((c: { char: string }) => c.char).join('');
+        expect(row).toContain('Memory');
     });
 
     it('uses ASCII chars when NO_UNICODE=1', async () => {

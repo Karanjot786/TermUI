@@ -184,3 +184,44 @@ describe('layout cache invalidation', () => {
         expect(child.computed.height).toBe(10);
     });
 });
+
+describe('border offset in LayoutEngine', () => {
+    it('places child at x=1, y=1 inside a bordered box (not x=2, y=2)', () => {
+        // A bordered widget adds 1 column/row on each side.
+        // The inner content position must offset by exactly 1 (left border),
+        // not by border.horizontal (which equals 2 — both sides combined).
+        const child = makeNode('child', { flexGrow: 1 });
+        const root = makeNode('root', { border: 'single' }, [child]);
+        computeLayout(root, 20, 10);
+
+        expect(root.children[0].computed.x).toBe(1);
+        expect(root.children[0].computed.y).toBe(1);
+        // Inner width/height should shrink by 2 (one border column on each side)
+        expect(root.children[0].computed.width).toBe(18);
+        expect(root.children[0].computed.height).toBe(8);
+    });
+
+    it('places child at x=0, y=0 when there is no border', () => {
+        const child = makeNode('child', { flexGrow: 1 });
+        const root = makeNode('root', {}, [child]);
+        computeLayout(root, 20, 10);
+
+        expect(root.children[0].computed.x).toBe(0);
+        expect(root.children[0].computed.y).toBe(0);
+        expect(root.children[0].computed.width).toBe(20);
+        expect(root.children[0].computed.height).toBe(10);
+    });
+
+    it('combines border offset with padding correctly', () => {
+        // padding=1 + border=1 (left side only) => content starts at x=2, y=2
+        const child = makeNode('child', { flexGrow: 1 });
+        const root = makeNode('root', { border: 'single', padding: 1 }, [child]);
+        computeLayout(root, 20, 10);
+
+        expect(root.children[0].computed.x).toBe(2); // 1 border + 1 padding
+        expect(root.children[0].computed.y).toBe(2);
+        // 20 - 2*padding - 2*border = 20 - 2 - 2 = 16
+        expect(root.children[0].computed.width).toBe(16);
+        expect(root.children[0].computed.height).toBe(6);
+    });
+});

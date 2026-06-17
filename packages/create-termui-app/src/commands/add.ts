@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync, existsSync } from "node:fs";
-import { dirname, join, resolve, sep } from "node:path";
+import { dirname, join, resolve, relative, isAbsolute } from "node:path";
 import { execFileSync } from "node:child_process";
 import { confirmPrompt } from "../prompts.js";
 
@@ -183,8 +183,9 @@ function resolveDestinationPath(
         : registryFilePath;
     const destination = resolve(destinationRoot, relativePath);
 
-    if (!destination.startsWith(resolve(destinationRoot) + sep)) {
-        throw new Error("Invalid file path from registry.");
+    const rel = relative(resolve(destinationRoot), destination);
+    if (rel.startsWith("..") || isAbsolute(rel)) {
+        throw new Error(`Destination ${destination} is outside project root`);
     }
 
     return destination;

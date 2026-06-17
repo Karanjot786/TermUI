@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'events';
 import { Terminal } from './Terminal.js';
-import { bell, notify } from '../utils/ansi.js';
+import { bell, notify, cursorShape } from '../utils/ansi.js';
 
 function createFakeStdout() {
     return {
@@ -53,6 +53,78 @@ describe('ansi helpers', () => {
 
     it('notify("hi") returns OSC 9 notification sequence', () => {
         expect(notify('hi')).toBe('\x1b]9;hi\x07');
+    });
+});
+
+describe('cursorShape ansi helper', () => {
+    it('block + blink writes \\x1b[1 q', () => {
+        expect(cursorShape('block', true)).toBe('\x1b[1 q');
+    });
+
+    it('block + steady writes \\x1b[2 q', () => {
+        expect(cursorShape('block', false)).toBe('\x1b[2 q');
+    });
+
+    it('underline + blink writes \\x1b[3 q', () => {
+        expect(cursorShape('underline', true)).toBe('\x1b[3 q');
+    });
+
+    it('underline + steady writes \\x1b[4 q', () => {
+        expect(cursorShape('underline', false)).toBe('\x1b[4 q');
+    });
+
+    it('bar + blink writes \\x1b[5 q', () => {
+        expect(cursorShape('bar', true)).toBe('\x1b[5 q');
+    });
+
+    it('bar + steady writes \\x1b[6 q', () => {
+        expect(cursorShape('bar', false)).toBe('\x1b[6 q');
+    });
+
+    it('omitting blink defaults to blinking', () => {
+        expect(cursorShape('block')).toBe('\x1b[1 q');
+        expect(cursorShape('underline')).toBe('\x1b[3 q');
+        expect(cursorShape('bar')).toBe('\x1b[5 q');
+    });
+});
+
+describe('Terminal.setCursorShape', () => {
+    it('setCursorShape block + blink writes correct DECSCUSR sequence', () => {
+        const stdout = createFakeStdout();
+        const terminal = new Terminal({ stdout });
+
+        terminal.setCursorShape('block', true);
+
+        expect(stdout.write).toHaveBeenCalledWith('\x1b[1 q');
+    });
+
+    it('setCursorShape bar + steady writes correct DECSCUSR sequence', () => {
+        const stdout = createFakeStdout();
+        const terminal = new Terminal({ stdout });
+
+        terminal.setCursorShape('bar', false);
+
+        expect(stdout.write).toHaveBeenCalledWith('\x1b[6 q');
+    });
+
+    it('setCursorShape underline default blink writes correct DECSCUSR sequence', () => {
+        const stdout = createFakeStdout();
+        const terminal = new Terminal({ stdout });
+
+        terminal.setCursorShape('underline');
+
+        expect(stdout.write).toHaveBeenCalledWith('\x1b[3 q');
+    });
+
+    it('hideCursor and showCursor are unchanged', () => {
+        const stdout = createFakeStdout();
+        const terminal = new Terminal({ stdout });
+
+        terminal.hideCursor();
+        expect(stdout.write).toHaveBeenCalledWith('\x1b[?25l');
+
+        terminal.showCursor();
+        expect(stdout.write).toHaveBeenCalledWith('\x1b[?25h');
     });
 });
 

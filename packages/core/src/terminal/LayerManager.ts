@@ -6,6 +6,7 @@ import type { Cell } from './Screen.js';
 import { emptyCell, type Screen } from './Screen.js';
 import type { Color } from '../style/Color.js';
 import type { Rect } from '../layout/Rect.js';
+import { segmenter, segmentWidth } from '../utils/unicode.js';
 
 /**
  * A rendering layer. Each layer has its own cell grid and z-index.
@@ -159,12 +160,18 @@ export class LayerManager {
         if (!(row >= 0 && row < this._rows)) return;
 
         let x = col;
-        for (const char of str) {
+        for (const { segment: char } of segmenter.segment(str)) {
             if (x >= this._cols) break;
-            if (x < 0) { x++; continue; }
+            const charWidth = segmentWidth(char);
+            if (x < 0) { x += charWidth; continue; }
 
-            this.setCell(layerId, x, row, { char, width: 1, ...style });
-            x++;
+            this.setCell(layerId, x, row, { char, width: charWidth, ...style });
+            // For wide characters, fill the next cell with a placeholder space
+            // so the grid stays coherent (no stale character bleeds through).
+            if (charWidth === 2 && x + 1 < this._cols) {
+                this.setCell(layerId, x + 1, row, { char: ' ', width: 1, ...style });
+            }
+            x += charWidth;
         }
     }
 

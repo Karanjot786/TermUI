@@ -1,4 +1,4 @@
-import { useRef } from '../hooks';
+import { useRef } from '../hooks.js';
 
 export function useFirstRender(): boolean {
   const isFirst = useRef(true);

@@ -2,12 +2,14 @@
 // @termuijs/core — Tests for Screen buffer
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Screen, emptyCell, resetCell, cellsEqual } from './Screen.js';
 import { caps } from './env-caps.js';
 import { hyperlinkOpen, hyperlinkClose } from '../utils/ansi.js';
 
 describe('Screen', () => {
+    afterEach(() => vi.restoreAllMocks());
+
     it('initializes with correct dimensions', () => {
         const screen = new Screen(10, 5);
         expect(screen.cols).toBe(10);
