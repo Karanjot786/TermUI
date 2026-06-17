@@ -98,3 +98,6 @@ export { debounce } from './utils/debounce.js';
 export type { DebounceOptions } from './utils/debounce.js';
 export { throttle } from './utils/throttle.js';
 export type { ThrottleOptions } from './utils/throttle.js';
+
+// ── Accessibility ─────────────────────────────────────
+export * from './a11y/index.js';

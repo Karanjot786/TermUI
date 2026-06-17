@@ -18,6 +18,8 @@ import {
     styleToCellAttrs,
     containsPoint,
     caps,
+    type A11yProps,
+    emitA11y,
 } from '@termuijs/core';
 import { animateRect, type SpringConfig, type SpringPresetName } from '@termuijs/motion';
 
@@ -118,6 +120,9 @@ export abstract class Widget {
         totalDurationMs: 0,
     };
 
+    /** Accessibility annotation props */
+    protected _a11y?: A11yProps;
+
     /** Enable animated layout transitions for size/position changes */
     public layoutTransition: Partial<SpringConfig> | SpringPresetName | boolean = false;
     private _layoutCancel: (() => void) | null = null;
@@ -146,6 +151,14 @@ export abstract class Widget {
 
     /** Get the current style */
     get style(): Style { return this._style; }
+
+    get a11y(): A11yProps | undefined { return this._a11y; }
+
+    public setA11y(props: A11yProps): this {
+        this._a11y = props;
+        this._dirty = true;
+        return this;
+    }
 
     /** Update the style (merge with existing) */
     setStyle(style: Partial<Style>): void {
@@ -241,6 +254,8 @@ export abstract class Widget {
     render(screen: Screen): void {
         if (this._style.visible === false) return;
 
+        emitA11y(this._a11y, (data: string) => process.stdout.write(data), 'start');
+
         // Push clip region if overflow is hidden (default style)
         const shouldClip = this._style.overflow !== 'visible';
         if (shouldClip) {
@@ -286,6 +301,8 @@ export abstract class Widget {
         if (shouldClip) {
             screen.popClip();
         }
+
+        emitA11y(this._a11y, (data: string) => process.stdout.write(data), 'end');
     }
 
     /**
