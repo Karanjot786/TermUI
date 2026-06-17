@@ -7,6 +7,7 @@ import type { BorderStyle } from './Border.js';
 import type { Pos } from '../layout/pos.js';
 import type { Dim } from '../layout/dim.js';
 import type { Constraint } from '../layout/constraint.js';
+import { adjustForContrast } from './contrast.js';
 
 /**
  * Edge values (padding, margin) — top, right, bottom, left.
@@ -158,7 +159,7 @@ export function hasLayoutChanges(oldStyle: Style, newStyle: Style): boolean {
  * Extract the cell-level style attributes from a Style object.
  * Used when rendering text into the screen buffer.
  */
-import { adjustForContrast } from './contrast.js';
+
 
 export function styleToCellAttrs(style: Style): {
     fg: Color;
@@ -173,8 +174,7 @@ export function styleToCellAttrs(style: Style): {
     let fg = style.fg ?? { type: 'none' };
     let bg = style.bg ?? { type: 'none' };
 
-    // globalThis does not include the process property in TypeScript type definitions (as it is Node.js-specific), which requires the type assertion (globalThis as any) to access the env variable at runtime.
-    const env = typeof globalThis !== 'undefined' ? (globalThis as any).process?.env : undefined;
+    const env = typeof process !== 'undefined' ? process.env : undefined;
     if (env?.TERMUI_ACCESSIBILITY_STRICT === '1' && fg.type !== 'none' && bg.type !== 'none') {
         fg = adjustForContrast(fg, bg);
     }

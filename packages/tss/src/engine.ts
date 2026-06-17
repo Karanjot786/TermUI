@@ -4,7 +4,7 @@
 
 import { tokenize } from './tokenizer.js';
 import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValue } from './parser.js';
-import { type Style, type Color, type BorderStyle, parseColor, adjustForContrast } from '@termuijs/core';
+import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
 import { evalCalc } from './calc.js';
 import { matchesPseudo } from './pseudo.js';
 import { extractKeyframes, type KeyframesDeclaration } from './animations.js';
@@ -128,11 +128,7 @@ export class ThemeEngine {
             this._applyProperties(rule.properties, style);
         }
 
-        // globalThis does not include the process property in TypeScript type definitions (as it is Node.js-specific), which requires the type assertion (globalThis as any) to access the env variable at runtime.
-        const env = typeof globalThis !== 'undefined' ? (globalThis as any).process?.env : undefined;
-        if (env?.TERMUI_ACCESSIBILITY_STRICT === '1' && style.fg && style.bg) {
-            style.fg = adjustForContrast(style.fg, style.bg);
-        }
+        // Contrast adjustment handled in styleToCellAttrs; no adjustment here.
 
         return style;
     }
