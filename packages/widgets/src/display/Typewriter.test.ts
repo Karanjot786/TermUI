@@ -23,6 +23,7 @@ describe('Typewriter', () => {
   });
 
   it('reveals one character per tick by default', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     const tw = new Typewriter('hello');
     tw.updateRect({ x: 0, y: 0, width: 20, height: 1 });
 
@@ -41,6 +42,7 @@ describe('Typewriter', () => {
   });
 
   it('reveals speed characters per tick when speed > 1', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     const tw = new Typewriter('hello', {}, { speed: 2 });
     tw.tick();
     const row = renderRow(tw);
@@ -49,6 +51,7 @@ describe('Typewriter', () => {
   });
 
   it('matches the spec snippet: two ticks on "hello" contain "he"', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     const screen = new Screen(20, 1);
     const tw = new Typewriter('hello');
     tw.updateRect({ x: 0, y: 0, width: 20, height: 1 });
@@ -60,6 +63,7 @@ describe('Typewriter', () => {
   });
 
   it('tick past the end stops at the full text (no-op)', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     const tw = new Typewriter('hi');
     // Two ticks to fully reveal "hi".
     tw.tick();
@@ -72,6 +76,7 @@ describe('Typewriter', () => {
   });
 
   it('does not render cursor once fully revealed', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
     const tw = new Typewriter('hi');
     tw.tick();
@@ -81,6 +86,7 @@ describe('Typewriter', () => {
   });
 
   it('renders cursor glyph while text is being revealed (unicode)', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
     const tw = new Typewriter('hello');
     tw.tick(); // reveals 'h', cursor follows
@@ -89,6 +95,7 @@ describe('Typewriter', () => {
   });
 
   it('renders ASCII fallback cursor when caps.unicode is false', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
     const tw = new Typewriter('hello');
     tw.tick();
@@ -121,6 +128,7 @@ describe('Typewriter', () => {
   });
 
   it('setText then tick reveals new text', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     const tw = new Typewriter('hello');
     tw.tick();
     tw.setText('world');
@@ -130,6 +138,7 @@ describe('Typewriter', () => {
   });
 
   it('respects a caller-supplied cursor string', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     const tw = new Typewriter('hello', {}, { cursor: '|' });
     tw.tick();
     const row = renderRow(tw);
@@ -158,5 +167,19 @@ describe('Typewriter', () => {
     // Screen untouched — all cells remain default space chars.
     const row = screen.back[0].map((c) => c.char).join('');
     expect(row.trim()).toBe('');
+  });
+
+  it('reveals all text immediately when reduced motion is preferred', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
+
+    const tw = new Typewriter('hello');
+
+    tw.tick();
+
+    const row = renderRow(tw);
+
+    expect(row).toContain('hello');
+    expect(row).not.toContain('▋');
+    expect(row).not.toContain('_');
   });
 });

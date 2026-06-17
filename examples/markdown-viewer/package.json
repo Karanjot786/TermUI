@@ -1,0 +1,23 @@
+{
+    "name": "@termuijs/example-markdown-viewer",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "description": "Scrollable terminal markdown reader example app",
+    "scripts": {
+        "start": "bun src/index.tsx",
+        "dev": "bun --watch src/index.tsx",
+        "build": "echo 'no build needed'",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/widgets": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.3"
+    },
+    "engines": {
+        "bun": ">=1.3.0"
+    }
+}

@@ -16,16 +16,16 @@ describe('Router hooks', () => {
 
     it('useParams returns params from current route (happy path)', () => {
         const r = new Router();
-        let capturedParams: any;
+        let capturedParams: any; // captured from JSX hook; type depends on runtime route params
 
         const TestScreen = () => {
             capturedParams = useParams();
-            return { type: 'box', props: {}, children: [] } as any;
+            return { type: 'box', props: {}, children: [] } as any; // VNode literal satisfies shape at runtime
         };
 
         r.addRoute('/user/[id]/post/[postId]', TestScreen);
-        
-        let screenToRender: any;
+
+        let screenToRender: any; // screen factory return varies by route component
         r.events.on('navigate', (ev) => { screenToRender = ev.screen; });
         
         r.push('/user/42/post/100');
@@ -41,17 +41,17 @@ describe('Router hooks', () => {
 
     it('useNavigate allows pushing to new route (happy path)', () => {
         const r = new Router();
-        let capturedNavigate: any;
+        let capturedNavigate: any; // navigate fn type is private to router internals
 
         const TestScreen = () => {
             capturedNavigate = useNavigate();
-            return { type: 'box', props: {}, children: [] } as any;
+            return { type: 'box', props: {}, children: [] } as any; // VNode literal satisfies shape at runtime
         };
 
         r.addRoute('/start', TestScreen);
-        r.addRoute('/end', () => ({ type: 'box', props: {}, children: [] } as any));
+        r.addRoute('/end', () => ({ type: 'box', props: {}, children: [] } as any)); // VNode literal satisfies shape at runtime
 
-        let screenToRender: any;
+        let screenToRender: any; // screen factory return varies by route component
         r.events.on('navigate', (ev) => { screenToRender = ev.screen; });
 
         r.push('/start');
@@ -67,17 +67,17 @@ describe('Router hooks', () => {
 
     it('useNavigate allows replacing current route', () => {
         const r = new Router();
-        let capturedNavigate: any;
+        let capturedNavigate: any; // navigate fn type is private to router internals
 
         const TestScreen = () => {
             capturedNavigate = useNavigate();
-            return { type: 'box', props: {}, children: [] } as any;
+            return { type: 'box', props: {}, children: [] } as any; // VNode literal satisfies shape at runtime
         };
 
         r.addRoute('/a', TestScreen);
-        r.addRoute('/b', () => ({ type: 'box', props: {}, children: [] } as any));
+        r.addRoute('/b', () => ({ type: 'box', props: {}, children: [] } as any)); // VNode literal satisfies shape at runtime
 
-        let screenToRender: any;
+        let screenToRender: any; // screen factory return varies by route component
         r.events.on('navigate', (ev) => { screenToRender = ev.screen; });
 
         r.push('/a');
@@ -95,19 +95,19 @@ describe('Router hooks', () => {
 
     it('handles edge cases gracefully (empty input does not throw)', () => {
         const r = new Router();
-        let capturedParams: any;
-        let capturedNavigate: any;
+        let capturedParams: any; // captured from JSX hook; type depends on runtime route params
+        let capturedNavigate: any; // navigate fn type is private to router internals
 
         const TestScreen = () => {
             capturedParams = useParams();
             capturedNavigate = useNavigate();
-            return { type: 'box', props: {}, children: [] } as any;
+            return { type: 'box', props: {}, children: [] } as any; // VNode literal satisfies shape at runtime
         };
 
         // Static route (no params)
         r.addRoute('/', TestScreen);
-        
-        let screenToRender: any;
+
+        let screenToRender: any; // screen factory return varies by route component
         r.events.on('navigate', (ev) => { screenToRender = ev.screen; });
 
         r.push('/');

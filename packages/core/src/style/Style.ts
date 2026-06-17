@@ -109,7 +109,7 @@ export function mergeStyles(base: Style, override: Style): Style {
     for (const key of Object.keys(override) as Array<keyof Style>) {
         const val = override[key];
         if (val !== undefined) {
-            (result as any)[key] = val;
+            (result as any)[key] = val; // as any: keyof Style index write not supported without escape
         }
     }
 

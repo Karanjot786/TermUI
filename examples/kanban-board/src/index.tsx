@@ -1,6 +1,13 @@
 import { App, type KeyEvent } from '@termuijs/core';
 import { Box, Text, Widget } from '@termuijs/widgets';
 
+// Control Command
+// ← → — switch columns
+// ↑ ↓ — move between cards
+// Shift + → — move a card to next column
+// Shift + ← — move a card back
+// q — quit
+
 type Card = { id: string; text: string };
 type ColumnData = { title: string; cards: Card[] };
 
@@ -40,11 +47,11 @@ class KanbanBoard extends Widget {
 
         this.addChild(new Text(' 📋 Kanban Board Example ', { bold: true, fg: { type: 'named', name: 'cyan' } }));
 
-        const boardLayout = new Box({ flexDirection: 'row', width: '100%', flex: 1, gap: 2 });
+       const boardLayout = new Box({ flexDirection: 'row', width: '100%', flexGrow: 1, gap: 2 });
         this.addChild(boardLayout);
 
         for (let i = 0; i < this.columnsData.length; i++) {
-            const colWidget = new Box({ flexDirection: 'column', width: 25, flex: 0, border: 'single', padding: 1, gap: 1 });
+            const colWidget = new Box({ flexDirection: 'column', width: 25, flexGrow: 1, border: 'single', padding: 1, gap: 1 });
             this.columnWidgets.push(colWidget);
             boardLayout.addChild(colWidget);
         }
@@ -71,21 +78,22 @@ class KanbanBoard extends Widget {
             const colWidget = this.columnWidgets[c];
 
             // Column Header
-            const headerColor = this.activeColIdx === c ? { type: 'named', name: 'blue' as const } : { type: 'named', name: 'default' as const };
+            const headerColor = this.activeColIdx === c ? { type: 'named', name: 'blue' as const } : { type: 'named', name: 'white' as const };
             colWidget.setStyle({ borderFg: headerColor });
-            colWidget.addChild(new Text(colData.title.toUpperCase(), { bold: true, fg: headerColor }));
-            colWidget.addChild(new Text('─'.repeat(21), { dim: true }));
+            colWidget.addChild(new Text(colData.title.toUpperCase(), { bold: true, fg: headerColor  , height : 1}));
+            colWidget.addChild(new Text('─'.repeat(21), { dim: true , height:1}));
 
             // Cards
             if (colData.cards.length === 0) {
-                colWidget.addChild(new Text(' (Empty)', { dim: true }));
+                colWidget.addChild(new Text(' (Empty)', { dim: true  , height : 1}));
             } else {
                 for (let r = 0; r < colData.cards.length; r++) {
                     const card = colData.cards[r];
                     const isSelected = this.activeColIdx === c && this.activeCardIdx === r;
                     const cardText = new Text(` ${card.text} `, { 
                         inverse: isSelected, 
-                        fg: isSelected ? { type: 'named', name: 'white' } : { type: 'named', name: 'default' } 
+                        fg: isSelected ? { type: 'named', name: 'white' } : { type: 'named', name: 'white' },
+                        height:1 
                     });
                     this.cardWidgets.set(card.id, cardText);
                     colWidget.addChild(cardText);

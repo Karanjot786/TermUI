@@ -1,4 +1,4 @@
-import { useRef } from '../hooks';
+import { useRef } from '../hooks.js';
 
 export function useLatest<T>(value: T): { readonly current: T } {
     const ref = useRef(value);
