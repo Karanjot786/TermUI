@@ -21,6 +21,19 @@ export const showCursor = `${CSI}?25h`;
 export const saveCursorPosition = `${CSI}s`;
 export const restoreCursorPosition = `${CSI}u`;
 
+export type CursorShape = 'block' | 'bar' | 'underline';
+
+/** DECSCUSR: CSI Ps SP q. blink toggles steady vs blinking. */
+export function cursorShape(shape: CursorShape, blink = true): string {
+    const codes: Record<CursorShape, number> = {
+        block: 1,
+        underline: 3,
+        bar: 5,
+    };
+    const code = codes[shape] + (blink ? 0 : 1);
+    return `${CSI}${code} q`;
+}
+
 export function moveTo(col: number, row: number): string {
     return `${CSI}${row + 1};${col + 1}H`;
 }
@@ -144,7 +157,7 @@ export function stripAnsiControl(str: string): string {
     // Remove all ESC-introduced sequences (CSI, OSC, DCS, SS2/SS3, etc.)
     // eslint-disable-next-line no-control-regex
     let out = str.replace(
-        /\x1b(?:[@-Z\\-_]|\[[0-9;]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[PX^_][^\x1b]*\x1b\\|.)/g,
+        /\x1b(?:[@-Z\\-_]|\[[0-9;<=>?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[PX^_][^\x1b]*\x1b\\|.)/g,
         ''
     );
     // Remove remaining bare C0 controls (keep TAB=0x09, LF=0x0A) and C1/DEL
@@ -193,3 +206,8 @@ export function readClipboard(
         stdout.write(`${OSC}52;c;?\x07`);
     });
 }
+
+export const clipboard = {
+    write: writeClipboard,
+    read: readClipboard,
+};

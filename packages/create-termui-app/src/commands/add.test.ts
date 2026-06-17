@@ -160,4 +160,28 @@ describe("runAddCommand", () => {
         expect(existsSync(destination)).toBe(true);
         expect(readFileSync(destination, "utf-8")).toContain("Badge");
     });
+
+    it("rejects path traversal in registry file paths", async () => {
+        const traversalSchema = {
+            components: [
+                {
+                    name: "evil",
+                    files: ["registry/components/evil/../../../../../../etc/passwd"],
+                    deps: [],
+                    peerDeps: [],
+                },
+            ],
+        };
+
+        globalThis.fetch = vi.fn(async (url: string) => {
+            if (url.endsWith("/registry/schema.json")) {
+                return { ok: true, json: async () => traversalSchema } as any;
+            }
+            return { ok: true, text: async () => "malicious content" } as any;
+        }) as any;
+
+        await expect(
+            runAddCommand({ component: "evil", yes: true }),
+        ).rejects.toThrow("is outside project root");
+    });
 });

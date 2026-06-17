@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { caps } from '@termuijs/core';
+import { caps, Screen } from '@termuijs/core';
 import { Spinner, SPINNER_FRAMES } from './Spinner.js';
 
 describe('Spinner', () => {
@@ -28,7 +28,11 @@ describe('Spinner', () => {
     it('starts at first frame', () => {
         // Default spinner is 'dots'
         const spinner = new Spinner();
-        expect(spinner).toBeDefined();
+        const screen = new Screen(20, 1);
+        spinner.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        spinner.render(screen);
+        const row = screen.back[0].map(c => c.char).join('');
+        expect(row.trim().length).toBeGreaterThan(0);
         const frameIndex = (spinner as unknown as { _frameIndex: number })._frameIndex;
         expect(frameIndex).toBe(0);
     });

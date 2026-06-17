@@ -46,6 +46,14 @@ export type { WatcherOptions } from './watcher.js';
 // AutoThemeProvider
 export { AutoThemeProvider, ThemeContext, useTheme } from './AutoThemeProvider.js';
 export type { AutoThemeProviderProps } from './AutoThemeProvider.js';
+
+// Imperative ThemeProvider singleton
+export { ThemeProvider } from './themeProvider.js';
+export type { ThemeChangeListener } from './themeProvider.js';
 export * from './media.js';
 export * from './importer.js';
 export { lighten, darken, alpha, evalColorFunction } from './color-functions.js';
+
+// @keyframes support
+export { extractKeyframes } from './animations.js';
+export type { KeyframesDeclaration } from './animations.js';

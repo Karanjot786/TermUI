@@ -7,8 +7,8 @@
  * Supports `on`, `off`, `once`, `emit` with type-safe event maps.
  */
 export class EventEmitter<TEventMap extends Record<string, any>> {
-    private _handlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
-    private _onceHandlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
+    private _handlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map(); // any: handler type erased here; callers constrain via generics
+    private _onceHandlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map(); // any: handler type erased here; callers constrain via generics
 
     /**
      * Subscribe to an event.
@@ -53,8 +53,8 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
         const handlers = this._handlers.get(event);
         if (handlers) {
             for (const handler of handlers) {
-                try { handler(data); } catch (err) {
-                    console.warn(`[EventEmitter] Handler error for '${String(event)}':`, err);
+                try { handler(data); } catch (_err) {
+                    // handler errors are silently ignored to prevent crash during rendering
                 }
             }
         }
@@ -63,8 +63,8 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
         const onceHandlers = this._onceHandlers.get(event);
         if (onceHandlers) {
             for (const handler of onceHandlers) {
-                try { handler(data); } catch (err) {
-                    console.warn(`[EventEmitter] Once-handler error for '${String(event)}':`, err);
+                try { handler(data); } catch (_err) {
+                    // handler errors are silently ignored to prevent crash during rendering
                 }
             }
             onceHandlers.clear();
