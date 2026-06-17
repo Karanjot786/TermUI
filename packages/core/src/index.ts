@@ -102,3 +102,5 @@ export { debounce } from './utils/debounce.js';
 export type { DebounceOptions } from './utils/debounce.js';
 export { throttle } from './utils/throttle.js';
 export type { ThrottleOptions } from './utils/throttle.js';
+export { CommandHistory } from "./history/CommandHistory.js";
+export type { CommandHistoryOptions } from "./history/CommandHistory.js";
