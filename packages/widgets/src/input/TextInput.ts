@@ -69,40 +69,7 @@ export class TextInput extends Widget {
         this.markDirty();
     }
 
-    /**
-     * Handle keyboard events when the widget is focused.
-     */
-    handleKey(event: KeyEvent): void {
-        switch (event.key) {
-            case 'left':
-                this.moveCursorLeft();
-                break;
-            case 'right':
-                this.moveCursorRight();
-                break;
-            case 'home':
-                this.moveCursorHome();
-                break;
-            case 'end':
-                this.moveCursorEnd();
-                break;
-            case 'backspace':
-                this.deleteBack();
-                break;
-            case 'delete':
-                this.deleteForward();
-                break;
-            case 'enter':
-                this.submit();
-                break;
-            default:
-                // Insert printable characters (length 1 means it's a typing char, not a special key)
-                if (event.key.length === 1 && !event.ctrl && !event.alt) {
-                    this.insertChar(event.key);
-                }
-                break;
-        }
-    }
+
 
     /**
      * Handle a typed character.
