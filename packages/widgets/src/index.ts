@@ -270,6 +270,14 @@ export type {
 } from './feedback/ProgressColumn.js';
 export { Progress } from './feedback/Progress.js';
 
+export { ProgressDashboard } from "./feedback/ProgressDashboard.js";
+
+export type {
+    ProgressTask,
+    TaskStatus,
+    ProgressDashboardOptions
+} from "./feedback/ProgressDashboard.js";
+
 export type {
     ProgressProps,
     ProgressTask,
