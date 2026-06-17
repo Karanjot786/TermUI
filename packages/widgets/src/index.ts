@@ -63,6 +63,8 @@ export { PinInput } from "./input/PinInput.js";
 export type { PinInputOptions } from "./input/PinInput.js";
 export { ContextMenu } from './input/ContextMenu.js';
 export type { ContextMenuItem } from './input/ContextMenu.js';
+export { FileExplorer } from './FileExplorer.js';
+export type { FileExplorerOptions, FileItem } from './FileExplorer.js';
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
