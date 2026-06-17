@@ -131,6 +131,30 @@ describe('RangeInput', () => {
         expect(onChange).toHaveBeenCalledWith(1, 100);
     });
 
+    it('arrow keys clamp low handle at min boundary', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price');
+        r.handleKey(makeKey('left')); // already at min (0), should stay 0
+        expect(r.getLow()).toBe(0);
+    });
+
+    it('arrow keys clamp high handle at max boundary', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price');
+        r.handleKey(makeKey('tab')); // switch to high handle
+        r.handleKey(makeKey('right')); // already at max (100), should stay 100
+        expect(r.getHigh()).toBe(100);
+    });
+
+    it('respects custom step option for arrow key movement', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price', {}, { step: 5 });
+        r.handleKey(makeKey('right')); // low 0 → 5
+        expect(r.getLow()).toBe(5);
+        r.handleKey(makeKey('right')); // low 5 → 10
+        expect(r.getLow()).toBe(10);
+    });
+
     it('renders unicode track chars', async () => {
         vi.stubEnv('NO_UNICODE', '');
         vi.stubEnv('TERM', '');

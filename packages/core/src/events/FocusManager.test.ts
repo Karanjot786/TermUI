@@ -76,6 +76,31 @@ describe('FocusManager', () => {
         expect(blurHandler).toHaveBeenCalledWith(expect.objectContaining({ targetId: 'a', type: 'blur' }));
     });
 
+    it('_changeFocus emits blur and focus events with epoch field', () => {
+        const fm = new FocusManager();
+        const focusHandler = vi.fn();
+        const blurHandler = vi.fn();
+        fm.on('focus', focusHandler);
+        fm.on('blur', blurHandler);
+
+        fm.register(makeWidget('w1'));
+        fm.register(makeWidget('w2'));
+
+        // focusWidget triggers _changeFocus
+        fm.focusWidget('w2');
+
+        const blurCall = blurHandler.mock.calls.find(([e]) => e.targetId === 'w1');
+        const focusCall = focusHandler.mock.calls.find(([e]) => e.targetId === 'w2');
+
+        expect(blurCall).toBeDefined();
+        expect(typeof blurCall![0].epoch).toBe('number');
+        expect(blurCall![0].epoch).toBeGreaterThanOrEqual(0);
+
+        expect(focusCall).toBeDefined();
+        expect(typeof focusCall![0].epoch).toBe('number');
+        expect(focusCall![0].epoch).toBeGreaterThan(blurCall![0].epoch);
+    });
+
     it('isFocused returns correct value', () => {
         const fm = new FocusManager();
         fm.register(makeWidget('a'));

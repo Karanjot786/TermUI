@@ -76,4 +76,27 @@ describe('Watermark', () => {
         expect(watermark.isDirty).toBe(true);
     });
 
+    it('renders double-width unicode characters', () => {
+        const { screen } = renderWatermark('你好', {}, {}, 4, 1);
+    
+        expect(rowText(screen, 0)).toContain('你');
+        expect(rowText(screen, 0)).toContain('好');
+    });
+    
+    it('renders emoji watermark content', () => {
+        const { screen } = renderWatermark('😀', {}, {}, 4, 1);
+    
+        expect(rowText(screen, 0)).toContain('😀');
+    });
+
+    it('marks continuation cells for wide Unicode characters', () => {
+        const { screen } = renderWatermark('你', {}, {}, 4, 1);
+    
+        expect(screen.back[0][0].char).toBe('你');
+        expect(screen.back[0][0].width).toBe(2);
+    
+        expect(screen.back[0][1].char).toBe('');
+        expect(screen.back[0][1].width).toBe(0);
+    });
+    
 });

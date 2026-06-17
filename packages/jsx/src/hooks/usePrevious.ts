@@ -1,4 +1,4 @@
-import { useEffect, useRef } from '../hooks';
+import { useEffect, useRef } from '../hooks.js';
 
 export function usePrevious<T>(value: T): T | undefined {
   const ref = useRef<T | undefined>(undefined);

@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { dirname, resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import { getBuiltinThemeNames } from '@termuijs/tss';
 import { textPrompt, selectPrompt, multiSelectPrompt } from './prompts.js';
@@ -146,7 +147,7 @@ async function runProjectScaffold(args: CliArgs): Promise<void> {
   console.log();
 }
 
-if (import.meta.main) {
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
   runCli(process.argv.slice(2)).catch(err => {
     console.error('Error:', err.message);
     process.exit(1);

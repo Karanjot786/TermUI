@@ -84,10 +84,10 @@ export function tokensToTSS(name: string, tokens: ThemeTokens): string {
  * Simple stack-based YAML parser for flat/nested config files.
  * Avoids heavy external dependency footprints.
  */
-function parseYaml(content: string): any {
-  const result: any = {};
+function parseYaml(content: string): any { // any: YAML structure is runtime-dynamic; shape unknown at parse time
+  const result: any = {}; // any: YAML structure is runtime-dynamic; shape unknown at parse time
   const lines = content.split(/\r?\n/);
-  const stack: { indent: number; obj: any }[] = [{ indent: -1, obj: result }];
+  const stack: { indent: number; obj: any }[] = [{ indent: -1, obj: result }]; // any: YAML structure is runtime-dynamic; shape unknown at parse time
 
   for (const line of lines) {
     const trimmed = line.trim();

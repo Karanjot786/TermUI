@@ -1,4 +1,4 @@
-import { useEffect } from '../hooks';
+import { useEffect } from '../hooks.js';
 
 export function useMount(callback: () => void): void {
   useEffect(() => {
