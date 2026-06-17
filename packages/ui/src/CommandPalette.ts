@@ -126,6 +126,7 @@ export class CommandPalette extends Widget {
         const backdropCh = caps.unicode ? '░' : ' ';
         for (let r = 0; r < height; r++) screen.writeString(x, y + r, backdropCh.repeat(width), { ...attrs, dim: true });
         // Box
+<<<<<<< HEAD
         const grouped = new Map<string, Command[]>();
 
 for (const cmd of this._filtered) {
@@ -137,8 +138,20 @@ for (const cmd of this._filtered) {
 
     grouped.get(category)!.push(cmd);
 }
+=======
+        const vis = this._filtered.slice(0, this._maxVisible);
+        const grouped = new Map<string, Command[]>();
+        for (const cmd of vis) {
+            const category = cmd.category ?? 'General';
+            if (!grouped.has(category)) {
+                grouped.set(category, []);
+            }
+            grouped.get(category)!.push(cmd);
+        }
+>>>>>>> upstream/main
         const bw = Math.min(60, width - 4);
-        const bh = Math.min(vis.length + 3, height - 2);
+        const totalVisRows = grouped.size + vis.length;
+        const bh = Math.min(totalVisRows + 3, height - 2);
         const bx = x + Math.floor((width - bw) / 2);
         const by = y + 2;
         const border = getBorderChars('single');
@@ -169,13 +182,24 @@ for (const [category, commands] of grouped) {
     for (const c of commands) {
         const active = rowOffset - 1 === this._selectedIndex;
 
+<<<<<<< HEAD
         const label =
             (active ? '❯ ' : '  ') + c.label;
+=======
+        const prefix = active ? (caps.unicode ? '❯ ' : '> ') : '  ';
+        const shortcutStr = c.shortcut ? `  ${c.shortcut}` : '';
+        const labelFull = prefix + c.label + shortcutStr;
+        const label = labelFull.slice(0, bw - 4).padEnd(bw - 4);
+>>>>>>> upstream/main
 
         screen.writeString(
             bx + 1,
             by + 3 + rowOffset,
+<<<<<<< HEAD
             label.padEnd(bw - 4),
+=======
+            label,
+>>>>>>> upstream/main
             {
                 ...attrs,
                 fg: active ? this._activeColor : attrs.fg,
@@ -187,7 +211,7 @@ for (const [category, commands] of grouped) {
     }
 }
         // Bottom
-        const last = Math.min(by + 3 + vis.length, by + bh - 1);
+        const last = Math.min(by + 3 + totalVisRows, by + bh - 1);
         screen.writeString(bx, last, border.bottomLeft + border.bottom.repeat(bw - 2) + border.bottomRight, ba);
     }
 }

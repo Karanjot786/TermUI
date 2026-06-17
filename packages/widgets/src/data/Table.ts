@@ -2,7 +2,7 @@
 // @termuijs/widgets — Table widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
+import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type TableState } from './TableState.js';
 
@@ -56,6 +56,7 @@ export interface TableProps {
  * - External state via `state` prop and `useTableState` hook
  */
 export class Table extends Widget {
+    focusable = true;
     protected _columns: TableColumn[];
     protected _rows: TableRow[];
     protected _showHeader: boolean;
@@ -102,6 +103,10 @@ export class Table extends Widget {
         this._onStateChange = onStateChange;
     }
 
+    // ── Public API ────────────────────────────────────
+
+    get selectedRow(): number { return this._selectedRow; }
+
     // ── Mutations ─────────────────────────────────────
 
     setRows(rows: TableRow[]): void {
@@ -131,6 +136,7 @@ export class Table extends Widget {
         }
     }
 
+<<<<<<< HEAD
     handleKey(key: string): void {
     if (key === 'up') {
         this._selectedRow = Math.max(0, this._selectedRow - 1);
@@ -146,6 +152,23 @@ export class Table extends Widget {
     this.markDirty();
 }
 
+=======
+    handleKey(event: KeyEvent): void {
+        if (event.key === 'up') {
+            this._selectedRow = Math.max(0, this._selectedRow - 1);
+        }
+
+        if (event.key === 'down') {
+            this._selectedRow = Math.min(
+                this._rows.length - 1,
+                this._selectedRow + 1
+            );
+        }
+
+        this.markDirty();
+    }
+
+>>>>>>> upstream/main
     // ── Rendering ─────────────────────────────────────
 
     protected _renderSelf(screen: Screen): void {

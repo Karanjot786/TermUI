@@ -141,8 +141,10 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
     const nodeHeight = node.computed.height;
 
     // Inner content area (after padding + border)
-    const innerX = padding.left + border.horizontal;
-    const innerY = padding.top + border.vertical;
+    // border.horizontal/vertical equals 2 (both sides), but the offset into content
+    // only needs 1 (left/top border). The width/height reduction still uses the full 2.
+    const innerX = padding.left + (border.horizontal > 0 ? 1 : 0);
+    const innerY = padding.top + (border.vertical > 0 ? 1 : 0);
     const innerWidth = Math.max(0, nodeWidth - padding.left - padding.right - border.horizontal);
     const innerHeight = Math.max(0, nodeHeight - padding.top - padding.bottom - border.vertical);
 

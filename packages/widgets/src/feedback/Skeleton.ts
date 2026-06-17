@@ -1,4 +1,4 @@
-import { type Screen, type Style, type Color, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, caps, prefersReducedMotion } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { timerPoolSubscribe } from '@termuijs/motion';
 
@@ -25,7 +25,7 @@ export class Skeleton extends Widget {
 
         this._chars = opts.chars ?? (caps.unicode ? ['░', '▒'] : ['-', '#']);
 
-        if (caps.motion) {
+        if (!prefersReducedMotion()) {
             this._unsubscribe = timerPoolSubscribe(this._intervalMs, () => {
                 this._frame = 1 - this._frame;
                 this._shimmerPos++;

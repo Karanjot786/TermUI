@@ -34,7 +34,7 @@ export function tail(filePath: string, opts: TailOptions = {}): TailStream {
         stop() {
             stream.active = false;
             // Eagerly stop the watcher instead of waiting for next change event
-            if ((stream as any)._watchPath) {
+            if ((stream as any)._watchPath) { // as any: _watchPath is runtime-augmented; not in TailStream interface
                 fs.unwatchFile((stream as any)._watchPath);
                 (stream as any)._watchPath = null;
             }

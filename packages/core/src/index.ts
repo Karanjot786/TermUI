@@ -8,6 +8,7 @@ export type { TerminalOptions } from './terminal/Terminal.js';
 export { Screen, emptyCell, cellsEqual } from './terminal/Screen.js';
 export type { Cell } from './terminal/Screen.js';
 export { Renderer } from './terminal/Renderer.js';
+export type { FrameStats } from './terminal/Renderer.js';
 export { LayerManager } from './terminal/LayerManager.js';
 export type { Layer } from './terminal/LayerManager.js';
 export { caps, prefersReducedMotion, shouldUseColor, prefersHighContrast } from './terminal/env-caps.js';
@@ -17,12 +18,14 @@ export { bell } from './terminal/bell.js';
 // ── Renderer ──────────────────────────────────────────
 export { RenderHook } from './renderer/render-hook.js';
 export { mergeBorders } from './renderer/border-merge.js';
+export { Scheduler, scheduler } from './renderer/Scheduler.js';
 
 // ── Input ─────────────────────────────────────────────
 export { InputParser } from './input/InputParser.js';
 export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS, normalizeNavigationKey } from './input/KeyMap.js';
 export { parseMouseEvent, isMouseSequence } from './input/MouseParser.js';
 export { MouseGestures } from './input/MouseGestures.js';
+export { splitGraphemes } from './input/grapheme.js';
 export type { MouseGesturesOptions } from './input/MouseGestures.js';
 export { ChordMatcher } from './input/ChordMatcher.js';
 export type { ChordMatcherOptions, Chord } from './input/ChordMatcher.js';
@@ -94,3 +97,8 @@ export { writeClipboard, readClipboard, clipboard } from './utils/ansi.js';
 export { debounce } from './utils/debounce.js';
 export type { DebounceOptions } from './utils/debounce.js';
 export * from './session/Session.js';
+export { writeClipboard, readClipboard, clipboard, stripAnsiControl } from './utils/ansi.js';
+export { debounce } from './utils/debounce.js';
+export type { DebounceOptions } from './utils/debounce.js';
+export { throttle } from './utils/throttle.js';
+export type { ThrottleOptions } from './utils/throttle.js';

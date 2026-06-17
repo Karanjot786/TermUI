@@ -1,4 +1,4 @@
-import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, caps, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export type CalloutVariant = 'info' | 'warn' | 'success' | 'danger';
@@ -68,14 +68,15 @@ export class Callout extends Widget {
         let cursor = x;
 
         screen.writeString(cursor, y, icon, { ...attrs, fg: color, bold: true });
-        cursor += icon.length;
+        cursor += stringWidth(icon);
 
         if (this._title) {
             const titleStr = ' ' + this._title;
             const avail = width - cursor;
             if (avail > 0) {
-                screen.writeString(cursor, y, titleStr.slice(0, avail), { ...attrs, fg: color, bold: true });
-                cursor += titleStr.slice(0, avail).length;
+                const truncated = truncate(titleStr, avail);
+                screen.writeString(cursor, y, truncated, { ...attrs, fg: color, bold: true });
+                cursor += stringWidth(truncated);
             }
         }
 

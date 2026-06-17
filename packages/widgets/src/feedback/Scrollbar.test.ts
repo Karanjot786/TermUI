@@ -16,8 +16,12 @@ describe('Scrollbar Widget — Initialization', () => {
             showArrows: false,
         });
 
-        expect(bar).toBeDefined();
         expect(bar.isDirty).toBe(true); // Starts dirty
+        bar.updateRect({ x: 0, y: 0, width: 1, height: 10 });
+        const screen = new Screen(1, 10);
+        bar.render(screen);
+        const col = screen.back.map((row: { char: string }[]) => row[0].char).join('');
+        expect(col.trim().length).toBeGreaterThan(0);
     });
 
     it('should fall back to defaults for missing optional options', () => {
@@ -26,7 +30,11 @@ describe('Scrollbar Widget — Initialization', () => {
             viewportLength: 10,
         });
 
-        expect(bar).toBeDefined();
+        bar.updateRect({ x: 0, y: 0, width: 1, height: 10 });
+        const screen = new Screen(1, 10);
+        bar.render(screen);
+        const col = screen.back.map((row: { char: string }[]) => row[0].char).join('');
+        expect(col.trim().length).toBeGreaterThan(0);
     });
 });
 
@@ -306,5 +314,61 @@ describe('Scrollbar Widget — Layout Operations', () => {
 
         scrollbar.setViewportLength(20);
         expect(spy).toHaveBeenCalledTimes(3);
+    });
+});
+
+describe('Scrollbar Widget — Performance optimizations', () => {
+    it('does not mark dirty when setPosition receives the same value', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+            position: 5,
+        });
+
+        bar.clearDirty();
+
+        bar.setPosition(5);
+
+        expect(bar.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setPosition receives a different value', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+            position: 5,
+        });
+
+        bar.clearDirty();
+
+        bar.setPosition(10);
+
+        expect(bar.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when setContentLength receives the same value', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+        });
+
+        bar.clearDirty();
+
+        bar.setContentLength(100);
+
+        expect(bar.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when setViewportLength receives the same value', () => {
+        const bar = new Scrollbar({}, {
+            contentLength: 100,
+            viewportLength: 10,
+        });
+
+        bar.clearDirty();
+
+        bar.setViewportLength(10);
+
+        expect(bar.isDirty).toBe(false);
     });
 });

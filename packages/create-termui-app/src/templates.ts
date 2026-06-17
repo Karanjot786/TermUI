@@ -117,7 +117,6 @@ export default defineConfig({
 function createPackageJson(config: ProjectConfig): string {
     const isFileManager = config.template === 'file-manager';
     const isAiAssistant = config.template === 'ai-assistant';
-    const isRestClient = config.template === 'rest-client';
     return JSON.stringify({
         name: config.name,
         version: '0.1.0',
@@ -136,14 +135,13 @@ function createPackageJson(config: ProjectConfig): string {
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
             }
-            : isFileManager || isRestClient
+            : isFileManager
             ? {
                 '@termuijs/core': 'latest',
                 '@termuijs/widgets': 'latest',
                 '@termuijs/ui': 'latest',
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
-                ...(isRestClient ? { '@termuijs/data': 'latest' } : {}),
             }
             : {
                 '@termuijs/core': 'latest',
@@ -336,11 +334,11 @@ function InteractiveTool() {
     useKeymap([
         { key: 'q',          action: () => process.exit(0),               description: 'Quit' },
         { key: 'c', ctrl: true, action: () => process.exit(0),            description: 'Quit' },
-        { key: 'ArrowUp',    action: () => setSelected(s => Math.max(0, s - 1)),              description: 'Move up' },
-        { key: 'ArrowDown',  action: () => setSelected(s => Math.min(items.length - 1, s + 1)), description: 'Move down' },
+        { key: 'up',         action: () => setSelected(s => Math.max(0, s - 1)),              description: 'Move up' },
+        { key: 'down',       action: () => setSelected(s => Math.min(items.length - 1, s + 1)), description: 'Move down' },
         { key: 'k',          action: () => setSelected(s => Math.max(0, s - 1)),              description: 'Move up (vim)' },
         { key: 'j',          action: () => setSelected(s => Math.min(items.length - 1, s + 1)), description: 'Move down (vim)' },
-        { key: 'Enter',      action: () => {
+        { key: 'enter',      action: () => {
             const item = items[selected];
             if (item) setDone(d => d.includes(item) ? d.filter(x => x !== item) : [...d, item]);
         }, description: 'Toggle selected' },
@@ -460,7 +458,7 @@ function CliWrapper() {
     ]);
     const [running, setRunning] = useState(false);
     const [exitCode, setExitCode] = useState<number | null>(null);
-    const procRef = useRef<any>(null);
+    const procRef = useRef<ReturnType<typeof spawn> | null>(null);
     const theme = useTheme();
 
     const addLog = (level: LogLevel, text: string) =>
@@ -798,7 +796,7 @@ function FileManager() {
         { key: 'tab', shift: true, action: () => cyclePane(-1), description: 'Previous pane' },
         { key: 'enter', action: () => {
             if (focusedPane === 'tree') {
-                tree.current.handleKey('Enter');
+                tree.current.handleKey('enter');
                 const selected = tree.current.selectedNode;
                 const payload = selected?.data as { path?: string; type?: string } | undefined;
                 if (payload?.type === 'file' && payload.path) {
@@ -813,27 +811,27 @@ function FileManager() {
                 return;
             }
 
-            preview.current.handleKey('Enter');
+            preview.current.handleKey('enter');
         }, description: 'Open item' },
         { key: 'up', action: () => {
-            if (focusedPane === 'tree') tree.current.handleKey('ArrowUp');
+            if (focusedPane === 'tree') tree.current.handleKey('up');
             else if (focusedPane === 'picker') filePicker.current.selectPrev();
-            else preview.current.handleKey('ArrowUp');
+            else preview.current.handleKey('up');
         }, description: 'Move up' },
         { key: 'down', action: () => {
-            if (focusedPane === 'tree') tree.current.handleKey('ArrowDown');
+            if (focusedPane === 'tree') tree.current.handleKey('down');
             else if (focusedPane === 'picker') filePicker.current.selectNext();
-            else preview.current.handleKey('ArrowDown');
+            else preview.current.handleKey('down');
         }, description: 'Move down' },
         { key: 'left', action: () => {
-            if (focusedPane === 'tree') tree.current.handleKey('ArrowLeft');
+            if (focusedPane === 'tree') tree.current.handleKey('left');
             else if (focusedPane === 'picker') {
                 filePicker.current.goUp();
                 syncPickerPath();
             }
         }, description: 'Collapse or go up' },
         { key: 'right', action: () => {
-            if (focusedPane === 'tree') tree.current.handleKey('ArrowRight');
+            if (focusedPane === 'tree') tree.current.handleKey('right');
             else if (focusedPane === 'picker') {
                 filePicker.current.confirm();
                 syncPickerPath();
@@ -1036,55 +1034,6 @@ function App() {
                 </box>
             )}>
                 <AiAssistant />
-            </ErrorBoundary>
-        </AutoThemeProvider>
-    );
-}
-
-render(<App />, { title: '${config.name}' });
-`,
-    }];
-}
-
-function generateRestClientTemplate(config: ProjectConfig): GeneratedFile[] {
-    return [{
-        path: 'src/index.tsx',
-        content: `/** @jsxImportSource @termuijs/jsx */
-import { render, useState, useKeymap, ErrorBoundary } from '@termuijs/jsx';
-import { AutoThemeProvider } from '@termuijs/tss';
-import { useFetch } from '@termuijs/data';
-import { JSONView, Text } from '@termuijs/widgets';
-
-function RestClient() {
-    const result = useFetch<{ id: number; name: string; email: string }>(
-        'https://jsonplaceholder.typicode.com/users/1',
-    );
-
-    useKeymap([
-        { key: 'q', action: () => process.exit(0), description: 'Quit' },
-        { key: 'c', ctrl: true, action: () => process.exit(0), description: 'Quit' },
-    ]);
-
-    return (
-        <box flexDirection="column" padding={1} gap={1}>
-            <text bold>${config.name}</text>
-            {result.loading && <text>Loading...</text>}
-            {result.error && <text color="red">Error: {String(result.error.message)}</text>}
-            {result.data && <jsonview data={result.data} />}
-        </box>
-    );
-}
-
-function App() {
-    return (
-        <AutoThemeProvider>
-            <ErrorBoundary fallback={(err) => (
-                <box border="single" borderColor="red" padding={1}>
-                    <text color="red" bold>Error</text>
-                    <text>{err.message}</text>
-                </box>
-            )}>
-                <RestClient />
             </ErrorBoundary>
         </AutoThemeProvider>
     );

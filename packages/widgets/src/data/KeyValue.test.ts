@@ -4,11 +4,17 @@
 
 import { describe, it, expect } from 'vitest';
 import { KeyValue } from './KeyValue.js';
+import { Screen } from '@termuijs/core';
 
 describe('KeyValue', () => {
     it('creates key value pairs from array', () => {
         const kv = new KeyValue([{ key: 'name', value: 'Alice' }]);
-        expect(kv).toBeDefined();
+        const screen = new Screen(40, 10);
+        kv.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        kv.render(screen);
+        const rows = screen.back.map((row: { char: string }[]) => row.map(c => c.char).join(''));
+        expect(rows.some(r => r.includes('name'))).toBe(true);
+        expect(rows.some(r => r.includes('Alice'))).toBe(true);
     });
 
     it('creates key value pairs from object', () => {
