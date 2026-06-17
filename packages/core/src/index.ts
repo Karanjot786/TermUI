@@ -93,3 +93,4 @@ export * as ansi from './utils/ansi.js';
 export { writeClipboard, readClipboard, clipboard } from './utils/ansi.js';
 export { debounce } from './utils/debounce.js';
 export type { DebounceOptions } from './utils/debounce.js';
+export * from './session/Session.js';
