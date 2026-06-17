@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createStore, batch, logger } from './store.js'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import { d } from '../../jsx/dist/createElement-g_-ixPAN.js'
+
 
 describe('createStore', () => {
     it('initializes state from creator function', () => {
