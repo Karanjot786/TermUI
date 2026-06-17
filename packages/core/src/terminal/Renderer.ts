@@ -63,6 +63,10 @@ export class Renderer {
         this._onTick = onTick ?? null;
         const interval = Math.floor(1000 / this._fps);
         this._frameTimer = setInterval(() => {
+            if (this._renderRequested) {
+                this._renderRequested = false;
+                this._flush();
+            }
             this._onTick?.();
         }, interval);
     }
