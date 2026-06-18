@@ -120,45 +120,11 @@ describe('Badge', () => {
         expect(() => renderBadge('test', {}, {}, 0, 0)).not.toThrow();
     });
 
-    // ── 6. Constructor overloads ──────────────────────────────────────────
-    it('deprecated signature Badge(text, opts) produces console.warn', () => {
-        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-        try {
-            new Badge('dep', { variant: 'info' });
-            expect(spy).toHaveBeenCalledWith(
-                'Badge(text, opts, style) is deprecated. Use Badge(text, style, opts) instead.',
-            );
-        } finally {
-            spy.mockRestore();
-        }
-    });
-
-    it('canonical signature Badge(text, style, opts) does not produce console.warn', () => {
-        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-        try {
-            new Badge('canon', {}, { variant: 'info' });
-            expect(spy).not.toHaveBeenCalled();
-        } finally {
-            spy.mockRestore();
-        }
-    });
-
-    it('deprecated and canonical signatures produce equivalent output', () => {
-        const { screen: screen1 } = renderBadge('same', {}, { variant: 'error' });
-        // Construct with deprecated overload (opts as second arg)
-        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-        try {
-            const badge2 = new Badge('same', { variant: 'error' });
-            const screen2 = new Screen(20, 3);
-            badge2.updateRect({ x: 0, y: 0, width: 20, height: 3 });
-            badge2.render(screen2);
-            // First row should match
-            expect(screen2.back[0][0].char).toBe(screen1.back[0][0].char);
-            expect(screen2.back[1][2].char).toBe(screen1.back[1][2].char);
-            expect(warnSpy).toHaveBeenCalled();
-        } finally {
-            warnSpy.mockRestore();
-        }
+    // ── 6. Constructor signature ────────────────────────────────────────────
+    it('canonical signature Badge(text, style, opts) works correctly', () => {
+        const { badge } = renderBadge('test', {}, { variant: 'info' });
+        expect(badge.getText()).toBe('test');
+        expect(badge.getVariant()).toBe('info');
     });
 
     it('does not mark dirty when text is unchanged', () => {

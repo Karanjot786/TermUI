@@ -16,8 +16,12 @@ describe('Scrollbar Widget — Initialization', () => {
             showArrows: false,
         });
 
-        expect(bar).toBeDefined();
         expect(bar.isDirty).toBe(true); // Starts dirty
+        bar.updateRect({ x: 0, y: 0, width: 1, height: 10 });
+        const screen = new Screen(1, 10);
+        bar.render(screen);
+        const col = screen.back.map((row: { char: string }[]) => row[0].char).join('');
+        expect(col.trim().length).toBeGreaterThan(0);
     });
 
     it('should fall back to defaults for missing optional options', () => {
@@ -26,7 +30,11 @@ describe('Scrollbar Widget — Initialization', () => {
             viewportLength: 10,
         });
 
-        expect(bar).toBeDefined();
+        bar.updateRect({ x: 0, y: 0, width: 1, height: 10 });
+        const screen = new Screen(1, 10);
+        bar.render(screen);
+        const col = screen.back.map((row: { char: string }[]) => row[0].char).join('');
+        expect(col.trim().length).toBeGreaterThan(0);
     });
 });
 

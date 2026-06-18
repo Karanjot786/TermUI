@@ -14,7 +14,7 @@
     "coverage": "bun vitest run --coverage --coverage.reportOnFailure",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "bench": "bun packages/core/src/benchmark/render-loop.ts",
+    "bench": "bun packages/core/src/benchmark/run-all.ts",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "prettier --write \".\""
   },

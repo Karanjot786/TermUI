@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { pathAnimation } from './path.ts';
+import { pathAnimation } from './path.js';
 // Add the .ts extension here
-import * as sequenceModule from './sequence.ts';
+import * as sequenceModule from './sequence.js';
 
 describe('pathAnimation', () => {
   afterEach(() => {

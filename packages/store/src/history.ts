@@ -13,7 +13,7 @@
 export interface TemporalHistory<T> {
     past: T[];
     present: T;
-    future: T[]
+    future: T[];
 }
 
 /**

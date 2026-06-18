@@ -19,6 +19,7 @@ import {
     containsPoint,
     caps,
 } from '@termuijs/core';
+import { animateRect, type SpringConfig, type SpringPresetName } from '@termuijs/motion';
 
 /**
  * Event map for widgets.
@@ -30,6 +31,12 @@ export interface WidgetEvents {
     blur: void;
     mount: void;
     unmount: void;
+}
+
+export interface RenderStats {
+    renderCount: number;
+    lastDurationMs: number;
+    totalDurationMs: number;
 }
 
 let _widgetIdCounter = 0;
@@ -104,6 +111,17 @@ export abstract class Widget {
      * Newly created widgets start dirty.
      */
     protected _dirty = true;
+    /** Render profiling statistics */
+    private _renderStats: RenderStats = {
+        renderCount: 0,
+        lastDurationMs: 0,
+        totalDurationMs: 0,
+    };
+
+    /** Enable animated layout transitions for size/position changes */
+    public layoutTransition: Partial<SpringConfig> | SpringPresetName | boolean = false;
+    private _layoutCancel: (() => void) | null = null;
+    private _targetRect: Rect | null = null;
 
     constructor(style: Partial<Style> = {}) {
         this.id = `widget_${++_widgetIdCounter}`;
@@ -113,6 +131,17 @@ export abstract class Widget {
     /** Check if this widget is currently active (focused) */
     isActive(): boolean {
         return this.isFocused;
+    }
+
+    getRenderStats(): RenderStats {
+        return { ...this._renderStats };
+    }
+
+    getAverageRenderDuration(): number {
+        return this._renderStats.renderCount === 0
+            ? 0
+            : this._renderStats.totalDurationMs /
+                this._renderStats.renderCount;
     }
 
     /** Get the current style */
@@ -162,7 +191,7 @@ export abstract class Widget {
         for (const child of children) {
             child.destroy();
         }
-        this.events.emit('unmount', undefined as any);
+        this.events.emit('unmount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         this.events.removeAll();
         this.parent = null;
     }
@@ -195,7 +224,7 @@ export abstract class Widget {
      */
     syncLayout(): void {
         if (this._layoutNode) {
-            this._rect = { ...this._layoutNode.computed };
+            this._applyRect({ ...this._layoutNode.computed });
         }
 
         // Sync children (match visible children to layout node children)
@@ -220,7 +249,12 @@ export abstract class Widget {
 
         // Render own content with error isolation
         try {
+            const start = performance.now();
             this._renderSelf(screen);
+            const duration = performance.now() - start;
+            this._renderStats.renderCount++;
+            this._renderStats.lastDurationMs = duration;
+            this._renderStats.totalDurationMs += duration;
             this._renderError = null;
             this._dirty = false;
         } catch (err) {
@@ -264,7 +298,63 @@ export abstract class Widget {
      * Update the computed rect from layout results.
      */
     updateRect(rect: Rect): void {
-        this._rect = rect;
+        this._applyRect(rect);
+    }
+
+    private _applyRect(newRect: Rect): void {
+        if (this._rect.width === 0 && this._rect.height === 0) {
+            // First render, do not animate
+            this._rect = newRect;
+            return;
+        }
+
+        if (!this.layoutTransition) {
+            if (this._layoutCancel) {
+                this._layoutCancel();
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+            this._rect = newRect;
+            return;
+        }
+        
+        // If target is same, ignore
+        if (this._targetRect && 
+            this._targetRect.x === newRect.x && 
+            this._targetRect.y === newRect.y && 
+            this._targetRect.width === newRect.width && 
+            this._targetRect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._rect.x === newRect.x && 
+            this._rect.y === newRect.y && 
+            this._rect.width === newRect.width && 
+            this._rect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._layoutCancel) {
+            this._layoutCancel();
+        }
+        
+        this._targetRect = { ...newRect };
+        
+        const config = typeof this.layoutTransition === 'boolean' 
+            ? 'default' 
+            : this.layoutTransition;
+            
+        this._layoutCancel = animateRect(this._rect, newRect, {
+            config,
+            onFrame: (rect) => {
+                this._rect = rect;
+                this.markDirty();
+            },
+            onComplete: () => {
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+        });
     }
 
     /**
@@ -414,7 +504,7 @@ export abstract class Widget {
 
     /** Lifecycle: called when the widget is mounted */
     mount(): void {
-        this.events.emit('mount', undefined as any);
+        this.events.emit('mount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         for (const child of this._children) {
             child.mount();
         }
@@ -425,7 +515,7 @@ export abstract class Widget {
         for (const child of this._children) {
             child.unmount();
         }
-        this.events.emit('unmount', undefined as any);
+        this.events.emit('unmount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         this.events.removeAll();
     }
 }

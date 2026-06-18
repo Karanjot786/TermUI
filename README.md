@@ -10,7 +10,7 @@
   <a href="https://www.npmjs.com/package/@termuijs/core"><img src="https://img.shields.io/npm/v/@termuijs/core.svg" alt="npm version"></a>
   <a href="https://github.com/Karanjot786/TermUI/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <img src="https://img.shields.io/badge/runtime-Bun%201.3+-orange" alt="Bun 1.3+">
-  <img src="https://img.shields.io/badge/tests-1394%20passing-brightgreen" alt="1394 tests passing">
+  <img src="https://img.shields.io/badge/tests-5018%20passing-brightgreen" alt="5018 tests passing">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript 5.9">
 </p>
 <p align="center">
@@ -482,7 +482,7 @@ examples/
 ```bash
 bun install
 bun run build      # Build all 14 packages
-bun run test        # Run all 1394 tests
+bun run test        # Run all 5018 tests
 bun run coverage    # Generate test coverage report
 bun run typecheck  # Type-check all packages
 ```

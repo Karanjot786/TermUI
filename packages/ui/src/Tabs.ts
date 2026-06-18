@@ -57,5 +57,14 @@ export class Tabs extends Widget {
             if (i < this._tabs.length - 1) { screen.writeString(col, y, caps.unicode ? '│' : '|', { ...attrs, dim: true }); col++; }
         }
         if (height > 1) screen.writeString(x, y + 1, '─'.repeat(width), { ...attrs, dim: true });
+
+        // Render active tab content below the separator
+        if (height > 2) {
+            const content = this.activeContent;
+            if (content) {
+                content.updateRect({ x, y: y + 2, width, height: height - 2 });
+                content.render(screen);
+            }
+        }
     }
 }

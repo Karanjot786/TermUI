@@ -253,9 +253,14 @@ describe('HeatMap', () => {
             vi.stubEnv('TERM', '');
             vi.resetModules();
 
+            const { Screen } = await import('@termuijs/core');
             const { HeatMap } = await import('./HeatMap.js');
             const widget = new HeatMap([[0, 100]], {});
-            (widget as any)._dirty = false;
+            const screen = new Screen(20, 5);
+            widget.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+            widget.render(screen);
+            expect(widget.isDirty).toBe(false);
+
             widget.setMatrix([[50, 50]]);
             expect(widget.isDirty).toBe(true);
         });

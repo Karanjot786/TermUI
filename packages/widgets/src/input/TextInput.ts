@@ -2,7 +2,7 @@
 // @termuijs/widgets — TextInput widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate, type KeyEvent } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 /**
@@ -48,6 +48,41 @@ export class TextInput extends Widget {
         this._value = v.slice(0, this._maxLength);
         this._cursorPos = Math.min(this._cursorPos, this._value.length);
         this.markDirty();
+    }
+
+    /**
+     * Handle keyboard events when the widget is focused.
+     */
+    handleKey(event: KeyEvent): void {
+        switch (event.key) {
+            case 'left':
+                this.moveCursorLeft();
+                break;
+            case 'right':
+                this.moveCursorRight();
+                break;
+            case 'home':
+                this.moveCursorHome();
+                break;
+            case 'end':
+                this.moveCursorEnd();
+                break;
+            case 'backspace':
+                this.deleteBack();
+                break;
+            case 'delete':
+                this.deleteForward();
+                break;
+            case 'enter':
+                this.submit();
+                break;
+            default:
+                // Insert printable characters (length 1 means it's a typing char, not a special key)
+                if (event.key.length === 1 && !event.ctrl && !event.alt) {
+                    this.insertChar(event.key);
+                }
+                break;
+        }
     }
 
     /**
