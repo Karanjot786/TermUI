@@ -159,8 +159,6 @@ export function hasLayoutChanges(oldStyle: Style, newStyle: Style): boolean {
  * Extract the cell-level style attributes from a Style object.
  * Used when rendering text into the screen buffer.
  */
-
-
 export function styleToCellAttrs(style: Style): {
     fg: Color;
     bg: Color;
