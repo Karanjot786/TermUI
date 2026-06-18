@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 
 // Screen Recorder Frame Data
