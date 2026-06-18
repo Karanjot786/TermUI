@@ -39,4 +39,9 @@ export class Highlight extends Box {
         this.clearChildren();
         this._buildSegments(text, query, style);
     }
+
+    /** @deprecated Use setText() instead. */
+    update(text: string, query: string | RegExp, style?: Partial<Style>): void {
+        this.setText(text, query, style);
+    }
 }
