@@ -27,16 +27,32 @@ export function parseMouseEvent(data: string): MouseEvent | null {
     let button: MouseButton;
     let type: MouseEventType;
     let scrollDelta: number | undefined;
+    let scrollDeltaX: number | undefined;
+    let scrollAxis: 'vertical' | 'horizontal' | undefined;
 
     // Decode button from low 2 bits
     const buttonBits = cb & 0b11;
     const motion = (cb & 0b100000) !== 0;
     const isScroll = (cb & 0b1000000) !== 0;
 
+    const shift = (cb & 0b100)   !== 0;
+    const alt   = (cb & 0b1000)  !== 0;
+    const ctrl  = (cb & 0b10000) !== 0;
+
     if (isScroll) {
         button = 'none';
         type = 'scroll';
-        scrollDelta = buttonBits === 0 ? -1 : 1; // 0 = scroll up, 1 = scroll down
+        const lowBits = cb & 0b111;
+        if (lowBits === 6) {
+            scrollAxis = 'horizontal';
+            scrollDeltaX = -1;
+        } else if (lowBits === 7) {
+            scrollAxis = 'horizontal';
+            scrollDeltaX = 1;
+        } else {
+            scrollAxis = 'vertical';
+            scrollDelta = buttonBits === 0 ? -1 : 1;
+        }
     } else if (motion) {
         type = 'mousemove';
         button = decodeButton(buttonBits);
@@ -53,7 +69,12 @@ export function parseMouseEvent(data: string): MouseEvent | null {
         y: cy,
         button,
         type,
-        scrollDelta,
+        ...(scrollDelta !== undefined && { scrollDelta }),
+        ...(scrollDeltaX !== undefined && { scrollDeltaX }),
+        ...(scrollAxis !== undefined && { scrollAxis }),
+        shift,
+        alt,
+        ctrl,
     };
 }
 

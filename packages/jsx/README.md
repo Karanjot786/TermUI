@@ -54,6 +54,7 @@ render(<App />)
 | Hook | What it does |
 |------|-------------|
 | `useState` | Component state. Triggers a re-render when the value changes |
+| `useToggle` | Boolean state with `toggle`, `on`, and `off` helpers |
 | `useEffect` | Side effects with cleanup. Runs after render, re-runs when deps change |
 | `useRef` | Mutable ref that persists across renders without causing re-renders |
 | `useInput` | Register a keyboard handler for this component |
@@ -65,23 +66,23 @@ render(<App />)
 
 ## useKeymap
 
-Declare key bindings as a map. More readable than chained if-statements. All bindings from multiple `useKeymap` calls in the same component are additive.
+Declare key bindings as an array of objects. More readable than chained if-statements. All bindings from multiple `useKeymap` calls in the same component are additive.
 
 ```tsx
 import { useKeymap } from '@termuijs/jsx'
 
 function App() {
-    useKeymap({
-        'ctrl+c': () => process.exit(0),
-        'q':      () => goBack(),
-        '/':      () => openSearch(),
-        'ctrl+s': () => save(),
-    })
+    useKeymap([
+        { key: 'c', ctrl: true, action: () => process.exit(0) },
+        { key: 'q', action: () => goBack() },
+        { key: '/', action: () => openSearch() },
+        { key: 's', ctrl: true, action: () => save() },
+    ])
 
     // Bindings with modifier access
-    useKeymap({
-        'ctrl+k': (e) => console.log('ctrl+k pressed', e),
-    })
+    useKeymap([
+        { key: 'k', ctrl: true, action: () => console.log('ctrl+k pressed') },
+    ])
 
     return <Box>...</Box>
 }
@@ -106,6 +107,28 @@ function AnimatedWidget() {
     }, [prefersReducedMotion])
 
     return <Box>...</Box>
+}
+```
+
+## useToggle
+
+Manage a simple boolean state with helpers to flip, enable, or disable it.
+
+```tsx
+import { useToggle } from '@termuijs/jsx'
+import { Box, Text, Button } from '@termuijs/widgets'
+
+function ToggleExample() {
+    const [isOpen, controls] = useToggle()
+
+    return (
+        <Box>
+            <Text>{isOpen ? 'Open' : 'Closed'}</Text>
+            <Button onPress={controls.toggle}>Toggle</Button>
+            <Button onPress={controls.on}>Open</Button>
+            <Button onPress={controls.off}>Close</Button>
+        </Box>
+    )
 }
 ```
 

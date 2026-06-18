@@ -1,5 +1,6 @@
 <p align="center">
   <h1 align="center">TermUI</h1>
+    
   <p align="center">Build terminal applications in TypeScript.</p>
 </p>
 
@@ -9,7 +10,7 @@
   <a href="https://www.npmjs.com/package/@termuijs/core"><img src="https://img.shields.io/npm/v/@termuijs/core.svg" alt="npm version"></a>
   <a href="https://github.com/Karanjot786/TermUI/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <img src="https://img.shields.io/badge/runtime-Bun%201.3+-orange" alt="Bun 1.3+">
-  <img src="https://img.shields.io/badge/tests-600%20passing-brightgreen" alt="600 tests passing">
+  <img src="https://img.shields.io/badge/tests-5018%20passing-brightgreen" alt="5018 tests passing">
   <img src="https://img.shields.io/badge/TypeScript-5.9-blue" alt="TypeScript 5.9">
 </p>
 <p align="center">
@@ -18,13 +19,59 @@
   <a href="https://github.com/Karanjot786/TermUI/graphs/contributors"><img src="https://img.shields.io/github/contributors/Karanjot786/TermUI?color=00ff88" alt="Contributors"></a>
   <a href="https://github.com/Karanjot786/TermUI/stargazers"><img src="https://img.shields.io/github/stars/Karanjot786/TermUI?style=flat&color=ffd700" alt="Stars"></a>
 </p>
+
 > ⭐ **GSSoC 2026 contributors:** star this repo before opening a PR. The `star-check` workflow blocks unstarred merges. Read [CONTRIBUTING.md](./CONTRIBUTING.md#gssoc-2026) for the full point system.
 
-> 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
+> 📖 **Docs site:** API docs, guides, and examples live at [termui.io](https://www.termui.io). Not sure which API to use? Read our [Choosing your API guide](./docs/choosing-your-api.md). The source is at [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs).
+
+## Table of Contents
+
+- [Available Scripts](#available-scripts)
+- [What is TermUI?](#what-is-termui)
+  - [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Manual Setup](#manual-setup)
+- [Packages](#packages)
+- [Features](#features)
+  - [useKeymap](#usekeymap)
+  - [Focus Management](#focus-management)
+  - [ErrorBoundary](#errorboundary)
+  - [Capability Flags](#capability-flags)
+  - [Notifications](#notifications)
+  - [Imperative Prompts](#imperative-prompts)
+  - [Global State with Batch Updates](#global-state-with-batch-updates)
+  - [Theming](#theming)
+  - [AI Widgets](#ai-widgets)
+  - [VirtualList](#virtuallist)
+  - [Reactive System Data](#reactive-system-data)
+  - [Testing](#testing)
+- [Architecture](#architecture)
+- [Examples](#examples)
+  - [Running the Examples](#running-the-examples)
+    - [Available Examples](#available-examples)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Requirements](#requirements)
+- [Roadmap](#roadmap)
+- [Community](#community)
+- [Contributors](#contributors)
+- [License](#license)
+- [Troubleshooting](#troubleshooting)
+  - [Build Cache and Dependency Synchronization Issues](#build-cache-and-dependency-synchronization-issues)
+
+## Available Scripts
+
+- `clean` → Clears build cache and node_modules
+- `dev` → Runs the development server
+- `build` → Builds the project for production
+- `test` → Runs test cases (if available)
+- `lint` → Runs code linter to check errors and style issues
 
 ## What is TermUI?
 
 TermUI is a TypeScript framework for building terminal apps. You get a layout engine, JSX support, React-style hooks, focus management, global state, theming, animations, routing, real-time data, error boundaries, and a hot-reload dev server. No curses bindings. No C extensions. Pure TypeScript.
+### Prerequisites
+- Bun >= 1.3.0
 
 ## Quick Start
 
@@ -35,7 +82,7 @@ bun install
 bun run dev
 ```
 
-Requires [Bun](https://bun.sh) 1.3.0 or newer.
+Requires [Bun](https://bun.sh) 1.3.0 or newer and [Node.js](https://nodejs.org/) 18.0.0 or newer.
 
 ## Manual Setup
 
@@ -51,10 +98,10 @@ import { useState, useKeymap, ErrorBoundary } from '@termuijs/jsx'
 function Counter() {
     const [count, setCount] = useState(0)
 
-    useKeymap({
-        '+':      () => setCount((c) => c + 1),
-        'ctrl+c': () => process.exit(0),
-    })
+    useKeymap([
+        { key: '+', action: () => setCount((c) => c + 1) },
+        { key: 'c', ctrl: true, action: () => process.exit(0) },
+    ])
 
     return (
         <Box border="round" padding={1}>
@@ -93,18 +140,18 @@ render(
 
 ### useKeymap
 
-Declare key bindings as a map. Cleaner than chained if-statements. Multiple calls in one component are additive.
+Declare key bindings as an array of objects. Cleaner than chained if-statements. Multiple calls in one component are additive.
 
 ```tsx
 import { useKeymap } from '@termuijs/jsx'
 
 function App() {
-    useKeymap({
-        'ctrl+c': () => process.exit(0),
-        'ctrl+s': () => save(),
-        '/':      () => openSearch(),
-        '?':      () => showHelp(),
-    })
+    useKeymap([
+        { key: 'c', ctrl: true, action: () => process.exit(0) },
+        { key: 's', ctrl: true, action: () => save() },
+        { key: '/', action: () => openSearch() },
+        { key: '?', action: () => showHelp() },
+    ])
     return <Box>...</Box>
 }
 ```
@@ -153,7 +200,7 @@ import { ErrorBoundary } from '@termuijs/jsx'
 
 ### Capability flags
 
-TermUI checks the terminal environment before rendering unicode or animations. Set environment variables to get ASCII output in CI or reduced-motion output for accessibility.
+TermUI checks the terminal environment before rendering unicode or animations. Set environment variables to get ASCII output in CI or reduced-motion output for accessibility. You can also configure standard keyboard navigation schemes.
 
 ```bash
 NO_UNICODE=1  # ASCII fallbacks for all widgets
@@ -161,10 +208,17 @@ NO_MOTION=1   # Skip all animations; static output
 NO_COLOR=1    # Disable ANSI color sequences
 ```
 
+Configure global navigation modes (`default` arrow keys, `vim` j/k/h/l, or `emacs` ctrl+n/p):
+```bash
+TERMUI_KEYBINDINGS=vim
+TERMUI_KEYBINDINGS=emacs
+```
+
 ```typescript
 import { caps } from '@termuijs/core'
 
 const bullet = caps.unicode ? '●' : '*'
+// caps.keybindingMode → "default", "vim", or "emacs"
 ```
 
 ### Notifications
@@ -184,12 +238,12 @@ function App() {
 function Dashboard() {
     const { notify } = useNotifications()
 
-    useKeymap({
-        's': async () => {
+    useKeymap([
+        { key: 's', action: async () => {
             await save()
             notify('Saved', { type: 'success', duration: 2000 })
-        },
-    })
+        }},
+    ])
     return <Box>...</Box>
 }
 ```
@@ -366,8 +420,12 @@ git clone https://github.com/Karanjot786/TermUI.git
 cd TermUI
 bun install
 bun run build
+```
 
-cd examples/dashboard
+To run the AI streaming example:
+
+```bash
+cd examples/ai-streaming
 bun run dev
 ```
 
@@ -385,6 +443,7 @@ bun run dev
 | Showcase | Widget gallery | Various display widgets | [`examples/showcase`](./examples/showcase) |
 | Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
 | CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
+| AI Assistant | Interactive AI chat with streaming | ChatMessage, StreamingText, ToolCall, ToolApproval, useAI, dual-mode operation | [`examples/ai-assistant`](./examples/ai-assistant) |
 
 ## Project structure
 
@@ -404,24 +463,27 @@ packages/
   quick/             Fluent builder API
   create-termui-app/ Project scaffolding CLI
 examples/
-  auth-flow/             Authentication flow example
-  cli-wrapper-live/      Live subprocess log streaming
-  dashboard/             Real-time system monitor
-  forms-and-validation/  Multi-field form with validation
-  jsx-dashboard/         JSX-based dashboard
-    multi-screen-router/   Multi-screen router example
-  showcase/              Widget gallery
-  system-monitor/        Advanced monitor
-  todo-app/              Interactive todo list
-  widget-gallery/        All widgets in one place
+  ai-streaming/          Mock AI chat with StreamingText, ChatMessage, ToolCall
+  auth-flow/            Authentication flow example
+  cli-wrapper-live/     Live subprocess log streaming
+  dashboard/            Real-time system monitor
+  forms-and-validation/ Multi-field form with validation
+  jsx-dashboard/        JSX-based dashboard
+  multi-screen-router/  Multi-screen router example
+  showcase/             Widget gallery
+  system-monitor/       Advanced monitor
+  todo-app/             Interactive todo list
+  widget-gallery/       All widgets in one place
 ```
 
 ## Development
+> **Note:** This project uses [Bun](https://bun.sh) as its package manager. Install Bun first: https://bun.sh/docs/installation
 
 ```bash
 bun install
 bun run build      # Build all 14 packages
-bun run test       # Run all 600 tests
+bun run test        # Run all 5018 tests
+bun run coverage    # Generate test coverage report
 bun run typecheck  # Type-check all packages
 ```
 
@@ -446,6 +508,28 @@ See [ROADMAP.md](./ROADMAP.md) for current waves, difficulty breakdown, and futu
 - [Issues](https://github.com/Karanjot786/TermUI/issues): report bugs, claim tasks
 - [Docs](https://www.termui.io): API reference, guides, examples
 
+## Contributors
+
+Thank you to everyone who has contributed to TermUI. Every bug fix, feature, test, and doc improvement makes this project better for everyone who builds with it.
+
+<a href="https://github.com/Karanjot786/TermUI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Karanjot786/TermUI" alt="Contributors" />
+</a>
+
+Want to join this list? Check the [open issues](https://github.com/Karanjot786/TermUI/issues) and read [CONTRIBUTING.md](./CONTRIBUTING.md) to get started.
+
 ## License
 
 MIT
+
+## Troubleshooting
+
+### Build Cache and Dependency Synchronization Issues
+If you encounter runtime rendering issues or stale execution logs while working with cross-package scripts inside this monorepo ecosystem, clear your local project configurations and refresh your setups completely by running:
+
+```bash
+bun run clean
+bun install
+```
+
+

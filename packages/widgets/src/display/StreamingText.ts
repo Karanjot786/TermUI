@@ -2,7 +2,7 @@
 // @termuijs/widgets — StreamingText widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, wordWrap, caps } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, wordWrap, caps, prefersReducedMotion } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import { Widget } from '../base/Widget.js';
 
@@ -16,6 +16,8 @@ export interface StreamingTextOptions {
     /** Cursor blink interval in ms. Default: 530 */
     blinkInterval?: number;
 }
+
+const segmenter = new Intl.Segmenter();
 
 /**
  * StreamingText — renders text that "streams in" token by token with a blinking cursor.
@@ -48,6 +50,7 @@ export class StreamingText extends Widget {
 
     /** Replace text content and reset the revealed counter to 0. */
     setText(text: string): void {
+        if (text === this._text) return;
         this._text = text;
         this._revealed = 0;
         this.markDirty();
@@ -59,20 +62,22 @@ export class StreamingText extends Widget {
      */
     tick(): void {
         if (this._speed <= 0 || this.isComplete()) return;
-        this._revealed = Math.min(this._revealed + this._speed, this._text.length);
+        const len = Array.from(segmenter.segment(this._text)).length;
+        this._revealed = Math.min(this._revealed + this._speed, len);
         this.markDirty();
     }
 
     /** Returns true when all text has been revealed. */
     isComplete(): boolean {
         if (this._speed === 0) return true;
-        return this._revealed >= this._text.length;
+        const len = Array.from(segmenter.segment(this._text)).length;
+        return this._revealed >= len;
     }
 
     /** Lifecycle: start the blink timer (only when motion is enabled). */
     mount(): void {
         super.mount();
-        if (!caps.motion) {
+        if (prefersReducedMotion()) {
             this._cursorVisible = false;  // Don't show cursor in reduced-motion
             return;
         }
@@ -97,8 +102,9 @@ export class StreamingText extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         // Determine how much text to display
+        const segments = Array.from(segmenter.segment(this._text));
         const displayText = this._speed > 0
-            ? this._text.slice(0, this._revealed)
+            ? segments.slice(0, this._revealed).map(s => s.segment).join('')
             : this._text;
 
         // Append cursor if visible

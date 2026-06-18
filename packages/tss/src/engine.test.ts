@@ -91,4 +91,35 @@ describe('ThemeEngine', () => {
         expect(engine.getVariable('--a')).toBe('red');
         expect(engine.rules.length).toBeGreaterThan(0);
     });
+
+    // ── @keyframes pipeline ──
+
+    it('engine.load() preserves @keyframes observable via getKeyframes()', () => {
+        const engine = new ThemeEngine();
+        engine.load(`@keyframes fade { 0% { opacity: 0; } 100% { opacity: 1; } }\nBox { bold: true; }`);
+
+        const decls = engine.getKeyframes();
+        expect(decls).toHaveLength(1);
+        expect(decls[0].name).toBe('fade');
+        expect(decls[0].frames).toEqual({
+            '0%':   { opacity: '0' },
+            '100%': { opacity: '1' },
+        });
+
+        // Engine must still resolve regular rules after loading @keyframes
+        const style = engine.resolveStyle('Box');
+        expect(style.bold).toBe(true);
+    });
+
+    it('loadAll() preserves keyframes from merged sources observable via getKeyframes()', () => {
+        const engine = new ThemeEngine();
+        engine.loadAll([
+            '@keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }',
+            '@keyframes slideUp { 0% { y: 10; } 100% { y: 0; } }',
+        ]);
+
+        const decls = engine.getKeyframes();
+        expect(decls).toHaveLength(2);
+        expect(decls.map(d => d.name)).toEqual(['fadeIn', 'slideUp']);
+    });
 });

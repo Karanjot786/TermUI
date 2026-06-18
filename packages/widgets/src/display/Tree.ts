@@ -9,6 +9,7 @@ import {
     truncate,
     stringWidth,
     caps,
+    normalizeNavigationKey,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
@@ -36,7 +37,7 @@ interface VisibleEntry {
  *
  * Supports:
  * - Expand/collapse of parent nodes
- * - Keyboard navigation (ArrowUp/Down/Left/Right, j/k/h/l, Home/End)
+ * - Keyboard navigation (up/down/left/right, j/k/h/l, home/end)
  * - Enter/Space to toggle or select
  * - onSelect callback for leaf nodes
  * - Unicode and ASCII fallback symbols
@@ -169,31 +170,33 @@ export class Tree extends Widget {
      * when this widget is focused.
      */
     handleKey(key: string): void {
-        switch (key) {
-            case 'ArrowUp':
-            case 'k':
+        const normalized = normalizeNavigationKey(key.toLowerCase());
+        switch (normalized) {
+            case 'arrowup':
+            case 'up':
                 this.movePrev();
                 break;
-            case 'ArrowDown':
-            case 'j':
+            case 'arrowdown':
+            case 'down':
                 this.moveNext();
                 break;
-            case 'Enter':
+            case 'enter':
             case ' ':
+            case 'space':
                 this.toggle();
                 break;
-            case 'ArrowLeft':
-            case 'h':
+            case 'arrowleft':
+            case 'left':
                 this.collapse();
                 break;
-            case 'ArrowRight':
-            case 'l':
+            case 'arrowright':
+            case 'right':
                 this.expand();
                 break;
-            case 'Home':
+            case 'home':
                 this.moveFirst();
                 break;
-            case 'End':
+            case 'end':
                 this.moveLast();
                 break;
         }

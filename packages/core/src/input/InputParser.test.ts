@@ -2,9 +2,15 @@
 // @termuijs/core — Tests for InputParser
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Buffer } from 'node:buffer';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { InputParser } from './InputParser.js';
-import { createMockStdin, sendKey } from '../../../../tests/helpers/mock-stdin.js';
+import { createMockStdin, sendKey as originalSendKey } from '../../../../tests/helpers/mock-stdin.js';
+
+function sendKey(stdin: any, key: any) {
+    originalSendKey(stdin, key);
+    vi.advanceTimersByTime(10);
+}
 
 function createParser() {
     const stdin = createMockStdin();
@@ -16,7 +22,14 @@ function createParser() {
 }
 
 describe('InputParser', () => {
-    afterEach(() => { vi.restoreAllMocks(); });
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.useRealTimers();
+    });
 
     it('parses regular ASCII character "a"', () => {
         const { stdin, handler } = createParser();
@@ -108,12 +121,162 @@ describe('InputParser', () => {
         expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'x', alt: true }));
     });
 
-    it('processes rapid multi-byte input correctly', () => {
+    it('does not emit Alt+[ for incomplete CSI prefix', () => {
         const { stdin, handler } = createParser();
-        sendKey(stdin, 'abc');
-        expect(handler).toHaveBeenCalledTimes(3);
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'a' }));
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'b' }));
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'c' }));
+        sendKey(stdin, '\x1b[');
+        expect(handler).not.toHaveBeenCalled();
     });
+
+    it('parses split Arrow Up escape sequence arriving in chunks', () => {
+        const { stdin, handler } = createParser();
+        sendKey(stdin, Buffer.from([0x1b]));
+        sendKey(stdin, '[');
+        sendKey(stdin, 'A');
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'up' }));
+    });
+
+    it('resolves cursor position reports with correct row/col', async () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition();
+        sendKey(stdin, '\x1b[12;34R');
+
+        await expect(positionPromise).resolves.toEqual({ row: 12, col: 34 });
+    });
+
+    it('rejects cursor position request after timeout', async () => {
+        vi.useFakeTimers();
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition(200);
+        vi.advanceTimersByTime(201);
+
+        await expect(positionPromise).rejects.toThrow('Cursor position request timed out');
+    });
+
+    it('rejects pending cursor position requests immediately when stop() is called', async () => {
+        vi.useFakeTimers();
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition(200);
+        parser.stop();
+
+        await expect(positionPromise).rejects.toThrow('InputParser stopped');
+    });
+
+    it('does not emit a key event for cursor position reports', async () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        const keyHandler = vi.fn();
+        parser.onKey(keyHandler);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition();
+        sendKey(stdin, '\x1b[5;7R');
+
+        await expect(positionPromise).resolves.toEqual({ row: 5, col: 7 });
+        expect(keyHandler).not.toHaveBeenCalled();
+    });
+
+    it('resolves two pending cursor position requests', async () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const first = parser.requestCursorPosition();
+        const second = parser.requestCursorPosition();
+        sendKey(stdin, '\x1b[8;9R');
+
+        await expect(Promise.all([first, second])).resolves.toEqual([
+            { row: 8, col: 9 },
+            { row: 8, col: 9 },
+        ]);
+    });
+
+    it('emits focus in for \x1b[I', () => {
+        const { stdin, parser } = createParser();
+        const focusHandler = vi.fn();
+        parser.onFocusChange(focusHandler);
+
+        sendKey(stdin, '\x1b[I');
+
+        expect(focusHandler).toHaveBeenCalledWith(true);
+        expect(focusHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it('emits focus out for \x1b[O', () => {
+        const { stdin, parser } = createParser();
+        const focusHandler = vi.fn();
+        parser.onFocusChange(focusHandler);
+
+        sendKey(stdin, '\x1b[O');
+
+        expect(focusHandler).toHaveBeenCalledWith(false);
+        expect(focusHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it('unsubscribes from focus events', () => {
+        const { stdin, parser } = createParser();
+        const focusHandler = vi.fn();
+        const unsubscribe = parser.onFocusChange(focusHandler);
+        unsubscribe();
+
+        sendKey(stdin, '\x1b[I');
+
+        expect(focusHandler).not.toHaveBeenCalled();
+    });
+
+    it('focus sequences do not become key events', () => {
+        const { stdin, parser, handler } = createParser();
+        const focusHandler = vi.fn();
+        parser.onFocusChange(focusHandler);
+
+        sendKey(stdin, '\x1b[I');
+        sendKey(stdin, 'a');
+
+        expect(focusHandler).toHaveBeenCalledWith(true);
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'a' }));
+    });
+
+    it('parses split multibyte emoji sequences arriving in chunks', () => {
+        const { stdin, handler } = createParser();
+
+        // Wave emoji with medium skin tone: 👋🏽 (\u{1F44B}\u{1F3FD})
+        // Encoded in UTF-8 as: [0xf0, 0x9f, 0x91, 0x8b, 0xf0, 0x9f, 0x8f, 0xbd]
+        const chunk1 = Buffer.from([0xf0, 0x9f, 0x91, 0x8b]);
+        const chunk2 = Buffer.from([0xf0, 0x9f, 0x8f, 0xbd]);
+
+        originalSendKey(stdin, chunk1);
+        // Should not emit yet as it is incomplete
+        expect(handler).not.toHaveBeenCalled();
+
+        originalSendKey(stdin, chunk2);
+        // Now it is complete
+        vi.advanceTimersByTime(10);
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: '👋🏽' }));
+    });
+
+    it('emits paste event for bracketed paste', () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        sendKey(stdin, '\x1b[200~hello world\x1b[201~');
+
+        expect(pasteHandler).toHaveBeenCalledWith('hello world');
+    }); 
 });

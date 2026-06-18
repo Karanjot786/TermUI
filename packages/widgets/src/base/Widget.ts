@@ -17,7 +17,9 @@ import {
     getBorderChars,
     styleToCellAttrs,
     containsPoint,
+    caps,
 } from '@termuijs/core';
+import { animateRect, type SpringConfig, type SpringPresetName } from '@termuijs/motion';
 
 /**
  * Event map for widgets.
@@ -31,6 +33,12 @@ export interface WidgetEvents {
     unmount: void;
 }
 
+export interface RenderStats {
+    renderCount: number;
+    lastDurationMs: number;
+    totalDurationMs: number;
+}
+
 let _widgetIdCounter = 0;
 
 /** Reset the widget ID counter (for testing only). */
@@ -40,6 +48,20 @@ export function _resetWidgetIdCounter(): void {
 
 /**
  * Base class for all TermUI widgets.
+ *
+ * CONSTRUCTOR SIGNATURE CONVENTION:
+ * - Simple display widgets: (content?, style?: Partial<Style>, opts?: SpecificOptions)
+ * - Data widgets:           (data, style?: Partial<Style>, opts?: SpecificOptions)
+ * - Compound UI widgets:    (options: SpecificOptions, style?: Partial<Style>)
+ *
+ * FOCUSABLE PATTERN:
+ * Set `focusable = true` as a class field initializer, OR in the constructor
+ * body after calling `super()`. Do NOT set it inside `_renderSelf()`.
+ *
+ * STYLE MERGE PATTERN:
+ * All widgets should call `super(mergeStyles(defaultStyle(), { ...defaults }, style))`
+ * to produce consistent base styles. For widgets that accept `style` as the
+ * second parameter, pass it directly through to `super()`.
  *
  * Provides:
  * - Unique ID generation
@@ -69,6 +91,9 @@ export abstract class Widget {
     /** Reference to the layout node (set during getLayoutNode) */
     private _layoutNode: LayoutNode | null = null;
 
+    /** Error from last render call, null if no error */
+    protected _renderError: Error | null = null;
+
     /** Whether this widget can receive focus */
     focusable = false;
 
@@ -86,10 +111,37 @@ export abstract class Widget {
      * Newly created widgets start dirty.
      */
     protected _dirty = true;
+    /** Render profiling statistics */
+    private _renderStats: RenderStats = {
+        renderCount: 0,
+        lastDurationMs: 0,
+        totalDurationMs: 0,
+    };
+
+    /** Enable animated layout transitions for size/position changes */
+    public layoutTransition: Partial<SpringConfig> | SpringPresetName | boolean = false;
+    private _layoutCancel: (() => void) | null = null;
+    private _targetRect: Rect | null = null;
 
     constructor(style: Partial<Style> = {}) {
         this.id = `widget_${++_widgetIdCounter}`;
         this._style = mergeStyles(defaultStyle(), style);
+    }
+
+    /** Check if this widget is currently active (focused) */
+    isActive(): boolean {
+        return this.isFocused;
+    }
+
+    getRenderStats(): RenderStats {
+        return { ...this._renderStats };
+    }
+
+    getAverageRenderDuration(): number {
+        return this._renderStats.renderCount === 0
+            ? 0
+            : this._renderStats.totalDurationMs /
+                this._renderStats.renderCount;
     }
 
     /** Get the current style */
@@ -115,16 +167,33 @@ export abstract class Widget {
         const idx = this._children.indexOf(child);
         if (idx >= 0) {
             this._children.splice(idx, 1);
-            child.parent = null;
+            child.destroy();
         }
     }
 
     /** Remove all children */
     clearChildren(): void {
-        for (const child of this._children) {
-            child.parent = null;
-        }
+        const children = [...this._children];
         this._children = [];
+        for (const child of children) {
+            child.destroy();
+        }
+    }
+
+    /**
+     * Destroy this widget and all its descendants.
+     * Cleans up event handlers, removes parent references, and clears children.
+     * Fiber-level cleanup is handled by the reconciler's _pruneInstancesForWidget.
+     */
+    destroy(): void {
+        const children = [...this._children];
+        this._children = [];
+        for (const child of children) {
+            child.destroy();
+        }
+        this.events.emit('unmount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
+        this.events.removeAll();
+        this.parent = null;
     }
 
     /** Get all children */
@@ -139,7 +208,12 @@ export abstract class Widget {
             .filter(c => c.style.visible !== false)
             .map(c => c.getLayoutNode());
 
-        this._layoutNode = createLayoutNode(this.id, this._style, childNodes);
+        if (this._layoutNode) {
+            this._layoutNode.style = this._style;
+            this._layoutNode.children = childNodes;
+        } else {
+            this._layoutNode = createLayoutNode(this.id, this._style, childNodes);
+        }
         return this._layoutNode;
     }
 
@@ -150,7 +224,7 @@ export abstract class Widget {
      */
     syncLayout(): void {
         if (this._layoutNode) {
-            this._rect = { ...this._layoutNode.computed };
+            this._applyRect({ ...this._layoutNode.computed });
         }
 
         // Sync children (match visible children to layout node children)
@@ -173,8 +247,32 @@ export abstract class Widget {
             screen.pushClip(this._rect);
         }
 
-        // Render own content
-        this._renderSelf(screen);
+        // Render own content with error isolation
+        try {
+            const start = performance.now();
+            this._renderSelf(screen);
+            const duration = performance.now() - start;
+            this._renderStats.renderCount++;
+            this._renderStats.lastDurationMs = duration;
+            this._renderStats.totalDurationMs += duration;
+            this._renderError = null;
+            this._dirty = false;
+        } catch (err) {
+            this._renderError = err instanceof Error ? err : new Error(String(err));
+            // Keep widget dirty so it will be retried on the next frame
+            this._dirty = true;
+            // Visual fallback in dev mode — show a red placeholder with widget name
+            if (process.env.NODE_ENV !== 'production') {
+                const { x, y, width } = this._rect;
+                if (width > 2) {
+                    const label = `Error: ${this.constructor.name}`;
+                    const truncated = label.slice(0, Math.max(3, width - 2));
+                    screen.writeString(x + 1, y, truncated, {
+                        fg: { type: 'named', name: 'red' },
+                    });
+                }
+            }
+        }
 
         // Render border
         this._renderBorder(screen);
@@ -200,7 +298,63 @@ export abstract class Widget {
      * Update the computed rect from layout results.
      */
     updateRect(rect: Rect): void {
-        this._rect = rect;
+        this._applyRect(rect);
+    }
+
+    private _applyRect(newRect: Rect): void {
+        if (this._rect.width === 0 && this._rect.height === 0) {
+            // First render, do not animate
+            this._rect = newRect;
+            return;
+        }
+
+        if (!this.layoutTransition) {
+            if (this._layoutCancel) {
+                this._layoutCancel();
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+            this._rect = newRect;
+            return;
+        }
+        
+        // If target is same, ignore
+        if (this._targetRect && 
+            this._targetRect.x === newRect.x && 
+            this._targetRect.y === newRect.y && 
+            this._targetRect.width === newRect.width && 
+            this._targetRect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._rect.x === newRect.x && 
+            this._rect.y === newRect.y && 
+            this._rect.width === newRect.width && 
+            this._rect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._layoutCancel) {
+            this._layoutCancel();
+        }
+        
+        this._targetRect = { ...newRect };
+        
+        const config = typeof this.layoutTransition === 'boolean' 
+            ? 'default' 
+            : this.layoutTransition;
+            
+        this._layoutCancel = animateRect(this._rect, newRect, {
+            config,
+            onFrame: (rect) => {
+                this._rect = rect;
+                this.markDirty();
+            },
+            onComplete: () => {
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+        });
     }
 
     /**
@@ -210,21 +364,36 @@ export abstract class Widget {
     markDirty(): void {
         if (this._dirty) return; // Already dirty
         this._dirty = true;
+        if (this._layoutNode) {
+            this._layoutNode._dirty = true;
+        }
         this.parent?.markDirty();
     }
 
     /**
      * Clear the dirty flag after rendering.
+     * Widgets with a render error stay dirty so they are retried on the next frame.
      */
     clearDirty(): void {
+        if (this._renderError) {
+            this._dirty = true;
+            return;
+        }
         this._dirty = false;
         for (const child of this._children) {
             child.clearDirty();
+            // If child remains dirty due to render error, keep ancestor dirty too
+            if (child._dirty) {
+                this._dirty = true;
+            }
         }
     }
 
     /** Check if this widget (or any child) needs re-rendering */
     get isDirty(): boolean { return this._dirty; }
+
+    /** Get the last render error, if any */
+    get renderError(): Error | null { return this._renderError; }
 
     /**
      * Render the border around this widget, including focus ring if focused.
@@ -241,7 +410,15 @@ export abstract class Widget {
         if (width < 2 || height < 2) return;
 
         if (hasBorder) {
-            const chars = getBorderChars(border);
+            const useAscii =
+                (this._style.asciiOnly ?? false) || !caps.unicode;
+
+            const chars = getBorderChars(
+                border,
+                undefined,
+                useAscii
+            );
+
             if (!chars) return;
 
             const attrs = styleToCellAttrs(this._style);
@@ -327,7 +504,7 @@ export abstract class Widget {
 
     /** Lifecycle: called when the widget is mounted */
     mount(): void {
-        this.events.emit('mount', undefined as any);
+        this.events.emit('mount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         for (const child of this._children) {
             child.mount();
         }
@@ -338,7 +515,7 @@ export abstract class Widget {
         for (const child of this._children) {
             child.unmount();
         }
-        this.events.emit('unmount', undefined as any);
+        this.events.emit('unmount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         this.events.removeAll();
     }
 }

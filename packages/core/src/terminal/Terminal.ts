@@ -16,6 +16,10 @@ export interface TerminalOptions {
     mouse?: boolean;
     /** Use alternate screen buffer for full-screen apps */
     altScreen?: boolean;
+    /** Enable bracketed-paste mode so InputParser receives paste events. */
+    bracketedPaste?: boolean;
+    /** Debounce window in ms for resize dispatch. Default 16. */
+    resizeDebounceMs?: number;
 }
 
 /**
@@ -32,18 +36,26 @@ export class Terminal {
     private _isRawMode = false;
     private _isAltScreen = false;
     private _isMouseEnabled = false;
+    private _isBracketedPasteEnabled = false;
     private _resizeHandlers: Array<(cols: number, rows: number) => void> = [];
     private _cleanupHandlers: Array<() => void> = [];
     private _originalRawMode: boolean | undefined;
 
+    // Debounce state properties
+    private _resizeDebounceMs: number;
+    private _resizeTimer: ReturnType<typeof setTimeout> | null = null;
+    private _lastDispatchedCols: number;
+    private _lastDispatchedRows: number;
+
     // Stored handler references for proper cleanup
     private _resizeHandler: (() => void) | null = null;
     private _exitHandler: (() => void) | null = null;
-    private _sigintHandler: (() => void) | null = null;
-    private _sigtermHandler: (() => void) | null = null;
-    private _uncaughtExceptionHandler: ((err: Error) => void) | null = null;
-    private _unhandledRejectionHandler: (() => void) | null = null;
     private _restored = false;
+    private _restoring = false;
+
+    // Stream write queue state to prevent interleaving backpressure fragmentation
+    private _writeQueue: string[] = [];
+    private _isWriting = false;
 
     constructor(options: TerminalOptions = {}) {
         this.stdout = options.stdout ?? process.stdout;
@@ -53,18 +65,44 @@ export class Terminal {
         this._cols = this.stdout.columns ?? 80;
         this._rows = this.stdout.rows ?? 24;
 
+        this._resizeDebounceMs = options.resizeDebounceMs ?? 16;
+        this._lastDispatchedCols = this._cols;
+        this._lastDispatchedRows = this._rows;
+
         // Listen for terminal resize (store ref for cleanup)
         this._resizeHandler = () => {
+            // Update immediately so getters are fresh
             this._cols = this.stdout.columns ?? 80;
             this._rows = this.stdout.rows ?? 24;
-            for (const handler of this._resizeHandlers) {
-                handler(this._cols, this._rows);
+
+            // Clear existing debounce timer
+            if (this._resizeTimer) {
+                clearTimeout(this._resizeTimer);
             }
+
+            // Schedule debounced dispatch
+            this._resizeTimer = setTimeout(() => {
+                this._resizeTimer = null;
+
+                // Dedup check: skip if dims match the last dispatched dims
+                if (this._cols !== this._lastDispatchedCols || this._rows !== this._lastDispatchedRows) {
+                    this._lastDispatchedCols = this._cols;
+                    this._lastDispatchedRows = this._rows;
+
+                    const handlers = [...this._resizeHandlers];
+                    for (const handler of handlers) {
+                        handler(this._cols, this._rows);
+                    }
+                }
+            }, this._resizeDebounceMs);
         };
         this.stdout.on('resize', this._resizeHandler);
 
         // Set up cleanup on process exit
         this._setupCleanup();
+        if (options.bracketedPaste) {
+            this.enableBracketedPaste();
+        }
     }
 
     /** Current terminal width in columns */
@@ -127,15 +165,104 @@ export class Terminal {
         this._isMouseEnabled = false;
     }
 
+    /** Emit the enable sequence (CSI ?2004h). Idempotent. */
+    enableBracketedPaste(): void {
+        if (this._isBracketedPasteEnabled) return;
+        this.write(ansi.enableBracketedPaste);
+        this._isBracketedPasteEnabled = true;
+    }
+
+    /** Emit the disable sequence (CSI ?2004l). Idempotent. */
+    disableBracketedPaste(): void {
+        if (!this._isBracketedPasteEnabled) return;
+        this.write(ansi.disableBracketedPaste);
+        this._isBracketedPasteEnabled = false;
+    }
+
     // ── Cursor ──────────────────────────────────────────
 
     hideCursor(): void { this.write(ansi.hideCursor); }
     showCursor(): void { this.write(ansi.showCursor); }
 
+    /** Set the cursor shape via DECSCUSR. Default blink = true. */
+    setCursorShape(shape: ansi.CursorShape, blink?: boolean): void {
+        this.write(ansi.cursorShape(shape, blink));
+    }
+
+    /** Ring the terminal bell (BEL). */
+    bell(): void { this.write(ansi.bell); }
+
+    /** Send an OSC 9 desktop notification. Body is appended after a separator. */
+    notify(title: string, body?: string): void {
+        const payload = body === undefined ? title : `${title}: ${body}`;
+        this.write(ansi.notify(payload));
+    }
+
     // ── Output ──────────────────────────────────────────
 
+    /**
+     * Writes chunked string data to stdout.
+     * Enforces queue serialization to ensure atomic ANSI escape execution.
+     */
     write(data: string): void {
+        if (!data) return;
+        
+        this._writeQueue.push(data);
+        if (this._isWriting) return;
+
+        this._processWriteQueue();
+    }
+
+    /**
+     * Writes data to stdout synchronously, bypassing the write queue.
+     * Used by the renderer during frame flush to avoid races with the
+     * async queue lifecycle. Only use for render-path output.
+     */
+    writeSync(data: string): void {
+        if (!data) return;
         this.stdout.write(data);
+    }
+
+    /**
+     * Sequentially unshifts and drains string frames to stdout safely.
+     */
+    private _processWriteQueue(): void {
+        if (this._writeQueue.length === 0) {
+            this._isWriting = false;
+            return;
+        }
+
+        this._isWriting = true;
+        const chunk = this._writeQueue.shift()!;
+
+        // Execute write operation
+        const canContinue = this.stdout.write(chunk);
+
+        if (!canContinue) {
+            // Buffer saturation hit; halt processing until kernel drains stream cache
+            this.stdout.once('drain', () => {
+                this._processWriteQueue();
+            });
+        } else {
+            // Proceed instantly via synchronous event-loop cycle
+            this._processWriteQueue();
+        }
+    }
+
+    // ── Clipboard ───────────────────────────────────────
+
+    /**
+     * Read text from the system clipboard via OSC 52.
+     */
+    readClipboard(): Promise<string> {
+        return ansi.readClipboard(this.stdin, this.stdout);
+    }
+
+    /**
+     * Write text to the system clipboard via OSC 52.
+     */
+    writeClipboard(text: string): void {
+        ansi.writeClipboard(text, this.stdout);
     }
 
     // ── Resize ──────────────────────────────────────────
@@ -156,32 +283,43 @@ export class Terminal {
      * Called automatically on SIGINT, SIGTERM, process exit.
      */
     restore(): void {
-        if (this._restored) return; // Prevent double-restore
-        this._restored = true;
+        if (this._restored || this._restoring) return;
+        this._restoring = true;
 
-        // Remove process-level signal handlers to prevent leaks
+        if (this._resizeTimer) {
+            clearTimeout(this._resizeTimer);
+            this._resizeTimer = null;
+        }
+
+        // Clear hanging buffer data states
+        this._writeQueue = [];
+        this._isWriting = false;
+
+        // Remove process-level handlers to prevent leaks
         if (this._exitHandler) process.off('exit', this._exitHandler);
-        if (this._sigintHandler) process.off('SIGINT', this._sigintHandler);
-        if (this._sigtermHandler) process.off('SIGTERM', this._sigtermHandler);
-        if (this._uncaughtExceptionHandler) {
-            process.off('uncaughtException', this._uncaughtExceptionHandler);
-            this._uncaughtExceptionHandler = null;
-        }
-        if (this._unhandledRejectionHandler) {
-            process.off('unhandledRejection', this._unhandledRejectionHandler);
-            this._unhandledRejectionHandler = null;
-        }
 
         // Remove resize listener
         if (this._resizeHandler) {
             this.stdout.off('resize', this._resizeHandler);
         }
 
-        this.disableMouse();
-        this.exitAltScreen();
-        this.exitRawMode();
-        this.showCursor();
-        this.write(ansi.reset);
+        // Capture direct stdout.write to bypass any RenderHook hijack
+        const directWrite = this.stdout.write.bind(this.stdout);
+        const savedWrite = this.write;
+        this.write = (s: string) => { directWrite(s); };
+
+        try {
+            this.disableBracketedPaste();
+            this.disableMouse();
+            this.exitAltScreen();
+            this.exitRawMode();
+            this.showCursor();
+            this.write(ansi.reset);
+            this._restored = true;
+        } finally {
+            this.write = savedWrite;
+            this._restoring = false;
+        }
     }
 
     /**
@@ -193,32 +331,15 @@ export class Terminal {
 
     private _setupCleanup(): void {
         const runCleanupHandlers = () => {
-            for (const handler of this._cleanupHandlers) {
+            const handlers = [...this._cleanupHandlers];
+            for (const handler of handlers) {
                 try { handler(); } catch { /* swallow */ }
             }
             this.restore();
         };
 
         this._exitHandler = runCleanupHandlers;
-        this._sigintHandler = () => { runCleanupHandlers(); process.exit(130); };
-        this._sigtermHandler = () => { runCleanupHandlers(); process.exit(143); };
 
         process.on('exit', this._exitHandler);
-        process.on('SIGINT', this._sigintHandler);
-        process.on('SIGTERM', this._sigtermHandler);
-
-        this._uncaughtExceptionHandler = (err: Error) => {
-            this.restore();
-            process.exit(1);
-        };
-        this._unhandledRejectionHandler = () => {
-            this.restore();
-            process.exit(1);
-        };
-        // Use .on() (not .once()) so restore() can explicitly remove these handlers
-        // via process.off(). With .once(), the reference is removed after first fire,
-        // making process.off() in restore() a no-op on subsequent exceptions.
-        process.on('uncaughtException', this._uncaughtExceptionHandler);
-        process.on('unhandledRejection', this._unhandledRejectionHandler);
     }
 }

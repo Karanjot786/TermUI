@@ -4,6 +4,7 @@
 
 import { EventEmitter } from './EventEmitter.js';
 import type { FocusEvent } from './types.js';
+import type { Rect } from '../layout/Rect.js';
 
 export interface Focusable {
     id: string;
@@ -19,6 +20,7 @@ export interface Focusable {
  * - Tab-order cycling (focusNext/focusPrev)
  * - Focus trapping (for modals — limits Tab to a container)
  * - Focus groups (for arrow-key navigation within a group)
+ * - 2D Spatial navigation (focusUp/Down/Left/Right)
  */
 export class FocusManager {
     private _focusables: Focusable[] = [];
@@ -43,6 +45,20 @@ export class FocusManager {
      */
     private _groups: Map<string, string[]> = new Map();
 
+    /**
+     * Record of on-screen rects for widgets, used for spatial navigation.
+     */
+    private _rects: Map<string, Rect> = new Map();
+
+    /** Monotonically increasing epoch for ordered event sequencing */
+    private _epoch = 0;
+
+    /** Queue of focus state changes accumulated before start() is called */
+    private _pendingQueue: Array<FocusEvent> = [];
+
+    /** True once start() has been called — enables event emission */
+    private _started = false;
+
     /** Currently focused widget ID, or null if none */
     get currentId(): string | null {
         if (this._currentIndex < 0 || this._currentIndex >= this._focusables.length) {
@@ -57,8 +73,24 @@ export class FocusManager {
     }
 
     /**
+     * Enable event emission and replay any queued focus events.
+     * Call this from App.mount() after _subscribeFocusEvents().
+     */
+    start(): void {
+        if (this._started) return;
+        this._started = true;
+        // Replay queued focus events
+        for (const evt of this._pendingQueue) {
+            this._events.emit(evt.type, evt);
+        }
+        this._pendingQueue = [];
+    }
+
+    /**
      * Register a focusable widget.
      * Widgets are ordered by tabIndex (ascending), then insertion order.
+     * Before start() is called, events are queued rather than emitted so
+     * they are not lost when App has not yet subscribed to them.
      */
     register(focusable: Focusable): void {
         this._focusables.push(focusable);
@@ -67,7 +99,12 @@ export class FocusManager {
         // Auto-focus the first widget if nothing is focused
         if (this._currentIndex < 0 && focusable.focusable) {
             this._currentIndex = this._focusables.indexOf(focusable);
-            this._events.emit('focus', { targetId: focusable.id, type: 'focus' });
+            const event: FocusEvent = { targetId: focusable.id, type: 'focus', epoch: this._epoch++ };
+            if (this._started) {
+                this._events.emit('focus', event);
+            } else {
+                this._pendingQueue.push(event);
+            }
         }
     }
 
@@ -78,23 +115,38 @@ export class FocusManager {
         const idx = this._focusables.findIndex(f => f.id === id);
         if (idx < 0) return;
 
+        // Clean up spatial rect to prevent memory leaks
+        this._rects.delete(id);
+
         const wasFocused = idx === this._currentIndex;
         this._focusables.splice(idx, 1);
 
         if (wasFocused) {
-            this._events.emit('blur', { targetId: id, type: 'blur' });
+            this._events.emit('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
             // Try to focus the next widget
             if (this._focusables.length > 0) {
                 this._currentIndex = Math.min(this._currentIndex, this._focusables.length - 1);
                 this._events.emit('focus', {
                     targetId: this._focusables[this._currentIndex].id,
                     type: 'focus',
+                    epoch: this._epoch++,
                 });
             } else {
                 this._currentIndex = -1;
             }
         } else if (idx < this._currentIndex) {
+            // Silent focus shift: the widget that preceded the removed item
+            // now occupies the focused position. Emit blur + focus to notify
+            // downstream so the visual focus state stays in sync.
             this._currentIndex--;
+            this._events.emit('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
+            if (this._currentIndex >= 0 && this._currentIndex < this._focusables.length) {
+                this._events.emit('focus', {
+                    targetId: this._focusables[this._currentIndex].id,
+                    type: 'focus',
+                    epoch: this._epoch++,
+                });
+            }
         }
     }
 
@@ -275,6 +327,89 @@ export class FocusManager {
         return false;
     }
 
+    // ── Spatial Navigation ──────────────────────────────
+
+    /** Record the on-screen rect for a widget, used for spatial navigation. */
+    setRect(id: string, rect: Rect): void {
+        this._rects.set(id, rect);
+    }
+
+    private _spatialFocus(
+        isValid: (cx: number, cy: number, tx: number, ty: number) => boolean,
+        calcDistance: (cx: number, cy: number, tx: number, ty: number) => number
+    ): boolean {
+        const currentId = this.currentId;
+        if (!currentId) return false;
+
+        const currentRect = this._rects.get(currentId);
+        if (!currentRect) return false;
+
+        const cx = currentRect.x + currentRect.width / 2;
+        const cy = currentRect.y + currentRect.height / 2;
+
+        let bestId: string | null = null;
+        let minDistance = Infinity;
+
+        // Iterate over active focusables to respect traps
+        const candidates = this._getActiveFocusables();
+
+        for (const node of candidates) {
+            if (!node.focusable || node.id === currentId) continue;
+            
+            const targetRect = this._rects.get(node.id);
+            if (!targetRect) continue;
+
+            const tx = targetRect.x + targetRect.width / 2;
+            const ty = targetRect.y + targetRect.height / 2;
+
+            if (isValid(cx, cy, tx, ty)) {
+                const dist = calcDistance(cx, cy, tx, ty);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    bestId = node.id;
+                }
+            }
+        }
+
+        if (bestId) {
+            this.focusWidget(bestId);
+            return true;
+        }
+        return false;
+    }
+
+    /** Move focus to the nearest focusable widget above the current one. */
+    focusUp(): boolean {
+        return this._spatialFocus(
+            (cx, cy, tx, ty) => ty < cy,
+            (cx, cy, tx, ty) => (cy - ty) + Math.abs(tx - cx)
+        );
+    }
+
+    /** Move focus to the nearest focusable widget below the current one. */
+    focusDown(): boolean {
+        return this._spatialFocus(
+            (cx, cy, tx, ty) => ty > cy,
+            (cx, cy, tx, ty) => (ty - cy) + Math.abs(tx - cx)
+        );
+    }
+
+    /** Move focus to the nearest focusable widget to the left of the current one. */
+    focusLeft(): boolean {
+        return this._spatialFocus(
+            (cx, cy, tx, ty) => tx < cx,
+            (cx, cy, tx, ty) => (cx - tx) + Math.abs(ty - cy)
+        );
+    }
+
+    /** Move focus to the nearest focusable widget to the right of the current one. */
+    focusRight(): boolean {
+        return this._spatialFocus(
+            (cx, cy, tx, ty) => tx > cx,
+            (cx, cy, tx, ty) => (tx - cx) + Math.abs(ty - cy)
+        );
+    }
+
     // ── Private ──────────────────────────────────────────
 
     /**
@@ -293,12 +428,13 @@ export class FocusManager {
     private _changeFocus(newIndex: number): void {
         const oldId = this.currentId;
         if (oldId) {
-            this._events.emit('blur', { targetId: oldId, type: 'blur' });
+            this._events.emit('blur', { targetId: oldId, type: 'blur', epoch: this._epoch++ });
         }
         this._currentIndex = newIndex;
         this._events.emit('focus', {
             targetId: this._focusables[newIndex].id,
             type: 'focus',
+            epoch: this._epoch++,
         });
     }
 }

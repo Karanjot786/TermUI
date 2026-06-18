@@ -10,6 +10,9 @@ export { Fragment } from './vnode.js';
 export type { VNode, VElement, VFragment, FC, IntrinsicProps } from './vnode.js';
 export { isVElement, isVFragment, flattenChildren } from './vnode.js';
 
+// ── Portal ──
+export { createPortal } from './createPortal.js';
+
 // ── Hooks ──
 export {
     useState,
@@ -27,11 +30,31 @@ export {
     useInsertBefore,
     useReducer,
 } from './hooks.js';
+export { useMediaQuery } from './hooks/useMediaQuery.js';
+export * from './hooks/useShortcuts.js';
+export { useToggle } from './hooks/useToggle.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
+export { useCounter } from './hooks/useCounter.js';
+export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
+export { useBoolean } from './hooks/useBoolean.js';
+export type { UseBooleanActions } from './hooks/useBoolean.js';
+export { useClipboard } from './hooks/useClipboard.js';
+export type { UseClipboardOptions, UseClipboardResult } from './hooks/useClipboard.js';
+export { useList } from './hooks/useList.js';
+export type { UseListActions } from './hooks/useList.js';
+export { useMap } from './hooks/useMap.js';
+export type { UseMapActions } from './hooks/useMap.js';
+export { useUpdateEffect } from './hooks/useUpdateEffect.js';
 
+export { useDefault } from './hooks/useDefault.js';
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
 export type { ErrorBoundaryProps } from './error-boundary.js';
+
+// ── Suspense / Lazy ──
+export { Suspense } from './Suspense.js';
+export type { SuspenseProps } from './Suspense.js';
+export { lazy } from './lazy.js';
 
 // ── Context ──
 export { createContext, useContext } from './context.js';
@@ -47,6 +70,8 @@ export { useFocusManager } from './hooks/useFocusManager.js';
 export type { UseFocusManagerResult } from './hooks/useFocusManager.js';
 export { useFocus } from './hooks/useFocus.js';
 export type { UseFocusOptions, UseFocusResult } from './hooks/useFocus.js';
+export { useFocusWithin } from './hooks/useFocusWithin.js';
+export type { UseFocusWithinOptions } from './hooks/useFocusWithin.js';
 export { useFocusTrap } from './hooks/useFocusTrap.js';
 export { useKeyboardNavigation } from './hooks/useKeyboardNavigation.js';
 export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hooks/useKeyboardNavigation.js';
@@ -56,17 +81,55 @@ export type { UseModalResult } from './hooks/useModal.js';
 // ── Subprocess ──
 export { useSubprocess } from './hooks/useSubprocess.js';
 export type { UseSubprocessResult } from './hooks/useSubprocess.js';
+export { useWorker } from './hooks/useWorker.js';
+
+export type {
+    UseWorkerOptions,
+    UseWorkerResult,
+} from './hooks/useWorker.js';
+
 // ── Render ──
 export { render, renderApp } from './render.js';
 export type { RenderOptions } from './render.js';
+export { getCurrentApp } from './runtime.js';
 
 // ── Reconciler (internal, but useful for testing) ──
 export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
 
 // ── Internal — used by @termuijs/testing ──
-export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber } from './hooks.js';
+export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber, resetHooksGlobals, registerCleanup } from './hooks.js';
 
 // ── Convenience alias ──
 /** h() — shorthand for createElement */
 export { createElement as h } from './createElement.js';
-export { usePrevious } from './hooks/usePrevious';
+export { useMount } from './hooks/useMount.js';
+export { useTimeout } from './hooks/useTimeout.js';
+export { I18nContext, I18nProvider, useI18n } from './i18n.js';
+export type { I18nContextValue, I18nProviderProps } from './i18n.js';
+export { useFirstRender } from './hooks/useFirstRender.js';
+export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
+export { useHover } from './hooks/useHover.js';
+export { useElementSize } from './hooks/useElementSize.js';
+export type { ElementSize } from './hooks/useElementSize.js';
+export { usePrevious } from './hooks/usePrevious.js';
+export { useLatest } from './hooks/useLatest.js';
+export { useDebounce } from './hooks/useDebounce.js';
+export { useTerminalSize } from './hooks/useTerminalSize.js';
+export type { TerminalSize } from './hooks/useTerminalSize.js';
+export { useIsMounted } from './hooks/useIsMounted.js';
+export { useUnmount } from './hooks/useUnmount.js';
+export { useTransition } from './hooks/useTransition.js';
+export { useStopwatch } from './hooks/useStopwatch.js';
+export type { UseStopwatchOptions, UseStopwatchControls } from './hooks/useStopwatch.js';
+export { useBell } from './hooks/useBell.js';
+export { useCountdown } from './hooks/useCountdown.js';
+export type { UseCountdownOptions, UseCountdownControls } from './hooks/useCountdown.js';
+export { useDeferredValue } from './hooks/useDeferredValue.js';
+export { useEventCallback } from './hooks/useEventCallback.js';
+export { useForceUpdate } from './hooks/useForceUpdate.js';
+export { useSet } from './hooks/useSet.js';
+export type { UseSetActions } from './hooks/useSet.js';
+export { useThrottle } from './hooks/useThrottle.js';
+export { useEventListener } from './hooks/useEventListener.js';
+export { useViewMeta } from './hooks/useViewMeta.js';
+export type { ViewMeta, ViewMetaCursor, ViewMetaMouseMode } from './hooks/useViewMeta.js';

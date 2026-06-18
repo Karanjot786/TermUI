@@ -43,3 +43,60 @@ describe('Text', () => {
         expect(screen.back[1][0].char).not.toBe(' ');
     });
 });
+
+describe('Text – mutation regression tests', () => {
+    it('does not mark dirty when content is unchanged', () => {
+        const text = new Text('hello');
+
+        text.clearDirty();
+        text.setContent('hello');
+
+        expect(text.isDirty).toBe(false);
+    });
+
+    it('marks dirty when content changes', () => {
+        const text = new Text('hello');
+
+        text.clearDirty();
+        text.setContent('world');
+
+        expect(text.getContent()).toBe('world');
+        expect(text.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when scrollY is unchanged', () => {
+        const text = new Text('hello', {}, { scrollY: 2 });
+
+        text.clearDirty();
+        text.setScrollY(2);
+
+        expect(text.isDirty).toBe(false);
+    });
+
+    it('marks dirty when scrollY changes', () => {
+        const text = new Text('hello', {}, { scrollY: 0 });
+
+        text.clearDirty();
+        text.setScrollY(3);
+
+        expect(text.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when scrollX is unchanged', () => {
+        const text = new Text('hello', {}, { scrollX: 2 });
+
+        text.clearDirty();
+        text.setScrollX(2);
+
+        expect(text.isDirty).toBe(false);
+    });
+
+    it('marks dirty when scrollX changes', () => {
+        const text = new Text('hello', {}, { scrollX: 0 });
+
+        text.clearDirty();
+        text.setScrollX(4);
+
+        expect(text.isDirty).toBe(true);
+    });
+});

@@ -1,0 +1,40 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Table snapshot tests > renders 3-column table 1`] = `
+"Name       │ Age   │ Role               
+────────────────────────────────────────
+Alice      │ 22    │ Dev                
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        "
+`;
+
+exports[`Table snapshot tests > renders headers only when rows are empty 1`] = `
+"Name       │ Age              
+──────────────────────────────
+                              
+                              
+                              
+                              
+                              
+                              
+                              
+                              "
+`;
+
+exports[`Table snapshot tests > truncates long content 1`] = `
+"Name     │ Role          
+─────────────────────────
+VeryLon… │ VeryLon…      
+                         
+                         
+                         
+                         
+                         
+                         
+                         "
+`;
