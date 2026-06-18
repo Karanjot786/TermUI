@@ -136,23 +136,6 @@ export class Table extends Widget {
         }
     }
 
-<<<<<<< HEAD
-    handleKey(key: string): void {
-    if (key === 'up') {
-        this._selectedRow = Math.max(0, this._selectedRow - 1);
-    }
-
-    if (key === 'down') {
-        this._selectedRow = Math.min(
-            this._rows.length - 1,
-            this._selectedRow + 1
-        );
-    }
-
-    this.markDirty();
-}
-
-=======
     handleKey(event: KeyEvent): void {
         if (event.key === 'up') {
             this._selectedRow = Math.max(0, this._selectedRow - 1);
@@ -168,7 +151,6 @@ export class Table extends Widget {
         this.markDirty();
     }
 
->>>>>>> upstream/main
     // ── Rendering ─────────────────────────────────────
 
     protected _renderSelf(screen: Screen): void {
