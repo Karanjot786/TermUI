@@ -33,14 +33,12 @@ export class Session {
      * to files, databases, or custom storage.
      */
     save(): void {
-        // Persist session data to storage
     }
 
     /**
      * Restore previous session.
      */
     restore(): void {
-        // Restore session data from storage
     }
 
     /**
