@@ -6,10 +6,6 @@ export {
     createStore,
     createPersistentStore,
     batch,
-<<<<<<< HEAD
-    logger,
-=======
->>>>>>> upstream/main
 } from './store.js';
 export type {
     Store,
