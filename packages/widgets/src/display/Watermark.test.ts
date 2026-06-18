@@ -119,7 +119,7 @@ describe('Watermark', () => {
         const { screen } = renderWatermark(family, {}, {}, 6, 1);
 
         expect(rowText(screen, 0)).toContain(family);
-        expect(screen.back[0][0].width).toBeGreaterThanOrEqual(1);
+        expect(screen.back[0][0].width).toBe(2);
     });
 
     it('handles combining marks as a single grapheme', () => {
