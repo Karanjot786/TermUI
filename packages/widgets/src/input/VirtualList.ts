@@ -192,12 +192,7 @@ export class VirtualList extends Widget {
 
     override markDirty(): void {
         if (this._memoizeLayout && this._isScrolling) {
-            (this as any)._dirty = true;
-            let p = this.parent;
-            while (p) {
-                (p as any)._dirty = true;
-                p = p.parent;
-            }
+            this._markDirtyNoLayout();
             return;
         }
         super.markDirty();

@@ -281,6 +281,16 @@ export abstract class Widget {
     }
 
     /**
+     * Marks the widget as dirty without invalidating the layout node.
+     * Used for performance optimizations like memoized scrolling.
+     */
+    protected _markDirtyNoLayout(): void {
+        if (this._dirty) return;
+        this._dirty = true;
+        this.parent?._markDirtyNoLayout();
+    }
+
+    /**
      * Clear the dirty flag after rendering.
      * Widgets with a render error stay dirty so they are retried on the next frame.
      */
