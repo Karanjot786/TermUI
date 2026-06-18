@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, createKeyEvent } from '@termuijs/core';
 import { SegmentedControl } from './SegmentedControl.js';
 
 describe('SegmentedControl', () => {
@@ -37,11 +37,7 @@ describe('SegmentedControl', () => {
             onChange,
         });
 
-        control.handleKey({
-            key: 'right',
-            ctrl: false,
-            alt: false,
-        } as any);
+        control.handleKey(createKeyEvent({ key: 'right', ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0) }));
 
         expect(control.value).toBe('Two');
         expect(onChange).toHaveBeenCalledWith('Two');
@@ -56,11 +52,7 @@ describe('SegmentedControl', () => {
             onChange,
         });
 
-        control.handleKey({
-            key: 'left',
-            ctrl: false,
-            alt: false,
-        } as any);
+        control.handleKey(createKeyEvent({ key: 'left', ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0) }));
 
         expect(control.value).toBe('One');
         expect(onChange).toHaveBeenCalledWith('One');
@@ -76,5 +68,33 @@ describe('SegmentedControl', () => {
         control.next();
 
         expect(spy).toHaveBeenCalled();
+    });
+
+    it('home moves to first option and fires onChange', () => {
+        const onChange = vi.fn();
+        const control = new SegmentedControl({
+            options: ['One', 'Two', 'Three'],
+            value: 'Two',
+            onChange,
+        });
+
+        control.handleKey(createKeyEvent({ key: 'home', ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0) }));
+
+        expect(control.value).toBe('One');
+        expect(onChange).toHaveBeenCalledWith('One');
+    });
+
+    it('end moves to last option and fires onChange', () => {
+        const onChange = vi.fn();
+        const control = new SegmentedControl({
+            options: ['One', 'Two', 'Three'],
+            value: 'Two',
+            onChange,
+        });
+
+        control.handleKey(createKeyEvent({ key: 'end', ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0) }));
+
+        expect(control.value).toBe('Three');
+        expect(onChange).toHaveBeenCalledWith('Three');
     });
 });
