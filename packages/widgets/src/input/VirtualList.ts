@@ -12,7 +12,7 @@
 //       renderItem: (index) => `Row #${index}`,
 //   });
 // ─────────────────────────────────────────────────────
-
+import { type Cell } from '@termuijs/core';
 import { type Screen, type Style, styleToCellAttrs, truncate, stringWidth, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { computeRange } from './virtual-scroll.js';
@@ -59,13 +59,12 @@ export class VirtualList extends Widget {
     private _overscan: number;
     private _showScrollbar: boolean;
     
-    private _fixedItemHeight?: number;
     private _memoizeLayout: boolean;
     private _isScrolling = false;
     private _lastContentWidth = 0;
     private _renderCache = new Map<number, {
         line: string;
-        cellStyle: any;
+        cellStyle:  Partial<Omit<Cell, 'char' | 'width'>>;
         isSelected: boolean;
         isFocused: boolean;
     }>();
@@ -73,8 +72,11 @@ export class VirtualList extends Widget {
     constructor(options: VirtualListOptions) {
         super({ border: 'single', ...options.style });
         this._totalItems = options.totalItems;
-        this._fixedItemHeight = options.fixedItemHeight;
-        this._itemHeight = options.fixedItemHeight ?? options.itemHeight ?? 1;
+        const resolvedItemHeight = options.fixedItemHeight ?? options.itemHeight ?? 1;
+        if (!Number.isFinite(resolvedItemHeight) || resolvedItemHeight <= 0) {
+            throw new Error('VirtualList itemHeight must be a positive number');
+        }
+        this._itemHeight = resolvedItemHeight;
         this._memoizeLayout = options.memoizeLayout ?? true;
         this._renderItem = options.renderItem;
         this._onSelect = options.onSelect;
