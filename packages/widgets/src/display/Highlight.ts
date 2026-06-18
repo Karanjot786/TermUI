@@ -41,7 +41,11 @@ export class Highlight extends Box {
     }
 
     /** @deprecated Use setText() instead. */
-    update(text: string, query: string | RegExp, style?: Partial<Style>): void {
-        this.setText(text, query, style);
+    update(text: string, query?: string | RegExp, style?: Partial<Style>): void;
+    update<T = unknown>(_previousProps: T): void;
+    update(text: unknown, query?: unknown, style?: unknown): void {
+        if (typeof text === 'string') {
+            this.setText(text, (query as string | RegExp | undefined) ?? '', style as Partial<Style> | undefined);
+        }
     }
 }
