@@ -54,7 +54,9 @@ export class Watermark extends Widget {
             while (col < width) {
                 const char = segments[index];
                 const charWidth = Math.max(1, stringWidth(char));
-                
+
+                if (col + charWidth > width) break;
+
                 screen.setCell(x + col, y + row, {
                     char,
                     width: charWidth,

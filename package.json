@@ -5,7 +5,8 @@
   "description": "A TypeScript-first framework for building beautiful, interactive terminal user interfaces",
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "website"
   ],
   "scripts": {
     "build": "turbo run build",
@@ -43,3 +44,4 @@
     "dotenv": "^16.0.0"
   }
 }
+

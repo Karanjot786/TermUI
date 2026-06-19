@@ -2,18 +2,19 @@
 // @termuijs/widgets — TextInput widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate, type KeyEvent } from '@termuijs/core';
+import {
+    type Screen,
+    type Style,
+    styleToCellAttrs,
+    stringWidth,
+    truncate,
+    type KeyEvent
+} from '@termuijs/core';
+
 import { Widget } from '../base/Widget.js';
 
 /**
  * TextInput — a single-line text input field.
- *
- * Supports:
- * - Cursor movement (left/right/Home/End)
- * - Character insertion and deletion
- * - Placeholder text
- * - Password masking
- * - Max length constraint
  */
 export class TextInput extends Widget {
     private _value = '';
@@ -35,24 +36,26 @@ export class TextInput extends Widget {
         } = {},
     ) {
         super({ border: 'single', height: 3, ...style });
+
         this._placeholder = options.placeholder ?? '';
         this._mask = options.mask ?? null;
         this._maxLength = options.maxLength ?? Infinity;
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
+
         this.focusable = true;
     }
 
-    get value(): string { return this._value; }
+    get value(): string {
+        return this._value;
+    }
+
     set value(v: string) {
         this._value = v.slice(0, this._maxLength);
         this._cursorPos = Math.min(this._cursorPos, this._value.length);
         this.markDirty();
     }
 
-    /**
-     * Handle keyboard events when the widget is focused.
-     */
     handleKey(event: KeyEvent): void {
         switch (event.key) {
             case 'left':
@@ -77,50 +80,43 @@ export class TextInput extends Widget {
                 this.submit();
                 break;
             default:
-                // Insert printable characters (length 1 means it's a typing char, not a special key)
                 if (event.key.length === 1 && !event.ctrl && !event.alt) {
                     this.insertChar(event.key);
                 }
-                break;
         }
     }
 
-    /**
-     * Handle a typed character.
-     */
     insertChar(char: string): void {
         if (this._value.length >= this._maxLength) return;
+
         this._value =
             this._value.slice(0, this._cursorPos) +
             char +
             this._value.slice(this._cursorPos);
+
         this._cursorPos++;
         this._onChange?.(this._value);
         this.markDirty();
     }
 
-    /**
-     * Delete the character before the cursor.
-     */
     deleteBack(): void {
         if (this._cursorPos > 0) {
             this._value =
                 this._value.slice(0, this._cursorPos - 1) +
                 this._value.slice(this._cursorPos);
+
             this._cursorPos--;
             this._onChange?.(this._value);
             this.markDirty();
         }
     }
 
-    /**
-     * Delete the character after the cursor.
-     */
     deleteForward(): void {
         if (this._cursorPos < this._value.length) {
             this._value =
                 this._value.slice(0, this._cursorPos) +
                 this._value.slice(this._cursorPos + 1);
+
             this._onChange?.(this._value);
             this.markDirty();
         }
@@ -128,43 +124,52 @@ export class TextInput extends Widget {
 
     moveCursorLeft(): void {
         const next = Math.max(0, this._cursorPos - 1);
-    
+
         if (next === this._cursorPos) {
             return;
         }
-    
+
         this._cursorPos = next;
         this.markDirty();
     }
+
     moveCursorRight(): void {
         const next = Math.min(this._value.length, this._cursorPos + 1);
-    
+
         if (next === this._cursorPos) {
             return;
         }
-    
+
         this._cursorPos = next;
         this.markDirty();
     }
+
     moveCursorHome(): void {
         if (this._cursorPos === 0) {
             return;
         }
-    
+
         this._cursorPos = 0;
         this.markDirty();
     }
+
     moveCursorEnd(): void {
         if (this._cursorPos === this._value.length) {
             return;
         }
-    
+
         this._cursorPos = this._value.length;
         this.markDirty();
     }
 
-    submit(): void { this._onSubmit?.(this._value); }
-    clear(): void { this._value = ''; this._cursorPos = 0; this._onChange?.(''); 
+    submit(): void {
+        this._onSubmit?.(this._value);
+    }
+
+    clear(): void {
+        this._value = '';
+        this._cursorPos = 0;
+        this._onChange?.('');
         this.markDirty();
     }
 
@@ -176,38 +181,73 @@ export class TextInput extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         if (this._value.length === 0 && !this.isFocused) {
-            // Show placeholder
-            screen.writeString(x, y, truncate(this._placeholder, width), { ...attrs, dim: true });
+            screen.writeString(
+                x,
+                y,
+                truncate(this._placeholder, width),
+                { ...attrs, dim: true }
+            );
             return;
         }
 
-        // Display value (optionally masked)
         const displayValue = this._mask
             ? this._mask.repeat(this._value.length)
             : this._value;
 
-        // Scroll the view if cursor is beyond visible area
-        const visibleWidth = width - 1; // Leave room for cursor
+        const visibleWidth = width - 1;
+
         let scrollX = 0;
         if (this._cursorPos > visibleWidth) {
             scrollX = this._cursorPos - visibleWidth;
         }
 
-        const visibleText = displayValue.slice(scrollX, scrollX + visibleWidth);
+        const visibleText = displayValue.slice(
+            scrollX,
+            scrollX + visibleWidth
+        );
+
         screen.writeString(x, y, visibleText, attrs);
 
-        // Draw cursor when focused
+        // Cursor
         if (this.isFocused) {
             const cursorScreenPos = x + this._cursorPos - scrollX;
+
             if (cursorScreenPos >= x && cursorScreenPos < x + width) {
-                const cursorChar = this._cursorPos < displayValue.length
-                    ? displayValue[this._cursorPos]
-                    : ' ';
+                const cursorChar =
+                    this._cursorPos < displayValue.length
+                        ? displayValue[this._cursorPos]
+                        : ' ';
+
                 screen.setCell(cursorScreenPos, y, {
                     char: cursorChar,
                     ...attrs,
                     inverse: true,
                 });
+            }
+        }
+
+        // ─────────────────────────────────────
+        // ✅ CHARACTER COUNTER (NEW FEATURE)
+        // ─────────────────────────────────────
+        if (this.isFocused) {
+            const length = this._value.length;
+            const max =
+                this._maxLength === Infinity ? null : this._maxLength;
+
+            const counterText = max
+                ? `${length}/${max}`
+                : `${length}`;
+
+            const counterWidth = stringWidth(counterText);
+            const counterX = x + width - counterWidth;
+
+            if (counterX >= x) {
+                screen.writeString(
+                    counterX,
+                    y,
+                    counterText,
+                    { ...attrs, dim: true }
+                );
             }
         }
     }

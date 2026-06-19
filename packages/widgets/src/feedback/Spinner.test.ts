@@ -71,6 +71,14 @@ describe('Spinner', () => {
         expect(interval).toBe(120);
     });
 
+    it('supports variant property override', () => {
+        const spinner = new Spinner({}, { variant: 'braille' });
+        const interval = (spinner as unknown as { _interval: number })._interval;
+        expect(interval).toBe(80);
+        const frames = (spinner as unknown as { _frames: string[] })._frames;
+        expect(frames[0]).toBe('⠋');
+    });
+
     it('supports custom interval overrides', () => {
         const spinner = new Spinner({}, { preset: 'dots', interval: 200 });
         const interval = (spinner as unknown as { _interval: number })._interval;

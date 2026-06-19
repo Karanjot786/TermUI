@@ -37,20 +37,32 @@ export function mapRange(
 }
 
 /**
- * Maps an input value using tuple ranges.
+ * Maps an input value using multi-stop arrays.
  */
 export function interpolate(
     value: number,
-    inputRange: [number, number],
-    outputRange: [number, number],
+    inputRange: number[],
+    outputRange: number[],
     options?: InterpolateOptions
 ): number {
+    if (inputRange.length !== outputRange.length) {
+        throw new Error('inputRange and outputRange must have the same length.');
+    }
+    if (inputRange.length < 2) {
+        throw new Error('inputRange and outputRange must have at least 2 elements.');
+    }
+
+    let index = 0;
+    while (index < inputRange.length - 2 && value > inputRange[index + 1]) {
+        index++;
+    }
+
     return mapRange(
         value,
-        inputRange[0],
-        inputRange[1],
-        outputRange[0],
-        outputRange[1],
+        inputRange[index],
+        inputRange[index + 1],
+        outputRange[index],
+        outputRange[index + 1],
         options
     );
 }

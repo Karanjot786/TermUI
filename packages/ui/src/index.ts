@@ -27,6 +27,16 @@ export { Slider, RangeInput } from './Slider.js';
 export { Divider } from './Divider.js';
 export type { DividerOptions } from './Divider.js';
 
+export { ShortcutManager } from "./ShortcutManager.js";
+export type { Shortcut as ShortcutManagerItem } from "./ShortcutManager.js";
+
+export { NotificationHistory } from "./NotificationHistory.js";
+
+export type {
+    Notification as NotificationHistoryItem,
+    NotificationType
+} from "./NotificationHistory.js";
+
 export { Spacer } from './Spacer.js';
 
 export { Tabs } from './Tabs.js';
