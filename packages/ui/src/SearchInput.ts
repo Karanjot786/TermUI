@@ -101,6 +101,11 @@ export class SearchInput extends Widget {
         }
     }
 
+    override destroy(): void {
+        this._cancelDebounce();
+        super.destroy();
+    }
+
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
