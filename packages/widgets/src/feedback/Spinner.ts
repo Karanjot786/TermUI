@@ -15,6 +15,11 @@ export const SPINNER_FRAMES: Record<string, { frames: string[]; asciiFrames: str
         asciiFrames: ['|', '/', '-', '\\'],
         interval: 80,
     },
+    /**
+     * Alias for `dots`. Uses the same braille character frames and interval.
+     * Provided as a more semantically descriptive name when the intent is to
+     * convey a "braille spinner" rather than a generic dots animation.
+     */
     braille: {
         frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
         asciiFrames: ['|', '/', '-', '\\'],
@@ -72,7 +77,12 @@ export interface SpinnerOptions {
     spinner?: string | { frames: string[]; interval: number };
     /** Spinner preset name (preferred option) */
     preset?: string;
-    /** Animation variant (dots, line, braille, etc.) */
+    /**
+     * Animation variant (dots, line, braille, etc.).
+     * Equivalent to `preset` — provided for semantic clarity when callers
+     * prefer to think of the choice as a visual "variant" rather than a
+     * configuration preset. If both are supplied, `variant` takes precedence.
+     */
     variant?: string;
     /** Text label displayed after the spinner */
     label?: string;
