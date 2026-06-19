@@ -9,6 +9,24 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^5.0.0"
+    "@types/prismjs": "^1.26.6",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "vite": "^5.0.0",
+    "vite-plugin-node-polyfills": "^0.28.0"
+  },
+  "dependencies": {
+    "@babel/standalone": "^8.0.2",
+    "@termuijs/core": "^0.1.6",
+    "@termuijs/jsx": "^0.1.6",
+    "@termuijs/testing": "^0.1.6",
+    "@termuijs/widgets": "^0.1.6",
+    "prismjs": "^1.30.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-simple-code-editor": "^0.14.1",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
   }
 }
