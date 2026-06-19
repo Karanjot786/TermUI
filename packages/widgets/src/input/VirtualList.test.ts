@@ -109,8 +109,8 @@ describe('VirtualList', () => {
             expect(list.selectedIndex).toBe(0);
 
             list.pageDown();
-            // pageDown should advance by at least 1 even when floor(height/itemHeight) === 0
-            expect(list.selectedIndex).toBeGreaterThanOrEqual(1);
+            // pageDown should advance by exactly 1 (pageSize === 1 in this setup)
+            expect(list.selectedIndex).toBe(1);
         });
 
         it('pageUp moves at least one when pageSize would be 0', () => {
@@ -119,7 +119,8 @@ describe('VirtualList', () => {
             expect(list.selectedIndex).toBe(3);
 
             list.pageUp();
-            expect(list.selectedIndex).toBeLessThan(3);
+            // pageUp should move up by exactly 1 (from 3 -> 2)
+            expect(list.selectedIndex).toBe(2);
         });
     });
 
