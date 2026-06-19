@@ -1,7 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { TextInput } from './TextInput.js';
-import { PasswordInput } from '../../../ui/src/PasswordInput.js';
+import { TextInput } from '@termuijs/widgets';
+import { PasswordInput } from './PasswordInput.js';
 import { Screen, createKeyEvent } from '@termuijs/core';
 
 function renderInput(input: TextInput | PasswordInput, width = 30, height = 3) {
@@ -93,7 +93,7 @@ describe('Vim keybindings (TextInput & PasswordInput)', () => {
 
     it('handles j and k as tab focus cycling keys in normal mode', () => {
         const textInput = new TextInput();
-        
+
         const eventJ = createKeyEvent({ key: 'j', ctrl: false, shift: false, alt: false, raw: Buffer.from('j') });
         textInput.handleKey(eventJ);
         expect(eventJ.key).toBe('tab');
@@ -109,7 +109,7 @@ describe('Vim keybindings (TextInput & PasswordInput)', () => {
         const textInput = new TextInput();
         textInput.value = 'abc';
         textInput.isFocused = true;
-        
+
         // Normal mode -> block cursor (inverse: true, underline: false/undefined)
         textInput.vimMode = 'normal';
         const screenNormal = renderInput(textInput, 30, 3);

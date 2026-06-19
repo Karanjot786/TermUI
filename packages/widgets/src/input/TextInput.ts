@@ -4,8 +4,9 @@
 
 import { type Screen, type Style, type KeyEvent, styleToCellAttrs, stringWidth, truncate, splitGraphemes } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { type VimMode } from './vim.js';
 
-export type VimMode = 'normal' | 'insert' | 'visual';
+export type { VimMode };
 
 /**
  * TextInput — a single-line text input field.
