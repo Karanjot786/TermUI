@@ -4,9 +4,9 @@
 // ─────────────────────────────────────────────────────
 
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { globSync } from 'glob';
+import { existsSync, readdirSync } from 'node:fs';
+import { join, resolve, relative, sep } from 'node:path';
+
 /**
  * Validate documentation target to prevent command injection
  * Allows: lowercase letters, numbers, hyphens, underscores, forward slashes
@@ -46,6 +46,27 @@ function validateDocTarget(target) {
 }
 
 /**
+ * Recursively collect files matching a given extension under a directory.
+ * Uses only Node built-ins (no external glob package required).
+ * @param {string} dir  Root directory to search
+ * @param {string} ext  File extension to match (e.g. '.ts')
+ * @returns {string[]}  Sorted list of matching file paths
+ */
+function findFiles(dir, ext) {
+  const results = [];
+  if (!existsSync(dir)) return results;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...findFiles(fullPath, ext));
+    } else if (entry.isFile() && entry.name.endsWith(ext)) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
+
+/**
  * Generate documentation from source
  * Uses execFileSync with separate commands to prevent injection
  */
@@ -56,7 +77,13 @@ function generateDocs(target) {
     // Defense-in-depth: ensure the output path stays inside the docs directory
     const docsRoot = resolve('docs');
     const targetOut = resolve(join('docs', target));
-    if (!targetOut.startsWith(docsRoot + '/') && targetOut !== docsRoot) {
+
+    const rel = relative(docsRoot, targetOut);
+
+    if (
+      rel.startsWith('..') ||
+      rel.includes('..' + sep)
+    ) {
       throw new Error(
         `Documentation output path "${targetOut}" escapes the docs directory.`
       );
@@ -71,17 +98,11 @@ function generateDocs(target) {
 
     // Use execFileSync with argument array (safe from injection)
     // Run TypeScript compiler on source
-    const files = globSync('src/**/*.ts');
-
-    execFileSync(
-      'jsdoc',
-      ['-d', join('docs', target), ...files],
-      {
-        stdio: 'inherit',
-        encoding: 'utf-8',
-        timeout: 300000,
-      }
-    );
+    execFileSync('tsc', ['--noEmit'], {
+      stdio: 'inherit',
+      encoding: 'utf-8',
+      timeout: 300000,
+    });
 
     // Generate documentation using typedoc (if available)
     try {
@@ -94,7 +115,12 @@ function generateDocs(target) {
     } catch (err) {
       // typedoc not available, try alternative
       console.log('📝 TypeDoc not available, generating from JSDoc comments instead');
-      execFileSync('jsdoc', ['-d', join('docs', target), 'src/**/*.ts'], {
+      // Expand glob pattern using Node built-ins so jsdoc receives real file paths
+      const files = findFiles('src', '.ts');
+      if (files.length === 0) {
+        throw new Error('No TypeScript source files found under "src".');
+      }
+      execFileSync('jsdoc', ['-d', join('docs', target), ...files], {
         stdio: 'inherit',
         encoding: 'utf-8',
         timeout: 300000,
