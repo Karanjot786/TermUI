@@ -2,7 +2,7 @@
 // @termuijs/widgets — ProgressBar widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, type Color, caps } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, type Color, caps, stringWidth } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface ProgressBarOptions {
@@ -82,7 +82,7 @@ export class ProgressBar extends Widget {
             }
         }
 
-        const barWidth = Math.max(0, width - label.length);
+        const barWidth = Math.max(0, width - stringWidth(label));
         const filled = this._value <= 0 ? 0 : Math.round(barWidth * this._value);
         const empty = barWidth - filled;
 

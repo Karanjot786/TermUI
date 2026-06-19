@@ -2,7 +2,7 @@
 // @termuijs/core — Tests for App lifecycle
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { App, type AppOptions, type RootWidget } from './App.js';
 import type { Screen } from '../terminal/Screen.js';
 import type { LayoutNode } from '../layout/LayoutEngine.js';
@@ -191,6 +191,8 @@ describe('App', () => {
     });
 
     describe('exit()', () => {
+        afterEach(() => vi.restoreAllMocks());
+
         it('does NOT call process.exit when called before mount()', () => {
             const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
             const root = createMockRootWidget();

@@ -130,6 +130,9 @@ export class RadioGroup extends Widget {
             case 'enter':
                 this.confirm();
                 break;
+            case 'space':
+                this.confirm();
+                break;
         }
     }
 

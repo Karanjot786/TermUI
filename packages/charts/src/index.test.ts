@@ -12,7 +12,9 @@ describe('@termuijs/charts exports', () => {
         widget.setData([1, 2, 3, 4, 5]);
         const screen = new Screen(20, 10);
         widget.updateRect({ x: 0, y: 0, width: 20, height: 10 });
-        expect(() => widget.render(screen)).not.toThrow();
+        widget.render(screen);
+        const rows = screen.back.map((row: { char: string }[]) => row.map(c => c.char).join(''));
+        expect(rows.some(row => row.trim().length > 0)).toBe(true);
     });
 
     it('PieChart renders into a Screen without throwing', () => {
@@ -24,7 +26,9 @@ describe('@termuijs/charts exports', () => {
         });
         const screen = new Screen(20, 10);
         widget.updateRect({ x: 0, y: 0, width: 20, height: 10 });
-        expect(() => widget.render(screen)).not.toThrow();
+        widget.render(screen);
+        const allChars = screen.back.flat().map((c: { char: string }) => c.char).join('');
+        expect(allChars.trim().length).toBeGreaterThan(0);
     });
 
     it('Gauge renders into a Screen without throwing', () => {
@@ -32,6 +36,8 @@ describe('@termuijs/charts exports', () => {
         widget.setValue(0.5);
         const screen = new Screen(20, 1);
         widget.updateRect({ x: 0, y: 0, width: 20, height: 1 });
-        expect(() => widget.render(screen)).not.toThrow();
+        widget.render(screen);
+        const row = screen.back[0].map((c: { char: string }) => c.char).join('');
+        expect(row.trim().length).toBeGreaterThan(0);
     });
 });

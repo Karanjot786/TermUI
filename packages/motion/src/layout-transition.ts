@@ -24,6 +24,7 @@ export function animateRect(
     let active = 4;
     
     const checkDone = () => {
+        if (active <= 0) return;
         active--;
         if (active <= 0 && options.onComplete) {
             options.onComplete();

@@ -171,7 +171,7 @@ export const AutoThemeProvider: FC<AutoThemeProviderProps> = (props) => {
         type: ThemeContext.Provider,
         props: { value: theme },
         children: childArray,
-    } as any;
+    } as any; // as any: reconciler VElement shape not assignable to VNode without cast
 };
 
 /**

@@ -7,7 +7,7 @@ type ConsoleMethod = 'log' | 'warn' | 'error';
 export class RenderHook {
     private _buffer: string[] = [];
     private _isActive = false;
-    private _originalConsole: Partial<Record<ConsoleMethod, (...args: any[]) => void>> = {};
+    private _originalConsole: Partial<Record<ConsoleMethod, (...args: any[]) => void>> = {}; // any[]: console methods accept arbitrary argument shapes
 
     /** Check if the hook is currently intercepting console output */
     get isActive(): boolean {
@@ -23,7 +23,7 @@ export class RenderHook {
         for (const method of methods) {
             this._originalConsole[method] = console[method];
             const hook = this;
-            console[method] = function (...args: any[]): void {
+            console[method] = function (...args: any[]): void { // any[]: console methods accept arbitrary argument shapes
                 const text = args.map(a => typeof a === 'string' ? a : String(a)).join(' ');
                 hook._buffer.push(text + '\n');
             };
@@ -36,7 +36,7 @@ export class RenderHook {
         this._isActive = false;
 
         for (const [method, original] of Object.entries(this._originalConsole)) {
-            console[method as ConsoleMethod] = original as (...args: any[]) => void;
+            console[method as ConsoleMethod] = original as (...args: any[]) => void; // any[]: console methods accept arbitrary argument shapes
         }
         this._originalConsole = {};
     }
@@ -60,7 +60,7 @@ export class RenderHook {
  * Ensures high-frequency mutations are batched together.
  * * Using .call() or .bind() from the application context invokes this safely.
  */
-export function queueUpdate(this: any) {
+export function queueUpdate(this: any) { // any: this is bound dynamically via .call() at render time
     setImmediate(() => {
         if (this && typeof this.render === 'function') {
             this.render();

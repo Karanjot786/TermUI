@@ -97,6 +97,18 @@ describe('RadioGroup', () => {
         expect(radio.selectedValue).toBe('light');
     });
 
+    it('onChange fires when a new option is confirmed with space', () => {
+        const onChange = vi.fn();
+        const radio = new RadioGroup({ options: OPTIONS, defaultValue: 'dark', onChange });
+
+        radio.selectNext(); // move focus to 'light'
+        radio.handleKey(createKeyEvent({ key: 'space', ctrl: false, shift: false, alt: false, raw: Buffer.alloc(0) }));
+
+        expect(onChange).toHaveBeenCalledOnce();
+        expect(onChange).toHaveBeenCalledWith('light');
+        expect(radio.selectedValue).toBe('light');
+    });
+
     it('onChange does not fire when confirming the already-selected option', () => {
         const onChange = vi.fn();
         const radio = new RadioGroup({ options: OPTIONS, defaultValue: 'dark', onChange });

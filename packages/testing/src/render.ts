@@ -181,7 +181,7 @@ function walkWidgets(
         const w = stack.pop()!;
         if (predicate(w)) result.push(w);
         // Push children in reverse so we process left-to-right
-        const children: Widget[] = (w as any)._children ?? [];
+        const children: Widget[] = (w as any)._children ?? []; // as any: Widget._children is private; accessed for test renderer tree walk
         for (let i = children.length - 1; i >= 0; i--) {
             stack.push(children[i]);
         }
@@ -192,7 +192,7 @@ function walkWidgets(
 /** Extract text content from a Text widget */
 function getTextContent(widget: Widget): string {
     if (widget instanceof Text) {
-        return (widget as any)._content ?? "";
+        return (widget as any)._content ?? ""; // as any: Text._content is private; accessed for test renderer content inspection
     }
     return "";
 }
@@ -200,7 +200,7 @@ function getTextContent(widget: Widget): string {
 /** Render the widget tree to the screen buffer */
 function renderToScreen(container: Box, screen: Screen): void {
     // Set the root rect to fill the screen
-    (container as any)._rect = {
+    (container as any)._rect = { // as any: Widget private fields accessed by test renderer; no public inspection API
         x: 0,
         y: 0,
         width: screen.cols,
@@ -212,11 +212,15 @@ function renderToScreen(container: Box, screen: Screen): void {
 
     // Clear and render
     screen.clear();
-    (container as any)._renderSelf?.(screen);
+    (container as any)._renderSelf?.(screen); // as any: Widget private fields accessed by test renderer; no public inspection API
     renderChildren(container, screen);
 }
 
-/** Simple recursive layout: stack children vertically */
+/**
+ * Simplified layout: divides height equally among children using integer division.
+ * Does NOT match ConstraintLayout's real output — do not assert pixel-perfect
+ * coordinates in tests using this renderer. Only assert cell content (text, chars).
+ */
 function assignRects(
     widget: Widget,
     x: number,
@@ -224,8 +228,8 @@ function assignRects(
     width: number,
     height: number,
 ): void {
-    (widget as any)._rect = { x, y, width, height };
-    const children: Widget[] = (widget as any)._children ?? [];
+    (widget as any)._rect = { x, y, width, height }; // as any: Widget private fields accessed by test renderer; no public inspection API
+    const children: Widget[] = (widget as any)._children ?? []; // as any: Widget private fields accessed by test renderer; no public inspection API
     if (children.length === 0) return;
     const childHeight = Math.max(1, Math.floor(height / children.length));
     let currentY = y;
@@ -236,9 +240,9 @@ function assignRects(
 }
 
 function renderChildren(parent: Widget, screen: Screen): void {
-    const children: Widget[] = (parent as any)._children ?? [];
+    const children: Widget[] = (parent as any)._children ?? []; // as any: Widget private fields accessed by test renderer; no public inspection API
     for (const child of children) {
-        (child as any)._renderSelf?.(screen);
+        (child as any)._renderSelf?.(screen); // as any: Widget private fields accessed by test renderer; no public inspection API
         renderChildren(child, screen);
     }
 }
@@ -285,7 +289,7 @@ export function render(
 ): TestInstance {
     const width = options.width ?? 80;
     const height = options.height ?? 24;
-    const screen = new Screen(width, height);
+    const screenRef = { current: new Screen(width, height) };
 
     let currentElement = element;
 
@@ -305,7 +309,7 @@ export function render(
 
     // Set up re-render callback — use fiber-preserving reRenderComponent
     setRequestRender(() => {
-        const instances: Map<Widget, any> = (globalThis as any)
+        const instances: Map<Widget, any> = (globalThis as any) // as any: set by @termuijs/jsx reconciler at runtime; not in globalThis type
             .__termuijs_instances;
         const rootInstance = instances?.get(rootWidget);
         if (rootInstance) {
@@ -319,24 +323,24 @@ export function render(
             container.addChild(newRoot);
             rootWidget = newRoot;
         }
-        renderToScreen(container, screen);
+        renderToScreen(container, screenRef.current);
     });
 
     // Initial render
-    renderToScreen(container, screen);
+    renderToScreen(container, screenRef.current);
 
     const instance: TestInstance = {
         container,
-        screen,
+        screen: screenRef.current,
 
         toString(): string {
-            return readScreenLines(screen)
+            return readScreenLines(screenRef.current)
                 .filter((l) => l.length > 0)
                 .join("\n");
         },
 
         lastFrame(): string[] {
-            return readScreenLines(screen);
+            return readScreenLines(screenRef.current);
         },
 
         getByText(text: string): Widget | null {
@@ -350,7 +354,7 @@ export function render(
             if (matches.length > 0) return matches[0];
 
             // Fallback: check screen buffer
-            const screenText = readScreenLines(screen).join("\n");
+            const screenText = readScreenLines(screenRef.current).join("\n");
             if (screenText.includes(text)) {
                 return container;
             }
@@ -376,7 +380,7 @@ export function render(
             });
         },
 
-        getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
+        getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] { // any[]: required to accept widget constructors with varying signatures
             return walkWidgets(container, (w) => w instanceof type) as T[];
         },
 
@@ -390,7 +394,7 @@ export function render(
             return matches.length > 0 ? matches[0] : null;
         },
 
-        queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null {
+        queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null { // any[]: required to accept widget constructors with varying signatures
             const matches = walkWidgets(container, (w) => w instanceof type) as T[];
             return matches.length > 0 ? matches[0] : null;
         },
@@ -398,7 +402,7 @@ export function render(
         queryAllByText(text: string): Widget[] {
             return instance.getAllByText(text);
         },
-        queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
+        queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] { // any[]: required to accept widget constructors with varying signatures
             return instance.getAllByType(type);
         },
 
@@ -433,7 +437,7 @@ export function render(
                 container.clearChildren();
                 container.addChild(newRoot);
                 rootWidget = newRoot;
-                renderToScreen(container, screen);
+                renderToScreen(container, screenRef.current);
             }
         },
 
@@ -467,8 +471,8 @@ export function render(
 
             if (target) {
                 // Dispatch to the widget
-                if (typeof (target as any).handleMouse === 'function') {
-                    (target as any).handleMouse(event);
+                if (typeof (target as any).handleMouse === 'function') { // as any: handleMouse not on Widget base type but implemented on interactive subclasses
+                    (target as any).handleMouse(event); // as any: handleMouse not on Widget base type but implemented on interactive subclasses
                 } else {
                     target.events.emit('mouse', event);
                 }
@@ -483,7 +487,7 @@ export function render(
                 container.addChild(newRoot);
                 rootWidget = newRoot;
             }
-            renderToScreen(container, screen);
+            renderToScreen(container, screenRef.current);
         },
 
         click(x: number, y: number) {
@@ -506,7 +510,7 @@ export function render(
                 container.clearChildren();
                 container.addChild(newRoot);
                 rootWidget = newRoot;
-                renderToScreen(container, screen);
+                renderToScreen(container, screenRef.current);
             } else {
                 // No new element: re-render existing fiber, preserving state.
                 const instances: Map<Widget, any> = (globalThis as any)
@@ -517,7 +521,7 @@ export function render(
                     container.clearChildren();
                     container.addChild(newRoot);
                     rootWidget = newRoot;
-                    renderToScreen(container, screen);
+                    renderToScreen(container, screenRef.current);
                 } else {
                     console.warn(
                         "[testing] rerender() called but no fiber instance or element available",
@@ -560,9 +564,9 @@ export function render(
         },
 
         fireResize(cols: number, rows: number): void {
-            const newScreen = new Screen(cols, rows);
-            Object.assign(instance, { screen: newScreen });
-            renderToScreen(container, newScreen);
+            screenRef.current = new Screen(cols, rows);
+            instance.screen = screenRef.current;
+            renderToScreen(container, screenRef.current);
         },
 
         unmount(): void {

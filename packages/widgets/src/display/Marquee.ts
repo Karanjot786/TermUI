@@ -1,4 +1,4 @@
-import { type Screen, type Style, styleToCellAttrs, stringWidth } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, stringWidth, prefersReducedMotion } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export type MarqueeDirection = 'left' | 'right';
@@ -25,6 +25,7 @@ export class Marquee extends Widget {
     }
 
     tick(): void {
+        if (prefersReducedMotion()) return;
         this._offset += this._speed;
         this.markDirty();
     }

@@ -405,6 +405,30 @@ describe("render harness", () => {
         });
     });
 
+    describe("fireResize", () => {
+        it("updates screen dimensions and re-renders at the new size", () => {
+            const t = render(<Hello />, { width: 80, height: 24 });
+
+            expect(t.screen.cols).toBe(80);
+            expect(t.screen.rows).toBe(24);
+
+            t.fireResize(120, 40);
+
+            // instance.screen should point to the new screen
+            expect(t.screen.cols).toBe(120);
+            expect(t.screen.rows).toBe(40);
+
+            // Subsequent renders (triggered by re-render) use the new screen
+            t.rerender();
+
+            expect(t.screen.cols).toBe(120);
+            expect(t.screen.rows).toBe(40);
+
+            // renderToString reads from the new screen — should still contain content
+            expect(t.renderToString()).toContain("Hello World");
+        });
+    });
+
     describe("nested widget traversal", () => {
     it("queries work inside deeply nested widget trees", () => {
         const screen = render(

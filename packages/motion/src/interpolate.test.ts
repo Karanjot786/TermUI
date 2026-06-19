@@ -36,4 +36,28 @@ describe('interpolate and mapRange', () => {
         expect(interpolate(15, [0, 10], [0, 100])).toBe(100);
         expect(interpolate(15, [0, 10], [0, 100], { clamp: false })).toBe(150);
     });
+
+    it('interpolate maps multi-stop arrays', () => {
+        // Example: Bouncing animation [0, 0.5, 1] -> [0, 10, 0]
+        expect(interpolate(0, [0, 0.5, 1], [0, 10, 0])).toBe(0);
+        expect(interpolate(0.25, [0, 0.5, 1], [0, 10, 0])).toBe(5);
+        expect(interpolate(0.5, [0, 0.5, 1], [0, 10, 0])).toBe(10);
+        expect(interpolate(0.75, [0, 0.5, 1], [0, 10, 0])).toBe(5);
+        expect(interpolate(1, [0, 0.5, 1], [0, 10, 0])).toBe(0);
+    });
+
+    it('interpolate with multi-stop arrays and clamping', () => {
+        // Clamped out of bounds
+        expect(interpolate(-0.5, [0, 0.5, 1], [0, 10, 0])).toBe(0);
+        expect(interpolate(1.5, [0, 0.5, 1], [0, 10, 0])).toBe(0);
+
+        // No clamp out of bounds
+        expect(interpolate(-0.5, [0, 0.5, 1], [0, 10, 0], { clamp: false })).toBe(-10);
+        expect(interpolate(1.5, [0, 0.5, 1], [0, 10, 0], { clamp: false })).toBe(-10);
+    });
+
+    it('throws if lengths are mismatched or too small', () => {
+        expect(() => interpolate(5, [0, 1], [0, 1, 2])).toThrow();
+        expect(() => interpolate(5, [0], [0])).toThrow();
+    });
 });

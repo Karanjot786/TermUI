@@ -81,6 +81,12 @@ export type { UseModalResult } from './hooks/useModal.js';
 // ── Subprocess ──
 export { useSubprocess } from './hooks/useSubprocess.js';
 export type { UseSubprocessResult } from './hooks/useSubprocess.js';
+export { useWorker } from './hooks/useWorker.js';
+
+export type {
+    UseWorkerOptions,
+    UseWorkerResult,
+} from './hooks/useWorker.js';
 
 // ── Render ──
 export { render, renderApp } from './render.js';
@@ -125,3 +131,5 @@ export { useSet } from './hooks/useSet.js';
 export type { UseSetActions } from './hooks/useSet.js';
 export { useThrottle } from './hooks/useThrottle.js';
 export { useEventListener } from './hooks/useEventListener.js';
+export { useViewMeta } from './hooks/useViewMeta.js';
+export type { ViewMeta, ViewMetaCursor, ViewMetaMouseMode } from './hooks/useViewMeta.js';

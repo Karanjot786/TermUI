@@ -3,7 +3,7 @@
 // Renders a list of tasks with status indicators.
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, caps, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 // ── Types ────────────────────────────────────────────
@@ -123,7 +123,7 @@ export class TaskList extends Widget {
             }
 
             const rowText = `${task.label} ${indicator}`;
-            screen.writeString(x, y + index, rowText.substring(0, width), attrs);
+            screen.writeString(x, y + index, truncate(rowText, width), attrs);
         });
     }
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Screen, createKeyEvent, caps } from '@termuijs/core';
 import { Slider, RangeInput } from './Slider.js';
 
@@ -35,6 +35,8 @@ function renderSlider() {
 }
 
 describe('Slider', () => {
+    afterEach(() => vi.restoreAllMocks());
+
     it('right key increments value', () => {
         const { slider } = renderSlider();
 

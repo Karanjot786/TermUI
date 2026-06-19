@@ -99,6 +99,8 @@ export interface FocusEvent {
     targetId: string;
     /** Type of focus event */
     type: 'focus' | 'blur';
+    /** Monotonically increasing sequence number for ordering / staleness detection */
+    epoch?: number;
 }
 
 /**

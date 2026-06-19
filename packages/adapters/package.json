@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.0",
+  "version": "0.1.6",
   "description": "Adapters for popular CLI libraries to integrate with TermUI",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -52,10 +52,12 @@
     "openai": "^4.0.0",
     "@anthropic-ai/sdk": "^0.39.0",
     "chalk": "^5.0.0",
+    "clipboardy": "^3.0.0",
     "dotenv": "^16.0.0",
     "simple-git": "^3.27.0",
     "keytar": "^7.9.0",
-    "execa": "^8.0.0"
+    "execa": "^8.0.0",
+    "open": "^10.0.0"
   },
   "peerDependenciesMeta": {
     "@octokit/rest": {
@@ -79,6 +81,9 @@
     "chalk": {
       "optional": true
     },
+    "clipboardy": {
+      "optional": true
+    },
     "dotenv": {
       "optional": true
     },
@@ -89,6 +94,9 @@
       "optional": true
     },
     "execa": {
+      "optional": true
+    },
+    "open": {
       "optional": true
     }
   },

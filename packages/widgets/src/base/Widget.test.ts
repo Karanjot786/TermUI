@@ -150,6 +150,60 @@ describe('Widget', () => {
         expect(w.callCount).toBe(2);
     });
 
+    it('tracks render count', () => {
+        const widget = new TestWidget();
+        const screen = new Screen(10, 5);
+    
+        widget.render(screen);
+        widget.render(screen);
+    
+        expect(
+            widget.getRenderStats().renderCount,
+        ).toBe(2);
+    });
+    
+    it('tracks last render duration', () => {
+        const widget = new TestWidget();
+        const screen = new Screen(10, 5);
+    
+        widget.render(screen);
+    
+        expect(
+            widget.getRenderStats().lastDurationMs,
+        ).toBeGreaterThanOrEqual(0);
+    });
+    
+    it('tracks total render duration', () => {
+        const widget = new TestWidget();
+        const screen = new Screen(10, 5);
+    
+        widget.render(screen);
+    
+        expect(
+            widget.getRenderStats().totalDurationMs,
+        ).toBeGreaterThanOrEqual(0);
+    });
+    
+    it('calculates average render duration', () => {
+        const widget = new TestWidget();
+        const screen = new Screen(10, 5);
+    
+        widget.render(screen);
+        widget.render(screen);
+    
+        expect(
+            widget.getAverageRenderDuration(),
+        ).toBeGreaterThanOrEqual(0);
+    });
+    
+    it('returns zero average when no renders occurred', () => {
+        const widget = new TestWidget();
+    
+        expect(
+            widget.getAverageRenderDuration(),
+        ).toBe(0);
+    });
+
     describe('destroy() lifecycle', () => {
         it('emits unmount and removes event listeners', () => {
             const w = new TestWidget();

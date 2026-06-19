@@ -64,7 +64,7 @@ export function text(content: string | Reactive<string>, opts: QuickTextOptions 
     const resolved = typeof content === 'function' ? resolve(content) : content;
     const t = new Text(resolved, style, { align: opts.align });
     if (typeof content === 'function') {
-        (t as any).__reactiveContent = content;
+        (t as any).__reactiveContent = content; // as any: Widget base has no reactive slot; patched at runtime
     }
     return t;
 }
@@ -81,7 +81,7 @@ export function gauge(label: string, value: Reactive<number>, opts: QuickGaugeOp
         showLabel: true,
     });
     g.setValue(resolve(value));
-    (g as any).__reactiveValue = value;
+    (g as any).__reactiveValue = value; // as any: Widget base has no reactive slot; patched at runtime
     return g;
 }
 
@@ -106,8 +106,8 @@ export function table(
         padding: 1,
     }, { stripe: true });
 
-    (t as any).__reactiveData = data;
-    (t as any).__tableTitle = title;
+    (t as any).__reactiveData = data; // as any: Widget base has no reactive slot; patched at runtime
+    (t as any).__tableTitle = title; // as any: Widget base has no reactive slot; patched at runtime
     return t;
 }
 
@@ -124,7 +124,7 @@ export function list(items: Reactive<string[]>, opts: QuickListOptions = {}): Wi
     const listItems = resolved.map(label => ({ label, value: label }));
 
     const onSelectCb = opts.onSelect
-        ? (_item: any, idx: number) => opts.onSelect!(idx)
+        ? (_item: any, idx: number) => opts.onSelect!(idx) // any: List callback provides full item; only index is used here
         : undefined;
 
     const l = new List(
@@ -133,7 +133,7 @@ export function list(items: Reactive<string[]>, opts: QuickListOptions = {}): Wi
         onSelectCb,
     );
 
-    (l as any).__reactiveItems = items;
+    (l as any).__reactiveItems = items; // as any: Widget base has no reactive slot; patched at runtime
     return l;
 }
 
@@ -163,7 +163,7 @@ export function sparkline(label: string, data: Reactive<number[]>, opts: QuickSp
         color: opts.color ?? { type: 'named', name: 'cyan' },
     });
     s.setData(resolve(data));
-    (s as any).__reactiveData = data;
+    (s as any).__reactiveData = data; // as any: Widget base has no reactive slot; patched at runtime
     return s;
 }
 
@@ -179,7 +179,7 @@ export function status(label: string, isUp: Reactive<boolean>, opts: QuickStatus
         upColor: opts.upColor ?? { type: 'named', name: 'green' },
         downColor: opts.downColor ?? { type: 'named', name: 'red' },
     });
-    (s as any).__reactiveStatus = isUp;
+    (s as any).__reactiveStatus = isUp; // as any: Widget base has no reactive slot; patched at runtime
     return s;
 }
 
@@ -195,7 +195,7 @@ export function logView(lines: Reactive<string[]>, opts: QuickLogViewOptions = {
         { highlight: opts.highlight, autoScroll: true },
     );
     lv.setLines(resolve(lines));
-    (lv as any).__reactiveLines = lines;
+    (lv as any).__reactiveLines = lines; // as any: Widget base has no reactive slot; patched at runtime
     return lv;
 }
 
@@ -218,7 +218,7 @@ export function tree(data: TreeNode[], opts: QuickTreeOptions = {}): Widget {
         borderColor: { type: 'named', name: 'brightBlack' },
         padding: 1,
     });
-    (t as any).__reactiveTreeNodes = null;
+    (t as any).__reactiveTreeNodes = null; // as any: Widget base has no reactive slot; patched at runtime
     return t;
 }
 
@@ -243,16 +243,12 @@ export function skeleton(opts: QuickSkeletonOptions = {}): Widget {
 
 export interface QuickGridOptions {
     gap?: number;
-    rowGap?: number;
-    colGap?: number;
 }
 
 export function gridWidget(columns: number, items: Widget[], opts: QuickGridOptions = {}): Widget {
     const gridOpts: GridOptions = {
         columns,
         gap: opts.gap,
-        rowGap: opts.rowGap,
-        colGap: opts.colGap,
     };
     const g = new GridWidget({ flexGrow: 1 }, gridOpts);
     for (const item of items) {
@@ -268,7 +264,7 @@ export interface QuickBarChartOptions extends BarChartOptions {}
 export function barChart(data: Reactive<BarGroup[]>, opts: QuickBarChartOptions = {}): Widget {
     const resolved = resolve(data);
     const bc = new BarChartWidget(resolved, { flexGrow: 1 }, opts);
-    (bc as any).__reactiveBarData = data;
+    (bc as any).__reactiveBarData = data; // as any: Widget base has no reactive slot; patched at runtime
     return bc;
 }
 
@@ -289,7 +285,7 @@ export function progressBar(value: Reactive<number>, opts: QuickProgressBarOptio
             showLabel: opts.showLabel ?? true,
         },
     );
-    (pb as any).__reactiveValue = value;
+    (pb as any).__reactiveValue = value; // as any: Widget base has no reactive slot; patched at runtime
     return pb;
 }
 
@@ -387,7 +383,7 @@ export function multiProgress(
     const initialItems = resolve(items);
     const mp = new MultiProgressWidget({ items: initialItems, ...opts }, { flexGrow: 1 });
     if (typeof items === 'function') {
-        (mp as any).__reactiveMultiItems = items;
+        (mp as any).__reactiveMultiItems = items; // as any: Widget base has no reactive slot; patched at runtime
     }
     return mp;
 }
@@ -407,13 +403,13 @@ export function tabs(items: Array<[string, Widget]>, opts?: QuickTabsOptions): W
     const t = new Tabs(formattedTabs, {
         activeIndex: opts?.active ?? 0,
         active: opts?.active ?? 0
-    } as any);
+    } as any); // as any: Tabs constructor options not exported from @termuijs/ui
 
     if (opts?.onChange) {
-        if (typeof (t as any).on === 'function') {
-            (t as any).on('change', opts.onChange); 
+        if (typeof (t as any).on === 'function') { // as any: Tabs constructor options not exported from @termuijs/ui
+            (t as any).on('change', opts.onChange); // as any: Tabs constructor options not exported from @termuijs/ui
         } else {
-            (t as any).onChange = opts.onChange;
+            (t as any).onChange = opts.onChange; // as any: Tabs constructor options not exported from @termuijs/ui
         }
     }
 
@@ -432,7 +428,7 @@ export function select(options: string[], opts?: QuickSelectOptions): Widget {
     const formattedOptions = options.map(opt => ({ label: opt, value: opt }));
     return new Select(formattedOptions, {
         onSelect: opts?.onSelect 
-            ? (option: any, index: number) => opts.onSelect!(option.value, index)
+            ? (option: any, index: number) => opts.onSelect!(option.value, index) // any: Widget base has no reactive slot; patched at runtime
             : undefined
     });
 }

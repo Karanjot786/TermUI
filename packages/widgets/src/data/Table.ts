@@ -56,6 +56,7 @@ export interface TableProps {
  * - External state via `state` prop and `useTableState` hook
  */
 export class Table extends Widget {
+    focusable = true;
     protected _columns: TableColumn[];
     protected _rows: TableRow[];
     protected _showHeader: boolean;
@@ -101,6 +102,10 @@ export class Table extends Widget {
         this._state = state;
         this._onStateChange = onStateChange;
     }
+
+    // ── Public API ────────────────────────────────────
+
+    get selectedRow(): number { return this._selectedRow; }
 
     // ── Mutations ─────────────────────────────────────
 

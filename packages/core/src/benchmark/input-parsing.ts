@@ -124,7 +124,7 @@ function main(): void {
         }
         results.push(result);
         const lps = (result.lookupsPerSec / 1e6).toFixed(2);
-        console.log(`${result.keyType}: ${lps}M lookups/sec  (${result.iterations} iterations in ${result.durationMs.toFixed(0)}ms)`);
+        process.stdout.write(`${result.keyType}: ${lps}M lookups/sec  (${result.iterations} iterations in ${result.durationMs.toFixed(0)}ms)` + '\n');
     }
     
     const payload = {
@@ -135,7 +135,7 @@ function main(): void {
         bun: process.versions.bun ?? null,
         results,
     };
-    console.log(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}`);
+    process.stdout.write(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}` + '\n');
 }
 
 main();

@@ -106,8 +106,7 @@ export function useExeca(globalOpts?: Options): UseExecaResult {
         } : undefined,
       };
 
-      // child is typed as any to support all dynamic overloads returned by execaFn at runtime
-      let child: any;
+      let child: any; // typed as any to support all dynamic overloads returned by execaFn at runtime
       try {
         child = execaFn(file, args, mergedOpts);
         const stream = child.all;

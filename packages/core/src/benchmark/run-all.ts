@@ -12,6 +12,8 @@
 
 import { spawn } from 'node:child_process';
 
+const report = (msg: string) => process.stdout.write(msg + '\n');
+
 interface BenchmarkResult {
     benchmark: string;
     version: number;
@@ -102,32 +104,32 @@ async function runBenchmark(benchmarkFile: string): Promise<BenchmarkResult> {
 }
 
 async function main(): Promise<void> {
-    console.log('Running all benchmarks...\n');
+    report('Running all benchmarks...\n');
 
     const results: BenchmarkResult[] = [];
     const benchmarkDir = new URL('.', import.meta.url);
 
     for (const benchmarkFile of BENCHMARKS) {
         const fullPath = new URL(benchmarkFile, benchmarkDir);
-        console.log(`Running ${benchmarkFile}...`);
+        report(`Running ${benchmarkFile}...`);
         try {
             const result = await runBenchmark(fullPath.pathname);
             results.push(result);
-            console.log(`  ✓ ${result.benchmark} completed\n`);
+            report(`  ✓ ${result.benchmark} completed\n`);
         } catch (error) {
-            console.error(`  ✗ ${benchmarkFile} failed:`, error);
+            process.stderr.write(`  ✗ ${benchmarkFile} failed:` + ' ' + String(error) + '\n');
             process.exit(1);
         }
     }
 
-    console.log('\n=== Benchmark Summary ===\n');
+    report('\n=== Benchmark Summary ===\n');
     for (const result of results) {
-        console.log(`${result.benchmark}:`);
-        console.log(`  Node: ${result.node}`);
-        console.log(`  Bun: ${result.bun ?? 'n/a'}`);
-        console.log(`  Run time: ${result.runMs}ms per iteration`);
-        console.log(`  Results: ${result.results.length} data points`);
-        console.log('');
+        report(`${result.benchmark}:`);
+        report(`  Node: ${result.node}`);
+        report(`  Bun: ${result.bun ?? 'n/a'}`);
+        report(`  Run time: ${result.runMs}ms per iteration`);
+        report(`  Results: ${result.results.length} data points`);
+        report('');
     }
 
     const payload: AggregatedResults = {
@@ -137,10 +139,10 @@ async function main(): Promise<void> {
         bun: process.versions.bun ?? null,
     };
 
-    console.log(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}`);
+    report(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}`);
 }
 
 main().catch((error) => {
-    console.error('Benchmark runner failed:', error);
+    process.stderr.write('Benchmark runner failed:' + ' ' + String(error) + '\n');
     process.exit(1);
 });

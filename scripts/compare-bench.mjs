@@ -43,7 +43,7 @@ if (!existsSync(mainPath)) {
 try {
     head = JSON.parse(readFileSync(headPath, 'utf8'));
 } catch (e) {
-    console.error(`Error parsing head benchmark file: ${e.message}`);
+    console.error(`Error parsing HEAD benchmark file: ${e.message}`);
     const errMarkdown = `<!-- termui-bench-comment -->\n## Performance benchmarks\n\n❌ **Error:** Failed to parse HEAD benchmark results. Check CI logs for details.`;
     const outPath = process.env.BENCH_COMMENT_OUT ?? 'bench-comment.md';
     writeFileSync(outPath, errMarkdown + '\n', 'utf8');
@@ -51,31 +51,20 @@ try {
 }
 
 try {
-    const mainContent = readFileSync(mainPath, 'utf8').trim();
-    if (mainContent) {
-        main = JSON.parse(mainContent);
-    } else {
-        console.warn('Main benchmark file is empty. Assuming no baseline.');
-        main = null;
-    }
+    main = JSON.parse(readFileSync(mainPath, 'utf8'));
 } catch (e) {
-    console.warn(`Error parsing main benchmark file (ignoring baseline): ${e.message}`);
-    main = null;
+    console.warn(`Warning parsing baseline/main benchmark file: ${e.message}. Using HEAD as baseline.`);
+    main = head;
 }
 
 // Handle both old format (single benchmark) and new format (aggregated benchmarks)
 const isAggregatedHead = head.benchmarks !== undefined;
+const isAggregatedMain = main.benchmarks !== undefined;
 const headBenchmarks = isAggregatedHead ? head.benchmarks : [head];
-
-let isAggregatedMain = false;
-let mainBenchmarks = [];
-if (main) {
-    isAggregatedMain = main.benchmarks !== undefined;
-    mainBenchmarks = isAggregatedMain ? main.benchmarks : [main];
-}
+const mainBenchmarks = isAggregatedMain ? main.benchmarks : [main];
 
 // Detect format migration - if formats differ, this is a benchmark system upgrade
-const isFormatMigration = main && isAggregatedHead !== isAggregatedMain;
+const isFormatMigration = isAggregatedHead !== isAggregatedMain;
 
 if (isFormatMigration) {
     console.log('Benchmark format migration detected - skipping regression checks for this PR.');
@@ -113,10 +102,8 @@ function validateBenchmark(data, name) {
 for (const bench of headBenchmarks) {
     validateBenchmark(bench, 'head benchmark');
 }
-if (main) {
-    for (const bench of mainBenchmarks) {
-        validateBenchmark(bench, 'main benchmark');
-    }
+for (const bench of mainBenchmarks) {
+    validateBenchmark(bench, 'main benchmark');
 }
 
 // Create a map of benchmark name -> benchmark data for easy lookup
@@ -130,11 +117,7 @@ const markdownSections = [];
 markdownSections.push('<!-- termui-bench-comment -->');
 markdownSections.push('## Performance benchmarks');
 markdownSections.push('');
-if (main) {
-    markdownSections.push(`Threshold: ≥${(threshold * 100).toFixed(0)}% regression on any metric fails CI.`);
-} else {
-    markdownSections.push(`⚠️ **Main benchmark baseline is unavailable.**`);
-}
+markdownSections.push(`Threshold: ≥${(threshold * 100).toFixed(0)}% regression on any metric fails CI.`);
 markdownSections.push('');
 
 // Process each benchmark
@@ -242,15 +225,13 @@ for (const headBench of headBenchmarks) {
 }
 
 // Check for removed benchmarks
-if (main) {
-    for (const benchName of mainBenchNames) {
-        if (!headBenchNames.has(benchName)) {
-            markdownSections.push(`### ${benchName}`);
-            markdownSections.push('');
-            markdownSections.push(`❌ Benchmark removed in this PR.`);
-            markdownSections.push('');
-            regressed = true;
-        }
+for (const benchName of mainBenchNames) {
+    if (!headBenchNames.has(benchName)) {
+        markdownSections.push(`### ${benchName}`);
+        markdownSections.push('');
+        markdownSections.push(`❌ Benchmark removed in this PR.`);
+        markdownSections.push('');
+        regressed = true;
     }
 }
 

@@ -124,6 +124,7 @@ export class AppBuilder {
     private _children: LayoutChild[] = [];
     private _keyMap: Record<string, string | (() => void)> = {};
     private _refreshInterval: number | null = null;
+    private _onError: ((err: unknown) => void) | null = null;
     private _fullscreen = true;
     private _app: App | null = null;
 
@@ -155,6 +156,12 @@ export class AppBuilder {
      */
     refresh(interval: string): this {
         this._refreshInterval = parseInterval(interval);
+        return this;
+    }
+
+    /** Register an error handler for reactive widget errors. */
+    onError(handler: (err: unknown) => void): this {
+        this._onError = handler;
         return this;
     }
 
@@ -405,7 +412,7 @@ export class AppBuilder {
                     appInstance.requestRender();
                 } catch (err) {
                     // Reactive widget error — don't crash the process
-                    console.error('[quick] reactive widget error:', err);
+                    this._onError?.(err);
                 }
             }, this._refreshInterval);
         }
@@ -428,7 +435,7 @@ export class AppBuilder {
      */
     private _refreshReactiveWidgets(widget: Widget): void {
         try {
-            const w = widget as any;
+            const w = widget as any; // as any: reactive metadata is monkey-patched onto Widget instances in widgets.ts
 
             // Text — reactive content
             if (widget instanceof Text && w.__reactiveContent) {

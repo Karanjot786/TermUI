@@ -76,7 +76,7 @@ function main(): void {
         const result = benchScreenSize(cols, rows);
         results.push(result);
         const mps = result.mergesPerSec.toFixed(0);
-        console.log(`${result.cols}x${result.rows}: ${mps} merges/sec  (${result.iterations} iterations in ${result.durationMs.toFixed(0)}ms)`);
+        process.stdout.write(`${result.cols}x${result.rows}: ${mps} merges/sec  (${result.iterations} iterations in ${result.durationMs.toFixed(0)}ms)` + '\n');
     }
     
     const payload = {
@@ -87,7 +87,7 @@ function main(): void {
         bun: process.versions.bun ?? null,
         results,
     };
-    console.log(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}`);
+    process.stdout.write(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}` + '\n');
 }
 
 main();

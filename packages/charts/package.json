@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Charts dashboard bundle for TermUI: AreaChart, PieChart, and Gauge widgets",
   "type": "module",
   "main": "./dist/index.cjs",

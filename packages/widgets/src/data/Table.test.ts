@@ -56,4 +56,9 @@ describe('Table', () => {
         const table = new Table(cols, [{ price: 99 }]);
         expect(table).toBeDefined();
     });
+
+    it('is focusable so FocusManager can route keyboard events to handleKey', () => {
+        const table = new Table(COLUMNS, ROWS);
+        expect(table.focusable).toBe(true);
+    });
 });

@@ -135,7 +135,7 @@ function main(): void {
         const result = benchStyleComplexity(propertyCount);
         results.push(result);
         const mps = (result.mergesPerSec / 1e6).toFixed(2);
-        console.log(`${result.propertyCount} properties: ${mps}M merges/sec  (${result.iterations} iterations in ${result.durationMs.toFixed(0)}ms)`);
+        process.stdout.write(`${result.propertyCount} properties: ${mps}M merges/sec  (${result.iterations} iterations in ${result.durationMs.toFixed(0)}ms)` + '\n');
     }
     
     const payload = {
@@ -146,7 +146,7 @@ function main(): void {
         bun: process.versions.bun ?? null,
         results,
     };
-    console.log(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}`);
+    process.stdout.write(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}` + '\n');
 }
 
 main();
