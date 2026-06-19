@@ -93,6 +93,13 @@ export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.
 // ── Utilities ─────────────────────────────────────────
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';
 export * as ansi from './utils/ansi.js';
-export { writeClipboard, readClipboard } from './utils/ansi.js';
+export { writeClipboard, readClipboard, clipboard, stripAnsiControl } from './utils/ansi.js';
+export { debounce } from './utils/debounce.js';
+export type { DebounceOptions } from './utils/debounce.js';
+export * from './session/Session.js';
+export { throttle } from './utils/throttle.js';
+export type { ThrottleOptions } from './utils/throttle.js';
+export { CommandHistory } from "./history/CommandHistory.js";
+export type { CommandHistoryOptions } from "./history/CommandHistory.js";
 export * from './errors.js';
 
