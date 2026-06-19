@@ -39,7 +39,7 @@ describe('cleanupActiveInstances', () => {
 
             // Cleanup (as HMR dispose handler would do)
             cleanupActiveInstances(activeInstances);
-            activeInstances.length = 0; // reset registry after cleanup
+            activeInstances.splice(0); // reset registry after cleanup
         }
 
         for (let i = 0; i < 10; i++) {

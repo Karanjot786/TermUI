@@ -14,6 +14,18 @@ import { setRequestRender, setInsertBefore, collectInputHandlers } from './hooks
 import { createElement } from './createElement.js';
 import { setCurrentApp } from './runtime.js';
 
+/**
+ * Shared inline unmount helper — used by both the dev-server-backed path
+ * and the fallback path so cleanup logic stays synchronized.
+ */
+function _unmountApps(apps: Array<{ unmount?: () => void }>): void {
+    apps.forEach((app) => {
+        if (typeof app.unmount === 'function') {
+            try { app.unmount(); } catch {}
+        }
+    });
+}
+
 export interface RenderOptions {
     /** App title shown in the title bar */
     title?: string;
@@ -134,18 +146,6 @@ export async function render(
         (globalThis as any).__termuijs_apps = [];
     }
     (globalThis as any).__termuijs_apps.push(appInstance);
-
-    /**
-     * Shared inline unmount helper — used by both the dev-server-backed path
-     * and the fallback path so cleanup logic stays synchronized.
-     */
-    function _unmountApps(apps: Array<{ unmount?: () => void }>): void {
-        apps.forEach((app) => {
-            if (typeof app.unmount === 'function') {
-                try { app.unmount(); } catch {}
-            }
-        });
-    }
 
     if ((import.meta as any).hot) {
         (import.meta as any).hot.accept();
