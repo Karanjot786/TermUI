@@ -12,8 +12,7 @@
 //       renderItem: (index) => `Row #${index}`,
 //   });
 // ─────────────────────────────────────────────────────
-import { type Cell } from '@termuijs/core';
-import { type Screen, type Style, styleToCellAttrs, truncate, stringWidth, caps } from '@termuijs/core';
+import { type Cell, type Screen, type Style, styleToCellAttrs, truncate, stringWidth, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { computeRange } from './virtual-scroll.js';
 
