@@ -40,24 +40,12 @@ export class Markdown extends Widget {
     }
 
     private renderInline(screen: Screen, x: number, y: number, text: string): void {
-<<<<<<< HEAD
-        text = text.replace(
-    /\[([^\]]+)\]\(([^)]+)\)/g,
-    '$1 ($2)'
-);
-    let bold = false;
-    let italic = false;
-    let code = false;
-    let col = x;
-    let segment = '';
-=======
         text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
         let bold = false;
         let italic = false;
         let code = false;
         let col = x;
         let segmentStr = '';
->>>>>>> upstream/main
 
         const flush = () => {
             if (segmentStr.length === 0) return;
