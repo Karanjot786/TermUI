@@ -327,35 +327,34 @@ export function createStore<T extends object>(
             writeTimeout = null;
         }
     };
-const mutate = (recipe: (draft: T) => void): void => {
-    const prevState = state;
-const nextState = produce(state, (draft) => {
-    recipe(draft as T);
-});
-   if (Object.is(prevState, nextState)) {
-        return;
-    } 
-    state = nextState;
-if (_batchDepth > 0) {
-        const existing = _batchStores.get(listeners);
-
-        if (!existing) {
-            _batchStores.set(listeners, {
-                prevState,
-                nextState,
-                commit: () => { state = nextState; persistState(); },
-                rollback: (s) => { state = s; },
-            });
+    const mutate = (recipe: (draft: T) => void): void => {
+        const prevState = state;
+        const nextState = produce(state, (draft) => {
+            recipe(draft as T);
+        });
+        if (Object.is(prevState, nextState)) {
+            return;
+        }
+        state = nextState;
+        if (_batchDepth > 0) {
+            const existing = _batchStores.get(listeners);
+            if (!existing) {
+                _batchStores.set(listeners, {
+                    prevState,
+                    nextState,
+                    commit: () => { state = nextState; persistState(); },
+                    rollback: (s) => { state = s; },
+                });
+            } else {
+                existing.nextState = nextState;
+            }
         } else {
-            existing.nextState = nextState;
+            for (const listener of listeners) {
+                listener(nextState, prevState);
+            }
+            persistState();
         }
-    } else {
-        for (const listener of listeners) {
-            listener(nextState, prevState);
-        }
-        persistState();
-    }
-};
+    };
     // Initialize state (supports creator functions or plain objects)
     state = typeof creator === 'function'
         ? (creator as StateCreator<T>)(setState, getState)
@@ -417,17 +416,7 @@ if (_batchDepth > 0) {
         };
     };
 
-    const store: Store<T> = {
-    getState,
-    setState,
-    mutate,
-    subscribe,
-    destroy,
-    computed,
-    reset,
-    getInitialState,
-};
-
+    const store: Store<T> = { getState, setState, mutate, subscribe, destroy, computed, reset, getInitialState };
 
     // Create the hook function
     function useStore(): T;
@@ -440,21 +429,19 @@ if (_batchDepth > 0) {
         const selectorRef = useRef(select);
         selectorRef.current = select;
 
-       useEffect(() => {
-    const unsubscribe = store.subscribe((newState) => {
-        const newSelected = selectorRef.current(newState);
+        useEffect(() => {
+            const unsubscribe = store.subscribe((newState) => {
+                const newSelected = selectorRef.current(newState);
+                setSelectedState(prev =>
+                    Object.is(prev, newSelected) ? prev : newSelected
+                );
+            });
+            return unsubscribe;
+        }, []);
 
-        setSelectedState(prev =>
-            Object.is(prev, newSelected) 
-            ? prev
-             : newSelected
-        );
-    });
+        return selectedState;
+    }
 
-    return unsubscribe;
-}, []);
-return selectedState;
-}
     // Attach store methods to the hook for direct access
     (useStore as any).getState = getState;
     (useStore as any).setState = setState;

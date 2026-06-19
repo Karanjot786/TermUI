@@ -29,7 +29,8 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@termuijs/jsx": "workspace:*"
+    "@termuijs/jsx": "workspace:*",
+    "immer": "^11.0.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
