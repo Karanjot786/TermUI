@@ -254,7 +254,7 @@ export abstract class Widget {
     render(screen: Screen): void {
         if (this._style.visible === false) return;
 
-        emitA11y(this._a11y, (data: string) => process.stdout.write(data), 'start');
+        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'start');
 
         // Push clip region if overflow is hidden (default style)
         const shouldClip = this._style.overflow !== 'visible';
@@ -302,7 +302,7 @@ export abstract class Widget {
             screen.popClip();
         }
 
-        emitA11y(this._a11y, (data: string) => process.stdout.write(data), 'end');
+        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'end');
     }
 
     /**

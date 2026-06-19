@@ -147,6 +147,10 @@ export class Renderer {
                 }
                 this._terminal.writeSync(output);
 
+                // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
+                const ansiQueue = this._screen.drainAnsiQueue();
+                if (ansiQueue) this._terminal.writeSync(ansiQueue);
+
                 this._screen.saveLines();
                 this._emitStats(start, bufferedLogs, output);
                 this._screen.swap();
@@ -167,6 +171,10 @@ export class Renderer {
                 this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
             }
             this._terminal.writeSync(output);
+
+            // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
+            const ansiQueue = this._screen.drainAnsiQueue();
+            if (ansiQueue) this._terminal.writeSync(ansiQueue);
 
             this._emitStats(start, bufferedLogs, output);
             this._screen.saveLines();

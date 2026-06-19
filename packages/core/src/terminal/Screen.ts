@@ -149,6 +149,16 @@ export class Screen {
     private _translateYStack: number[] = [];
     private _translateY = 0;
 
+    /**
+     * Queue of raw ANSI/OSC sequences to be emitted verbatim after the
+     * current frame is flushed to the terminal.  Populated by writeAnsi()
+     * (e.g. from VTE a11y escape sequences) and drained by Renderer._flush()
+     * via drainAnsiQueue() so that all output travels through the same
+     * Terminal.writeSync pipeline instead of bypassing it with
+     * process.stdout.write.
+     */
+    private _ansiQueue: string[] = [];
+
     constructor(cols: number, rows: number) {
         this._cols = cols;
         this._rows = rows;
@@ -457,6 +467,27 @@ export class Screen {
         Terminal Export
     </text>
 </svg>`;
+    }
+
+    /**
+     * Buffer a raw ANSI/OSC escape sequence to be written to the terminal
+     * after the current frame is flushed.  Call this instead of
+     * process.stdout.write() so that the sequence stays in the same
+     * output pipeline as the rest of the rendered frame.
+     */
+    writeAnsi(seq: string): void {
+        this._ansiQueue.push(seq);
+    }
+
+    /**
+     * Return and clear all buffered ANSI sequences accumulated since the
+     * last drain.  Called by Renderer._flush() after the frame is written.
+     */
+    drainAnsiQueue(): string {
+        if (this._ansiQueue.length === 0) return '';
+        const out = this._ansiQueue.join('');
+        this._ansiQueue = [];
+        return out;
     }
 
     private _createGrid(cols: number, rows: number): Cell[][] {
