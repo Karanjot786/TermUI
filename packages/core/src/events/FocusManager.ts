@@ -427,7 +427,7 @@ export class FocusManager {
 
     private _changeFocus(newIndex: number): void {
         const oldId = this.currentId;
-        const events: Array<{ type: string; data: FocusEvent }> = [];
+        const events: Array<{ type: 'focus' | 'blur'; data: FocusEvent }> = [];
 
         if (oldId) {
             events.push({ type: 'blur', data: { targetId: oldId, type: 'blur', epoch: this._epoch++ } });
