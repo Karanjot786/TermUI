@@ -164,7 +164,7 @@ export class VirtualList extends Widget {
     pageUp(): void {
         this._runScrollAction(() => {
             const rect = this._getContentRect();
-            const pageSize = Math.floor(rect.height / this._itemHeight);
+            const pageSize = Math.max(1, Math.floor(rect.height / this._itemHeight));
             this._selectedIndex = Math.max(0, this._selectedIndex - pageSize);
             this._clampScroll();
             this.markDirty();
@@ -175,7 +175,7 @@ export class VirtualList extends Widget {
     pageDown(): void {
         this._runScrollAction(() => {
             const rect = this._getContentRect();
-            const pageSize = Math.floor(rect.height / this._itemHeight);
+            const pageSize = Math.max(1, Math.floor(rect.height / this._itemHeight));
             this._selectedIndex = Math.min(this._totalItems - 1, this._selectedIndex + pageSize);
             this._clampScroll();
             this.markDirty();
