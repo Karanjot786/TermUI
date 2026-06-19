@@ -76,29 +76,29 @@ describe('ChatThread', () => {
     });
 
     it('auto-scrolls when new messages are added', () => {
-    const thread = new ChatThread();
+        const thread = new ChatThread();
 
-    thread.updateRect({
-        x: 0,
-        y: 0,
-        width: 60,
-        height: 2
-    });
+        thread.updateRect({
+            x: 0,
+            y: 0,
+            width: 60,
+            height: 2
+        });
 
-    for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 5; i++) {
+            thread.addMessage({
+                role: 'assistant',
+                content: `msg${i}`
+            });
+        }
+
+        thread.clearDirty();
+
         thread.addMessage({
             role: 'assistant',
-            content: `msg${i}`
+            content: 'latest'
         });
-    }
 
-    thread.clearDirty();
-
-    thread.addMessage({
-        role: 'assistant',
-        content: 'latest'
+        expect(thread.isDirty).toBe(true);
     });
-
-    expect(thread.isDirty).toBe(true);
-});
 });
