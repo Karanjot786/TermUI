@@ -106,10 +106,7 @@ export { throttle } from './utils/throttle.js';
 export type { ThrottleOptions } from './utils/throttle.js';
 export { CommandHistory } from "./history/CommandHistory.js";
 export type { CommandHistoryOptions } from "./history/CommandHistory.js";
-<<<<<<< HEAD
-=======
 export * from './errors.js';
 
 // ── Accessibility ─────────────────────────────────────
 export * from './a11y/index.js';
->>>>>>> upstream/main
