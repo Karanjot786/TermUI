@@ -279,14 +279,14 @@ export function createStore<T extends object>(
         const prevState = state;
 
         // When in a batch, function updaters should see the pending batch state
-        const batchState = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
+        const batchState: T = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
         const nextPartial = typeof partial === 'function'
             ? (partial as (state: T) => Partial<T>)(batchState)
             : partial;
 
         const applyUpdate = (finalPartial: Partial<T>): T => {
             // When in a batch, compute nextState from pending batch state if available
-            const baseState = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
+            const baseState: T = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
             const nextState = { ...baseState, ...finalPartial };
 
             // Only notify if at least one key's value actually changed
@@ -389,7 +389,7 @@ export function createStore<T extends object>(
     const mutate = (recipe: (draft: T) => void): void => {
         const prevState = state;
         // When in a batch, produce from pending batch state
-        const baseState = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
+        const baseState: T = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
         const nextState = produce(baseState, (draft) => {
             recipe(draft as T);
         });
