@@ -1,4 +1,6 @@
 import type { FocusContextValue } from './focus-context.js';
+import type { Widget } from '@termuijs/widgets';
+import { getInstanceMap } from './reconciler.js';
 
 // Focus unmount cleanups with fallback routing
 export const autoBlurNode = (focusManager: FocusContextValue, nodeId: string) => {
@@ -7,8 +9,8 @@ export const autoBlurNode = (focusManager: FocusContextValue, nodeId: string) =>
     }
 
     // Find the widget instance matching nodeId
-    const instances = (globalThis as any).__termuijs_instances;
-    let widget: any = null;
+    const instances = getInstanceMap();
+    let widget: Widget & { id: string; focusable: boolean; parent: Widget | null } | null = null;
     if (instances instanceof Map) {
         for (const w of instances.keys()) {
             if (w.id === nodeId) {

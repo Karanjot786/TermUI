@@ -41,6 +41,15 @@ const _fiberToWidgetMap = new Map<Fiber, Widget>();
 (globalThis as any).__termuijs_instances = _instanceMap;
 (globalThis as any).__termuijs_fiberToWidget = _fiberToWidgetMap;
 
+/**
+ * Typed accessor for the internal widget instance registry.
+ * Returns the map that tracks all widget instances created by the reconciler.
+ * Consumers should import this function instead of accessing the global directly.
+ */
+export function getInstanceMap(): Map<Widget, ComponentInstance> {
+  return _instanceMap;
+}
+
 // ── Parent fiber tracking ──
 // Tracks the currently-rendering fiber so child components
 // can inherit the parent reference for context lookups.

@@ -630,7 +630,7 @@ export function destroyFiber(fiber: Fiber): void {
     if (_fiberToWidget instanceof Map) {
         const widget = _fiberToWidget.get(fiber);
         if (widget) {
-            const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+            const termuiInstances: Map<any, any> | undefined = getInstanceMap();
             if (termuiInstances instanceof Map) {
                 termuiInstances.delete(widget);
             }
@@ -643,14 +643,14 @@ export function destroyFiber(fiber: Fiber): void {
     fiber.cleanups = [];
     fiber.intervals = [];
     fiber.contextValues.clear();
-    
+
     if (fiber.contextDependencies) {
         for (const subs of fiber.contextDependencies) {
             subs.delete(fiber);
         }
         fiber.contextDependencies.clear();
     }
-    
+
     fiber.childFibers = undefined;
     fiber._prevChildFibers = undefined;
 }
@@ -668,9 +668,9 @@ export function resetHooksGlobals(): void {
     for (const fn of cleanups) {
         try { fn(); } catch { /* ignore cleanup errors */ }
     }
-    
+
     // Clear global instance map
-    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+    const termuiInstances: Map<any, any> | undefined = getInstanceMap();
     if (termuiInstances instanceof Map) {
         termuiInstances.clear();
     }

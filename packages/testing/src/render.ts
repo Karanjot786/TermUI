@@ -421,7 +421,7 @@ export function render(
                 },
             };
 
-        
+
 
             const instances: Map<Widget, any> = (globalThis as any)
                 .__termuijs_instances;
@@ -479,7 +479,7 @@ export function render(
             }
 
             // Re-render and flush any sync state updates
-            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+            const instances: Map<Widget, any> = getInstanceMap();
             const rootInstance = instances?.get(rootWidget);
             if (rootInstance) {
                 const newRoot = reRenderComponent(rootInstance);

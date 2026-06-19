@@ -254,7 +254,8 @@ export abstract class Widget {
     render(screen: Screen): void {
         if (this._style.visible === false) return;
 
-        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'start');
+        const _emitA11y = typeof emitA11y === 'function' ? emitA11y : (() => {});
+        _emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'start');
 
         // Push clip region if overflow is hidden (default style)
         const shouldClip = this._style.overflow !== 'visible';
@@ -302,7 +303,8 @@ export abstract class Widget {
             screen.popClip();
         }
 
-        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'end');
+        const _emitA11yEnd = typeof emitA11y === 'function' ? emitA11y : (() => {});
+        _emitA11yEnd(this._a11y, (data: string) => screen.writeAnsi(data), 'end');
     }
 
     /**
@@ -352,33 +354,33 @@ export abstract class Widget {
             this._rect = newRect;
             return;
         }
-        
+
         // If target is same, ignore
-        if (this._targetRect && 
-            this._targetRect.x === newRect.x && 
-            this._targetRect.y === newRect.y && 
-            this._targetRect.width === newRect.width && 
+        if (this._targetRect &&
+            this._targetRect.x === newRect.x &&
+            this._targetRect.y === newRect.y &&
+            this._targetRect.width === newRect.width &&
             this._targetRect.height === newRect.height) {
             return;
         }
-        
-        if (this._rect.x === newRect.x && 
-            this._rect.y === newRect.y && 
-            this._rect.width === newRect.width && 
+
+        if (this._rect.x === newRect.x &&
+            this._rect.y === newRect.y &&
+            this._rect.width === newRect.width &&
             this._rect.height === newRect.height) {
             return;
         }
-        
+
         if (this._layoutCancel) {
             this._layoutCancel();
         }
-        
+
         this._targetRect = { ...newRect };
-        
-        const config = typeof this.layoutTransition === 'boolean' 
-            ? 'default' 
+
+        const config = typeof this.layoutTransition === 'boolean'
+            ? 'default'
             : this.layoutTransition;
-            
+
         this._layoutCancel = animateRect(this._rect, newRect, {
             config,
             onFrame: (rect) => {

@@ -36,7 +36,7 @@ function ReturnsTextVNode(): VNode {
 }
 
 function getInstanceMap(): Map<any, any> {
-    return (globalThis as any).__termuijs_instances;
+    return getInstanceMap();
 }
 
 describe('_instanceMap leak prevention', () => {

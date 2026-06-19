@@ -5,6 +5,7 @@ import { FocusContext } from './focus-context.js';
 import { useFocus } from './hooks/useFocus.js';
 import { useState } from './hooks.js';
 import { autoBlurNode } from './focus_cleanup.js';
+import { getInstanceMap } from './reconciler.js';
 
 describe('focus cleanup & autoBlurNode integration', () => {
     let mockContextValue: {
@@ -16,7 +17,7 @@ describe('focus cleanup & autoBlurNode integration', () => {
     let originalInstances: any;
 
     beforeEach(() => {
-        originalInstances = (globalThis as any).__termuijs_instances;
+        originalInstances = getInstanceMap();
         mockContextValue = {
             focused: null,
             focus: vi.fn((id: string) => {
@@ -28,7 +29,7 @@ describe('focus cleanup & autoBlurNode integration', () => {
         };
         // Global instance map used by reconciler
         // Accessing global mapping for test assertions on widgets
-        const instances = (globalThis as any).__termuijs_instances;
+        const instances = getInstanceMap();
         if (instances instanceof Map) {
             instances.clear();
         }
@@ -61,13 +62,13 @@ describe('focus cleanup & autoBlurNode integration', () => {
         }
 
         const rootWidget = reconcile(createElement(App, null));
-        
+
         // Simulate focusing the node
         mockContextValue.focused = 'my-id';
 
         // Retrieve instance to trigger re-render
         // Accessing global mapping for test assertions on widgets
-        const instances = (globalThis as any).__termuijs_instances;
+        const instances = getInstanceMap();
         const rootInstance = instances.get(rootWidget);
 
         // Trigger state change (unmount ChildComponent)
@@ -97,12 +98,12 @@ describe('focus cleanup & autoBlurNode integration', () => {
         }
 
         const rootWidget = reconcile(createElement(App, null));
-        
+
         // Focus a different node
         mockContextValue.focused = 'other-id';
 
         // Accessing global mapping for test assertions on widgets
-        const instances = (globalThis as any).__termuijs_instances;
+        const instances = getInstanceMap();
         const rootInstance = instances.get(rootWidget);
 
         triggerUnmount();
