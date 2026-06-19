@@ -1,6 +1,7 @@
 // Grapheme splitting helper
-const GRAPHEME_SEGMENTER = new Intl.Segmenter('en', { granularity: 'grapheme' });
+import { segmenter } from "../utils/unicode.js";
 
 export const splitGraphemes = (str: string): string[] => {
-    return Array.from(GRAPHEME_SEGMENTER.segment(str), s => s.segment);
+    return Array.from(segmenter.segment(str), s => s.segment);
 };
+

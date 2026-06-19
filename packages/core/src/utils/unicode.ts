@@ -2,7 +2,6 @@
 // @termuijs/core — Unicode string width utilities
 // ─────────────────────────────────────────────────────
 
-
 /**
  * Check if a code point is a CJK (East Asian Wide/Fullwidth) character.
  * These characters occupy 2 terminal columns.
@@ -30,7 +29,7 @@ function isWideChar(codePoint: number): boolean {
         (codePoint >= 0xFFE0 && codePoint <= 0xFFE6) ||
         // CJK Unified Ideographs Extension B
         (codePoint >= 0x20000 && codePoint <= 0x2A6DF) ||
-        // CJK Unified Ideographs Extension C,D,E,F
+        // CJK Unified Ideographs Extension C‑F
         (codePoint >= 0x2A700 && codePoint <= 0x2EBEF) ||
         // CJK Compatibility Ideographs Supplement
         (codePoint >= 0x2F800 && codePoint <= 0x2FA1F)
@@ -38,7 +37,7 @@ function isWideChar(codePoint: number): boolean {
 }
 
 /**
- * Check if a code point is a combining character (zero-width).
+ * Check if a code point is a combining character (zero‑width).
  * These characters do not occupy any terminal column by themselves.
  */
 function isCombining(codePoint: number): boolean {
@@ -55,7 +54,7 @@ function isCombining(codePoint: number): boolean {
         (codePoint >= 0xFE20 && codePoint <= 0xFE2F) ||
         // Variation selectors
         (codePoint >= 0xFE00 && codePoint <= 0xFE0F) ||
-        // Zero-width joiner / non-joiner
+        // Zero‑width joiner / non‑joiner
         codePoint === 0x200B || codePoint === 0x200C || codePoint === 0x200D ||
         codePoint === 0xFEFF
     );
@@ -85,16 +84,13 @@ function isEmoji(codePoint: number): boolean {
 }
 
 /**
- * Calculate the visual width of a string in terminal columns.
- *
- * - CJK characters count as 2 columns
- * - Emoji count as 2 columns
- * - Combining/zero-width characters count as 0
- * - ANSI escape sequences count as 0
- * - Regular characters count as 1
+ * Exported segmenter used throughout the module.
  */
 export const segmenter = new Intl.Segmenter();
 
+/**
+ * Calculate the visual width of a single grapheme segment.
+ */
 export function segmentWidth(segment: string): number {
     const cp = segment.codePointAt(0)!;
     if (cp < 0x20 || (cp >= 0x7F && cp < 0xA0)) {
@@ -103,28 +99,28 @@ export function segmentWidth(segment: string): number {
     if (isCombining(cp)) {
         return 0; // Combining
     }
-    
     const charCount = [...segment].length;
     let isMultiCpWide = false;
     if (charCount > 1) {
         const cps = [...segment].map(c => c.codePointAt(0)!);
         isMultiCpWide = cps.slice(1).some(c => !isCombining(c));
     }
-
     if (isWideChar(cp) || isEmoji(cp) || isMultiCpWide) {
         return 2;
     }
     return 1;
 }
 
+/**
+ * Calculate the visual width of a string in terminal columns.
+ * Handles ANSI escape sequences and grapheme clusters.
+ */
 export function stringWidth(str: string): number {
     let width = 0;
     let inEscape = false;
-
     const segments = segmenter.segment(str);
     for (const { segment } of segments) {
         const cp = segment.codePointAt(0)!;
-
         // Skip ANSI escape sequences
         if (cp === 0x1B) { // ESC
             inEscape = true;
@@ -137,10 +133,8 @@ export function stringWidth(str: string): number {
             }
             continue;
         }
-
         width += segmentWidth(segment);
     }
-
     return width;
 }
 
@@ -152,21 +146,17 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
     if (maxWidth <= 0) return '';
     const strW = stringWidth(str);
     if (strW <= maxWidth) return str;
-
     const ellipsisW = stringWidth(ellipsis);
     const targetW = maxWidth - ellipsisW;
     if (targetW <= 0) return ellipsis.slice(0, maxWidth);
-
     let width = 0;
     let result = '';
     let inEscape = false;
     let escapeBuffer = '';
-
     const segments = segmenter.segment(str);
     for (const { segment } of segments) {
         const cp = segment.codePointAt(0)!;
-
-        if (cp === 0x1B) {
+        if (cp === 0x1B) { // ESC
             inEscape = true;
             escapeBuffer += segment;
             continue;
@@ -180,14 +170,11 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
             }
             continue;
         }
-
-        let charW = segmentWidth(segment);
-
+        const charW = segmentWidth(segment);
         if (width + charW > targetW) break;
         width += charW;
         result += segment;
     }
-
     return result + ellipsis;
 }
 
@@ -200,33 +187,28 @@ export function stripAnsi(str: string): string {
 }
 
 /**
- * Word-wrap text to a given width, respecting existing newlines.
+ * Word‑wrap text to a given width, respecting existing newlines.
  * Does not handle ANSI codes within words (wraps at the character level).
  */
 export function wordWrap(str: string, width: number): string {
     if (width <= 0) return str;
-
     const lines = str.split('\n');
     const result: string[] = [];
-
     for (const line of lines) {
         if (stringWidth(line) <= width) {
             result.push(line);
             continue;
         }
-
         let currentLine = '';
         let currentWidth = 0;
         const words = line.split(/(\s+)/);
-
         for (const word of words) {
             const wordW = stringWidth(word);
-
             if (currentWidth + wordW <= width) {
                 currentLine += word;
                 currentWidth += wordW;
             } else if (wordW > width) {
-                // Word is longer than width — break it
+                // Break long word
                 if (currentLine) {
                     result.push(currentLine);
                     currentLine = '';
@@ -236,7 +218,7 @@ export function wordWrap(str: string, width: number): string {
                 for (const { segment } of wordSegments) {
                     const charW = segmentWidth(segment);
                     if (currentWidth + charW > width) {
-                        result.push(currentLine);
+                        if (currentLine) result.push(currentLine);
                         currentLine = '';
                         currentWidth = 0;
                     }
@@ -244,16 +226,14 @@ export function wordWrap(str: string, width: number): string {
                     currentWidth += charW;
                 }
             } else {
-                result.push(currentLine);
+                // Start new line with this word
+                if (currentLine) result.push(currentLine);
                 currentLine = word.trimStart();
                 currentWidth = stringWidth(currentLine);
             }
         }
-
-        if (currentLine) {
-            result.push(currentLine);
-        }
+        if (currentLine) result.push(currentLine);
     }
-
     return result.join('\n');
 }
+

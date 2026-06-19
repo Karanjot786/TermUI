@@ -127,6 +127,9 @@ export class ThemeEngine {
             if (!this._matchesSelector(rule.selector, widgetType, className, pseudo)) continue;
             this._applyProperties(rule.properties, style);
         }
+
+        // Contrast adjustment handled in styleToCellAttrs; no adjustment here.
+
         return style;
     }
 

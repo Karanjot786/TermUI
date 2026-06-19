@@ -35,8 +35,25 @@ export class Highlight extends Box {
         }
     }
 
-    update(text: string, query: string | RegExp, style?: Partial<Style>): void {
+    setText(text: string, query: string | RegExp, style?: Partial<Style>): void {
         this.clearChildren();
         this._buildSegments(text, query, style);
+    }
+
+    private _updateHighlight(text: string, query: string | RegExp, style?: Partial<Style>): void {
+        this.setText(text, query, style);
+    }
+
+    /** @deprecated Use setText() instead. */
+    update(text: string, query?: string | RegExp, style?: Partial<Style>): void;
+    update<T = unknown>(_previousProps: T): void;
+    update(text: unknown, query?: unknown, style?: unknown): void {
+        if (typeof text === 'string') {
+            const q = typeof query === 'string' || query instanceof RegExp ? query : '';
+            const s = style === undefined || (typeof style === 'object' && style !== null && !Array.isArray(style))
+                ? (style as Partial<Style> | undefined)
+                : undefined;
+            this._updateHighlight(text, q, s);
+        }
     }
 }

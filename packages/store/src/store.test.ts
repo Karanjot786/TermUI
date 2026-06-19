@@ -479,6 +479,42 @@ describe('persistence', () => {
     })
 })
 
+it('mutate updates state', () => {
+    const useStore = createStore((set) => ({
+        count: 0,
+    }));
+
+    useStore.mutate((state) => {
+        state.count = 5;
+    });
+
+    expect(useStore.getState().count).toBe(5);
+});
+it('mutate updates nested object', () => {
+    const useStore = createStore((set) => ({
+        user: { name: 'A' },
+    }));
+
+    useStore.mutate((state) => {
+        state.user.name = 'B';
+    });
+
+    expect(useStore.getState().user.name).toBe('B');
+});
+it('mutate does not modify original state reference', () => {
+    const useStore = createStore((set) => ({
+        count: 0,
+    }));
+
+    const before = useStore.getState();
+
+    useStore.mutate((state) => {
+        state.count = 10;
+    });
+
+    expect(before.count).toBe(0);
+});
+
 describe('useStore selector memoization', () => {
     it('does not call setSelectedState when selected slice is unchanged', () => {
         const useStore = createStore({ a: 1, b: 2 })

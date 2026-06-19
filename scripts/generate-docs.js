@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────────────────
 
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { join, resolve, relative, sep } from 'node:path';
 
 /**
@@ -43,6 +43,27 @@ function validateDocTarget(target) {
       `Documentation target "${topLevelSegment}" is a reserved directory name and cannot be used.`
     );
   }
+}
+
+/**
+ * Recursively collect files matching a given extension under a directory.
+ * Uses only Node built-ins (no external glob package required).
+ * @param {string} dir  Root directory to search
+ * @param {string} ext  File extension to match (e.g. '.ts')
+ * @returns {string[]}  Sorted list of matching file paths
+ */
+function findFiles(dir, ext) {
+  const results = [];
+  if (!existsSync(dir)) return results;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...findFiles(fullPath, ext));
+    } else if (entry.isFile() && entry.name.endsWith(ext)) {
+      results.push(fullPath);
+    }
+  }
+  return results;
 }
 
 /**
@@ -94,7 +115,12 @@ function generateDocs(target) {
     } catch (err) {
       // typedoc not available, try alternative
       console.log('📝 TypeDoc not available, generating from JSDoc comments instead');
-      execFileSync('jsdoc', ['-d', join('docs', target), 'src/**/*.ts'], {
+      // Expand glob pattern using Node built-ins so jsdoc receives real file paths
+      const files = findFiles('src', '.ts');
+      if (files.length === 0) {
+        throw new Error('No TypeScript source files found under "src".');
+      }
+      execFileSync('jsdoc', ['-d', join('docs', target), ...files], {
         stdio: 'inherit',
         encoding: 'utf-8',
         timeout: 300000,

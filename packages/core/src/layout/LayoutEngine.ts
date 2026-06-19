@@ -152,6 +152,181 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
     const isRow = direction === 'row';
     const gap = style.gap ?? 0;
 
+    // ── Phase 0.0: CSS Grid Layout Solver ──
+    if (style.display === 'grid') {
+        const colGap = style.gridGap ?? style.gap ?? 0;
+        const rowGap = style.gridGap ?? style.gap ?? 0;
+
+        const colWidths = resolveTracks(style.gridTemplateColumns, innerWidth, colGap, 1);
+        const numCols = colWidths.length;
+
+        const occupied: boolean[][] = [];
+        const getOccupied = (r: number, c: number): boolean => {
+            if (!occupied[r]) return false;
+            return !!occupied[r][c];
+        };
+        const setOccupied = (r: number, c: number, val: boolean) => {
+            if (!occupied[r]) occupied[r] = [];
+            occupied[r][c] = val;
+        };
+
+        const placements: Array<{
+            child: LayoutNode;
+            row: number;
+            col: number;
+            rowSpan: number;
+            colSpan: number;
+        }> = [];
+
+        const autoChildren: LayoutNode[] = [];
+        for (const child of node.children) {
+            if (child.style.visible === false) continue;
+            const s = child.style;
+
+            const colInfo = getSpan(s.gridColumnStart, s.gridColumnEnd);
+            const rowInfo = getSpan(s.gridRowStart, s.gridRowEnd);
+
+            if (colInfo.start !== null || rowInfo.start !== null) {
+                const cStart = colInfo.start ?? 0;
+                const rStart = rowInfo.start ?? 0;
+
+                placements.push({
+                    child,
+                    row: rStart,
+                    col: cStart,
+                    rowSpan: rowInfo.span,
+                    colSpan: colInfo.span
+                });
+
+                for (let r = rStart; r < rStart + rowInfo.span; r++) {
+                    for (let c = cStart; c < cStart + colInfo.span; c++) {
+                        setOccupied(r, c, true);
+                    }
+                }
+            } else {
+                autoChildren.push(child);
+            }
+        }
+
+        let currentAutoRow = 0;
+        let currentAutoCol = 0;
+
+        for (const child of autoChildren) {
+            const s = child.style;
+            const colInfo = getSpan(s.gridColumnStart, s.gridColumnEnd);
+            const rowInfo = getSpan(s.gridRowStart, s.gridRowEnd);
+
+            const clampedColSpan = Math.max(1, Math.min(colInfo.span, numCols));
+
+            while (true) {
+                let available = true;
+                for (let r = currentAutoRow; r < currentAutoRow + rowInfo.span; r++) {
+                    for (let c = currentAutoCol; c < currentAutoCol + clampedColSpan; c++) {
+                        if (c >= numCols) {
+                            available = false;
+                            break;
+                        }
+                        if (getOccupied(r, c)) {
+                            available = false;
+                            break;
+                        }
+                    }
+                    if (!available) break;
+                }
+
+                if (available) {
+                    placements.push({
+                        child,
+                        row: currentAutoRow,
+                        col: currentAutoCol,
+                        rowSpan: rowInfo.span,
+                        colSpan: clampedColSpan
+                    });
+
+                    for (let r = currentAutoRow; r < currentAutoRow + rowInfo.span; r++) {
+                        for (let c = currentAutoCol; c < currentAutoCol + clampedColSpan; c++) {
+                            setOccupied(r, c, true);
+                        }
+                    }
+
+                    currentAutoCol += clampedColSpan;
+                    if (currentAutoCol >= numCols) {
+                        currentAutoCol = 0;
+                        currentAutoRow++;
+                    }
+                    break;
+                } else {
+                    currentAutoCol++;
+                    if (currentAutoCol >= numCols) {
+                        currentAutoCol = 0;
+                        currentAutoRow++;
+                    }
+                }
+            }
+        }
+
+        let maxRowIndex = 0;
+        for (const p of placements) {
+            maxRowIndex = Math.max(maxRowIndex, p.row + p.rowSpan - 1);
+        }
+
+        const numRows = maxRowIndex + 1;
+        const rowHeights = resolveTracks(style.gridTemplateRows, innerHeight, rowGap, numRows);
+
+        const colOffsets: number[] = [];
+        let cOffset = 0;
+        for (let c = 0; c < colWidths.length; c++) {
+            colOffsets.push(cOffset);
+            cOffset += colWidths[c] + colGap;
+        }
+
+        const rowOffsets: number[] = [];
+        let rOffset = 0;
+        for (let r = 0; r < rowHeights.length; r++) {
+            rowOffsets.push(rOffset);
+            rOffset += rowHeights[r] + rowGap;
+        }
+
+        for (const p of placements) {
+            const child = p.child;
+
+            let itemWidth = 0;
+            for (let c = p.col; c < p.col + p.colSpan; c++) {
+                if (c < colWidths.length) itemWidth += colWidths[c];
+            }
+            if (p.colSpan > 1) {
+                itemWidth += (p.colSpan - 1) * colGap;
+            }
+
+            let itemHeight = 0;
+            for (let r = p.row; r < p.row + p.rowSpan; r++) {
+                if (r < rowHeights.length) itemHeight += rowHeights[r];
+            }
+            if (p.rowSpan > 1) {
+                itemHeight += (p.rowSpan - 1) * rowGap;
+            }
+
+            const xStart = colOffsets[p.col] ?? 0;
+            const yStart = rowOffsets[p.row] ?? 0;
+
+            const childMargin = normalizeEdges(child.style.margin);
+
+            child.computed = {
+                x: Math.floor(node.computed.x + innerX + xStart + childMargin.left),
+                y: Math.floor(node.computed.y + innerY + yStart + childMargin.top),
+                width: Math.round(Math.max(0, itemWidth - childMargin.left - childMargin.right)),
+                height: Math.round(Math.max(0, itemHeight - childMargin.top - childMargin.bottom))
+            };
+
+            layoutNode(child, child.computed.width, child.computed.height, true);
+        }
+
+        node._dirty = false;
+        node._lastComputedWidth = node.computed.width;
+        node._lastComputedHeight = node.computed.height;
+        return;
+    }
+
     // ── Phase 0.1: 1D Layout Constraints (Overrides Flexbox) ──
     if (style.constraints && style.constraints.length > 0) {
         const mainAvail = isRow ? innerWidth : innerHeight;
@@ -424,3 +599,91 @@ function clampSize(value: number, min?: number, max?: number): number {
     if (max !== undefined) result = Math.min(result, max);
     return result;
 }
+
+function getSpan(start: number | string | undefined, end: number | string | undefined): { start: number | null, span: number } {
+    let startIdx: number | null = null;
+    let span = 1;
+
+    if (typeof start === 'number') {
+        startIdx = start - 1;
+    } else if (typeof start === 'string') {
+        if (start.startsWith('span ')) {
+            span = parseInt(start.substring(5)) || 1;
+        } else {
+            const val = parseInt(start);
+            if (!isNaN(val)) startIdx = val - 1;
+        }
+    }
+
+    if (typeof end === 'number') {
+        if (startIdx !== null) {
+            span = Math.max(1, end - 1 - startIdx);
+        } else {
+            // Note: When start is undefined, the numeric end value is interpreted as
+            // a span count rather than a grid line number.
+            span = end;
+        }
+    } else if (typeof end === 'string') {
+        if (end.startsWith('span ')) {
+            span = parseInt(end.substring(5)) || 1;
+        } else {
+            const val = parseInt(end);
+            if (startIdx !== null && !isNaN(val)) {
+                span = Math.max(1, val - 1 - startIdx);
+            }
+        }
+    }
+    return { start: startIdx, span };
+}
+
+function resolveTracks(template: string | undefined, totalSize: number, gap: number, fallbackCount: number): number[] {
+    let parts: string[] = [];
+    if (template) {
+        parts = template.trim().split(/\s+/);
+    }
+    while (parts.length < fallbackCount) {
+        parts.push('1fr');
+    }
+    const count = parts.length;
+    const totalGaps = Math.max(0, count - 1) * gap;
+    const sizeForTracks = Math.max(0, totalSize - totalGaps);
+
+    let fixedSum = 0;
+    let frSum = 0;
+    const parsed = parts.map(part => {
+        if (part.endsWith('px')) {
+            const val = parseFloat(part);
+            fixedSum += val;
+            return { type: 'px', value: val };
+        } else if (part.endsWith('fr')) {
+            const val = parseFloat(part);
+            frSum += val;
+            return { type: 'fr', value: val };
+        } else if (part.endsWith('%')) {
+            const val = (parseFloat(part) / 100) * sizeForTracks;
+            fixedSum += val;
+            return { type: 'px', value: val };
+        } else if (part === 'auto') {
+            frSum += 1;
+            return { type: 'fr', value: 1 };
+        } else {
+            const val = parseFloat(part);
+            if (!isNaN(val)) {
+                fixedSum += val;
+                return { type: 'px', value: val };
+            }
+            frSum += 1;
+            return { type: 'fr', value: 1 };
+        }
+    });
+
+    const remaining = Math.max(0, sizeForTracks - fixedSum);
+    const frUnitValue = frSum > 0 ? remaining / frSum : 0;
+
+    return parsed.map(track => {
+        if (track.type === 'px') return track.value;
+        if (track.type === 'fr') return track.value * frUnitValue;
+        return 0;
+    });
+}
+

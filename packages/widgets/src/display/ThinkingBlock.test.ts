@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import * as core from '@termuijs/core';
+import * as motion from '@termuijs/motion';
 import { Screen, type KeyEvent, caps } from '@termuijs/core';
 import { ThinkingBlock } from './ThinkingBlock.js';
 
@@ -52,15 +54,40 @@ describe('ThinkingBlock', () => {
         expect((block as any)._streaming).toBe(true);
     });
 
-    it('uses ASCII borders when caps.unicode is false', () => {
-        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+    it('does not start animation when reduced motion is preferred', () => {
+        vi.spyOn(core, 'prefersReducedMotion')
+            .mockReturnValue(true);
+        const timerSpy = vi.spyOn(
+            motion,
+            'timerPoolSubscribe',
+        );
+
         const block = new ThinkingBlock();
-        block.handleKey(key('enter')); // expand
-        const screen = render(block);
-        expect(screen.back[0]?.[0]?.char).toBe('+');
-        expect(screen.back[0]?.[1]?.char).toBe('-');
-        const secondRow = screen.back[1];
-        expect(secondRow?.[0]?.char).toBe('|');
+        block.setStreaming(true);
+        block.mount();
+        expect(timerSpy).not.toHaveBeenCalled();
+    });
+
+    it('uses ASCII borders when caps.unicode is false', () => {
+        const originalUnicode = caps.unicode;
+        Object.defineProperty(caps, 'unicode', {
+            value: false,
+            configurable: true,
+        });
+        try {
+            const block = new ThinkingBlock();
+            block.handleKey(key('enter'));
+            const screen = render(block);
+            expect(screen.back[0]?.[0]?.char).toBe('+');
+            expect(screen.back[0]?.[1]?.char).toBe('-');
+            const secondRow = screen.back[1];
+            expect(secondRow?.[0]?.char).toBe('|');
+        } finally {
+            Object.defineProperty(caps, 'unicode', {
+                value: originalUnicode,
+                configurable: true,
+            });
+        }
     });
 
     it('toggles back to collapsed state on repeated Enter presses', () => {
