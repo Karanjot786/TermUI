@@ -99,6 +99,8 @@ export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
 
 // ── Internal — used by @termuijs/testing ──
 export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber, resetHooksGlobals, registerCleanup } from './hooks.js';
+// Export instance map accessor for testing utilities
+export { getInstanceMap } from './reconciler.js';
 
 // ── Convenience alias ──
 /** h() — shorthand for createElement */
