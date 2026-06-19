@@ -93,7 +93,7 @@ describe('RadioGroup', () => {
 
     it('handleKey home is a no-op when already at first enabled option', () => {
         const radio = new RadioGroup({ options: OPTIONS, defaultValue: 'dark' });
-        const spy = vi.spyOn(radio as any, 'markDirty');
+        const spy = vi.spyOn(radio, 'markDirty');
         radio.handleKey(createKeyEvent({ key: 'home', ctrl: false, shift: false, alt: false, raw: Buffer.alloc(0) }));
         expect(radio.focusedIndex).toBe(0);
         expect(spy).not.toHaveBeenCalled();
@@ -107,7 +107,7 @@ describe('RadioGroup', () => {
 
     it('handleKey end is a no-op when already at last enabled option', () => {
         const radio = new RadioGroup({ options: OPTIONS, defaultValue: 'system' });
-        const spy = vi.spyOn(radio as any, 'markDirty');
+        const spy = vi.spyOn(radio, 'markDirty');
         radio.handleKey(createKeyEvent({ key: 'end', ctrl: false, shift: false, alt: false, raw: Buffer.alloc(0) }));
         expect(radio.focusedIndex).toBe(2);
         expect(spy).not.toHaveBeenCalled();
