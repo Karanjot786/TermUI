@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { VirtualList } from './VirtualList.js';
-import { Screen } from '@termuijs/core';
+import { Screen, computeLayout } from '@termuijs/core';
 
 function createList(totalItems = 100, options = {}) {
     return new VirtualList({
@@ -141,59 +141,64 @@ describe('VirtualList', () => {
     });
 
     describe('spring scrolling', () => {
-        it('instantly snaps when springScroll is false', () => {
+        // Helper: set up a VirtualList with a real computed layout so _getContentRect()
+        // returns correct values without touching private internals.
+        // With width=40, height=10 and the default 'single' border, the content
+        // area is 38×8 (border consumes 1 cell on each side).
+        function createListWithLayout(options: { springScroll: boolean }) {
             const list = new VirtualList({
                 totalItems: 100,
                 renderItem: (i) => `Item ${i}`,
-                springScroll: false,
-                style: { width: 40, height: 10 }
+                springScroll: options.springScroll,
+                style: { width: 40, height: 10 },
             });
-            // Mock content rect to have height 8 (10 height - 2 for borders)
-            vi.spyOn(list as any, '_getContentRect').mockReturnValue({ x: 0, y: 0, width: 40, height: 8 });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            return list;
+        }
 
-            // Scroll to index 50
+        it('instantly snaps when springScroll is false', () => {
+            const list = createListWithLayout({ springScroll: false });
+
+            // Scroll to index 50; content height is 8, so target offset = 50 - 8 + 1 = 43
             list.scrollTo(50);
-            expect(list.scrollOffset).toBe(43); // 50 - 8 + 1
+            expect(list.scrollOffset).toBe(43);
         });
 
         it('animates gradually when springScroll is true', () => {
             let mockTime = 1000;
             const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => mockTime);
 
-            const list = new VirtualList({
-                totalItems: 100,
-                renderItem: (i) => `Item ${i}`,
-                springScroll: true,
-                style: { width: 40, height: 10 }
-            });
-            vi.spyOn(list as any, '_getContentRect').mockReturnValue({ x: 0, y: 0, width: 40, height: 8 });
+            const list = createListWithLayout({ springScroll: true });
+            const screen = new Screen(80, 25);
 
             // Initially at 0
             expect(list.scrollOffset).toBe(0);
 
-            // Scroll to 50 -> should start animation, offset not immediately updated to target
+            // Scroll to 50 -> animation starts; offset must NOT jump immediately
             list.scrollTo(50);
-            expect(list.scrollOffset).toBe(0); // Still at 0 on start
+            expect(list.scrollOffset).toBe(0);
 
-            // Run first render pass using a real Screen instance for type safety
-            const realScreen = new Screen(80, 25);
-            list.render(realScreen);
+            // First render tick
+            list.render(screen);
 
-            // Advance time by 100 frames of 16ms to allow the spring to accelerate and move
+            // Advance 100 frames of 16 ms — spring should have begun moving
             for (let i = 0; i < 100; i++) {
                 mockTime += 16;
-                list.render(realScreen);
+                list.render(screen);
             }
 
-            // Expect scroll offset to have started moving towards target (43)
+            // Offset must have started moving toward the target (43)
             expect(list.scrollOffset).toBeGreaterThan(0);
 
-            // Advance time completely to let it settle
-            let limit = 0;
-            while ((list as any)._isAnimating && limit < 2000) {
+            // Drive the animation to completion.
+            // The spring (stiffness=0.15, damping=0.8, dt=16ms) converges in
+            // roughly 1600 frames — run 2000 to be safe.  We check only the
+            // public scrollOffset getter; no private fields are accessed.
+            for (let i = 0; i < 2000; i++) {
                 mockTime += 16;
-                list.render(realScreen);
-                limit++;
+                list.render(screen);
             }
 
             expect(list.scrollOffset).toBe(43);
