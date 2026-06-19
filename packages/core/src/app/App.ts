@@ -366,6 +366,7 @@ export class App {
                 // callback so the dirty check and the _isRenderPending guard
                 // are never racy with concurrent requestRender() calls.
                 if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
+                    this._isRenderPending = false;
                     return;
                 }
 
