@@ -20,7 +20,10 @@ export interface ListProps {
     state?: ListState;
     /** Called whenever selection or scroll changes */
     onStateChange?: (state: ListState) => void;
+    /** Message to display when the list is empty */
+    emptyMessage?: string;
 }
+
 
 /**
  * List — a scrollable, selectable list of items.
@@ -39,6 +42,7 @@ export class List extends Widget {
     private _onSelect?: (item: ListItem, index: number) => void;
     private _state?: ListState;
     private _onStateChange?: (state: ListState) => void;
+    private _emptyMessage?: string;
 
     constructor(
         itemsOrProps: ListItem[] | ListProps,
@@ -56,6 +60,8 @@ export class List extends Widget {
             this._state = props.state;
             this._onStateChange = props.onStateChange;
             this._onSelect = props.onSelect ?? onSelect;
+            this._emptyMessage = props.emptyMessage;
+
 
             // Initialise from external state if provided
             if (props.state) {
@@ -129,12 +135,22 @@ export class List extends Widget {
 
     // ── Rendering ─────────────────────────────────────
 
-    protected _renderSelf(screen: Screen): void {
+       protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
         if (width <= 0 || height <= 0) return;
 
         const attrs = styleToCellAttrs(this._style);
+
+        // Render Empty State if no items exist
+        if (this._items.length === 0 && this._emptyMessage) {
+            const msg = truncate(this._emptyMessage, width);
+            const msgX = x + Math.floor((width - stringWidth(msg)) / 2);
+            const msgY = y + Math.floor(height / 2);
+            screen.writeString(msgX, msgY, msg, { ...attrs, dim: true });
+            return;
+        }
+
         const visibleCount = Math.min(this._items.length - this._scrollOffset, height);
 
         for (let i = 0; i < visibleCount; i++) {
