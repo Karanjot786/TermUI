@@ -29,20 +29,12 @@ export { Divider } from './Divider.js';
 export type { DividerOptions } from './Divider.js';
 
 export { ShortcutManager } from "./ShortcutManager.js";
-<<<<<<< HEAD
-export type { Shortcut } from "./ShortcutManager.js";
-=======
 export type { Shortcut as ShortcutManagerItem } from "./ShortcutManager.js";
->>>>>>> upstream/main
 
 export { NotificationHistory } from "./NotificationHistory.js";
 
 export type {
-<<<<<<< HEAD
-    Notification,
-=======
     Notification as NotificationHistoryItem,
->>>>>>> upstream/main
     NotificationType
 } from "./NotificationHistory.js";
 
@@ -260,3 +252,6 @@ export { ChatThread } from './ChatThread.js';
 export type { ChatThreadOptions } from './ChatThread.js';
 export { TokenUsage } from './TokenUsage.js';
 export type { TokenUsageOptions } from './TokenUsage.js';
+
+export { SearchPanel } from "./SearchPanel.js";
+export type { SearchPanelOptions } from "./SearchPanel.js";
