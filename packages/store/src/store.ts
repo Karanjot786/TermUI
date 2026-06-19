@@ -277,8 +277,11 @@ export function createStore<T extends object>(
 
     const setState: SetState<T> = (partial) => {
         const prevState = state;
+
+        // When in a batch, function updaters should see the pending batch state
+        const batchState = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
         const nextPartial = typeof partial === 'function'
-            ? (partial as (state: T) => Partial<T>)(state)
+            ? (partial as (state: T) => Partial<T>)(batchState)
             : partial;
 
         const applyUpdate = (finalPartial: Partial<T>): T => {
@@ -307,7 +310,6 @@ export function createStore<T extends object>(
                         existing.nextState = nextState;
                         existing.commit = () => { state = nextState; persistState(); };
                     }
-                    state = nextState;
                 } else {
                     state = nextState; 
                     // Not in a batch: notify immediately
@@ -343,7 +345,13 @@ export function createStore<T extends object>(
         }
     };
 
-    const getState: GetState<T> = () => state;
+    const getState: GetState<T> = () => {
+        if (_batchDepth > 0) {
+            const entry = _batchStores.get(listeners);
+            if (entry) return entry.nextState;
+        }
+        return state;
+    };
 
     const subscribe = (listener: Listener<T>): (() => void) => {
         listeners.add(listener);
@@ -380,13 +388,14 @@ export function createStore<T extends object>(
     };
     const mutate = (recipe: (draft: T) => void): void => {
         const prevState = state;
-        const nextState = produce(state, (draft) => {
+        // When in a batch, produce from pending batch state
+        const baseState = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
+        const nextState = produce(baseState, (draft) => {
             recipe(draft as T);
         });
-        if (Object.is(prevState, nextState)) {
+        if (Object.is(baseState, nextState)) {
             return;
         }
-        state = nextState;
         if (_batchDepth > 0) {
             const existing = _batchStores.get(listeners);
             if (!existing) {
@@ -400,6 +409,7 @@ export function createStore<T extends object>(
                 existing.nextState = nextState;
             }
         } else {
+            state = nextState;
             for (const listener of listeners) {
                 listener(nextState, prevState);
             }
