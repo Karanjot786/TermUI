@@ -128,6 +128,7 @@ export class RangeInput extends Widget {
     private _min: number;
     private _max: number;
     private _step: number;
+    private _editingLow = true;
 
     onChange?: (low: number, high: number) => void;
 
@@ -157,6 +158,30 @@ this.setRange(
     opts.low ?? this._min,
     opts.high ?? this._max,
 );
+    }
+
+    handleKey(event: KeyEvent): void {
+        switch (event.key) {
+            case 'left':
+                if (this._editingLow) {
+                    this.setRange(this._low - this._step, this._high);
+                } else {
+                    this.setRange(this._low, this._high - this._step);
+                }
+                break;
+            case 'right':
+                if (this._editingLow) {
+                    this.setRange(this._low + this._step, this._high);
+                } else {
+                    this.setRange(this._low, this._high + this._step);
+                }
+                break;
+            case 'up':
+            case 'down':
+                this._editingLow = !this._editingLow;
+                this.markDirty();
+                break;
+        }
     }
 
     getLow(): number {

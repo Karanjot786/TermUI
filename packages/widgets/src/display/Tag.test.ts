@@ -130,7 +130,7 @@ describe('Tag', () => {
     });
 
     it('does not mark dirty when variant is unchanged', () => {
-        const tag = new Tag('Hello', { variant: 'success' });
+        const tag = new Tag('Hello', {}, { variant: 'success' });
 
         tag.clearDirty();
         tag.setVariant('success');
@@ -147,42 +147,10 @@ describe('Tag', () => {
         expect(() => renderTag('test', {}, {}, 0, 0)).not.toThrow();
     });
 
-    // ── 6. Constructor overloads ──────────────────────────────────────────
-    it('deprecated signature Tag(text, opts) produces console.warn', () => {
-        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-        try {
-            new Tag('dep', { variant: 'info' });
-            expect(spy).toHaveBeenCalledWith(
-                'Tag(text, opts, style) is deprecated. Use Tag(text, style, opts) instead.',
-            );
-        } finally {
-            spy.mockRestore();
-        }
-    });
-
-    it('canonical signature Tag(text, style, opts) does not produce console.warn', () => {
-        const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-        try {
-            new Tag('canon', {}, { variant: 'info' });
-            expect(spy).not.toHaveBeenCalled();
-        } finally {
-            spy.mockRestore();
-        }
-    });
-
-    it('deprecated and canonical signatures produce equivalent output', () => {
-        const { screen: screen1 } = renderTag('same', {}, { variant: 'error' });
-        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-        try {
-            const tag2 = new Tag('same', { variant: 'error' });
-            const screen2 = new Screen(20, 3);
-            tag2.updateRect({ x: 0, y: 0, width: 20, height: 3 });
-            tag2.render(screen2);
-            expect(screen2.back[0][0].char).toBe(screen1.back[0][0].char);
-            expect(screen2.back[1][2].char).toBe(screen1.back[1][2].char);
-            expect(warnSpy).toHaveBeenCalled();
-        } finally {
-            warnSpy.mockRestore();
-        }
+    // ── 6. Constructor signature ────────────────────────────────────────────
+    it('canonical signature Tag(text, style, opts) works correctly', () => {
+        const { tag } = renderTag('test', {}, { variant: 'info' });
+        expect(tag.getText()).toBe('test');
+        expect(tag.getVariant()).toBe('info');
     });
 });

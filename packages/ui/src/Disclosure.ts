@@ -1,11 +1,12 @@
-import { 
-    type Screen, 
-    type KeyEvent, 
-    type Style, 
-    caps, 
-    mergeStyles, 
-    defaultStyle, 
-    styleToCellAttrs 
+import {
+    type Screen,
+    type KeyEvent,
+    type Style,
+    caps,
+    mergeStyles,
+    defaultStyle,
+    styleToCellAttrs,
+    truncate,
 } from '@termuijs/core';
 import { Widget } from '@termuijs/widgets';
 
@@ -69,37 +70,27 @@ export class Disclosure extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        const marker = caps.unicode 
-            ? (this._isOpen ? '▼' : '▶') 
+        if (!this.rect || this.rect.width <= 0) return;
+
+        const { x, y, width, height } = this.rect;
+
+        const marker = caps.unicode
+            ? (this._isOpen ? '▾' : '▸')
             : (this._isOpen ? 'v' : '>');
 
         const headerText = `${marker} ${this.summary}`;
-        
-        const startX = this.rect?.x ?? 0;
-        const startY = this.rect?.y ?? 0;
-        
-        const screenWidth = (screen as any).width ?? (screen as any).rect?.width ?? 0;
-        const screenHeight = (screen as any).height ?? (screen as any).rect?.height ?? 0;
-        
-        const width = this.rect?.width ?? screenWidth;
+        const truncatedHeader = truncate(headerText, width);
 
-        for (let i = 0; i < headerText.length && i < width; i++) {
-            if (screen.back && screen.back[startY] && screen.back[startY][startX + i]) {
-                const cell = screen.back[startY][startX + i] as any;
-                cell.char = headerText[i];
-                
-                cell['attrs'] = styleToCellAttrs(this._customStyle);
-            }
-        }
+        screen.writeString(x, y, truncatedHeader, styleToCellAttrs(this._customStyle));
 
         if (this._isOpen && this.content) {
             const childRect = {
-                x: startX,
-                y: startY + 1,
-                width: width,
-                height: Math.max(0, (this.rect?.height ?? screenHeight) - 1)
+                x,
+                y: y + 1,
+                width,
+                height: Math.max(0, height - 1),
             };
-            
+
             this.content.updateRect(childRect);
             this.content.render(screen);
         }

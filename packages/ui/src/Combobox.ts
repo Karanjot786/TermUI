@@ -81,6 +81,10 @@ export class Combobox extends Widget {
         }
 
         if (key === 'escape') {
+            if (!this._isOpen && this._selectedIndex === -1) {
+                return;
+            }
+        
             this._isOpen = false;
             this._selectedIndex = -1;
             this.markDirty();
@@ -104,11 +108,13 @@ export class Combobox extends Widget {
         }
 
         if (key === 'backspace') {
-            if (this._inputValue.length > 0) {
-                this._inputValue = this._inputValue.slice(0, -1);
-                this._isOpen = true;
-                this._selectedIndex = -1;
+            if (this._inputValue.length === 0) {
+                return;
             }
+        
+            this._inputValue = this._inputValue.slice(0, -1);
+            this._isOpen = true;
+            this._selectedIndex = -1;
             this.markDirty();
             return;
         }

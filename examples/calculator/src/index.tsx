@@ -154,6 +154,7 @@ function safeEval(expr: string): string {
     }
     return resStr;
 }
+
 // ── Calculator App Widget ───────────────────────────────────────────────────
 
 const BUTTONS_LAYOUT = [
@@ -164,20 +165,23 @@ const BUTTONS_LAYOUT = [
 ];
 
 class CalculatorApp extends Widget {
-    private _display: Text;
+    private _expressionDisplay: Text;
+    private _resultDisplay: Text;
+    private _historyDisplay: Text;
     private _focusedRow = 0;
     private _focusedCol = 0;
     private _buttons: Button[][] = [];
 
     private expression = '';
     private result: string | null = null;
+    private history: string[] = [];
 
     constructor() {
         super({
             flexDirection: "column",
-            width: 60,
-            maxWidth: 60,
-            height: 20,
+            width: 78,
+            maxWidth: 78,
+            height: 23,
             border: "double",
             borderColor: { type: 'named', name: 'cyan' },
             padding: { left: 1, right: 1, top: 0, bottom: 0 },
@@ -194,24 +198,45 @@ class CalculatorApp extends Widget {
             { align: "center" },
         );
 
-        // 2. Display screen area
-        const displayBox = new Box({
-            border: "single",
-            height: 3,
-            borderColor: { type: "named", name: "brightBlack" },
-            padding: { left: 1, right: 1, top: 0, bottom: 0 },
+        // 2. Main body horizontal box containing Left and Right columns
+        const bodyBox = new Box({
+            flexDirection: "row",
+            height: 16,
+            justifyContent: "space-between",
         });
 
-        this._display = new Text("0",{
-                bold: true,
-                height: 1,
-                fg: { type: "named", name: "white" },
-            },{ align: "left" },
-        );
+        // Left Column: Display Screen + Buttons Grid
+        const leftCol = new Box({
+            flexDirection: "column",
+            width: 44,
+            height: 16,
+        });
 
-        displayBox.addChild(this._display);
+        const displayBox = new Box({
+            flexDirection: "column",
+            border: "single",
+            height: 4,
+            borderColor: { type: "named", name: "brightBlack" },
+            padding: { left: 1, right: 1 },
+        });
 
-        // 3. Grid for calculator keys
+        this._expressionDisplay = new Text("0", {
+            bold: true,
+            height: 1,
+            fg: { type: "named", name: "white" },
+        });
+
+        this._resultDisplay = new Text("🎯 Result: -", {
+            bold: true,
+            height: 1,
+            fg: { type: "named", name: "green" },
+        });
+
+        displayBox.addChild(this._expressionDisplay);
+        displayBox.addChild(this._resultDisplay);
+        leftCol.addChild(displayBox);
+
+        // Grid for calculator keys
         const grid = new Box({ flexDirection: "column", flexGrow: 1, height: 12 });
 
         for (let r = 0; r < 4; r++) {
@@ -230,11 +255,60 @@ class CalculatorApp extends Widget {
             this._buttons.push(rowButtons);
             grid.addChild(rowBox);
         }
+        leftCol.addChild(grid);
+
+        // Right Column: Session history panel
+        const rightCol = new Box({
+            flexDirection: "column",
+            border: "single",
+            borderColor: { type: "named", name: "yellow" },
+            width: 30,
+            height: 16,
+            padding: { left: 1, right: 1, top: 0, bottom: 0 },
+        });
+
+        const historyTitle = new Text("📜 History", {
+            bold: true,
+            height: 1,
+            fg: { type: "named", name: "yellow" },
+        }, { align: "center" });
+
+        this._historyDisplay = new Text("No calculations yet", {
+            height: 11,
+            fg: { type: "named", name: "white" },
+        });
+
+        rightCol.addChild(historyTitle);
+        rightCol.addChild(this._historyDisplay);
+
+        bodyBox.addChild(leftCol);
+        bodyBox.addChild(rightCol);
+
+        // 3. Footer controls info
+        const footerBox = new Box({
+            flexDirection: "column",
+            height: 3,
+            padding: { left: 1, right: 1 },
+        });
+
+        const footerTitle = new Text("⌨️ Controls", {
+            bold: true,
+            height: 1,
+            fg: { type: "named", name: "magenta" },
+        });
+
+        const footerHints = new Text("Enter = Calculate  │  Esc = Clear  │  q = Quit", {
+            height: 1,
+            fg: { type: "named", name: "magenta" },
+        });
+
+        footerBox.addChild(footerTitle);
+        footerBox.addChild(footerHints);
 
         // Add elements to root container
         this.addChild(title);
-        this.addChild(displayBox);
-        this.addChild(grid);
+        this.addChild(bodyBox);
+        this.addChild(footerBox);
 
         this.updateFocus();
     }
@@ -330,7 +404,15 @@ class CalculatorApp extends Widget {
 
     private evaluate() {
         if (this.expression.trim() === "") return;
+        const oldExpr = this.expression;
         this.result = safeEval(this.expression);
+        if (this.result !== null && !this.result.startsWith("Error")) {
+            const entry = `${oldExpr} = ${this.result}`;
+            this.history.unshift(entry);
+            if (this.history.length > 10) {
+                this.history.pop();
+            }
+        }
         this.updateDisplay();
     }
 
@@ -347,13 +429,41 @@ class CalculatorApp extends Widget {
     }
 
     private updateDisplay() {
-        const text = this.result !== null ? this.result : this.expression || "0";
-        this._display.setContent(text);
+        this._expressionDisplay.setContent(this.expression || "0");
+
+        if (this.result !== null) {
+            if (this.result.startsWith("Error")) {
+                this._resultDisplay.setContent(`🎯 Result: ${this.result}`);
+                this._resultDisplay.setStyle({
+                    fg: { type: "named", name: "red" },
+                    bold: true,
+                });
+            } else {
+                this._resultDisplay.setContent(`🎯 Result: ${this.result}`);
+                this._resultDisplay.setStyle({
+                    fg: { type: "named", name: "green" },
+                    bold: true,
+                });
+            }
+        } else {
+            this._resultDisplay.setContent("🎯 Result: -");
+            this._resultDisplay.setStyle({
+                fg: { type: "named", name: "green" },
+                bold: true,
+            });
+        }
+
+        if (this.history.length === 0) {
+            this._historyDisplay.setContent("No calculations yet");
+        } else {
+            this._historyDisplay.setContent(this.history.join("\n"));
+        }
+
         this.markDirty();
     }
 
     handleKey(event: KeyEvent): boolean {
-         if (event.key === 'q' || (event.ctrl && event.key === 'c')) {
+        if (event.key === 'q' || (event.ctrl && event.key === 'c')) {
             return false; // Stop application
         }
 
@@ -387,7 +497,7 @@ class CalculatorApp extends Widget {
         }
 
         // Direct inputs
-       if (key.length === 1 && key >= '0' && key <= '9') {
+        if (key.length === 1 && key >= '0' && key <= '9') {
             this.addDigit(key);
             return true;
         }
@@ -399,7 +509,7 @@ class CalculatorApp extends Widget {
             this.evaluate();
             return true;
         }
-        if (key === 'c' || key === 'C') {
+        if (key === 'escape' || key === 'c' || key === 'C') {
             this.clear();
             return true;
         }

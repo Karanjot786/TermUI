@@ -2,9 +2,15 @@
 // @termuijs/core — Tests for InputParser
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Buffer } from 'node:buffer';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { InputParser } from './InputParser.js';
-import { createMockStdin, sendKey } from '../../../../tests/helpers/mock-stdin.js';
+import { createMockStdin, sendKey as originalSendKey } from '../../../../tests/helpers/mock-stdin.js';
+
+function sendKey(stdin: any, key: any) {
+    originalSendKey(stdin, key);
+    vi.advanceTimersByTime(10);
+}
 
 function createParser() {
     const stdin = createMockStdin();
@@ -16,6 +22,10 @@ function createParser() {
 }
 
 describe('InputParser', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
     afterEach(() => {
         vi.restoreAllMocks();
         vi.useRealTimers();
@@ -237,14 +247,25 @@ describe('InputParser', () => {
         expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'a' }));
     });
 
-    it('processes rapid multi-byte input correctly', () => {
+    it('parses split multibyte emoji sequences arriving in chunks', () => {
         const { stdin, handler } = createParser();
-        sendKey(stdin, 'abc');
-        expect(handler).toHaveBeenCalledTimes(3);
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'a' }));
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'b' }));
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'c' }));
+
+        // Wave emoji with medium skin tone: 👋🏽 (\u{1F44B}\u{1F3FD})
+        // Encoded in UTF-8 as: [0xf0, 0x9f, 0x91, 0x8b, 0xf0, 0x9f, 0x8f, 0xbd]
+        const chunk1 = Buffer.from([0xf0, 0x9f, 0x91, 0x8b]);
+        const chunk2 = Buffer.from([0xf0, 0x9f, 0x8f, 0xbd]);
+
+        originalSendKey(stdin, chunk1);
+        // Should not emit yet as it is incomplete
+        expect(handler).not.toHaveBeenCalled();
+
+        originalSendKey(stdin, chunk2);
+        // Now it is complete
+        vi.advanceTimersByTime(10);
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: '👋🏽' }));
     });
+
     it('emits paste event for bracketed paste', () => {
         const stdin = createMockStdin();
         const parser = new InputParser(stdin);

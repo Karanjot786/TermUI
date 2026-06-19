@@ -109,9 +109,9 @@ export class RAGChat extends Widget {
     }
 
     private async _submitQuery(query: string): Promise<void> {
-        if (!query.trim() || this._loading) return;
-
-        this._loading = true;
+        if (!query.trim()) return;
+        if (this._loading) return; // guard against re-entrant calls
+        this._loading = true; // set synchronously before any await to prevent re-entrancy
         this._messages.push({ role: 'user', content: query });
         this._query = '';
         this._cursorPos = 0;

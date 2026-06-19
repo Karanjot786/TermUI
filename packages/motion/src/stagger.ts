@@ -16,6 +16,12 @@ export function stagger(animations: AnimationRunner[], delayMs: number, onComple
     return sequencing.parallel(delayedAnimations, onComplete);
 }
 
+/**
+ * Wraps a runner with a startup delay using `setTimeout`.
+ * Note: uses real `setTimeout` (not VirtualClock injection), so delays are not
+ * controllable via fake timers in tests. For deterministic stagger timing in tests,
+ * call runners directly without stagger().
+ */
 function withDelay(runner: AnimationRunner, delayMs: number): AnimationRunner {
     return (done) => {
         if (delayMs <= 0) {

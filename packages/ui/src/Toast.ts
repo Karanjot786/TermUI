@@ -68,7 +68,7 @@ export class Toast extends Widget {
         for (let i = 0; i < visible.length; i++) {
             const m = visible[i];
             const label = ` ${icons[m.type]} ${m.text} `.slice(0, tw).padEnd(tw);
-            screen.writeString(sx, sy + i, label, { ...attrs, fg: { type: 'named', name: COLORS[m.type] as any }, bold: true });
+            screen.writeString(sx, sy + i, label, { ...attrs, fg: { type: 'named', name: COLORS[m.type] as any }, bold: true }); // as any: COLORS values are string but Style.name expects NamedColor; types need aligning
         }
     }
 }

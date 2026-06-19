@@ -22,6 +22,7 @@ class GitClientExample extends Widget {
 
         const title = new Text(' Git Client Example ', {
             bold: true,
+            height: 1,
             fg: { type: 'named', name: 'cyan' },
         });
 
@@ -63,8 +64,7 @@ class GitClientExample extends Widget {
 
         const leftPanel = new Box({
             flexDirection: 'column',
-            width: 30,
-            border: 'single',
+            width: 40,
         });
 
         leftPanel.addChild(
@@ -73,7 +73,7 @@ class GitClientExample extends Widget {
             }),
         );
 
-        this.fileList = new List(files);
+        this.fileList = new List(files, { flexGrow: 2});
 
         leftPanel.addChild(this.fileList);
 
@@ -91,7 +91,7 @@ class GitClientExample extends Widget {
 
         const diffView = new DiffView({
             lines: diffLines,
-        });
+        }, { flexGrow: 1 });
 
         rightPanel.addChild(diffView);
 
@@ -101,23 +101,25 @@ class GitClientExample extends Widget {
         const commitBox = new Box({
             flexDirection: 'column',
             border: 'single',
-            height: 4,
+            height: 7,
         });
 
         commitBox.addChild(
-            new Text(' Commit Message ', {
+            new Text('Commit Message ', {
                 bold: true,
+                height:1
             }),
         );
 
         commitBox.addChild(
-            new Text('feat: initial git-client example'),
+            new Text('feat: initial git-client example',{height:2}),
         );
 
         this.statusText = new Text(
             'Controls: ↑ ↓ navigate | Enter select | q quit',
             {
                 dim: true,
+                height: 1,
             },
         );
 

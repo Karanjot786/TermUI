@@ -205,4 +205,5 @@ describe('VirtualList', () => {
             nowSpy.mockRestore();
         });
     });
+
 });
