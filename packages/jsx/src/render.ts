@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────
 
 import { App, type KeyEvent } from '@termuijs/core';
+import { getInstanceMap } from './reconciler.js';
 import { Box, Widget } from '@termuijs/widgets';
 import type { VNode, FC } from './vnode.js';
 import { reconcile, unmountAll, reRenderComponent } from './reconciler.js';

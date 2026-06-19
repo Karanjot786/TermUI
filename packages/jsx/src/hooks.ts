@@ -11,6 +11,7 @@ import { caps } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import type { Widget } from '@termuijs/widgets';
 import type { FC } from './vnode.js';
+import { getInstanceMap } from './reconciler.js';
 
 // ── Fiber — per-component-instance state ──
 
