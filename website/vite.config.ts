@@ -22,8 +22,6 @@ export default defineConfig({
       'child_process': '/src/empty.ts',
       'node:fs': '/src/empty.ts',
       'fs': '/src/empty.ts',
-      'node:path': '/src/empty.ts',
-      'path': '/src/empty.ts',
     }
   },
   build: {

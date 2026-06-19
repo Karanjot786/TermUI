@@ -18,7 +18,7 @@ import 'xterm/css/xterm.css';
 // Fix for React inside the eval scope
 const globalReact = React;
 
-export default function Playground() {
+export function Playground() {
   const [activeExample, setActiveExample] = useState('dashboard');
   const [code, setCode] = useState(EXAMPLES['dashboard'].code);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export default function Playground() {
   const terminalContainerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
-  const termuiAppRef = useRef<any>(null);
+  const termuiAppRef = useRef<termuijsCore.App | null>(null);
 
   const handleExampleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const key = e.target.value;
@@ -85,6 +85,7 @@ export default function Playground() {
       termuiAppRef.current = null;
     }
 
+    let dataDisposable: any = null;
 
     try {
       // Prepare evaluation scope
@@ -167,7 +168,7 @@ export default function Playground() {
 
       // Listen for xterm inputs to feed into stdin
       if (xtermRef.current) {
-        xtermRef.current.onData(data => {
+        dataDisposable = xtermRef.current.onData(data => {
           if (!unmounted) {
             mockStdin.emit('data', Buffer.from(data));
           }
@@ -215,6 +216,9 @@ export default function Playground() {
     }
 
     return () => {
+      if (dataDisposable) {
+        dataDisposable.dispose();
+      }
       if (termuiAppRef.current) {
         try {
           termuiAppRef.current.unmount();
@@ -222,6 +226,10 @@ export default function Playground() {
       }
       try {
         termuijsJsx.unmountAll();
+      } catch (e) { }
+      try {
+        termuijsJsx.setCurrentApp(null as any);
+        termuijsJsx.setRequestRender(null as any);
       } catch (e) { }
       unmounted = true;
     };

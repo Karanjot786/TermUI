@@ -1,4 +1,3 @@
-export default {};
 export const readFile = async () => '';
 export const writeFile = async () => {};
 export const mkdir = async () => {};
