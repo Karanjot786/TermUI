@@ -4,8 +4,9 @@
   "private": true,
   "description": "A TypeScript-first framework for building beautiful, interactive terminal user interfaces",
   "workspaces": [
-    "packages/*", "examples/*", "website",
-    "examples/*"
+    "packages/*",
+    "examples/*",
+    "website"
   ],
   "scripts": {
     "build": "turbo run build",
