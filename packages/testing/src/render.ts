@@ -18,6 +18,7 @@ import {
     destroyFiber,
     resetHooksGlobals,
     type VNode,
+    getInstanceMap,
 } from "@termuijs/jsx";
 
 /**
