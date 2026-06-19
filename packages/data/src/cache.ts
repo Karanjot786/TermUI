@@ -9,7 +9,7 @@ export interface CacheEntry<T = any> {
 }
 
 const cacheStore = new Map<string, CacheEntry>();
-const inFlight = new Map<string, Promise<any>>();
+const inFlight = new Map<string, Promise<any>>(); // any: fetch promises resolve to heterogeneous shapes per endpoint
 
 /**
  * Get a cache entry by key (URL).

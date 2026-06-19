@@ -382,6 +382,14 @@ For application tests, the virtual clock available through `@termuijs/testing` c
 
 ---
 
+# Changelog
+
+## 0.1.7 (upcoming)
+
+- **feat(motion):** `interpolate()` now supports multi-stop keyframe arrays with two or more stops. The input/output parameter types were widened from `[number, number]` (two-element tuple) to `number[]` (array). TypeScript callers relying on the stricter tuple type should update their signatures accordingly.
+
+---
+
 # Documentation
 
 Additional documentation is available at:

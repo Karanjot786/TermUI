@@ -65,16 +65,16 @@ interface SimpleGitClient {
     staged: string[]
   }>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  log<T = DefaultLogFields>(options?: any): Promise<LogResult<T>>
+  log<T = DefaultLogFields>(options?: any): Promise<LogResult<T>> // any: simple-git options bag type not exported from package
   add(files: string | string[]): Promise<string>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  commit(message: string, options?: any): Promise<CommitResult>
+  commit(message: string, options?: any): Promise<CommitResult> // any: simple-git options bag type not exported from package
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  push(remote?: string, branch?: string, options?: any): Promise<PushResult>
+  push(remote?: string, branch?: string, options?: any): Promise<PushResult> // any: simple-git options bag type not exported from package
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  pull(remote?: string, branch?: string, options?: any): Promise<PullResult>
+  pull(remote?: string, branch?: string, options?: any): Promise<PullResult> // any: simple-git options bag type not exported from package
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  diff(options?: any): Promise<string>
+  diff(options?: any): Promise<string> // any: simple-git options bag type not exported from package
 }
 
 export interface GitStatusResult {
@@ -112,7 +112,7 @@ async function getSimpleGit(cwd?: string): Promise<SimpleGitClient> {
 
   // Typecast simpleGitModule to any to allow accessing dynamic ESM/CJS exports cleanly.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mod = simpleGitModule as any
+  const mod = simpleGitModule as any // as any: CJS/ESM interop shape varies at runtime
   const factory = mod.simpleGit || mod.default || mod
   if (typeof factory !== 'function') {
     throw new Error('Failed to resolve simpleGit factory function from "simple-git" module.')

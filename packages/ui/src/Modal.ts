@@ -68,8 +68,8 @@ export class Modal extends Widget {
         // Content
         if (this._content) {
             const cr = { x: mx + 2, y: my + 1, width: mw - 4, height: mh - 2 };
-            (this._content as any)._rect = cr;
-            (this._content as any)._renderSelf(screen);
+            this._content.updateRect(cr);
+            this._content.render(screen);
         }
     }
 }

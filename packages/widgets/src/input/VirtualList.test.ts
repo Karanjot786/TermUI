@@ -4,6 +4,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { VirtualList } from './VirtualList.js';
+import { Widget } from '../base/Widget.js';
+import { Screen } from '@termuijs/core';
 
 function createList(totalItems = 100, options = {}) {
     return new VirtualList({
@@ -136,6 +138,95 @@ describe('VirtualList', () => {
             });
             list.confirm();
             expect(onSelect).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('performance optimizations', () => {
+        it('supports fixedItemHeight configuration', () => {
+            const list = new VirtualList({
+                totalItems: 10,
+                fixedItemHeight: 3,
+                renderItem: (i) => `Item ${i}`,
+            });
+            const screen = new Screen(40, 10);
+            list.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+            list.render(screen);
+
+            // With border: single, content starts at y=1.
+            // Item 0: y=1
+            // Item 1: y=1+3=4
+            expect(screen.getCell(3, 1)?.char).toBe('I'); // 'I' from 'Item 0'
+            expect(screen.getCell(3, 4)?.char).toBe('I'); // 'I' from 'Item 1'
+            expect(screen.getCell(3, 7)?.char).toBe('I'); // 'I' from 'Item 2'
+        });
+
+        it('bypasses layout engine dirtying on scrolling when memoizeLayout is true', () => {
+            const list = createList(10, {
+                totalItems: 10,
+                memoizeLayout: true,
+            });
+
+            const markDirtySpy = vi.spyOn(Widget.prototype, 'markDirty');
+            list.clearDirty();
+
+            list.selectNext();
+
+            expect(list.isDirty).toBe(true);
+            // Should NOT call super.markDirty() which invalidates layout
+            expect(markDirtySpy).not.toHaveBeenCalled();
+            
+            markDirtySpy.mockRestore();
+        });
+
+        it('does NOT bypass layout engine dirtying on scrolling when memoizeLayout is false', () => {
+            const list = createList(10, {
+                totalItems: 10,
+                memoizeLayout: false,
+            });
+
+            const markDirtySpy = vi.spyOn(Widget.prototype, 'markDirty');
+            list.clearDirty();
+
+            list.selectNext();
+
+            expect(list.isDirty).toBe(true);
+            // Should call super.markDirty()
+            expect(markDirtySpy).toHaveBeenCalled();
+            
+            markDirtySpy.mockRestore();
+        });
+
+        it('clears render cache when data/style changes', () => {
+            const initialRenderItem = vi.fn((i: number) => `Item ${i}`);
+            const list = new VirtualList({
+                totalItems: 10,
+                renderItem: initialRenderItem,
+            });
+
+            const screen = new Screen(40, 10);
+            list.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+            list.render(screen);
+
+            const initialCalls = initialRenderItem.mock.calls.length;
+            expect(initialCalls).toBeGreaterThan(0);
+
+            // Render again - should be cached
+            list.render(screen);
+            expect(initialRenderItem.mock.calls.length).toBe(initialCalls);
+
+            // Update - should clear cache
+            const newRenderItem = vi.fn((i: number) => `New ${i}`);
+            list.setRenderItem(newRenderItem);
+            list.render(screen);
+            // The initial render item should not have been called again
+            expect(initialRenderItem.mock.calls.length).toBe(initialCalls);
+            // The new render item should have been called
+            expect(newRenderItem.mock.calls.length).toBeGreaterThan(0);
+
+            const callsAfterUpdate = newRenderItem.mock.calls.length;
+            list.setTotalItems(5);
+            list.render(screen);
+            expect(newRenderItem.mock.calls.length).toBeGreaterThan(callsAfterUpdate);
         });
     });
 });

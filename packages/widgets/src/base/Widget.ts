@@ -18,7 +18,10 @@ import {
     styleToCellAttrs,
     containsPoint,
     caps,
+    type A11yProps,
+    emitA11y,
 } from '@termuijs/core';
+import { animateRect, type SpringConfig, type SpringPresetName } from '@termuijs/motion';
 
 /**
  * Event map for widgets.
@@ -30,6 +33,12 @@ export interface WidgetEvents {
     blur: void;
     mount: void;
     unmount: void;
+}
+
+export interface RenderStats {
+    renderCount: number;
+    lastDurationMs: number;
+    totalDurationMs: number;
 }
 
 let _widgetIdCounter = 0;
@@ -104,6 +113,20 @@ export abstract class Widget {
      * Newly created widgets start dirty.
      */
     protected _dirty = true;
+    /** Render profiling statistics */
+    private _renderStats: RenderStats = {
+        renderCount: 0,
+        lastDurationMs: 0,
+        totalDurationMs: 0,
+    };
+
+    /** Accessibility annotation props */
+    protected _a11y?: A11yProps;
+
+    /** Enable animated layout transitions for size/position changes */
+    public layoutTransition: Partial<SpringConfig> | SpringPresetName | boolean = false;
+    private _layoutCancel: (() => void) | null = null;
+    private _targetRect: Rect | null = null;
 
     constructor(style: Partial<Style> = {}) {
         this.id = `widget_${++_widgetIdCounter}`;
@@ -115,8 +138,27 @@ export abstract class Widget {
         return this.isFocused;
     }
 
+    getRenderStats(): RenderStats {
+        return { ...this._renderStats };
+    }
+
+    getAverageRenderDuration(): number {
+        return this._renderStats.renderCount === 0
+            ? 0
+            : this._renderStats.totalDurationMs /
+                this._renderStats.renderCount;
+    }
+
     /** Get the current style */
     get style(): Style { return this._style; }
+
+    get a11y(): A11yProps | undefined { return this._a11y; }
+
+    public setA11y(props: A11yProps): this {
+        this._a11y = props;
+        this._dirty = true;
+        return this;
+    }
 
     /** Update the style (merge with existing) */
     setStyle(style: Partial<Style>): void {
@@ -162,7 +204,7 @@ export abstract class Widget {
         for (const child of children) {
             child.destroy();
         }
-        this.events.emit('unmount', undefined as any);
+        this.events.emit('unmount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         this.events.removeAll();
         this.parent = null;
     }
@@ -195,7 +237,7 @@ export abstract class Widget {
      */
     syncLayout(): void {
         if (this._layoutNode) {
-            this._rect = { ...this._layoutNode.computed };
+            this._applyRect({ ...this._layoutNode.computed });
         }
 
         // Sync children (match visible children to layout node children)
@@ -212,6 +254,8 @@ export abstract class Widget {
     render(screen: Screen): void {
         if (this._style.visible === false) return;
 
+        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'start');
+
         // Push clip region if overflow is hidden (default style)
         const shouldClip = this._style.overflow !== 'visible';
         if (shouldClip) {
@@ -220,7 +264,12 @@ export abstract class Widget {
 
         // Render own content with error isolation
         try {
+            const start = performance.now();
             this._renderSelf(screen);
+            const duration = performance.now() - start;
+            this._renderStats.renderCount++;
+            this._renderStats.lastDurationMs = duration;
+            this._renderStats.totalDurationMs += duration;
             this._renderError = null;
             this._dirty = false;
         } catch (err) {
@@ -252,6 +301,8 @@ export abstract class Widget {
         if (shouldClip) {
             screen.popClip();
         }
+
+        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'end');
     }
 
     /**
@@ -261,10 +312,84 @@ export abstract class Widget {
     protected abstract _renderSelf(screen: Screen): void;
 
     /**
+     * Update the widget with previous props/state.
+     * Subclasses override this with a specific type parameter
+     * to receive typed previous state instead of `any`.
+     *
+     * @example
+     * ```ts
+     * update(previousProps: MyWidgetProps): void {
+     *   if (previousProps.label !== this.props.label) {
+     *     this.markDirty();
+     *   }
+     * }
+     * ```
+     */
+    update<T = unknown>(_previousProps: T): void {
+        this.markDirty();
+    }
+
+    /**
      * Update the computed rect from layout results.
      */
     updateRect(rect: Rect): void {
-        this._rect = rect;
+        this._applyRect(rect);
+    }
+
+    private _applyRect(newRect: Rect): void {
+        if (this._rect.width === 0 && this._rect.height === 0) {
+            // First render, do not animate
+            this._rect = newRect;
+            return;
+        }
+
+        if (!this.layoutTransition) {
+            if (this._layoutCancel) {
+                this._layoutCancel();
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+            this._rect = newRect;
+            return;
+        }
+        
+        // If target is same, ignore
+        if (this._targetRect && 
+            this._targetRect.x === newRect.x && 
+            this._targetRect.y === newRect.y && 
+            this._targetRect.width === newRect.width && 
+            this._targetRect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._rect.x === newRect.x && 
+            this._rect.y === newRect.y && 
+            this._rect.width === newRect.width && 
+            this._rect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._layoutCancel) {
+            this._layoutCancel();
+        }
+        
+        this._targetRect = { ...newRect };
+        
+        const config = typeof this.layoutTransition === 'boolean' 
+            ? 'default' 
+            : this.layoutTransition;
+            
+        this._layoutCancel = animateRect(this._rect, newRect, {
+            config,
+            onFrame: (rect) => {
+                this._rect = rect;
+                this.markDirty();
+            },
+            onComplete: () => {
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+        });
     }
 
     /**
@@ -278,6 +403,16 @@ export abstract class Widget {
             this._layoutNode._dirty = true;
         }
         this.parent?.markDirty();
+    }
+
+    /**
+     * Marks the widget as dirty without invalidating the layout node.
+     * Used for performance optimizations like memoized scrolling.
+     */
+    protected _markDirtyNoLayout(): void {
+        if (this._dirty) return;
+        this._dirty = true;
+        this.parent?._markDirtyNoLayout();
     }
 
     /**
@@ -414,7 +549,7 @@ export abstract class Widget {
 
     /** Lifecycle: called when the widget is mounted */
     mount(): void {
-        this.events.emit('mount', undefined as any);
+        this.events.emit('mount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         for (const child of this._children) {
             child.mount();
         }
@@ -425,7 +560,7 @@ export abstract class Widget {
         for (const child of this._children) {
             child.unmount();
         }
-        this.events.emit('unmount', undefined as any);
+        this.events.emit('unmount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         this.events.removeAll();
     }
 }

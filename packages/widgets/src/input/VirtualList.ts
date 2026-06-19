@@ -12,8 +12,7 @@
 //       renderItem: (index) => `Row #${index}`,
 //   });
 // ─────────────────────────────────────────────────────
-
-import { type Screen, type Style, styleToCellAttrs, truncate, stringWidth, caps } from '@termuijs/core';
+import { type Cell, type Screen, type Style, styleToCellAttrs, truncate, stringWidth, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { computeRange } from './virtual-scroll.js';
 
@@ -22,6 +21,10 @@ export interface VirtualListOptions {
     totalItems: number;
     /** Height of each item in rows (default: 1) */
     itemHeight?: number;
+    /** Fixed height of each item, alias for itemHeight */
+    fixedItemHeight?: number;
+    /** Whether to memoize the layout and bypass Flexbox recalculation on scroll frames (default: true) */
+    memoizeLayout?: boolean;
     /** Render function: returns the string content for an item at a given index */
     renderItem: (index: number) => string;
     /** Style overrides */
@@ -54,11 +57,26 @@ export class VirtualList extends Widget {
     private _scrollOffset = 0;
     private _overscan: number;
     private _showScrollbar: boolean;
+    
+    private _memoizeLayout: boolean;
+    private _isScrolling = false;
+    private _lastContentWidth = 0;
+    private _renderCache = new Map<number, {
+        line: string;
+        cellStyle:  Partial<Omit<Cell, 'char' | 'width'>>;
+        isSelected: boolean;
+        isFocused: boolean;
+    }>();
 
     constructor(options: VirtualListOptions) {
         super({ border: 'single', ...options.style });
         this._totalItems = options.totalItems;
-        this._itemHeight = options.itemHeight ?? 1;
+        const resolvedItemHeight = options.fixedItemHeight ?? options.itemHeight ?? 1;
+        if (!Number.isFinite(resolvedItemHeight) || resolvedItemHeight <= 0) {
+            throw new Error('VirtualList itemHeight must be a positive number');
+        }
+        this._itemHeight = resolvedItemHeight;
+        this._memoizeLayout = options.memoizeLayout ?? true;
         this._renderItem = options.renderItem;
         this._onSelect = options.onSelect;
         this._overscan = options.overscan ?? 2;
@@ -76,6 +94,7 @@ export class VirtualList extends Widget {
 
     /** Update the total item count (e.g., after data refresh) */
     setTotalItems(count: number): void {
+        this._clearCache();
         this._totalItems = count;
         this._selectedIndex = Math.min(this._selectedIndex, Math.max(0, count - 1));
         this._clampScroll();
@@ -84,6 +103,7 @@ export class VirtualList extends Widget {
 
     /** Update the render function (e.g., when data changes) */
     setRenderItem(fn: (index: number) => string): void {
+        this._clearCache();
         this._renderItem = fn;
         this.markDirty();
     }
@@ -91,58 +111,72 @@ export class VirtualList extends Widget {
     /** Move selection up by one */
     selectPrev(): void {
         if (this._selectedIndex > 0) {
-            this._selectedIndex--;
-            this._clampScroll();
-            this.markDirty();
+            this._runScrollAction(() => {
+                this._selectedIndex--;
+                this._clampScroll();
+                this.markDirty();
+            });
         }
     }
 
     /** Move selection down by one */
     selectNext(): void {
         if (this._selectedIndex < this._totalItems - 1) {
-            this._selectedIndex++;
-            this._clampScroll();
-            this.markDirty();
+            this._runScrollAction(() => {
+                this._selectedIndex++;
+                this._clampScroll();
+                this.markDirty();
+            });
         }
     }
 
     /** Jump to the first item */
     selectFirst(): void {
-        this._selectedIndex = 0;
-        this._clampScroll();
-        this.markDirty();
+        this._runScrollAction(() => {
+            this._selectedIndex = 0;
+            this._clampScroll();
+            this.markDirty();
+        });
     }
 
     /** Jump to the last item */
     selectLast(): void {
-        this._selectedIndex = Math.max(0, this._totalItems - 1);
-        this._clampScroll();
-        this.markDirty();
+        this._runScrollAction(() => {
+            this._selectedIndex = Math.max(0, this._totalItems - 1);
+            this._clampScroll();
+            this.markDirty();
+        });
     }
 
     /** Page up — move by viewport height */
     pageUp(): void {
-        const rect = this._getContentRect();
-        const pageSize = Math.floor(rect.height / this._itemHeight);
-        this._selectedIndex = Math.max(0, this._selectedIndex - pageSize);
-        this._clampScroll();
-        this.markDirty();
+        this._runScrollAction(() => {
+            const rect = this._getContentRect();
+            const pageSize = Math.floor(rect.height / this._itemHeight);
+            this._selectedIndex = Math.max(0, this._selectedIndex - pageSize);
+            this._clampScroll();
+            this.markDirty();
+        });
     }
 
     /** Page down — move by viewport height */
     pageDown(): void {
-        const rect = this._getContentRect();
-        const pageSize = Math.floor(rect.height / this._itemHeight);
-        this._selectedIndex = Math.min(this._totalItems - 1, this._selectedIndex + pageSize);
-        this._clampScroll();
-        this.markDirty();
+        this._runScrollAction(() => {
+            const rect = this._getContentRect();
+            const pageSize = Math.floor(rect.height / this._itemHeight);
+            this._selectedIndex = Math.min(this._totalItems - 1, this._selectedIndex + pageSize);
+            this._clampScroll();
+            this.markDirty();
+        });
     }
 
     /** Scroll to a specific index */
     scrollTo(index: number): void {
-        this._selectedIndex = Math.max(0, Math.min(index, this._totalItems - 1));
-        this._clampScroll();
-        this.markDirty();
+        this._runScrollAction(() => {
+            this._selectedIndex = Math.max(0, Math.min(index, this._totalItems - 1));
+            this._clampScroll();
+            this.markDirty();
+        });
     }
 
     /** Confirm the current selection */
@@ -150,6 +184,19 @@ export class VirtualList extends Widget {
         if (this._totalItems > 0) {
             this._onSelect?.(this._selectedIndex);
         }
+    }
+
+    override setStyle(style: Partial<Style>): void {
+        this._clearCache();
+        super.setStyle(style);
+    }
+
+    override markDirty(): void {
+        if (this._memoizeLayout && this._isScrolling) {
+            this._markDirtyNoLayout();
+            return;
+        }
+        super.markDirty();
     }
 
     // ── Rendering ──
@@ -172,6 +219,11 @@ export class VirtualList extends Widget {
             ? width - 1
             : width;
 
+        if (this._lastContentWidth !== contentWidth) {
+            this._clearCache();
+            this._lastContentWidth = contentWidth;
+        }
+
         // Only render items in the visible window
         for (let idx = startIdx; idx < endIdx; idx++) {
             const rowY = y + (idx - this._scrollOffset) * this._itemHeight;
@@ -180,34 +232,41 @@ export class VirtualList extends Widget {
             if (rowY < y || rowY >= y + height) continue;
 
             const isSelected = idx === this._selectedIndex;
+            const isFocused = this.isFocused;
 
-            // Get the item content
-            let content: string;
-            try {
-                content = this._renderItem(idx);
-            } catch {
-                content = `[Error: item ${idx}]`;
+            let cached = this._renderCache.get(idx);
+            if (!cached || cached.isSelected !== isSelected || cached.isFocused !== isFocused) {
+                // Get the item content
+                let content: string;
+                try {
+                    content = this._renderItem(idx);
+                } catch {
+                    content = `[Error: item ${idx}]`;
+                }
+
+                // Add selection prefix
+                const prefix = isSelected ? (caps.unicode ? '▸ ' : '> ') : '  ';
+                let line = prefix + content;
+                line = truncate(line, contentWidth);
+
+                // Style
+                const cellStyle = {
+                    ...attrs,
+                    bold: isSelected,
+                    inverse: isSelected && isFocused,
+                };
+
+                cached = { line, cellStyle, isSelected, isFocused };
+                this._renderCache.set(idx, cached);
             }
 
-            // Add selection prefix
-            const prefix = isSelected ? (caps.unicode ? '▸ ' : '> ') : '  ';
-            let line = prefix + content;
-            line = truncate(line, contentWidth);
-
-            // Style
-            const cellStyle = {
-                ...attrs,
-                bold: isSelected,
-                inverse: isSelected && this.isFocused,
-            };
-
-            screen.writeString(x, rowY, line, cellStyle);
+            screen.writeString(x, rowY, cached.line, cached.cellStyle);
 
             // Fill rest of line for inverse highlight
-            if (isSelected && this.isFocused) {
-                const remaining = contentWidth - stringWidth(line);
+            if (isSelected && isFocused) {
+                const remaining = contentWidth - stringWidth(cached.line);
                 for (let c = 0; c < remaining; c++) {
-                    screen.setCell(x + stringWidth(line) + c, rowY, { char: ' ', ...cellStyle });
+                    screen.setCell(x + stringWidth(cached.line) + c, rowY, { char: ' ', ...cached.cellStyle });
                 }
             }
         }
@@ -225,6 +284,19 @@ export class VirtualList extends Widget {
                 const scrollChar = r === thumbPos ? thumbChar : trackChar;
                 screen.setCell(scrollbarX, y + r, { char: scrollChar, ...attrs, dim: r !== thumbPos });
             }
+        }
+    }
+
+    private _clearCache(): void {
+        this._renderCache.clear();
+    }
+
+    private _runScrollAction(action: () => void): void {
+        this._isScrolling = true;
+        try {
+            action();
+        } finally {
+            this._isScrolling = false;
         }
     }
 

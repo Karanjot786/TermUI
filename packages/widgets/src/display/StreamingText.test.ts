@@ -2,7 +2,7 @@
 // @termuijs/widgets — Tests for StreamingText widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { timerPoolUnsubscribeAll } from '@termuijs/motion';
 import { Screen, caps } from '@termuijs/core';
 import { StreamingText } from './StreamingText.js';
@@ -10,6 +10,10 @@ import { StreamingText } from './StreamingText.js';
 afterEach(() => {
     // Clean up any live timers started by mount()
     timerPoolUnsubscribeAll();
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
 });
 
 /** Helper: create widget, set rect, render to a screen, return both */
@@ -199,11 +203,12 @@ describe('StreamingText – cursor hidden', () => {
 
 // ── 8. mount/unmount lifecycle ────────────────────────────────────────────────
 describe('StreamingText – lifecycle', () => {
-    let origMotion: boolean;
-    beforeEach(() => { origMotion = caps.motion; (caps as any).motion = true; });
-    afterEach(() => { (caps as any).motion = origMotion; });
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
 
     it('mount() sets up _blinkUnsub', () => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
         const widget = new StreamingText({ text: 'Hello' });
         expect((widget as any)._blinkUnsub).toBeUndefined();
         widget.mount();
@@ -211,7 +216,16 @@ describe('StreamingText – lifecycle', () => {
         widget.unmount();
     });
 
+    it('does not start cursor blinking when reduced motion is preferred', () => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
+        const widget = new StreamingText({ text: 'Hello' });
+        widget.mount();
+        expect((widget as any)._blinkUnsub).toBeUndefined();
+        expect((widget as any)._cursorVisible).toBe(false);
+    });
+
     it('unmount() clears _blinkUnsub', () => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
         const widget = new StreamingText({ text: 'Hello' });
         widget.mount();
         widget.unmount();
@@ -222,19 +236,14 @@ describe('StreamingText – lifecycle', () => {
 // ── 9. caps.unicode cursor fallback ──────────────────────────────────────────
 describe('StreamingText – caps.unicode cursor fallback', () => {
     it('uses ASCII cursor _ when caps.unicode is false and no explicit cursor given', () => {
-        const orig = caps.unicode;
-        (caps as any).unicode = false;
-        try {
-            const widget = new StreamingText({ text: 'Hi', speed: 0 });
-            (widget as any)._cursorVisible = true;
-            const screen = new Screen(40, 10);
-            widget.updateRect({ x: 0, y: 0, width: 40, height: 10 });
-            widget.render(screen);
-            const line = rowText(screen, 0);
-            expect(line).toBe('Hi_');
-        } finally {
-            (caps as any).unicode = orig;
-        }
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const widget = new StreamingText({ text: 'Hi', speed: 0 });
+        (widget as any)._cursorVisible = true;
+        const screen = new Screen(40, 10);
+        widget.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        widget.render(screen);
+        const line = rowText(screen, 0);
+        expect(line).toBe('Hi_');
     });
 });
 

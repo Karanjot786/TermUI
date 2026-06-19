@@ -15,6 +15,8 @@ import { FileWatcher, type FileChange } from './watcher.js';
 import { DevTools } from './devtools.js';
 import { ErrorOverlay } from './error-overlay.js';
 
+const log = (msg: string) => process.stdout.write(msg + '\n');
+
 export interface DevServerOptions {
     /** Project root directory */
     rootDir: string;
@@ -105,7 +107,7 @@ export class DevServer {
         });
 
         this._watcher.onError((err) => {
-            console.error(`[termui] Watch error: ${err.message}`);
+            process.stderr.write(`[termui] Watch error: ${err.message}\n`);
         });
     }
 
@@ -135,17 +137,17 @@ export class DevServer {
 
         this._running = true;
 
-        console.log();
-        console.log('  ⚡ TermUI Dev Server (Bun)');
-        console.log(`  📁 ${this._rootDir}`);
+        log('');
+        log('  ⚡ TermUI Dev Server (Bun)');
+        log(`  📁 ${this._rootDir}`);
 
         if (this._entryFile) {
-            console.log(`  🚀 Entry: ${this._entryFile}`);
+            log(`  🚀 Entry: ${this._entryFile}`);
         }
 
-        console.log('  👀 Watching for changes...');
-        console.log('  F12 toggles DevTools');
-        console.log();
+        log('  👀 Watching for changes...');
+        log('  F12 toggles DevTools');
+        log('');
 
         this._watcher.start();
 
@@ -175,7 +177,7 @@ export class DevServer {
 
         this._banner = null;
 
-        console.log('\n  Dev server stopped.\n');
+        log('\n  Dev server stopped.\n');
     }
 
     // ── Child process lifecycle ──
@@ -257,7 +259,7 @@ export class DevServer {
                 ) {
                     const time = new Date().toLocaleTimeString();
 
-                    console.log(
+                    log(
                         `  ❌ [${time}] Process exited (code: ${exitCode}, signal: ${signal})`
                     );
 
@@ -277,8 +279,8 @@ export class DevServer {
                 this._child = null;
             });
         } catch (err) {
-            console.error(
-                `  ❌ Failed to spawn: ${(err as Error).message}`
+            process.stderr.write(
+                `  ❌ Failed to spawn: ${(err as Error).message}\n`
             );
         }
     }
@@ -333,7 +335,7 @@ export class DevServer {
 
         this._hideErrorOverlay();
 
-        console.log(
+        log(
             `  ${icon} [${time}] ${change.filename} changed — reloading...`
         );
 
@@ -369,31 +371,38 @@ export class DevServer {
 
             if (!this._running) return;
 
+            // Capture the exited promise before _killChild() nulls this._child,
+            // then await it so the old process is fully gone before we respawn.
+            // This eliminates the previous fixed 100ms setTimeout race where the
+            // old child (with a 2s SIGKILL fallback) could still be alive when
+            // the new child started.
+            const exitedPromise = this._child?.exited ?? Promise.resolve(0);
+
             this._killChild();
 
-            setTimeout(() => {
-                if (this._running && this._entryFile) {
-                    this._spawnChild();
+            await exitedPromise.catch(() => {});
 
-                    const respawnTime =
-                        new Date().toLocaleTimeString();
+            if (this._running && this._entryFile) {
+                this._spawnChild();
 
-                    console.log(
-                        `  🔄 [${respawnTime}] Respawned`
-                    );
+                const respawnTime =
+                    new Date().toLocaleTimeString();
 
-                    this._banner = 'Reloaded';
+                log(
+                    `  🔄 [${respawnTime}] Respawned`
+                );
 
-                    if (this._bannerTimer) {
-                        clearTimeout(this._bannerTimer);
-                    }
+                this._banner = 'Reloaded';
 
-                    this._bannerTimer = setTimeout(() => {
-                        this._banner = null;
-                        this._bannerTimer = null;
-                    }, this._bannerMs);
+                if (this._bannerTimer) {
+                    clearTimeout(this._bannerTimer);
                 }
-            }, 100);
+
+                this._bannerTimer = setTimeout(() => {
+                    this._banner = null;
+                    this._bannerTimer = null;
+                }, this._bannerMs);
+            }
         }, this._debounce);
     }
 
