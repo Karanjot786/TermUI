@@ -32,7 +32,8 @@ import type { EqualityFn } from './shallow.js'
 interface BatchEntry<T> {
     prevState: T;
     nextState: T;
-    commit: () => void;
+    changes: Partial<T>;
+    commit: () => T;
     rollback: () => void;
 }
 
@@ -108,10 +109,10 @@ function flushBatch(threw: boolean) {
         queueMicrotask(() => {
             const stores = Array.from(_batchStores.entries());
             _batchStores.clear();
-            for (const [listeners, { prevState, nextState ,commit }] of stores) {
-                commit();
+            for (const [listeners, { prevState, commit }] of stores) {
+                const newState = commit();
                 for (const listener of listeners) {
-                    listener(nextState, prevState);
+                    listener(newState, prevState);
                 }
             }
         });
@@ -299,16 +300,19 @@ export function createStore<T extends object>(
                     // We're in a batch: defer listener notifications and track the final state
                     const existing = _batchStores.get(listeners);
                     if (!existing) {
+                        // Track only the keys changed inside the batch so commit can merge
+                        // onto any intermediate non-batched updates without overwriting them.
+                        const changes: Partial<T> = { ...finalPartial };
                         _batchStores.set(listeners, {
                             prevState,
                             nextState,
-                            commit: () => { state = nextState; persistState(); },
+                            changes,
+                            commit: () => { state = { ...state, ...changes } as T; persistState(); return state; },
                             rollback: () => { state = prevState; },
                         });
                     } else {
-                        // Update to the new nextState, but keep the original prevState
+                        Object.assign(existing.changes, finalPartial);
                         existing.nextState = nextState;
-                        existing.commit = () => { state = nextState; persistState(); };
                     }
                 } else {
                     state = nextState; 
@@ -398,14 +402,24 @@ export function createStore<T extends object>(
         }
         if (_batchDepth > 0) {
             const existing = _batchStores.get(listeners);
+            // Compute which keys actually changed so commit can merge instead of replace
+            const changedKeys = Object.keys(nextState).filter(
+                k => !Object.is((nextState as any)[k], (baseState as any)[k])
+            );
+            const changes: Partial<T> = {};
+            for (const k of changedKeys) {
+                (changes as any)[k] = (nextState as any)[k];
+            }
             if (!existing) {
                 _batchStores.set(listeners, {
                     prevState,
                     nextState,
-                    commit: () => { state = nextState; persistState(); },
+                    changes,
+                    commit: () => { state = { ...state, ...changes } as T; persistState(); return state; },
                     rollback: () => { state = prevState; },
                 });
             } else {
+                Object.assign(existing.changes, changes);
                 existing.nextState = nextState;
             }
         } else {
