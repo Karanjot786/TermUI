@@ -1,4 +1,4 @@
-import { type Color, contrastRatio, relativeLuminance, colorToRgb } from './Color.js';
+import { type Color, contrastRatio, colorToRgb } from './Color.js';
 
 function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
     r /= 255;
