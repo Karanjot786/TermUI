@@ -33,20 +33,14 @@ export class Session {
      * to files, databases, or custom storage.
      */
     save(): void {
-<<<<<<< HEAD
         console.log('Session saved:', this._data);
-=======
->>>>>>> upstream/main
     }
 
     /**
      * Restore previous session.
      */
     restore(): void {
-<<<<<<< HEAD
         console.log('Session restored');
-=======
->>>>>>> upstream/main
     }
 
     /**
