@@ -244,3 +244,8 @@ export type { SearchInputOptions } from './SearchInput.js';
 export * from '@termuijs/tss';
 
 export type { VimMode } from './vim_modes.js';
+
+export { ChatThread } from './ChatThread.js';
+export type { ChatThreadOptions } from './ChatThread.js';
+export { TokenUsage } from './TokenUsage.js';
+export type { TokenUsageOptions } from './TokenUsage.js';
