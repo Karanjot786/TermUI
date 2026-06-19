@@ -46,3 +46,9 @@ export type { LocalStorageAdapter } from './localStorage/index.js'
 
 export { useExeca, useShell } from './execa/index.js'
 export type { UseExecaResult } from './execa/index.js'
+
+export { useOpen } from './open/index.js'
+export type { UseOpenResult } from './open/index.js'
+
+export { ClaudeAdapter } from './claude.js'
+export type { ClaudeClientOptions } from './claude.js'

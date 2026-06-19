@@ -25,6 +25,8 @@ export { StreamingText } from './display/StreamingText.js';
 export type { StreamingTextOptions } from './display/StreamingText.js';
 export { ChatMessage } from './display/ChatMessage.js';
 export type { ChatMessageOptions, MessageRole } from './display/ChatMessage.js';
+export { ChatThread } from './display/ChatThread.js';
+export type { ThreadMessage } from './display/ChatThread.js';
 export { ToolCall, ToolApproval } from './display/ToolCall.js';
 export type { ToolCallOptions, ToolApprovalOptions, ToolCallStatus } from './display/ToolCall.js';
 export { Canvas } from './display/Canvas.js';
@@ -40,6 +42,10 @@ export { PerformanceOverlay } from './display/PerformanceOverlay.js';
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
 export type { ScrollRange } from './input/virtual-scroll.js';
 
+// ─────────────────────────────────────────────────────
+
+
+
 // ── Input Widgets ─────────────────────────────────────
 export { List } from './input/List.js';
 export type { ListItem, ListProps } from './input/List.js';
@@ -51,6 +57,8 @@ export { CommandPalette } from './input/CommandPalette.js';
 export type { Command, CommandPaletteOptions } from './input/CommandPalette.js';
 export { Button } from './input/Button.js';
 export type { ButtonOptions, ButtonVariant } from './input/Button.js';
+export { Checkbox } from './input/Checkbox.js';
+export type { CheckboxOptions } from './input/Checkbox.js';
 
 export { Slider } from "./input/Slider.js";
 export type { SliderOptions } from "./input/Slider.js";
@@ -63,6 +71,8 @@ export { PinInput } from "./input/PinInput.js";
 export type { PinInputOptions } from "./input/PinInput.js";
 export { ContextMenu } from './input/ContextMenu.js';
 export type { ContextMenuItem } from './input/ContextMenu.js';
+export { FileExplorer } from './FileExplorer.js';
+export type { FileExplorerOptions, FileItem } from './FileExplorer.js';
 
 // ── Data Widgets ──────────────────────────────────────
 export { Table } from './data/Table.js';
@@ -94,8 +104,8 @@ export { GanttChart } from './data/GanttChart.js';
 export type { GanttChartOptions, GanttTask } from './data/GanttChart.js';
 
 // ── Layout Widgets ────────────────────────────────────
-export { Grid } from './layout/Grid.js';
-export type { GridOptions } from './layout/Grid.js';
+export { Grid, GridItem } from './layout/Grid.js';
+export type { GridOptions, GridItemOptions } from './layout/Grid.js';
 export { ScrollView } from './layout/ScrollView.js';
 export type { ScrollViewOptions } from './layout/ScrollView.js';
 export { Center } from './layout/Center.js';
@@ -112,6 +122,8 @@ export { Divider } from './layout/Divider.js';
 export type { DividerOptions, DividerOrientation } from './layout/Divider.js';
 export { AspectRatio } from './layout/AspectRatio.js';
 export type { AspectRatioOptions } from './layout/AspectRatio.js';
+export { DraggableWidget, DroppableWidget, DragState } from './layout/DragAndDrop.js';
+export type { DraggableOptions, DroppableOptions } from './layout/DragAndDrop.js';
 export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { SplitPane } from './layout/SplitPane.js';
@@ -198,6 +210,9 @@ export type { CarouselOptions } from './display/Carousel.js';
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 
+export { ContextMenu as FloatingContextMenu } from './display/ContextMenu.js';
+export type { ContextMenuOptions as FloatingContextMenuOptions } from './display/ContextMenu.js';
+
 export { Panel } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
@@ -267,6 +282,14 @@ export type {
     ProgressColumnProps,
 } from './feedback/ProgressColumn.js';
 export { Progress } from './feedback/Progress.js';
+
+export { ProgressDashboard } from "./feedback/ProgressDashboard.js";
+
+export type {
+    ProgressTask as DashboardProgressTask,
+    TaskStatus as DashboardTaskStatus,
+    ProgressDashboardOptions
+} from "./feedback/ProgressDashboard.js";
 
 export type {
     ProgressProps,

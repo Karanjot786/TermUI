@@ -157,10 +157,10 @@ describe('TextInput', () => {
         
         const screen = renderTextInput(input, 20, 3);
         
-        // Character at cursor ('b') should be inverted
+        // Character at cursor ('b') should be underlined in default insert mode
         const cell = screen.back[1][2]; // x=1 is start of content, x=2 is index 1 of value
         expect(cell.char).toBe('b');
-        expect(cell.inverse).toBe(true);
+        expect(cell.underline).toBe(true);
     });
 
     it('scrolls value view horizontally when text exceeds viewport width', () => {

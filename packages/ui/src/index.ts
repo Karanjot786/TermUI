@@ -20,12 +20,23 @@ export {
     ProgressBar,
     Spinner,
     Widget,
+    ContextMenu,
 } from '@termuijs/widgets';
 
 // ── New components ──
 export { Slider, RangeInput } from './Slider.js';
 export { Divider } from './Divider.js';
 export type { DividerOptions } from './Divider.js';
+
+export { ShortcutManager } from "./ShortcutManager.js";
+export type { Shortcut as ShortcutManagerItem } from "./ShortcutManager.js";
+
+export { NotificationHistory } from "./NotificationHistory.js";
+
+export type {
+    Notification as NotificationHistoryItem,
+    NotificationType
+} from "./NotificationHistory.js";
 
 export { Spacer } from './Spacer.js';
 
@@ -220,9 +231,11 @@ export type { ListbarOptions, ListbarItem } from './Listbar.js';
 
 export { validateInput } from './validation.js';
 export type { InputValidator } from './validation.js';
+export { Draggable, Droppable } from './components/DragAndDrop.js';
+export type { DraggableProps, DroppableProps } from './components/DragAndDrop.js';
 
 export { Popover } from './Popover.js';
-export type { PopoverOptions, PopoverPlacement } from './Popover.js'
+export type { PopoverOptions, PopoverPlacement } from './Popover.js';
 
 export { FormBuilder, useForm } from './components/FormBuilder.js';
 export type { FormBuilderProps } from './components/FormBuilder.js';
@@ -232,3 +245,10 @@ export type { SearchInputOptions } from './SearchInput.js';
 
 // -- External Theme / Stylesheet Engine --
 export * from '@termuijs/tss';
+
+export type { VimMode } from './vim_modes.js';
+
+export { ChatThread } from './ChatThread.js';
+export type { ChatThreadOptions } from './ChatThread.js';
+export { TokenUsage } from './TokenUsage.js';
+export type { TokenUsageOptions } from './TokenUsage.js';

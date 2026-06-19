@@ -32,4 +32,6 @@ export type { LoggerOptions } from './logger.js';
 
 export { signal, mutate } from './mutate.js';
 export type { Signal } from './mutate.js';
+export type { EqualityFn } from './shallow.js';
+export { shallow } from './shallow.js';
 

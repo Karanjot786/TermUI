@@ -19,16 +19,18 @@ function createMockSubprocess() {
     };
 }
 
-vi.mock('node:fs', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('node:fs')>();
+const { mockExistsSync, mockWatch } = vi.hoisted(() => ({
+    mockExistsSync: vi.fn(() => true),
+    mockWatch: vi.fn(() => ({ on: vi.fn(), close: vi.fn() })),
+}));
 
+vi.mock('node:fs', async () => {
+    const actual = await import('node:fs');
     return {
         ...actual,
-        existsSync: vi.fn(() => true),
-        watch: vi.fn(() => ({
-            on: vi.fn(),
-            close: vi.fn()
-        }))
+        existsSync: mockExistsSync,
+        watch: mockWatch,
+    
     };
 });
 
