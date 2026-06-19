@@ -121,7 +121,7 @@ export { useUnmount } from './hooks/useUnmount.js';
 export { useTransition } from './hooks/useTransition.js';
 export { useStopwatch } from './hooks/useStopwatch.js';
 export type { UseStopwatchOptions, UseStopwatchControls } from './hooks/useStopwatch.js';
-export { useTimeout } from './hooks/useTimeout.js';
+
 export * from './hooks/useTypeahead.js';
 export { useBell } from './hooks/useBell.js';
 export { useCountdown } from './hooks/useCountdown.js';
