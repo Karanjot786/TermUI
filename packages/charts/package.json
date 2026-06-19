@@ -1,15 +1,5 @@
 {
   "name": "@termuijs/charts",
-<<<<<<< HEAD
-  "version": "0.0.1",
-  "description": "Built-in charts dashboard package for TermUI",
-  "type": "module",
-  "main": "./src/index.ts",
-  "exports": {
-    ".": "./src/index.ts"
-  }
-}
-=======
   "homepage": "https://www.termui.io/docs/widgets/data",
   "repository": {
     "type": "git",
@@ -60,4 +50,3 @@
     "node": ">=18.0.0"
   }
 }
->>>>>>> upstream/main
