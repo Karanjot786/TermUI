@@ -48,12 +48,12 @@ describe('interpolate and mapRange', () => {
 
     it('interpolate with multi-stop arrays and clamping', () => {
         // Clamped out of bounds
-        expect(interpolate(-0.5, [0, 0.5, 1], [0, 10, 0])).toBe(0); 
-        expect(interpolate(1.5, [0, 0.5, 1], [0, 10, 0])).toBe(0); 
-        
+        expect(interpolate(-0.5, [0, 0.5, 1], [0, 10, 0])).toBe(0);
+        expect(interpolate(1.5, [0, 0.5, 1], [0, 10, 0])).toBe(0);
+
         // No clamp out of bounds
-        expect(interpolate(-0.5, [0, 0.5, 1], [0, 10, 0], { clamp: false })).toBe(-10); 
-        expect(interpolate(1.5, [0, 0.5, 1], [0, 10, 0], { clamp: false })).toBe(-10); 
+        expect(interpolate(-0.5, [0, 0.5, 1], [0, 10, 0], { clamp: false })).toBe(-10);
+        expect(interpolate(1.5, [0, 0.5, 1], [0, 10, 0], { clamp: false })).toBe(-10);
     });
 
     it('throws if lengths are mismatched or too small', () => {
