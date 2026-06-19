@@ -2,7 +2,15 @@
 // @termuijs/widgets — TextInput widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type KeyEvent, styleToCellAttrs, stringWidth, truncate, splitGraphemes } from '@termuijs/core';
+import {
+    type Screen,
+    type Style,
+    styleToCellAttrs,
+    stringWidth,
+    truncate,
+    type KeyEvent,
+    splitGraphemes
+} from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type VimMode } from './vim.js';
 
@@ -10,13 +18,6 @@ export type { VimMode };
 
 /**
  * TextInput — a single-line text input field.
- *
- * Supports:
- * - Cursor movement (left/right/Home/End)
- * - Character insertion and deletion
- * - Placeholder text
- * - Password masking
- * - Max length constraint
  */
 export class TextInput extends Widget {
     private _value = '';
@@ -39,17 +40,22 @@ export class TextInput extends Widget {
         } = {},
     ) {
         super({ border: 'single', height: 3, ...style });
+
         this._placeholder = options.placeholder ?? '';
         this._mask = options.mask ?? null;
         this._maxLength = options.maxLength ?? Infinity;
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
+
         this.focusable = true;
 
         this.events.on('key', (event: KeyEvent) => this.handleKey(event));
     }
 
-    get value(): string { return this._value; }
+    get value(): string {
+        return this._value;
+    }
+
     set value(v: string) {
         const graphemes = splitGraphemes(v);
         if (graphemes.length > this._maxLength) {
@@ -70,11 +76,6 @@ export class TextInput extends Widget {
         this.markDirty();
     }
 
-
-
-    /**
-     * Handle a typed character.
-     */
     insertChar(char: string): void {
         const graphemes = splitGraphemes(this._value);
         if (graphemes.length >= this._maxLength) return;
@@ -85,9 +86,6 @@ export class TextInput extends Widget {
         this.markDirty();
     }
 
-    /**
-     * Delete the character before the cursor.
-     */
     deleteBack(): void {
         if (this._cursorPos > 0) {
             const graphemes = splitGraphemes(this._value);
@@ -99,9 +97,6 @@ export class TextInput extends Widget {
         }
     }
 
-    /**
-     * Delete the character after the cursor.
-     */
     deleteForward(): void {
         const graphemes = splitGraphemes(this._value);
         if (this._cursorPos < graphemes.length) {
@@ -114,44 +109,50 @@ export class TextInput extends Widget {
 
     moveCursorLeft(): void {
         const next = Math.max(0, this._cursorPos - 1);
-    
+
         if (next === this._cursorPos) {
             return;
         }
-    
+
         this._cursorPos = next;
         this.markDirty();
     }
+
     moveCursorRight(): void {
         const graphemes = splitGraphemes(this._value);
         const next = Math.min(graphemes.length, this._cursorPos + 1);
-    
+
         if (next === this._cursorPos) {
             return;
         }
-    
+
         this._cursorPos = next;
         this.markDirty();
     }
+
     moveCursorHome(): void {
         if (this._cursorPos === 0) {
             return;
         }
-    
+
         this._cursorPos = 0;
         this.markDirty();
     }
+
     moveCursorEnd(): void {
         const graphemes = splitGraphemes(this._value);
         if (this._cursorPos === graphemes.length) {
             return;
         }
-    
+
         this._cursorPos = graphemes.length;
         this.markDirty();
     }
 
-    submit(): void { this._onSubmit?.(this._value); }
+    submit(): void {
+        this._onSubmit?.(this._value);
+    }
+
     clear(): void {
         this._value = '';
         this._cursorPos = 0;
@@ -319,6 +320,14 @@ export class TextInput extends Widget {
         if (process.env.TERMUI_KEYBINDINGS === 'vim' && this.isFocused && width > 15) {
             modeIndicator = ` -- ${this._vimMode.toUpperCase()} -- `;
             rightReserved = modeIndicator.length;
+        } else if (this.isFocused) {
+            const length = this._value.length;
+            const max = this._maxLength === Infinity ? null : this._maxLength;
+            const counterText = max ? `${length}/${max}` : `${length}`;
+            const counterWidth = stringWidth(counterText);
+            if (x + width - counterWidth >= x) {
+                rightReserved = counterWidth;
+            }
         }
 
         const maxVisibleWidth = width - rightReserved;
@@ -367,7 +376,15 @@ export class TextInput extends Widget {
 
         if (modeIndicator) {
             screen.writeString(x + width - modeIndicator.length, y, modeIndicator, { ...attrs, dim: true });
+        } else if (this.isFocused) {
+            const length = this._value.length;
+            const max = this._maxLength === Infinity ? null : this._maxLength;
+            const counterText = max ? `${length}/${max}` : `${length}`;
+            const counterWidth = stringWidth(counterText);
+            const counterX = x + width - counterWidth;
+            if (counterX >= x) {
+                screen.writeString(counterX, y, counterText, { ...attrs, dim: true });
+            }
         }
     }
 }
-

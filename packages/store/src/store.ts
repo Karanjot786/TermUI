@@ -24,6 +24,7 @@ import { useState, useEffect, useRef } from '@termuijs/jsx';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+import type { EqualityFn } from './shallow.js'
 
 // ── Batch Mechanism ──
 
@@ -450,8 +451,8 @@ export function createStore<T extends object>(
 
     // Create the hook function
     function useStore(): T;
-    function useStore<U>(selector: Selector<T, U>): U;
-    function useStore<U>(selector?: Selector<T, U>): T | U {
+    function useStore<U>(selector: Selector<T, U>, equalityFn?: EqualityFn<U>): U;
+    function useStore<U>(selector?: Selector<T, U>, equalityFn?: EqualityFn<U>): T | U {
         const select = selector ?? ((s: T) => s as unknown as U);
 
         // Use useState to trigger re-renders
@@ -459,11 +460,18 @@ export function createStore<T extends object>(
         const selectorRef = useRef(select);
         selectorRef.current = select;
 
+        // Store equalityFn in a ref to avoid stale closures
+        const equalityRef = useRef<EqualityFn<U> | undefined>(equalityFn as EqualityFn<U> | undefined);
+        equalityRef.current = equalityFn as EqualityFn<U> | undefined;
+
         useEffect(() => {
             let prevSelected = selectorRef.current(store.getState());
             const unsubscribe = store.subscribe((newState) => {
                 const newSelected = selectorRef.current(newState);
-                if (!Object.is(prevSelected, newSelected)) {
+                const areEqual = equalityRef.current
+                    ? equalityRef.current(prevSelected as U, newSelected as U)
+                    : Object.is(prevSelected, newSelected);
+                if (!areEqual) {
                     prevSelected = newSelected;
                     setSelectedState(newSelected);
                 }

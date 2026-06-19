@@ -58,45 +58,57 @@ describe('Watermark', () => {
 
     it('does not mark dirty when setText receives the same value', () => {
         const watermark = new Watermark('CONFIDENTIAL');
-    
+
         watermark.clearDirty();
-    
+
         watermark.setText('CONFIDENTIAL');
-    
+
         expect(watermark.isDirty).toBe(false);
     });
-    
+
     it('marks dirty when setText receives a different value', () => {
         const watermark = new Watermark('CONFIDENTIAL');
-    
+
         watermark.clearDirty();
-    
+
         watermark.setText('INTERNAL');
-    
+
         expect(watermark.isDirty).toBe(true);
     });
 
     it('renders double-width unicode characters', () => {
         const { screen } = renderWatermark('你好', {}, {}, 4, 1);
-    
+
         expect(rowText(screen, 0)).toContain('你');
         expect(rowText(screen, 0)).toContain('好');
     });
-    
+
     it('renders emoji watermark content', () => {
         const { screen } = renderWatermark('😀', {}, {}, 4, 1);
-    
+
         expect(rowText(screen, 0)).toContain('😀');
     });
 
-    it('marks continuation cells for wide Unicode characters', () => {
-        const { screen } = renderWatermark('你', {}, {}, 4, 1);
-    
+    it('advances by the displayed cell width for double-width characters', () => {
+        const { screen } = renderWatermark('你好', {}, {}, 4, 1);
+
         expect(screen.back[0][0].char).toBe('你');
         expect(screen.back[0][0].width).toBe(2);
-    
         expect(screen.back[0][1].char).toBe('');
         expect(screen.back[0][1].width).toBe(0);
+
+        expect(screen.back[0][2].char).toBe('好');
+        expect(screen.back[0][2].width).toBe(2);
+        expect(screen.back[0][3].char).toBe('');
+        expect(screen.back[0][3].width).toBe(0);
     });
-    
+
+    it('does not write a double-width character when it would overflow the row', () => {
+        const { screen } = renderWatermark('A你', {}, {}, 2, 1);
+
+        expect(screen.back[0][0].char).toBe('A');
+        expect(screen.back[0][0].width).toBe(1);
+        expect(screen.back[0][1].char).toBe(' ');
+        expect(screen.back[0][1].width).toBe(1);
+    });
 });
