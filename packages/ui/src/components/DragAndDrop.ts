@@ -1,37 +1,25 @@
-import { createElement } from '@termuijs/jsx';
 import type { VNode } from '@termuijs/jsx';
-import { DraggableWidget, DroppableWidget } from '@termuijs/widgets';
+import {
+    DraggableWidget,
+    DroppableWidget,
+    type DraggableOptions,
+    type DroppableOptions,
+} from '@termuijs/widgets';
 
-export interface DraggableProps {
-    id: string;
-    onDragStart?: () => void;
+export interface DraggableProps extends DraggableOptions {
     children?: VNode | VNode[];
 }
 
-export function Draggable(props: DraggableProps) {
-    return createElement(
-        DraggableWidget as any,
-        {
-            id: props.id,
-            onDragStart: props.onDragStart,
-        },
-        props.children
-    );
+export function Draggable(props: DraggableProps): DraggableWidget {
+    const { children: _children, ...opts } = props;
+    return new DraggableWidget(opts);
 }
 
-export interface DroppableProps {
-    id: string;
-    onDrop?: (draggedId: string) => void;
+export interface DroppableProps extends DroppableOptions {
     children?: VNode | VNode[];
 }
 
-export function Droppable(props: DroppableProps) {
-    return createElement(
-        DroppableWidget as any,
-        {
-            id: props.id,
-            onDrop: props.onDrop,
-        },
-        props.children
-    );
+export function Droppable(props: DroppableProps): DroppableWidget {
+    const { children: _children, ...opts } = props;
+    return new DroppableWidget(opts);
 }
