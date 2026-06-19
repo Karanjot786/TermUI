@@ -133,6 +133,91 @@ describe('Screen', () => {
     });
 });
 
+describe('getStyleLine', () => {
+    it('returns empty string for out-of-bounds row', () => {
+        const screen = new Screen(5, 3);
+        expect(screen.getStyleLine(-1)).toBe('');
+        expect(screen.getStyleLine(3)).toBe('');
+    });
+
+    it('different ansi256 codes produce different hashes', () => {
+        const screen = new Screen(5, 1);
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'ansi256', code: 1 } });
+        const hash1 = screen.getStyleLine(0);
+
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'ansi256', code: 9 } });
+        const hash2 = screen.getStyleLine(0);
+
+        expect(hash1).not.toBe(hash2);
+    });
+
+    it('different named colors produce different hashes', () => {
+        const screen = new Screen(5, 1);
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'named', name: 'red' } });
+        const hash1 = screen.getStyleLine(0);
+
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'named', name: 'blue' } });
+        const hash2 = screen.getStyleLine(0);
+
+        expect(hash1).not.toBe(hash2);
+    });
+
+    it('different rgb values produce different hashes', () => {
+        const screen = new Screen(5, 1);
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'rgb', r: 255, g: 0, b: 0 } });
+        const hash1 = screen.getStyleLine(0);
+
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'rgb', r: 0, g: 255, b: 0 } });
+        const hash2 = screen.getStyleLine(0);
+
+        expect(hash1).not.toBe(hash2);
+    });
+
+    it('different hex values produce different hashes', () => {
+        const screen = new Screen(5, 1);
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'hex', hex: '#ff0000' } });
+        const hash1 = screen.getStyleLine(0);
+
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'hex', hex: '#00ff00' } });
+        const hash2 = screen.getStyleLine(0);
+
+        expect(hash1).not.toBe(hash2);
+    });
+
+    it('same color values produce the same hash', () => {
+        const screen = new Screen(5, 1);
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'ansi256', code: 42 } });
+        const hash1 = screen.getStyleLine(0);
+
+        screen.setCell(0, 0, { char: 'A', fg: { type: 'ansi256', code: 42 } });
+        const hash2 = screen.getStyleLine(0);
+
+        expect(hash1).toBe(hash2);
+    });
+
+    it('style flags still affect the hash', () => {
+        const screen = new Screen(5, 1);
+        screen.setCell(0, 0, { char: 'A', bold: false });
+        const hash1 = screen.getStyleLine(0);
+
+        screen.setCell(0, 0, { char: 'A', bold: true });
+        const hash2 = screen.getStyleLine(0);
+
+        expect(hash1).not.toBe(hash2);
+    });
+
+    it('background color changes are detected', () => {
+        const screen = new Screen(5, 1);
+        screen.setCell(0, 0, { char: 'A', bg: { type: 'ansi256', code: 1 } });
+        const hash1 = screen.getStyleLine(0);
+
+        screen.setCell(0, 0, { char: 'A', bg: { type: 'ansi256', code: 9 } });
+        const hash2 = screen.getStyleLine(0);
+
+        expect(hash1).not.toBe(hash2);
+    });
+});
+
 describe('cellsEqual', () => {
     it('returns true for identical cells', () => {
         const a = emptyCell();
