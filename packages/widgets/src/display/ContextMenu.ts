@@ -1,5 +1,5 @@
 import type { Screen, Style, Color, KeyEvent } from '@termuijs/core';
-import { styleToCellAttrs } from '@termuijs/core';
+import { styleToCellAttrs, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface ContextMenuItem {
@@ -122,7 +122,7 @@ export class ContextMenu extends Widget {
             const isSelected = i === this._selectedIndex;
             
             const prefix = isSelected ? '> ' : '  ';
-            const labelStr = (prefix + item.label).substring(0, width - border * 2);
+            const labelStr = truncate(prefix + item.label, width - border * 2);
 
             const itemBg = isSelected ? { type: 'named', name: 'white' } as Color : bg;
             const itemFg = isSelected ? { type: 'named', name: 'black' } as Color : fg;

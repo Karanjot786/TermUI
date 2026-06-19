@@ -1,8 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
+import { Screen, createKeyEvent } from "@termuijs/core";
+
+const keyOf = (key: string) =>
+    createKeyEvent({ key, raw: Buffer.from(key), ctrl: false, alt: false, shift: false });
 
 describe("ContextMenu", () => {
     it("renders item labels", async () => {
-        const { Screen } = await import("@termuijs/core");
         const { ContextMenu } = await import("./ContextMenu.js");
 
         const menu = new ContextMenu({
@@ -45,21 +48,21 @@ describe("ContextMenu", () => {
             ]
         });
 
-        menu.handleKey({ key: "down" } as any);
-        menu.handleKey({ key: "enter" } as any);
+        menu.handleKey(keyOf("down"));
+        menu.handleKey(keyOf("enter"));
         expect(selected).toBe("B");
 
-        menu.handleKey({ key: "down" } as any);
-        menu.handleKey({ key: "enter" } as any);
+        menu.handleKey(keyOf("down"));
+        menu.handleKey(keyOf("enter"));
         expect(selected).toBe("C");
 
-        menu.handleKey({ key: "up" } as any);
-        menu.handleKey({ key: "enter" } as any);
+        menu.handleKey(keyOf("up"));
+        menu.handleKey(keyOf("enter"));
         expect(selected).toBe("B");
 
-        menu.handleKey({ key: "up" } as any);
-        menu.handleKey({ key: "up" } as any);
-        menu.handleKey({ key: "enter" } as any);
+        menu.handleKey(keyOf("up"));
+        menu.handleKey(keyOf("up"));
+        menu.handleKey(keyOf("enter"));
         expect(selected).toBe("C"); // Wrap around backwards
     });
 
@@ -74,7 +77,7 @@ describe("ContextMenu", () => {
             ]
         });
 
-        menu.handleKey({ key: "enter" } as any);
+        menu.handleKey(keyOf("enter"));
         expect(actionCalled).toBe(true);
     });
 });
