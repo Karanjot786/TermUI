@@ -98,8 +98,6 @@ export { debounce } from './utils/debounce.js';
 export type { DebounceOptions } from './utils/debounce.js';
 export * from './session/Session.js';
 export { writeClipboard, readClipboard, clipboard, stripAnsiControl } from './utils/ansi.js';
-export { debounce } from './utils/debounce.js';
-export type { DebounceOptions } from './utils/debounce.js';
 export * from './session/Session.js';
 export { throttle } from './utils/throttle.js';
 export type { ThrottleOptions } from './utils/throttle.js';
