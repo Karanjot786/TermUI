@@ -4,10 +4,16 @@ import { ThemeWatcher } from './theme-watcher.js';
 import { watch, existsSync } from 'node:fs';
 import { EventEmitter } from 'node:events';
 
-vi.mock('node:fs', () => ({
+const { watch: mockWatch, existsSync: mockExistsSync } = vi.hoisted(() => ({
     watch: vi.fn(),
-    existsSync: vi.fn(() => true)
+    existsSync: vi.fn(() => true),
 }));
+
+vi.mock('node:fs', () => ({
+    watch: mockWatch,
+    existsSync: mockExistsSync,
+}));
+
 
 describe('ThemeWatcher', () => {
     let mockWatcherEmitter: EventEmitter;

@@ -117,7 +117,6 @@ export default defineConfig({
 function createPackageJson(config: ProjectConfig): string {
     const isFileManager = config.template === 'file-manager';
     const isAiAssistant = config.template === 'ai-assistant';
-    const isRestClient = config.template === 'rest-client';
     return JSON.stringify({
         name: config.name,
         version: '0.1.0',
@@ -132,18 +131,18 @@ function createPackageJson(config: ProjectConfig): string {
             ? {
                 '@termuijs/core': 'latest',
                 '@termuijs/widgets': 'latest',
+                '@termuijs/adapters': 'latest',
                 '@termuijs/ui': 'latest',
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
             }
-            : isFileManager || isRestClient
+            : isFileManager
             ? {
                 '@termuijs/core': 'latest',
                 '@termuijs/widgets': 'latest',
                 '@termuijs/ui': 'latest',
                 '@termuijs/jsx': 'latest',
                 '@termuijs/tss': 'latest',
-                ...(isRestClient ? { '@termuijs/data': 'latest' } : {}),
             }
             : {
                 '@termuijs/core': 'latest',
@@ -336,11 +335,11 @@ function InteractiveTool() {
     useKeymap([
         { key: 'q',          action: () => process.exit(0),               description: 'Quit' },
         { key: 'c', ctrl: true, action: () => process.exit(0),            description: 'Quit' },
-        { key: 'ArrowUp',    action: () => setSelected(s => Math.max(0, s - 1)),              description: 'Move up' },
-        { key: 'ArrowDown',  action: () => setSelected(s => Math.min(items.length - 1, s + 1)), description: 'Move down' },
+        { key: 'up',         action: () => setSelected(s => Math.max(0, s - 1)),              description: 'Move up' },
+        { key: 'down',       action: () => setSelected(s => Math.min(items.length - 1, s + 1)), description: 'Move down' },
         { key: 'k',          action: () => setSelected(s => Math.max(0, s - 1)),              description: 'Move up (vim)' },
         { key: 'j',          action: () => setSelected(s => Math.min(items.length - 1, s + 1)), description: 'Move down (vim)' },
-        { key: 'Enter',      action: () => {
+        { key: 'enter',      action: () => {
             const item = items[selected];
             if (item) setDone(d => d.includes(item) ? d.filter(x => x !== item) : [...d, item]);
         }, description: 'Toggle selected' },
@@ -460,7 +459,7 @@ function CliWrapper() {
     ]);
     const [running, setRunning] = useState(false);
     const [exitCode, setExitCode] = useState<number | null>(null);
-    const procRef = useRef<any>(null);
+    const procRef = useRef<ReturnType<typeof spawn> | null>(null);
     const theme = useTheme();
 
     const addLog = (level: LogLevel, text: string) =>
@@ -798,7 +797,7 @@ function FileManager() {
         { key: 'tab', shift: true, action: () => cyclePane(-1), description: 'Previous pane' },
         { key: 'enter', action: () => {
             if (focusedPane === 'tree') {
-                tree.current.handleKey('Enter');
+                tree.current.handleKey('enter');
                 const selected = tree.current.selectedNode;
                 const payload = selected?.data as { path?: string; type?: string } | undefined;
                 if (payload?.type === 'file' && payload.path) {
@@ -813,27 +812,27 @@ function FileManager() {
                 return;
             }
 
-            preview.current.handleKey('Enter');
+            preview.current.handleKey('enter');
         }, description: 'Open item' },
         { key: 'up', action: () => {
-            if (focusedPane === 'tree') tree.current.handleKey('ArrowUp');
+            if (focusedPane === 'tree') tree.current.handleKey('up');
             else if (focusedPane === 'picker') filePicker.current.selectPrev();
-            else preview.current.handleKey('ArrowUp');
+            else preview.current.handleKey('up');
         }, description: 'Move up' },
         { key: 'down', action: () => {
-            if (focusedPane === 'tree') tree.current.handleKey('ArrowDown');
+            if (focusedPane === 'tree') tree.current.handleKey('down');
             else if (focusedPane === 'picker') filePicker.current.selectNext();
-            else preview.current.handleKey('ArrowDown');
+            else preview.current.handleKey('down');
         }, description: 'Move down' },
         { key: 'left', action: () => {
-            if (focusedPane === 'tree') tree.current.handleKey('ArrowLeft');
+            if (focusedPane === 'tree') tree.current.handleKey('left');
             else if (focusedPane === 'picker') {
                 filePicker.current.goUp();
                 syncPickerPath();
             }
         }, description: 'Collapse or go up' },
         { key: 'right', action: () => {
-            if (focusedPane === 'tree') tree.current.handleKey('ArrowRight');
+            if (focusedPane === 'tree') tree.current.handleKey('right');
             else if (focusedPane === 'picker') {
                 filePicker.current.confirm();
                 syncPickerPath();
@@ -875,222 +874,5 @@ render(<App />, { title: '${config.name}' });
 
 
 function generateAiAssistantTemplate(config: ProjectConfig): GeneratedFile[] {
-    return [{
-        path: 'src/index.tsx',
-        content: `/** @jsxImportSource @termuijs/jsx */
-import { render, useState, useKeymap, useEffect, ErrorBoundary } from '@termuijs/jsx';
-import { AutoThemeProvider, useTheme } from '@termuijs/tss';
-
-// ── Types ────────────────────────────────────────────────────────────────────
-
-interface Message { role: 'user' | 'assistant'; content: string; }
-interface TokenUsageData { inputTokens: number; outputTokens: number; }
-
-// ── Mock adapter (works without ANTHROPIC_API_KEY) ────────────────────────────
-
-const MOCK_REPLIES = [
-    'Hello! Running in mock mode. Set ANTHROPIC_API_KEY for real Claude.',
-    'Mock mode active — your message was received!',
-    'No API key needed in mock mode. Real Claude would answer here.',
-];
-
-async function* mockStream(_prompt: string): AsyncGenerator<string> {
-    const reply = MOCK_REPLIES[Math.floor(Math.random() * MOCK_REPLIES.length)];
-    for (const ch of reply) {
-        yield ch;
-        await new Promise(r => setTimeout(r, 20));
-    }
-}
-
-async function* claudeStream(
-    messages: Message[],
-    onUsage: (u: TokenUsageData) => void,
-): AsyncGenerator<string> {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-            'content-type': 'application/json',
-            'x-api-key': process.env.ANTHROPIC_API_KEY ?? '',
-            'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-            model: 'claude-3-5-haiku-20241022',
-            max_tokens: 1024,
-            stream: true,
-            messages: messages.map(m => ({ role: m.role, content: m.content })),
-        }),
-    });
-    if (!res.ok) throw new Error('Claude API ' + res.status + ': ' + res.statusText);
-    const reader = res.body!.getReader();
-    const dec = new TextDecoder();
-    let buf = '';
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\\n');
-        buf = lines.pop() ?? '';
-        for (const line of lines) {
-            if (!line.startsWith('data: ')) continue;
-            const raw = line.slice(6).trim();
-            if (raw === '[DONE]') return;
-            try {
-                const ev = JSON.parse(raw);
-                if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') yield ev.delta.text as string;
-                if (ev.type === 'message_delta' && ev.usage) onUsage({ inputTokens: ev.usage.input_tokens ?? 0, outputTokens: ev.usage.output_tokens ?? 0 });
-            } catch { /* skip */ }
-        }
-    }
-}
-
-// ── Components ────────────────────────────────────────────────────────────────
-
-const IS_MOCK = !process.env.ANTHROPIC_API_KEY;
-
-function AiAssistant() {
-    const theme = useTheme();
-    const [messages, setMessages] = useState<Message[]>([{
-        role: 'assistant',
-        content: IS_MOCK
-            ? 'Hi! Running in mock mode (no ANTHROPIC_API_KEY). Type and press Enter!'
-            : 'Hi! I am Claude. How can I help you?',
-    }]);
-    const [input, setInput]           = useState('');
-    const [streaming, setStreaming]   = useState('');
-    const [busy, setBusy]             = useState(false);
-    const [usage, setUsage]           = useState<TokenUsageData>({ inputTokens: 0, outputTokens: 0 });
-
-    const send = async () => {
-        const text = input.trim();
-        if (!text || busy) return;
-        const next: Message[] = [...messages, { role: 'user', content: text }];
-        setMessages(next);
-        setInput('');
-        setBusy(true);
-        setStreaming('');
-        try {
-            let full = '';
-            const src = IS_MOCK ? mockStream(text) : claudeStream(next, setUsage);
-            for await (const chunk of src) { full += chunk; setStreaming(full); }
-            setMessages(m => [...m, { role: 'assistant', content: full }]);
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            setMessages(m => [...m, { role: 'assistant', content: 'Error: ' + msg }]);
-        } finally { setStreaming(''); setBusy(false); }
-    };
-
-    useKeymap([
-        { key: 'enter',     action: () => { void send(); },                   description: 'Send' },
-        { key: 'backspace', action: () => setInput(v => v.slice(0, -1)),       description: 'Delete' },
-        { key: 'c', ctrl: true, action: () => process.exit(0),                description: 'Quit' },
-        ...(' abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?-_()').split('').map(ch => ({
-            key: ch, action: () => { if (!busy) setInput(v => v + ch); }, description: '',
-        })),
-    ]);
-
-    return (
-        <box flexDirection="column" flexGrow={1} padding={1}>
-            <box border="single" padding={1} flexDirection="row">
-                <text bold>AI Assistant</text>
-                <text> {IS_MOCK ? '[mock mode]' : '[claude-3-5-haiku]'}</text>
-                <text color={theme.colors.muted}> in:{usage.inputTokens} out:{usage.outputTokens}</text>
-            </box>
-
-            <box flexDirection="column" flexGrow={1} padding={1}>
-                {messages.map((m, i) => (
-                    <box key={i} flexDirection="column" marginBottom={1}>
-                        <text bold color={m.role === 'user' ? theme.colors.primary : theme.colors.success}>
-                            {m.role === 'user' ? 'You' : 'Claude'}
-                        </text>
-                        <text>{m.content}</text>
-                    </box>
-                ))}
-                {streaming.length > 0 && (
-                    <box flexDirection="column">
-                        <text bold color={theme.colors.success}>Claude</text>
-                        <text>{streaming}█</text>
-                    </box>
-                )}
-            </box>
-
-            <box border="single" padding={1}>
-                <text color={theme.colors.muted}>&gt; </text>
-                <text>{input}{busy ? '' : '█'}</text>
-                {busy && <text color={theme.colors.muted}> thinking...</text>}
-            </box>
-
-            <box padding={1}>
-                <text dim>Ctrl+C to quit{IS_MOCK ? ' | Set ANTHROPIC_API_KEY for real Claude' : ''}</text>
-            </box>
-        </box>
-    );
-}
-
-function App() {
-    return (
-        <AutoThemeProvider>
-            <ErrorBoundary fallback={(err) => (
-                <box border="single" borderColor="red" padding={1}>
-                    <text color="red" bold>Error</text>
-                    <text>{err.message}</text>
-                </box>
-            )}>
-                <AiAssistant />
-            </ErrorBoundary>
-        </AutoThemeProvider>
-    );
-}
-
-render(<App />, { title: '${config.name}' });
-`,
-    }];
-}
-
-function generateRestClientTemplate(config: ProjectConfig): GeneratedFile[] {
-    return [{
-        path: 'src/index.tsx',
-        content: `/** @jsxImportSource @termuijs/jsx */
-import { render, useState, useKeymap, ErrorBoundary } from '@termuijs/jsx';
-import { AutoThemeProvider } from '@termuijs/tss';
-import { useFetch } from '@termuijs/data';
-import { JSONView, Text } from '@termuijs/widgets';
-
-function RestClient() {
-    const result = useFetch<{ id: number; name: string; email: string }>(
-        'https://jsonplaceholder.typicode.com/users/1',
-    );
-
-    useKeymap([
-        { key: 'q', action: () => process.exit(0), description: 'Quit' },
-        { key: 'c', ctrl: true, action: () => process.exit(0), description: 'Quit' },
-    ]);
-
-    return (
-        <box flexDirection="column" padding={1} gap={1}>
-            <text bold>${config.name}</text>
-            {result.loading && <text>Loading...</text>}
-            {result.error && <text color="red">Error: {String(result.error.message)}</text>}
-            {result.data && <jsonview data={result.data} />}
-        </box>
-    );
-}
-
-function App() {
-    return (
-        <AutoThemeProvider>
-            <ErrorBoundary fallback={(err) => (
-                <box border="single" borderColor="red" padding={1}>
-                    <text color="red" bold>Error</text>
-                    <text>{err.message}</text>
-                </box>
-            )}>
-                <RestClient />
-            </ErrorBoundary>
-        </AutoThemeProvider>
-    );
-}
-
-render(<App />, { title: '${config.name}' });
-`,
-    }];
+    return loadTemplateFiles('ai-assistant', config);
 }

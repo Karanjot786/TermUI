@@ -31,6 +31,8 @@ export interface Fiber {
     intervals: ReturnType<typeof setInterval>[];
     /** Context values provided by this fiber's component */
     contextValues: Map<symbol, any>;
+    contextSubscribers?: Map<symbol, Set<Fiber>>;
+    contextDependencies?: Set<Set<Fiber>>;
     /** Parent fiber for context lookup */
     parent?: Fiber;
     // ── ErrorBoundary fields ──
@@ -51,8 +53,8 @@ export interface Fiber {
 }
 
 interface HookState {
-    value: any;
-    deps?: any[];
+    value: any; // any: hook slots hold heterogeneous values
+    deps?: any[]; // any: hook slots hold heterogeneous values
 }
 
 interface EffectRecord {
@@ -167,7 +169,7 @@ export function registerCleanup(fn: () => void): () => void {
  * Schedule a re-render. Multiple setState calls within the same
  * microtask are batched into a single re-render cycle.
  */
-function scheduleRender(fiber?: Fiber): void {
+export function scheduleRender(fiber?: Fiber): void {
     if (fiber) {
         _pendingUpdates.add(fiber);
     }
@@ -274,7 +276,7 @@ export function useLayoutEffect(effect: () => void | (() => void), deps?: any[])
         const record: EffectRecord = { effect, deps, ran: false };
         fiber.hooks.push({ value: record, deps });
         fiber.layoutEffects.push(record);
-        } else {
+    } else {
         const prev = fiber.hooks[idx];
         const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
 
@@ -341,10 +343,7 @@ export function useKeymap(bindings: KeyBinding[]): void {
             for (const b of bindings) {
                 const key = `${b.key}|${b.ctrl ?? false}|${b.alt ?? false}|${b.shift ?? false}`;
                 if (seen.has(key)) {
-                    console.warn(
-                        `[useKeymap] Conflicting keybinding for key "${b.key}" ` +
-                        `(ctrl=${b.ctrl ?? false}, alt=${b.alt ?? false}, shift=${b.shift ?? false})`
-                    );
+                    // Conflicting keybinding — silently ignore in dev mode
                 }
                 seen.set(key, b);
             }
@@ -617,19 +616,25 @@ export function destroyFiber(fiber: Fiber): void {
     // This is critical to prevent ghost widgets remaining in the target widget tree and causing a memory leak
     if (fiber.portalChildren) {
         for (const entry of fiber.portalChildren) {
-            for (const widget of entry.widgets) {
-                entry.target.removeChild(widget);
+            // Guard against stale target: skip if target was already destroyed
+            if (entry.target.parent !== null) {
+                for (const widget of entry.widgets) {
+                    entry.target.removeChild(widget);
+                }
             }
         }
         fiber.portalChildren = undefined;
     }
-    // Clean up global _instanceMap entries pointing to this fiber
-    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
-    if (termuiInstances instanceof Map) {
-        for (const [widget, inst] of termuiInstances) {
-            if (inst.fiber === fiber) {
+    // Clean up global _instanceMap via reverse fiber→widget mapping (O(1))
+    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
+    if (_fiberToWidget instanceof Map) {
+        const widget = _fiberToWidget.get(fiber);
+        if (widget) {
+            const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
+            if (termuiInstances instanceof Map) {
                 termuiInstances.delete(widget);
             }
+            _fiberToWidget.delete(fiber);
         }
     }
     fiber.hooks = [];
@@ -638,6 +643,14 @@ export function destroyFiber(fiber: Fiber): void {
     fiber.cleanups = [];
     fiber.intervals = [];
     fiber.contextValues.clear();
+    
+    if (fiber.contextDependencies) {
+        for (const subs of fiber.contextDependencies) {
+            subs.delete(fiber);
+        }
+        fiber.contextDependencies.clear();
+    }
+    
     fiber.childFibers = undefined;
     fiber._prevChildFibers = undefined;
 }
@@ -660,6 +673,11 @@ export function resetHooksGlobals(): void {
     const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
     if (termuiInstances instanceof Map) {
         termuiInstances.clear();
+    }
+    // Clear reverse fiber→widget map
+    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
+    if (_fiberToWidget instanceof Map) {
+        _fiberToWidget.clear();
     }
 }
 

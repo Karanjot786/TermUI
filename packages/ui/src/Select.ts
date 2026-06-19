@@ -16,10 +16,12 @@ export class Select extends Widget {
     private _placeholder: string;
     private _activeColor: Style['fg'];
     private _onSelect?: (option: SelectOption, index: number) => void;
+    private _closedHeight: number;
     focusable = true;
 
     constructor(options: SelectOption[], config: SelectOptions = {}, style?: Partial<Style>) {
         super(mergeStyles(mergeStyles(defaultStyle(), { height: 1 }), style ?? {}));
+        this._closedHeight = typeof this._style.height === 'number' ? this._style.height : 1;
         this._options = options;
         this._placeholder = config.placeholder ?? 'Select...';
         this._activeColor = config.activeColor ?? { type: 'named', name: 'cyan' };
@@ -29,9 +31,20 @@ export class Select extends Widget {
     get selectedOption(): SelectOption | undefined { return this._options[this._selectedIndex]; }
     get selectedIndex(): number { return this._selectedIndex; }
     get isOpen(): boolean { return this._isOpen; }
-    open(): void { this._isOpen = true; this.markDirty(); }
-    close(): void { this._isOpen = false; this.markDirty(); }
-    toggle(): void { this._isOpen = !this._isOpen; this.markDirty(); }
+    open(): void { this._isOpen = true; this._expandHeight(); this.markDirty(); }
+    close(): void { this._isOpen = false; this._restoreHeight(); this.markDirty(); }
+    toggle(): void {
+        this._isOpen = !this._isOpen;
+        if (this._isOpen) { this._expandHeight(); } else { this._restoreHeight(); }
+        this.markDirty();
+    }
+
+    private _expandHeight(): void {
+        this.updateRect({ ...this._rect, height: this._closedHeight + this._options.length });
+    }
+    private _restoreHeight(): void {
+        this.updateRect({ ...this._rect, height: this._closedHeight });
+    }
 
     selectNext(): void {
         let n = this._selectedIndex + 1;
@@ -45,7 +58,7 @@ export class Select extends Widget {
     }
     confirm(): void {
         const opt = this._options[this._selectedIndex];
-        if (opt && !opt.disabled) { this._onSelect?.(opt, this._selectedIndex); this._isOpen = false; this.markDirty(); }
+        if (opt && !opt.disabled) { this._onSelect?.(opt, this._selectedIndex); this._isOpen = false; this._restoreHeight(); this.markDirty(); }
     }
 
     protected _renderSelf(screen: Screen): void {

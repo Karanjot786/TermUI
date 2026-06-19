@@ -2,7 +2,7 @@
 // @termuijs/widgets - Watermark widget
 // -----------------------------------------------------------------------------
 
-import { type Screen, type Style, type Color, styleToCellAttrs } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface WatermarkOptions {
@@ -11,6 +11,8 @@ export interface WatermarkOptions {
     /** Diagonal tilt angle in characters. 0 = horizontal rows. Default: 0 */
     angle?: 0 | 45;
 }
+
+const segmenter = new Intl.Segmenter();
 
 /**
  * Watermark - fills its area with faint repeating text.
@@ -28,6 +30,7 @@ export class Watermark extends Widget {
     }
 
     setText(text: string): void {
+        if (this._text === text) return;
         this._text = text;
         this.markDirty();
     }
@@ -38,14 +41,39 @@ export class Watermark extends Widget {
 
         const attrs = { ...styleToCellAttrs(this._style), fg: this._color };
         const rowOffsetStep = this._angle === 45 ? 1 : 0;
+        
+        const segments = Array.from(segmenter.segment(this._text)).map(s => s.segment);
+        if (segments.length === 0) return;
 
         for (let row = 0; row < height; row++) {
-            for (let col = 0; col < width; col++) {
-                const index = (row * width + col + row * rowOffsetStep) % this._text.length;
+            let col = 0;
+            // row * rowOffsetStep produces the 45° horizontal offset per row
+            // row * width contributes to linearizing row/col into the segments index
+            let index = (row * width + row * rowOffsetStep) % segments.length;
+            
+            while (col < width) {
+                const char = segments[index];
+                const charWidth = Math.max(1, stringWidth(char));
+
+                if (col + charWidth > width) break;
+
                 screen.setCell(x + col, y + row, {
-                    char: this._text[index],
+                    char,
+                    width: charWidth,
                     ...attrs,
                 });
+                
+                for (let i = 1; i < charWidth; i++) {
+                    if (col + i < width) {
+                        screen.setCell(x + col + i, y + row, {
+                            char: '',
+                            width: 0,
+                            ...attrs,
+                        });
+                    }
+                }
+                col += charWidth;
+                index = (index + 1) % segments.length;
             }
         }
     }

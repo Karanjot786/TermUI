@@ -63,11 +63,11 @@ export class Renderer {
         this._onTick = onTick ?? null;
         const interval = Math.floor(1000 / this._fps);
         this._frameTimer = setInterval(() => {
-            this._onTick?.();
             if (this._renderRequested) {
                 this._renderRequested = false;
                 this._flush();
             }
+            this._onTick?.();
         }, interval);
     }
 
@@ -105,11 +105,22 @@ export class Renderer {
         this._flush();
     }
 
+    /** ANSI sequence to save cursor position */
+    private static _CURSOR_SAVE = '\x1b[s';
+    /** ANSI sequence to restore cursor position */
+    private static _CURSOR_RESTORE = '\x1b[u';
+
     /**
      * Core diff and flush: compare front vs back buffer,
      * emit only changed cells.
      */
     private _flush(): void {
+        // Capture the current epoch; if swap() has already been called by a
+        // duplicate callback, skip this flush to prevent buffer corruption.
+        const epoch = this._screen.epoch;
+        if (this._screen.flushEpoch === epoch) return;
+        this._screen.flushEpoch = epoch;
+
         const start = this._callbacks.size > 0 ? performance.now() : 0;
 
         // 1. Grab any logs that console.log() caught while we were rendering
@@ -133,13 +144,16 @@ export class Renderer {
                 output += ansiReset;
                 output += endSyncUpdate;
 
-                try {
-                    RenderHook.suspendAll();
-                    if (bufferedLogs) this._terminal.write(bufferedLogs);
-                    this._terminal.write(output);
-                } finally {
-                    RenderHook.resumeAll();
+                // Write buffered logs wrapped in cursor save/restore so they
+                // don't shift the frame's expected cursor position
+                if (bufferedLogs) {
+                    this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
                 }
+                this._terminal.writeSync(output);
+
+                // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
+                const ansiQueue = this._screen.drainAnsiQueue();
+                if (ansiQueue) this._terminal.writeSync(ansiQueue);
 
                 this._screen.saveLines();
                 this._emitStats(start, bufferedLogs, output);
@@ -157,21 +171,19 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
-            try {
-                RenderHook.suspendAll();
-                if (bufferedLogs) {
-                    this._terminal.write(bufferedLogs);
-                }
-
-                this._terminal.write(output);
-            } finally {
-                RenderHook.resumeAll();
+            if (bufferedLogs) {
+                this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
             }
+            this._terminal.writeSync(output);
+
+            // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
+            const ansiQueue = this._screen.drainAnsiQueue();
+            if (ansiQueue) this._terminal.writeSync(ansiQueue);
 
             this._emitStats(start, bufferedLogs, output);
+            this._screen.saveLines();
             this._screen.swap();
-        } catch (err) {
-            console.error('[TermUI] Renderer flush error:', err);
+        } catch (_err) {
             // Re-request render so the next frame tick retries.
             this._renderRequested = true;
             // Reset style fingerprint to prevent color bleed on retry.
@@ -234,6 +246,18 @@ export class Renderer {
     }
 
     /**
+     * If a span starts at a width-0 continuation cell (the second half of a
+     * wide character), adjust backward to the preceding cell so the cursor
+     * is placed at a valid column boundary.
+     */
+    private static _adjustSpanStart(col: number, row: Cell[]): number {
+        while (col > 0 && row[col].width === 0) {
+            col--;
+        }
+        return col;
+    }
+
+    /**
      * Render only the changed spans within a single row (cell-level granularity).
      * Uses moveTo to position the cursor at the start of each changed span.
      */
@@ -251,7 +275,8 @@ export class Renderer {
                 spanStart = c; // start a new changed span
             } else if (!changed && spanStart !== -1) {
                 // flush the span
-                output += moveTo(spanStart, row);
+                const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
+                output += moveTo(adjustedStart, row);
                 for (let sc = spanStart; sc < c; sc++) {
                     const cell = back[row][sc];
                     if (cell.width === 0) continue;
@@ -263,7 +288,8 @@ export class Renderer {
 
         // flush trailing span
         if (spanStart !== -1) {
-            output += moveTo(spanStart, row);
+            const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
+            output += moveTo(adjustedStart, row);
             for (let sc = spanStart; sc < cols; sc++) {
                 const cell = back[row][sc];
                 if (cell.width === 0) continue;

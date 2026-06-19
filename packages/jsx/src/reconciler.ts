@@ -26,8 +26,8 @@ import { Suspense } from './Suspense.js';
 
 interface ComponentInstance {
     fiber: Fiber;
-    component: FC<any>;
-    props: Record<string, any>;
+    component: FC<any>; // any: per-instance slot; specific type not knowable at interface definition
+    props: Record<string, any>; // any: per-instance slot; specific type not knowable at interface definition
     children: VNode[];
     widget: Widget;
     childInstances: ComponentInstance[];
@@ -35,8 +35,11 @@ interface ComponentInstance {
 }
 
 const _instanceMap = new Map<Widget, ComponentInstance>();
-// Expose globally so render() and @termuijs/testing can dispatch to useInput handlers
+/** Reverse map: Fiber → Widget for O(1) cleanup in destroyFiber */
+const _fiberToWidgetMap = new Map<Fiber, Widget>();
+// Expose globally so render() and @termuijs/testing can dispatch to useInput handlers and destroyFiber
 (globalThis as any).__termuijs_instances = _instanceMap;
+(globalThis as any).__termuijs_fiberToWidget = _fiberToWidgetMap;
 
 // ── Parent fiber tracking ──
 // Tracks the currently-rendering fiber so child components
@@ -129,8 +132,7 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
             return new Grid({ ...style }, {
                 columns: props.columns ?? 12,
                 gap: props.gap,
-                rowGap: props.rowGap,
-                colGap: props.colGap,
+                rows: props.rows,
             });
         }
 
@@ -233,7 +235,7 @@ function extractStyle(props: Record<string, any>): Partial<Style> {
 }
 
 /** Parse a color prop — accepts a named color string, hex string, or Color object */
-function parseColorProp(value: any): Color | undefined {
+function parseColorProp(value: any): Color | undefined { // any: JSX prop values are untyped at this call site
     if (!value) return undefined;
     if (typeof value === 'string') {
         if (value.startsWith('#')) return parseColor(value);
@@ -461,8 +463,8 @@ function renderComponent(
             const fallbackVNode = boundary.errorFallback(error);
             return reconcile(fallbackVNode);
         }
-        // No boundary found — show default error widget and log
-        console.error('[TermUI] Unhandled component error:', error);
+        // No boundary found — destroy fiber and show default error widget
+        destroyFiber(fiber);
         return reconcile(defaultErrorVNode(error));
     }
 
@@ -484,6 +486,7 @@ function renderComponent(
             childInstances: [],
             lastVNode: vnode,
         });
+        _fiberToWidgetMap.set(fiber, vnode);
 
         return vnode;
     }
@@ -511,20 +514,36 @@ function renderComponent(
         childInstances: [],
         lastVNode: vnode,
     });
+    _fiberToWidgetMap.set(fiber, widget);
 
     return widget;
 }
 
 /**
  * Recursively remove stale _instanceMap entries for a widget and all its
- * descendants. Fibers are NOT destroyed here — cleanupStaleChildFibers
- * already handles orphaned fibers after each reconcile pass. This function
- * only prevents _instanceMap from retaining dead widget references.
+ * descendants. Fiber destruction is handled separately by
+ * cleanupStaleChildFibers for stale subtrees after each reconcile pass.
  */
 /** @internal exposed for testing */
 export function _pruneInstancesForWidget(widget: Widget): void {
+    const inst = _instanceMap.get(widget);
+    if (inst && _fiberToWidgetMap.get(inst.fiber) === widget) {
+        _fiberToWidgetMap.delete(inst.fiber);
+    }
     _instanceMap.delete(widget);
-    const children = (widget as any)._children ?? (widget as any).children ?? []; // cast required: Widget._children/children are protected, not part of public API
+
+    // Recursively clean up portal children registered on the fiber
+    // so they are removed from their target widgets when the portal owner is destroyed.
+    if (inst?.fiber?.portalChildren) {
+        for (const entry of inst.fiber.portalChildren) {
+            for (const portalWidget of entry.widgets) {
+                _pruneInstancesForWidget(portalWidget);
+            }
+        }
+        inst.fiber.portalChildren = undefined;
+    }
+
+    const children = widget.children;
     if (Array.isArray(children)) {
         for (const child of children) {
             if (child && typeof child === 'object') {
@@ -567,7 +586,10 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
             _parentFiber = boundary;
             return reconcile(boundary.errorFallback(err));
         }
-        console.error('[TermUI] Unhandled component error:', err);
+        // No error boundary found — destroy fiber and prune old widget
+        destroyFiber(fiber);
+        _pruneInstancesForWidget(instance.widget);
+        invalidateLayout(instance.widget.getLayoutNode());
         return reconcile(defaultErrorVNode(err));
     }
 
@@ -588,6 +610,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         instance.widget = vnode;
         instance.lastVNode = vnode;
         _instanceMap.set(vnode, instance);
+        _fiberToWidgetMap.set(fiber, vnode);
 
         return vnode;
     }
@@ -625,6 +648,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
 
     // Re-register with new widget
     _instanceMap.set(newWidget, instance);
+    _fiberToWidgetMap.set(fiber, newWidget);
 
     return newWidget;
 }
@@ -637,4 +661,5 @@ export function unmountAll(): void {
         destroyFiber(instance.fiber);
     }
     _instanceMap.clear();
+    _fiberToWidgetMap.clear();
 }
