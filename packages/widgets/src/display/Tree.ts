@@ -12,6 +12,7 @@ import {
     normalizeNavigationKey,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { computeRange } from '../input/virtual-scroll.js';
 
 export interface TreeNode {
     label: string;
@@ -42,6 +43,7 @@ interface VisibleEntry {
  * - onSelect callback for leaf nodes
  * - Unicode and ASCII fallback symbols
  * - Scrolling when tree exceeds visible height
+ * - Virtualized rendering
  */
 export class Tree extends Widget {
     private _nodes: TreeNode[];
@@ -216,16 +218,16 @@ export class Tree extends Widget {
         const expandedChevron  = useUnicode ? '▼ ' : 'v ';
         const leafPrefix       = useUnicode ? '• ' : '* ';
 
-        const visibleCount = Math.min(
-            this._visibleNodes.length - this._scrollOffset,
-            height,
-        );
+        // Use the virtualization engine
+        const range = computeRange(this._scrollOffset, height, this._visibleNodes.length, 0);
 
-        for (let i = 0; i < visibleCount; i++) {
-            const entryIdx = this._scrollOffset + i;
+        for (let entryIdx = range.start; entryIdx < range.end; entryIdx++) {
             const entry = this._visibleNodes[entryIdx];
             const { node, depth } = entry;
             const isSelected = entryIdx === this._selectedIndex;
+
+            const screenY = y + (entryIdx - this._scrollOffset);
+            if (screenY < y || screenY >= y + height) continue;
 
             // Build line text
             const indentStr = ' '.repeat(this._indent * depth);
@@ -249,14 +251,14 @@ export class Tree extends Widget {
                     ? { ...attrs, bold: true }
                     : attrs;
 
-            screen.writeString(x, y + i, line, cellStyle);
+            screen.writeString(x, screenY, line, cellStyle);
 
             // Fill rest of row for selection highlight
             if (isSelected && this.isFocused) {
                 const lineWidth = stringWidth(line);
                 const remaining = width - lineWidth;
                 for (let c = 0; c < remaining; c++) {
-                    screen.setCell(x + lineWidth + c, y + i, {
+                    screen.setCell(x + lineWidth + c, screenY, {
                         char: ' ',
                         ...cellStyle,
                     });

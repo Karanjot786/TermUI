@@ -61,4 +61,29 @@ describe('Table', () => {
         const table = new Table(COLUMNS, ROWS);
         expect(table.focusable).toBe(true);
     });
+
+        it('virtualizes rows and updates scroll offset via keyboard navigation', () => {
+        // Create 50 rows
+        const manyRows = Array.from({ length: 50 }).map((_, i) => ({ name: `Row${i}`, age: i }));
+        const table = new Table(COLUMNS, manyRows);
+        
+        // Mock a screen with a height of 10
+        table.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        
+        // Initially, selectedRow is 0, offset is 0
+        expect(table.selectedRow).toBe(0);
+        expect((table as any)._scrollOffset).toBe(0);
+
+        // Move down past the viewport
+        for (let i = 0; i < 20; i++) {
+            table.handleKey({ key: 'down' } as any);
+        }
+        
+        expect(table.selectedRow).toBe(20);
+        
+        // Table viewport dataHeight is 10 - 2 (header) = 8
+        // So if selected is 20, offset should be clamped to 20 - 8 + 1 = 13
+        expect((table as any)._scrollOffset).toBe(13);
+    });
+
 });
