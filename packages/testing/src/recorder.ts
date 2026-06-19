@@ -64,7 +64,7 @@ export class ScreenRecorder {
 
     /**
      * Retrieve all currently buffered frames.
-     * Returns a shallow copy of the frames array.
+     * Returns a new array containing a shallow copy of each frame object.
      */
     public getFrames(): FrameData[] {
         return this.frames.map((frame) => ({ ...frame }));
