@@ -118,6 +118,7 @@ export class Button extends Widget {
     mount(): void {
         super.mount();
         if (this._loading && !prefersReducedMotion()) {
+            this._timerUnsub?.();
             this._startTime = Date.now();
             this._timerUnsub = timerPoolSubscribe(this._interval, () => {
                 this.markDirty();
