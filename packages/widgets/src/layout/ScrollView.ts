@@ -106,26 +106,13 @@ export class ScrollView extends Widget {
         this._renderSelf(screen);
         this._renderBorder(screen);
 
-        // Temporarily shift children's rects upward by scrollOffset
+        // Render children with a Y offset for scrolling
         const rect = this._getContentRect();
+        screen.pushTranslateY(-this._scrollOffset);
         for (const child of this._children) {
-            const origRect = { ...child.rect };
-            // Access protected _rect to temporarily modify for scroll offset rendering
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (child as any)._rect = {
-                x: origRect.x,
-                y: origRect.y - this._scrollOffset,
-                width: origRect.width,
-                height: origRect.height,
-            };
-            try {
-                child.render(screen);
-            } finally {
-                // Restore original rect after rendering
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (child as any)._rect = origRect;
-            }
+            child.render(screen);
         }
+        screen.popTranslateY();
 
         if (shouldClip) screen.popClip();
 

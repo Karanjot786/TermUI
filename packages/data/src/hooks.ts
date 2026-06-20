@@ -341,9 +341,8 @@ export function useWebSocket(url: string): UseWebSocketReturn {
     const send = useCallback((data: Parameters<WebSocket['send']>[0]) => {
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(data)
-        } else {
-            console.warn("Websocket is not connected.")
         }
+        // no-op when disconnected
     }, [])
 
     return { message, state, send }

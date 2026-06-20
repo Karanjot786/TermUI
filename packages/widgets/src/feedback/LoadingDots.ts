@@ -2,7 +2,7 @@
 // @termuijs/widgets — LoadingDots widget
 // ─────────────────────────────────────────────────────
 
-import { type Style, type Color, type Screen, caps, styleToCellAttrs, stringWidth } from '@termuijs/core';
+import { type Style, type Color, type Screen, caps, styleToCellAttrs, stringWidth, prefersReducedMotion } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface LoadingDotsOptions {
@@ -28,6 +28,7 @@ export class LoadingDots extends Widget {
     }
 
     tick(): void {
+        if (prefersReducedMotion()) return;
         this._dotCount = (this._dotCount + 1) % (this._maxDots + 1);
         this.markDirty();
     }

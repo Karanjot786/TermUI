@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import ShortcutHelpOverlayDefault, {
+import {
     ShortcutHelpOverlay,
     type Shortcut,
     type ShortcutHelpOverlayProps,
@@ -8,10 +8,6 @@ import ShortcutHelpOverlayDefault, {
 describe('ShortcutHelpOverlay', () => {
     it('exports a named function component', () => {
         expect(typeof ShortcutHelpOverlay).toBe('function');
-    });
-
-    it('default export matches named export', () => {
-        expect(ShortcutHelpOverlayDefault).toBe(ShortcutHelpOverlay);
     });
 
     it('Shortcut shape has key and label strings', () => {

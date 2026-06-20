@@ -176,6 +176,22 @@ describe('LayerManager - Cell Writing', () => {
         expect(layer.cells[0][1].char).toBe('B');
         expect(layer.cells[0][2].char).toBe('C');
     });
+
+    it('places character after wide emoji at column 2 not column 1', () => {
+        const lm = new LayerManager(20, 10);
+        const layer = lm.createLayer('base', 0);
+
+        // '😀' is a 2-column wide emoji, so 'A' should land at x=2
+        lm.writeString('base', 0, 0, '😀A');
+
+        // The emoji occupies column 0 (wide, width=2)
+        expect(layer.cells[0][0].char).toBe('😀');
+        expect(layer.cells[0][0].width).toBe(2);
+        // Column 1 is the placeholder for the wide char's second cell
+        expect(layer.cells[0][1].char).toBe(' ');
+        // 'A' must land at column 2, not column 1
+        expect(layer.cells[0][2].char).toBe('A');
+    });
 });
 
 describe('LayerManager - Dirty Region', () => {

@@ -108,6 +108,9 @@ this._columns =
     }
 
     public setTasks(tasks: ProgressTask[]): void {
+        if (tasks === this._tasks) {
+            return;
+        }
     this._tasks = tasks;
     this.markDirty();
 }

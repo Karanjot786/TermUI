@@ -2,7 +2,7 @@
 // @termuijs/ui — Tests for Autocomplete widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Screen, caps, type KeyEvent } from '@termuijs/core';
 import { Autocomplete } from './Autocomplete.js';
 

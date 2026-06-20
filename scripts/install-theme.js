@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────────────
 
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Validate theme name to prevent command injection
@@ -17,7 +18,7 @@ import { execFileSync } from 'node:child_process';
     'solarized',
     'dracula',
   ]);
-function validateThemeName(name) {
+export function validateThemeName(name) {
 
   if (!name || name.length === 0) {
     throw new Error('Theme name cannot be empty');
@@ -65,13 +66,16 @@ function installTheme(themeName) {
   }
 }
 
-// Get theme name from command line arguments
-const themeName = process.argv[2];
+// Only run CLI behavior when executed directly (not when imported in tests)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const themeName = process.argv[2];
 
-if (!themeName) {
-  console.error('Usage: install-theme <theme-name>');
-  console.error('Example: install-theme dark');
-  process.exit(1);
+  if (!themeName) {
+    console.error('Usage: install-theme <theme-name>');
+    console.error('Example: install-theme dark');
+    process.exit(1);
+  }
+
+  installTheme(themeName);
 }
 
-installTheme(themeName);

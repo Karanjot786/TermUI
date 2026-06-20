@@ -2,7 +2,7 @@
 // @termuijs/widgets — Definition widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface DefinitionPair {
@@ -73,7 +73,7 @@ export class Definition extends Widget {
             if (row >= height) break;
 
             // Term (bold)
-            screen.writeString(x, y + row, pair.term.slice(0, width), {
+            screen.writeString(x, y + row, truncate(pair.term, width, ''), {
                 ...attrs,
                 fg: this._termColor ?? attrs.fg,
                 bold: true,
@@ -86,12 +86,16 @@ export class Definition extends Widget {
             const defWidth = Math.max(1, width - indent);
             const words = pair.definition.split(' ');
             let line = '';
+            let lineWidth = 0;
 
             for (const word of words) {
-                if (line.length === 0) {
+                const wordWidth = stringWidth(word);
+                if (lineWidth === 0) {
                     line = word;
-                } else if (line.length + 1 + word.length <= defWidth) {
+                    lineWidth = wordWidth;
+                } else if (lineWidth + 1 + wordWidth <= defWidth) {
                     line += ' ' + word;
+                    lineWidth += 1 + wordWidth;
                 } else {
                     if (row >= height) break;
                     screen.writeString(x + indent, y + row, line, {
@@ -100,6 +104,7 @@ export class Definition extends Widget {
                     });
                     row++;
                     line = word;
+                    lineWidth = wordWidth;
                 }
             }
 

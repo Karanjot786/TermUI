@@ -16,7 +16,8 @@ import {
     reset, bold, dim, italic, underline, blink, inverse, strikethrough,
     resetBold, resetDim, resetItalic, resetUnderline, resetBlink, resetInverse, resetStrikethrough,
     setScrollRegion, resetScrollRegion,
-    setTitle, writeClipboard, readClipboard
+    setTitle, writeClipboard, readClipboard,
+    stripAnsiControl,
 } from './ansi.js';
 
 class MockStdin extends EventEmitter {
@@ -178,5 +179,52 @@ describe('ANSI Clipboard Functions', () => {
         );
 
         await expect(promise).resolves.toBe('hello');
+    });
+});
+
+describe('stripAnsiControl', () => {
+    it('strips standard CSI sequences (SGR)', () => {
+        expect(stripAnsiControl('\x1b[31mhello\x1b[0m')).toBe('hello');
+    });
+
+    it('strips CSI sequences with ? parameter byte (cursor hide/show)', () => {
+        expect(stripAnsiControl('\x1b[?25l')).toBe('');
+        expect(stripAnsiControl('\x1b[?25h')).toBe('');
+    });
+
+    it('strips CSI sequences with ? parameter byte (alt screen)', () => {
+        expect(stripAnsiControl('\x1b[?1049h')).toBe('');
+        expect(stripAnsiControl('\x1b[?1049l')).toBe('');
+    });
+
+    it('strips CSI sequences with ? parameter byte (bracketed paste)', () => {
+        expect(stripAnsiControl('\x1b[?2004h')).toBe('');
+        expect(stripAnsiControl('\x1b[?2004l')).toBe('');
+    });
+
+    it('strips CSI sequences with ? parameter byte (mouse tracking)', () => {
+        expect(stripAnsiControl('\x1b[?1000h')).toBe('');
+        expect(stripAnsiControl('\x1b[?1006h')).toBe('');
+    });
+
+    it('strips sequences mixed with regular text', () => {
+        const input = 'Hello \x1b[?25lWorld\x1b[?25h!';
+        expect(stripAnsiControl(input)).toBe('Hello World!');
+    });
+
+    it('preserves plain text without ANSI sequences', () => {
+        expect(stripAnsiControl('Hello World')).toBe('Hello World');
+    });
+
+    it('strips OSC sequences truncated by catch-all', () => {
+        expect(stripAnsiControl('\x1b]0;My App\x07')).toBe('0;My App');
+    });
+
+    it('strips DCS sequences truncated by catch-all', () => {
+        expect(stripAnsiControl('\x1bPsome data\x1b\\')).toBe('some data');
+    });
+
+    it('handles empty string', () => {
+        expect(stripAnsiControl('')).toBe('');
     });
 });

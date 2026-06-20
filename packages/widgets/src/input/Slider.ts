@@ -18,6 +18,7 @@ export interface SliderOptions {
 }
 
 export class Slider extends Widget {
+  focusable = true;
   private _label: string;
   private _value = 0;
   private _min: number;

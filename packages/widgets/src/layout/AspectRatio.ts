@@ -68,7 +68,7 @@ export class AspectRatio extends Widget {
                     (content.height - childHeight) / 2,
                 );
 
-            (child as any)._rect = {
+            (child as any)._rect = { // as any: _rect is protected; no public API for temporary rect override during measurement
                 x: content.x,
                 y: childY,
                 width: content.width,
@@ -77,7 +77,7 @@ export class AspectRatio extends Widget {
 
             child.render(screen);
 
-            (child as any)._rect = originalRect;
+            (child as any)._rect = originalRect; // as any: _rect is protected; no public API for temporary rect override during measurement
         }
 
         if (shouldClip) {

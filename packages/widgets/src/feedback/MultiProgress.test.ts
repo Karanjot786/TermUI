@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Screen } from '@termuijs/core';
 import { MultiProgress, type ProgressItem } from './MultiProgress.js';
 
 describe('MultiProgress', () => {
@@ -14,7 +15,12 @@ describe('MultiProgress', () => {
 
     it('initializes with items', () => {
         const mp = new MultiProgress({ items });
-        expect(mp).toBeDefined();
+        const screen = new Screen(40, 10);
+        mp.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        mp.render(screen);
+        const rows = screen.back.map((row: { char: string }[]) => row.map(c => c.char).join(''));
+        expect(rows.some(r => r.includes('Build'))).toBe(true);
+        expect(rows.some(r => r.includes('Tests'))).toBe(true);
     });
 
     it('renders correct number of rows (one per item)', () => {
@@ -135,10 +141,12 @@ describe('MultiProgress — ASCII fallback', () => {
             { label: 'Build', value: 0.5 },
         ];
         const mp = new MultiProgress({ items });
-
-        // Render to verify ASCII fallback is used
-        // We can't easily inspect private rendering logic, but we verify it doesn't crash
-        expect(mp).toBeDefined();
+        const { Screen: S } = await import('@termuijs/core');
+        const screen = new S(40, 3);
+        mp.updateRect({ x: 0, y: 0, width: 40, height: 3 });
+        mp.render(screen);
+        const rendered = screen.back.map((row: { char: string }[]) => row.map(c => c.char).join(''));
+        expect(rendered.some((r: string) => r.includes('Build'))).toBe(true);
     });
 
     it('uses "█" for fill when unicode is available', async () => {
@@ -151,8 +159,12 @@ describe('MultiProgress — ASCII fallback', () => {
             { label: 'Build', value: 0.5 },
         ];
         const mp = new MultiProgress({ items });
-
-        expect(mp).toBeDefined();
+        const { Screen: S } = await import('@termuijs/core');
+        const screen = new S(40, 3);
+        mp.updateRect({ x: 0, y: 0, width: 40, height: 3 });
+        mp.render(screen);
+        const rendered = screen.back.map((row: { char: string }[]) => row.map(c => c.char).join(''));
+        expect(rendered.some((r: string) => r.includes('Build'))).toBe(true);
     });
 });
 
@@ -172,7 +184,11 @@ describe('MultiProgress — edge cases', () => {
             { label: 'VeryLongLabelThatExceedsDefault', value: 0.5 },
         ];
         const mp = new MultiProgress({ items });
-        expect(mp).toBeDefined();
+        const screen = new Screen(40, 3);
+        mp.updateRect({ x: 0, y: 0, width: 40, height: 3 });
+        mp.render(screen);
+        const rows = screen.back.map((row: { char: string }[]) => row.map(c => c.char).join(''));
+        expect(rows.some(r => r.trim().length > 0)).toBe(true);
     });
 
     it('setItems() clamps all values in new items', () => {

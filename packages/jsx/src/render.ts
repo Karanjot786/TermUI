@@ -14,6 +14,18 @@ import { setRequestRender, setInsertBefore, collectInputHandlers } from './hooks
 import { createElement } from './createElement.js';
 import { setCurrentApp } from './runtime.js';
 
+/**
+ * Shared inline unmount helper — used by both the dev-server-backed path
+ * and the fallback path so cleanup logic stays synchronized.
+ */
+function _unmountApps(apps: Array<{ unmount?: () => void }>): void {
+    apps.forEach((app) => {
+        if (typeof app.unmount === 'function') {
+            try { app.unmount(); } catch {}
+        }
+    });
+}
+
 export interface RenderOptions {
     /** App title shown in the title bar */
     title?: string;
@@ -127,6 +139,35 @@ export async function render(
             }
         }
     });
+
+    // Register the app instance globally for HMR cleanups
+    // globalThis lacks a typed declaration for this property — cast needed to attach runtime state
+    if (!(globalThis as any).__termuijs_apps) {
+        (globalThis as any).__termuijs_apps = [];
+    }
+    (globalThis as any).__termuijs_apps.push(appInstance);
+
+    if ((import.meta as any).hot) {
+        (import.meta as any).hot.accept();
+        (import.meta as any).hot.dispose(() => {
+            // Dynamically import dev-server to clean up apps, falling back to local inline cleanup if unavailable
+            const devServerPkg = '@termuijs/dev-server';
+            import(devServerPkg)
+                .then(({ cleanupActiveInstances }) => {
+                    // globalThis.__termuijs_apps is a runtime-only property without a type declaration
+                    cleanupActiveInstances((globalThis as any).__termuijs_apps || []);
+                    (globalThis as any).__termuijs_apps = [];
+                })
+                .catch(() => {
+                    // dev-server unavailable — use local helper for cleanup
+                    const apps = (globalThis as any).__termuijs_apps;
+                    if (Array.isArray(apps)) {
+                        _unmountApps(apps);
+                        (globalThis as any).__termuijs_apps = [];
+                    }
+                });
+        });
+    }
 
     // Mount and run
     return appInstance.mount();
