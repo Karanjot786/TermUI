@@ -6,7 +6,6 @@ import {
     type Screen,
     type Style,
     styleToCellAttrs,
-    stringWidth,
     truncate,
     type KeyEvent,
     splitGraphemes
@@ -414,7 +413,18 @@ export class TextInput extends Widget {
             display = this._placeholder;
         }
 
-        display = truncate(display, width);
+        const graphemes = splitGraphemes(display);
+
+let scrollX = 0;
+
+if (this.isFocused && graphemes.length > width) {
+    scrollX = Math.max(0, this._cursorPos - width);
+}
+
+display = graphemes
+    .slice(scrollX, scrollX + width)
+    .join('');
+
 
         screen.writeString(
             x,
@@ -428,16 +438,28 @@ export class TextInput extends Widget {
 
         // Cursor
         if (this.isFocused) {
-            const cursorX = Math.min(
-                x + stringWidth(display),
-                x + width - 1
-            );
+            if (this.isFocused) {
+    const cursorIndex = this._cursorPos - scrollX;
+
+    if (cursorIndex >= 0 && cursorIndex < width) {
+        const charIndex = Math.min(
+            this._cursorPos,
+            graphemes.length - 1
+        );
+
+        screen.setCell(x + cursorIndex, y, {
+            char: graphemes[charIndex] ?? ' ',
+            ...attrs,
+            underline: true,
+        });
+    }
+}
 
             screen.setCell(cursorX, y, {
-                char: display[cursorX - x] ?? ' ',
-                ...attrs,
-                inverse: true,
-            });
+    char: display[cursorX - x] ?? ' ',
+    ...attrs,
+    underline: true,
+});
         }
 
         // Auto-complete suggestions
