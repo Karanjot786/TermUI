@@ -5,11 +5,13 @@
 import { type Screen, type Style, type KeyEvent, caps, styleToCellAttrs } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
+export type SplitDirection = 'horizontal' | 'vertical';
+
 export interface SplitPaneOptions {
-    /** Horizontal split ratio for the left pane (0–1, default: 0.5) */
     ratio?: number;
-    /** Minimum width in cells for each pane (default: 1) */
     minSize?: number;
+    direction?: SplitDirection;
+    persistent?: boolean;
 }
 
 /**
@@ -22,6 +24,8 @@ export interface SplitPaneOptions {
 export class SplitPane extends Widget {
     private _ratio: number;
     private readonly _minSize: number;
+    private readonly _direction: SplitDirection;
+    private readonly _persistent: boolean;
 
     constructor(
         left: Widget,
@@ -32,6 +36,8 @@ export class SplitPane extends Widget {
         super(style);
         this._ratio = opts.ratio ?? 0.5;
         this._minSize = opts.minSize ?? 1;
+        this._direction = opts.direction ?? 'horizontal';
+        this._persistent = opts.persistent ?? false;
         this.focusable = true;
         this.addChild(left);
         this.addChild(right);
@@ -54,12 +60,35 @@ export class SplitPane extends Widget {
         if (totalWidth <= 0) return;
 
         const step = 1 / totalWidth;
-        if (event.key === 'left') {
+        if (
+            (this._direction === 'horizontal' && event.key === 'left') ||
+            (this._direction === 'vertical' && event.key === 'up')
+        ) {
             this.setRatio(this._ratio - step);
-        } else if (event.key === 'right') {
+        } else if (
+            (this._direction === 'horizontal' && event.key === 'right') ||
+            (this._direction === 'vertical' && event.key === 'down')
+        ) {
             this.setRatio(this._ratio + step);
         }
     }
+
+    saveLayout(): string {
+    if (!this._persistent) {
+        return '';
+    }
+
+    return JSON.stringify({
+        ratio: this._ratio,
+        direction: this._direction,
+    });
+}
+
+loadLayout(data: string): void {
+    const layout = JSON.parse(data);
+    this._ratio = layout.ratio ?? this._ratio;
+    this.markDirty();
+}
 
     override syncLayout(): void {
         super.syncLayout();
