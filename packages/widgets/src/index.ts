@@ -128,6 +128,12 @@ export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { SplitPane } from './layout/SplitPane.js';
 export type { SplitPaneOptions } from './layout/SplitPane.js';
+export { NotificationQueue } from "./feedback/NotificationQueue.js";
+
+export type {
+    Notification,
+    NotificationPriority
+} from "./feedback/NotificationQueue.js";
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
