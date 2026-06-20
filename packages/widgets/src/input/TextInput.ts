@@ -455,11 +455,23 @@ display = graphemes
     }
 }
 
-            screen.setCell(cursorX, y, {
-    char: display[cursorX - x] ?? ' ',
-    ...attrs,
-    underline: true,
-});
+// Cursor
+if (this.isFocused) {
+    const cursorIndex = this._cursorPos - scrollX;
+
+    if (cursorIndex >= 0 && cursorIndex < width) {
+        const charIndex = Math.min(
+            this._cursorPos,
+            graphemes.length - 1
+        );
+
+        screen.setCell(x + cursorIndex, y, {
+            char: graphemes[charIndex] ?? ' ',
+            ...attrs,
+            underline: true,
+        });
+    }
+}
         }
 
         // Auto-complete suggestions
