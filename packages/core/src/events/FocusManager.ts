@@ -427,14 +427,25 @@ export class FocusManager {
 
     private _changeFocus(newIndex: number): void {
         const oldId = this.currentId;
+        const events: Array<{ type: 'focus' | 'blur'; data: FocusEvent }> = [];
+
         if (oldId) {
-            this._events.emit('blur', { targetId: oldId, type: 'blur', epoch: this._epoch++ });
+            events.push({ type: 'blur', data: { targetId: oldId, type: 'blur', epoch: this._epoch++ } });
         }
         this._currentIndex = newIndex;
-        this._events.emit('focus', {
-            targetId: this._focusables[newIndex].id,
+        events.push({
             type: 'focus',
-            epoch: this._epoch++,
+            data: {
+                targetId: this._focusables[newIndex].id,
+                type: 'focus',
+                epoch: this._epoch++,
+            },
         });
+
+        // Flush events after state is fully updated so that any re-entrant calls
+        // (e.g., handlers that call unregister()) see the finalized _currentIndex.
+        for (const evt of events) {
+            this._events.emit(evt.type, evt.data);
+        }
     }
 }

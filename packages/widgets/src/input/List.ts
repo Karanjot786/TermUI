@@ -20,7 +20,12 @@ export interface ListProps {
     state?: ListState;
     /** Called whenever selection or scroll changes */
     onStateChange?: (state: ListState) => void;
+    /** Message to display when the list is empty */
+    emptyMessage?: string;
+    /** Allow items to be reordered via moveItem() */
+    reorderable?: boolean;
 }
+
 
 /**
  * List — a scrollable, selectable list of items.
@@ -39,6 +44,8 @@ export class List extends Widget {
     private _onSelect?: (item: ListItem, index: number) => void;
     private _state?: ListState;
     private _onStateChange?: (state: ListState) => void;
+    private _emptyMessage?: string;
+    private _reorderable = false;
 
     constructor(
         itemsOrProps: ListItem[] | ListProps,
@@ -56,6 +63,8 @@ export class List extends Widget {
             this._state = props.state;
             this._onStateChange = props.onStateChange;
             this._onSelect = props.onSelect ?? onSelect;
+            this._emptyMessage = props.emptyMessage;
+            this._reorderable = props.reorderable ?? false;
 
             // Initialise from external state if provided
             if (props.state) {
@@ -82,6 +91,20 @@ export class List extends Widget {
         this._clampScroll();
         this.markDirty();
         this._pushState();
+    }
+
+    /** Move an item to a new position (requires reorderable: true). */
+    moveItem(from: number, to: number): void {
+        if (!this._reorderable) return;
+        if (from < 0 || to < 0 || from >= this._items.length || to >= this._items.length) return;
+        const [item] = this._items.splice(from, 1);
+        if (item) {
+            this._items.splice(to, 0, item);
+            this._selectedIndex = to;
+            this._clampScroll();
+            this.markDirty();
+            this._pushState();
+        }
     }
 
     /** Move selection up */
@@ -129,12 +152,22 @@ export class List extends Widget {
 
     // ── Rendering ─────────────────────────────────────
 
-    protected _renderSelf(screen: Screen): void {
+       protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
         if (width <= 0 || height <= 0) return;
 
         const attrs = styleToCellAttrs(this._style);
+
+        // Render Empty State if no items exist
+        if (this._items.length === 0 && this._emptyMessage) {
+            const msg = truncate(this._emptyMessage, width);
+            const msgX = x + Math.floor((width - stringWidth(msg)) / 2);
+            const msgY = y + Math.floor(height / 2);
+            screen.writeString(msgX, msgY, msg, { ...attrs, dim: true });
+            return;
+        }
+
         const visibleCount = Math.min(this._items.length - this._scrollOffset, height);
 
         for (let i = 0; i < visibleCount; i++) {

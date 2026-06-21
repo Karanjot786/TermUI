@@ -26,4 +26,23 @@ describe('mutate helper', () => {
         expect(listener).toHaveBeenCalledTimes(1);
         expect(listener).toHaveBeenCalledWith(['a']);
     });
+
+    it('is safe against listener mutation during iteration', () => {
+        const sig = signal({ count: 0 });
+        const listenerSkipped = vi.fn();
+        
+        const unsub1 = sig.subscribe(() => {
+            // A UI state change causes a child component to unmount, removing its listener
+            unsub2(); 
+        });
+        
+        const unsub2 = sig.subscribe(listenerSkipped);
+
+        // Trigger the loop
+        mutate(sig);
+        
+        // listenerSkipped should NOT be called because unsub1 unsubscribed it 
+        // before the snapshot loop reached it.
+        expect(listenerSkipped).not.toHaveBeenCalled();
+    });
 });

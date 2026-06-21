@@ -38,6 +38,7 @@ export class InputParser {
     private _escapeBuffer: Buffer = Buffer.alloc(0);
     private _isPasting = false;
     private _pasteBuffer = '';
+    private _pasteTimeout: ReturnType<typeof setTimeout> | null = null;
     private _cursorRequests: Array<{
         resolve: (position: CursorPosition) => void;
         reject: (error: Error) => void;
@@ -106,6 +107,10 @@ export class InputParser {
             clearTimeout(this._graphemeTimeout);
             this._graphemeTimeout = null;
         }
+        if (this._pasteTimeout) {
+            clearTimeout(this._pasteTimeout);
+            this._pasteTimeout = null;
+        }
         this._escapeBuffer = Buffer.alloc(0);
         this._graphemeBuffer = '';
         this._decoder.end();
@@ -135,12 +140,38 @@ export class InputParser {
         const PASTE_START = '\x1b[200~';
         const PASTE_END = '\x1b[201~';
 
-        if (str.includes(PASTE_START) && str.includes(PASTE_END)) {
-            const pastedText = str
-                .replace(PASTE_START, '')
-                .replace(PASTE_END, '');
+        // ── Multi-chunk bracketed paste handling ──
 
-            this._events.emit('paste', pastedText);
+        // Check if this chunk contains the paste-start marker
+        if (!this._isPasting && str.includes(PASTE_START)) {
+            this._isPasting = true;
+            this._pasteBuffer = str.slice(str.indexOf(PASTE_START) + PASTE_START.length);
+            this._startPasteTimeout();
+
+            // Check if paste-end is also in this same chunk
+            if (this._pasteBuffer.includes(PASTE_END)) {
+                const pastedText = this._pasteBuffer.slice(0, this._pasteBuffer.indexOf(PASTE_END));
+                this._isPasting = false;
+                this._pasteBuffer = '';
+                this._clearPasteTimeout();
+                this._events.emit('paste', pastedText);
+            }
+            return;
+        }
+
+        // If we are inside a paste, accumulate content
+        if (this._isPasting) {
+            if (str.includes(PASTE_END)) {
+                this._pasteBuffer += str.slice(0, str.indexOf(PASTE_END));
+                const pastedText = this._pasteBuffer;
+                this._isPasting = false;
+                this._pasteBuffer = '';
+                this._clearPasteTimeout();
+                this._events.emit('paste', pastedText);
+            } else {
+                this._pasteBuffer += str;
+                this._startPasteTimeout();
+            }
             return;
         }
 
@@ -272,6 +303,27 @@ export class InputParser {
             }
         }
         return false;
+    }
+
+    /**
+     * Start or restart the paste inactivity timeout.
+     * If no additional paste data arrives within the timeout,
+     * the paste state is aborted to prevent stale state.
+     */
+    private _startPasteTimeout(): void {
+        this._clearPasteTimeout();
+        this._pasteTimeout = setTimeout(() => {
+            this._isPasting = false;
+            this._pasteBuffer = '';
+            this._pasteTimeout = null;
+        }, 500);
+    }
+
+    private _clearPasteTimeout(): void {
+        if (this._pasteTimeout) {
+            clearTimeout(this._pasteTimeout);
+            this._pasteTimeout = null;
+        }
     }
 
     /**

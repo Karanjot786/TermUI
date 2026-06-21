@@ -65,6 +65,8 @@ export type { SliderOptions } from "./input/Slider.js";
 export { RangeInput } from "./input/RangeInput.js";
 export type { RangeInputOptions } from "./input/RangeInput.js";
 export { TextInput } from './input/TextInput.js';
+export { DatePicker } from "./input/DatePicker.js";
+export type { DatePickerOptions } from "./input/DatePicker.js";
 export { Knob } from "./input/Knob.js";
 export type { KnobOptions } from "./input/Knob.js";
 export { PinInput } from "./input/PinInput.js";
@@ -134,6 +136,7 @@ export type {
     Notification,
     NotificationPriority
 } from "./feedback/NotificationQueue.js";
+export type { SplitPaneOptions, SplitDirection } from './layout/SplitPane.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';

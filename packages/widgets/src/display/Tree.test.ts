@@ -354,4 +354,31 @@ describe('Tree', () => {
             expect((tree as any)._visibleNodes.length).toBe(1);
         });
     });
+
+        describe('Virtualization', () => {
+        it('updates scroll offset via keyboard navigation when moving past viewport', () => {
+            // Generate many nodes
+            const manyNodes = Array.from({ length: 50 }).map((_, i) => ({ label: `Node${i}` }));
+            
+            // makeTree helper in this file accepts (nodes, onSelect, width, height)
+            // We set height to 10
+            const tree = makeTree(manyNodes, undefined, 40, 10);
+            
+            // Initially, selectedIndex is 0, offset is 0
+            expect(tree.selectedIndex).toBe(0);
+            expect((tree as any)._scrollOffset).toBe(0);
+
+            // Move down past the viewport
+            for (let i = 0; i < 20; i++) {
+                tree.handleKey('down');
+            }
+            
+            expect(tree.selectedIndex).toBe(20);
+            
+            // Viewport height is 10
+            // So if selected is 20, offset should be clamped to 20 - 10 + 1 = 11
+            expect((tree as any)._scrollOffset).toBe(11);
+        });
+    });
+
 });

@@ -75,6 +75,7 @@ export type { UseFocusWithinOptions } from './hooks/useFocusWithin.js';
 export { useFocusTrap } from './hooks/useFocusTrap.js';
 export { useKeyboardNavigation } from './hooks/useKeyboardNavigation.js';
 export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hooks/useKeyboardNavigation.js';
+export { useTypeahead } from './hooks/useTypeahead.js';
 export { useModal } from './hooks/useModal.js';
 export type { UseModalResult } from './hooks/useModal.js';
 
