@@ -92,4 +92,66 @@ describe('Menu', () => {
         menu.handleKey(mockKeyEvent('escape'));
         expect(onClose).toHaveBeenCalled();
     });
+
+    it('home moves to first enabled item', () => {
+        const menu = new Menu({ items });
+        const screen = new Screen(20, 5);
+        menu.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+
+        // Move down twice to land on 'Exit' (skipping disabled 'Save')
+        menu.handleKey(mockKeyEvent('down'));
+        menu.handleKey(mockKeyEvent('down'));
+        menu.render(screen);
+        expect(screen.back[3].some(c => c.bg?.name === 'cyan')).toBe(true);
+
+        // Press Home -> should jump to 'New' (index 0)
+        menu.handleKey(mockKeyEvent('home'));
+        menu.render(screen);
+        expect(screen.back[0].some(c => c.bg?.name === 'cyan')).toBe(true);
+    });
+
+    it('end moves to last enabled item (skips disabled)', () => {
+        const menu = new Menu({ items });
+        const screen = new Screen(20, 5);
+        menu.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+
+        // Press End -> should land on 'Exit' (last enabled)
+        menu.handleKey(mockKeyEvent('end'));
+        menu.render(screen);
+        expect(screen.back[3].some(c => c.bg?.name === 'cyan')).toBe(true);
+    });
+
+    it('home/end are no-ops when already at extremes', () => {
+        const menu = new Menu({ items });
+
+        // At start (first enabled) Home should be a no-op
+        const spy = vi.spyOn(menu, 'markDirty');
+        menu.handleKey(mockKeyEvent('home'));
+        expect(spy).not.toHaveBeenCalled();
+        spy.mockRestore();
+
+        // Move to end, then End again should be a no-op
+        menu.handleKey(mockKeyEvent('end'));
+        const spy2 = vi.spyOn(menu, 'markDirty');
+        menu.handleKey(mockKeyEvent('end'));
+        expect(spy2).not.toHaveBeenCalled();
+        spy2.mockRestore();
+    });
+
+    it('end skips disabled items when computing last', () => {
+        const items2: MenuItem[] = [
+            { label: 'A', onSelect: vi.fn() },
+            { label: 'B', disabled: true },
+            { label: 'C', onSelect: vi.fn() },
+            { label: 'D', disabled: true },
+        ];
+        const menu = new Menu({ items: items2 });
+        const screen = new Screen(20, 5);
+        menu.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+
+        menu.handleKey(mockKeyEvent('end'));
+        menu.render(screen);
+        // Last enabled is 'C' at index 2
+        expect(screen.back[2].some(c => c.bg?.name === 'cyan')).toBe(true);
+    });
 });

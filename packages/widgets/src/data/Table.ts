@@ -5,6 +5,7 @@
 import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type TableState } from './TableState.js';
+import { computeRange } from '../input/virtual-scroll.js';
 
 export interface TableColumn {
     /** Column header label */
@@ -54,6 +55,7 @@ export interface TableProps {
  * - Text alignment per column
  * - Truncation for overflow
  * - External state via `state` prop and `useTableState` hook
+ * - Virtualized scrolling
  */
 export class Table extends Widget {
     focusable = true;
@@ -67,6 +69,7 @@ export class Table extends Widget {
     private _state?: TableState;
     private _onStateChange?: (state: TableState) => void;
     private _selectedRow = 0;
+    private _scrollOffset = 0;
     private _sortColumn = '';
 
     constructor(
@@ -111,21 +114,22 @@ export class Table extends Widget {
 
     setRows(rows: TableRow[]): void {
         this._rows = rows;
+        this._clampScroll();
         this.markDirty();
         this._pushState();
     }
 
     sortByColumn(columnKey: string): void {
-    this._sortColumn = columnKey;
+        this._sortColumn = columnKey;
 
-    this._rows.sort((a, b) =>
-        String(a[columnKey] ?? '').localeCompare(
-            String(b[columnKey] ?? '')
-        )
-    );
+        this._rows.sort((a, b) =>
+            String(a[columnKey] ?? '').localeCompare(
+                String(b[columnKey] ?? '')
+            )
+        );
 
-    this.markDirty();
-}
+        this.markDirty();
+    }
 
     // ── External state sync ───────────────────────────
 
@@ -148,7 +152,25 @@ export class Table extends Widget {
             );
         }
 
+        this._clampScroll();
         this.markDirty();
+    }
+
+    private _clampScroll(): void {
+        const rect = this._getContentRect();
+        let visibleHeight = rect.height;
+        if (this._showHeader) {
+            visibleHeight -= 2; // header + separator
+        }
+        if (visibleHeight <= 0) { this._scrollOffset = 0; return; }
+
+        if (this._selectedRow < this._scrollOffset) {
+            this._scrollOffset = this._selectedRow;
+        }
+        if (this._selectedRow >= this._scrollOffset + visibleHeight) {
+            this._scrollOffset = this._selectedRow - visibleHeight + 1;
+        }
+        this._scrollOffset = Math.max(0, this._scrollOffset);
     }
 
     // ── Rendering ─────────────────────────────────────
@@ -166,40 +188,50 @@ export class Table extends Widget {
             width - (this._columns.length - 1) * sepWidth,
         );
 
-        let row = 0;
+        let headerOffset = 0;
 
         // Render header
-        if (this._showHeader && row < height) {
+        if (this._showHeader && headerOffset < height) {
             let cx = x;
             for (let c = 0; c < this._columns.length; c++) {
                 const col = this._columns[c];
                 const cellText = this._alignText(col.header, colWidths[c], col.align ?? 'left');
-                screen.writeString(cx, y + row, cellText, {
+                screen.writeString(cx, y + headerOffset, cellText, {
                     ...attrs,
                     fg: this._headerColor,
                     bold: true,
                 });
                 cx += colWidths[c];
                 if (c < this._columns.length - 1) {
-                    screen.writeString(cx, y + row, this._separator, { ...attrs, dim: true });
+                    screen.writeString(cx, y + headerOffset, this._separator, { ...attrs, dim: true });
                     cx += sepWidth;
                 }
             }
-            row++;
+            headerOffset++;
 
             // Header separator line
-            if (row < height) {
+            if (headerOffset < height) {
                 const sepLine = '─'.repeat(width);
-                screen.writeString(x, y + row, sepLine, { ...attrs, dim: true });
-                row++;
+                screen.writeString(x, y + headerOffset, sepLine, { ...attrs, dim: true });
+                headerOffset++;
             }
         }
 
-        // Render data rows
-        for (let r = 0; r < this._rows.length && row < height; r++) {
+        const dataHeight = height - headerOffset;
+        if (dataHeight <= 0) return;
+
+        // Use the virtualization engine
+        const range = computeRange(this._scrollOffset, dataHeight, this._rows.length, 0);
+
+        // Render data rows within the virtual range
+        for (let r = range.start; r < range.end; r++) {
             const dataRow = this._rows[r];
             const isStripe = this._stripe && r % 2 === 1;
             const isSelected = r === this._selectedRow;
+            
+            const screenY = y + headerOffset + (r - this._scrollOffset);
+            if (screenY < y || screenY >= y + height) continue;
+
             let cx = x;
 
             for (let c = 0; c < this._columns.length; c++) {
@@ -207,17 +239,17 @@ export class Table extends Widget {
                 const rawValue = String(dataRow[col.key] ?? '');
                 const cellText = this._alignText(rawValue, colWidths[c], col.align ?? 'left');
 
-                screen.writeString(cx, y + row, cellText, {
-    ...attrs,
-    bg: isSelected
-        ? { type: 'named', name: 'blue' }
-        : isStripe
-            ? this._stripeColor
-            : attrs.bg,
-});
+                screen.writeString(cx, screenY, cellText, {
+                    ...attrs,
+                    bg: isSelected
+                        ? { type: 'named', name: 'blue' }
+                        : isStripe
+                            ? this._stripeColor
+                            : attrs.bg,
+                });
                 cx += colWidths[c];
                 if (c < this._columns.length - 1) {
-                    screen.writeString(cx, y + row, this._separator, {
+                    screen.writeString(cx, screenY, this._separator, {
                         ...attrs,
                         dim: true,
                         bg: isStripe ? this._stripeColor : attrs.bg,
@@ -226,14 +258,13 @@ export class Table extends Widget {
                 }
             }
 
-            // Fill remaining width for stripe
-            if (isStripe) {
+            // Fill remaining width for stripe/selection highlight
+            if (isStripe || isSelected) {
+                const rowBg = isSelected ? { type: 'named' as const, name: 'blue' as const } : this._stripeColor;
                 for (let fx = cx; fx < x + width; fx++) {
-                    screen.setCell(fx, y + row, { char: ' ', bg: this._stripeColor });
+                    screen.setCell(fx, screenY, { char: ' ', bg: rowBg });
                 }
             }
-
-            row++;
         }
     }
 

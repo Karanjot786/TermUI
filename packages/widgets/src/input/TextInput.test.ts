@@ -303,6 +303,28 @@ describe('handleKey', () => {
         input.handleKey(createMockKeyEvent('enter'));
         expect(onSubmitSpy).toHaveBeenCalledWith('done');
     });
+
+    it('clears line on Ctrl+U', () => {
+        const input = new TextInput();
+        input.value = 'hello world';
+        input.moveCursorEnd();
+        input.handleKey(createMockKeyEvent('u', true)); // ctrl = true
+        expect(input.value).toBe('');
+    });
+
+    it('deletes previous word on Ctrl+W', () => {
+        const input = new TextInput();
+        input.value = 'hello world';
+        input.moveCursorEnd();
+        
+        input.handleKey(createMockKeyEvent('w', true));
+        expect(input.value).toBe('hello ');
+        expect((input as any)._cursorPos).toBe(6); // cursor at index 6, after space
+        
+        input.handleKey(createMockKeyEvent('w', true));
+        expect(input.value).toBe('');
+        expect((input as any)._cursorPos).toBe(0);
+    });
 });
 
 describe('Performance optimizations', () => {

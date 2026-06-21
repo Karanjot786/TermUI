@@ -131,6 +131,75 @@ describe('Screen', () => {
         // Old data is reset
         expect(screen.back[0][0].char).toBe(' ');
     });
+
+    it('pushClip with active translateY adjusts clip region correctly', () => {
+        const screen = new Screen(20, 10);
+        // Push a translate first (simulating a parent ScrollView)
+        screen.pushTranslateY(-3);
+        // Clip region should be adjusted by the current translate
+        screen.pushClip({ x: 0, y: 5, width: 10, height: 4 });
+
+        // setCell applies translate: row 8 + (-3) = 5. With adjusted clip at y=2 (5-3),
+        // 5 >= 2 and 5 < 6 should pass → visible
+        screen.setCell(1, 8, { char: 'A' });
+        expect(screen.back[5][1].char).toBe('A');
+
+        // setCell translates row 9 + (-3) = 6. Clip is at y=2, h=4 → y range [2, 6)
+        // 6 is NOT < 6 → clipped
+        screen.setCell(1, 9, { char: 'B' });
+        expect(screen.back[6][1].char).not.toBe('B');
+
+        screen.popClip();
+        screen.popTranslateY();
+    });
+
+    it('nested clips with active translate work correctly', () => {
+        const screen = new Screen(30, 20);
+        // Outer translate (simulating parent ScrollView with scrollOffset=2)
+        screen.pushTranslateY(-2);
+        screen.pushClip({ x: 0, y: 5, width: 20, height: 10 });
+
+        // Inner translate (simulating child ScrollView with scrollOffset=1)
+        screen.pushTranslateY(-1);
+        screen.pushClip({ x: 0, y: 8, width: 10, height: 5 });
+
+        // Total translate: -3. inner clip absolute y=8 → adjusted y = 8-3 = 5 in setCell space.
+        // Inner clip visual range: y ∈ [5, 10), row ∈ [8, 13) absolute.
+        // Content row 8 absolute → visual row 8-3=5 → inside clip (5 >= 5 && 5 < 10) ✓
+        screen.setCell(1, 8, { char: 'X' });
+        expect(screen.back[5][1].char).toBe('X');
+
+        // Content row 13 absolute → visual row 13-3=10 → outside clip (10 >= 10) → clipped
+        screen.setCell(1, 13, { char: 'Y' });
+        expect(screen.back[10][1].char).not.toBe('Y');
+
+        screen.popClip();
+        screen.popTranslateY();
+        screen.popClip();
+        screen.popTranslateY();
+    });
+
+    it('setCell is clipped by translate-adjusted region when parents have translate', () => {
+        const screen = new Screen(30, 20);
+        // Simulate: outer container at absolute y=10 with scrollOffset=5
+        screen.pushTranslateY(-5);
+        // Child clip region at absolute y=14, height=4
+        screen.pushClip({ x: 0, y: 14, width: 10, height: 4 });
+
+        // After translate: clip adjusted to y = 14 + (-5) = 9, height=4 → visual range [9, 13)
+        // Content that would render at absolute row 15 (first row inside child viewport)
+        // visual row = 15 + (-5) = 10 → inside clip (10 >= 9 && 10 < 13) ✓
+        screen.setCell(0, 15, { char: 'A' });
+        expect(screen.back[10][0].char).toBe('A');
+
+        // Content at absolute row 19 (outside child viewport)
+        // visual row = 19 + (-5) = 14 → outside clip (14 >= 13) → clipped
+        screen.setCell(0, 19, { char: 'B' });
+        expect(screen.back[14][0].char).not.toBe('B');
+
+        screen.popClip();
+        screen.popTranslateY();
+    });
 });
 
 describe('cellsEqual', () => {

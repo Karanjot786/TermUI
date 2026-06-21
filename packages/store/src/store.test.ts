@@ -388,6 +388,38 @@ describe('middleware', () => {
         // No listeners should have fired
         expect(spy).not.toHaveBeenCalled()
     })
+
+    it('setState outside batch after batch call is not overwritten by commit', async () => {
+        const useStore = createStore((set) => ({
+            x: 0,
+            y: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ x: 1 })
+        })
+
+        // Between batch return and microtask, setState outside batch
+        useStore.setState({ y: 2 })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState()).toEqual({ x: 1, y: 2 })
+    })
+
+    it('getState inside batch returns pending batch state', () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+        }))
+
+        batch(() => {
+            useStore.setState({ count: 1 })
+            // Inside the batch, getState should see the pending value
+            expect(useStore.getState().count).toBe(1)
+        })
+    })
 })
 
 describe('persistence', () => {

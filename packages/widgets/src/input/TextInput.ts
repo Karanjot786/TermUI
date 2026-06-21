@@ -264,7 +264,14 @@ export class TextInput extends Widget {
         this.markDirty();
     }
 
-        handleKey(event: KeyEvent): void {
+    clearLine(): void {
+        this._value = '';
+        this._cursorPos = 0;
+        this._onChange?.('');
+        this.markDirty();
+    }
+
+    handleKey(event: KeyEvent): void {
         const isVim = process.env.TERMUI_KEYBINDINGS === 'vim';
 
         // Vim mode handling
@@ -328,7 +335,20 @@ export class TextInput extends Widget {
             }
         }
 
-        // Normal input handling
+        if (event.ctrl) {
+            if (event.key === 'u') {
+                this.clearLine();
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            } else if (event.key === 'w') {
+                this.deleteWordBack();
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+        }
+
         switch (event.key) {
             case 'tab':
                 this.acceptSuggestion();

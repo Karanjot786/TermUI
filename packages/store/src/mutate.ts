@@ -27,7 +27,11 @@ export function signal<T>(initialValue: T): Signal<T> {
         set value(newVal: T) {
             if (!Object.is(_value, newVal)) {
                 _value = newVal;
-                listeners.forEach((l) => l(_value));
+                // Snapshot to prevent mutation-during-iteration bugs
+                const snapshot = Array.from(listeners);
+                for (let i = 0; i < snapshot.length; i++) {
+                    if (listeners.has(snapshot[i])) snapshot[i](_value);
+                }
             }
         },
         subscribe(listener: Listener<T>) {
@@ -37,7 +41,11 @@ export function signal<T>(initialValue: T): Signal<T> {
             };
         },
         _setDirty() {
-            listeners.forEach((l) => l(_value));
+            // Snapshot to prevent mutation-during-iteration bugs
+            const snapshot = Array.from(listeners);
+            for (let i = 0; i < snapshot.length; i++) {
+                if (listeners.has(snapshot[i])) snapshot[i](_value);
+            }
         }
     };
 }

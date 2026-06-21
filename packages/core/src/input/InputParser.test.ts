@@ -278,5 +278,77 @@ describe('InputParser', () => {
         sendKey(stdin, '\x1b[200~hello world\x1b[201~');
 
         expect(pasteHandler).toHaveBeenCalledWith('hello world');
-    }); 
+    });
+
+    it('handles multi-chunk paste spanning multiple data chunks', () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        // First chunk: paste-start marker + partial content
+        stdin.emit('data', Buffer.from('\x1b[200~hello ', 'utf8'));
+        expect(pasteHandler).not.toHaveBeenCalled();
+
+        // Second chunk: rest of content + paste-end marker
+        stdin.emit('data', Buffer.from('world\x1b[201~', 'utf8'));
+
+        expect(pasteHandler).toHaveBeenCalledWith('hello world');
+    });
+
+    it('handles paste with content split across three chunks', () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        stdin.emit('data', Buffer.from('\x1b[200~abc', 'utf8'));
+        stdin.emit('data', Buffer.from('def', 'utf8'));
+        stdin.emit('data', Buffer.from('ghi\x1b[201~', 'utf8'));
+
+        expect(pasteHandler).toHaveBeenCalledWith('abcdefghi');
+    });
+
+    it('emits paste event when both markers are in a single chunk', () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        stdin.emit('data', Buffer.from('before\x1b[200~content\x1b[201~after', 'utf8'));
+
+        expect(pasteHandler).toHaveBeenCalledWith('content');
+    });
+
+    it('recovers from partial paste via timeout', () => {
+        vi.useFakeTimers();
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        // Start paste but never end it
+        stdin.emit('data', Buffer.from('\x1b[200~incomplete', 'utf8'));
+        expect(pasteHandler).not.toHaveBeenCalled();
+
+        // Advance time past the paste timeout
+        vi.advanceTimersByTime(600);
+
+        // Handler should not have been called (paste was aborted)
+        expect(pasteHandler).not.toHaveBeenCalled();
+
+        vi.useRealTimers();
+    });
 });

@@ -1,3 +1,20 @@
+/**
+ * Markdown Viewer Example
+ *
+ * A full-screen terminal application that renders Markdown content
+ * inside a scrollable viewport using TermUI widgets.
+ *
+ * Features:
+ * - File-based or built-in markdown content
+ * - Scrollable markdown rendering
+ * - Responsive content height recalculation
+ * - Keyboard navigation
+ * - Terminal resize support
+ *
+ * Usage:
+ *   bun start
+ *   bun start README.md
+ */
 import { App, wordWrap, type KeyEvent } from '@termuijs/core';
 import { Text, Widget, Markdown, ScrollView } from '@termuijs/widgets';
 import { readFileSync } from 'node:fs';
@@ -63,6 +80,12 @@ MIT — see LICENSE for details.
 `;
 
 // ── Load markdown content ────────────────────────────────────────
+/**
+ * Loads markdown content from a file path supplied via CLI arguments.
+ * Falls back to SAMPLE_MARKDOWN when no file is provided.
+ *
+ * Exits the process if the specified file cannot be read.
+ */
 function loadMarkdown(): string {
     const filePath = process.argv[2];
     if (filePath) {
@@ -78,16 +101,40 @@ function loadMarkdown(): string {
 }
 
 // ── Application widget ──────────────────────────────────────────
+/**
+ * Main application widget responsible for:
+ * - Rendering markdown content
+ * - Managing scroll state
+ * - Handling keyboard navigation
+ * - Synchronizing content height with viewport changes
+ */
 class MarkdownViewerApp extends Widget {
+    /** Scrollable container hosting the markdown widget. */
     private scrollView: ScrollView;
+    /** Widget responsible for markdown rendering. */
     private markdownWidget: Markdown;
+    /** Footer showing available keyboard shortcuts. */
     private statusText: Text;
+    /** Original markdown source content. */
     private filePath: string;
+    /** Original markdown source content. */
     private content: string;
+    /** Cached viewport height used to detect resize events. */
     private lastHeight = 0;
+    /** Cached viewport width used to detect resize events. */
     private lastWidth = 0;
-
-    /** Compute the rendered row count, mirroring Markdown._renderSelf logic. */
+/**
+ * Estimates the number of terminal rows required to render the markdown.
+ *
+ * The Markdown widget relies on a fixed height, so this method approximates
+ * the rendered size by accounting for:
+ * - Wrapped paragraph text
+ * - Headings
+ * - Ordered and unordered lists
+ * - Fenced code blocks
+ *
+ * The result is used as the ScrollView content height.
+ */    
     private static computeContentHeight(content: string, width: number): number {
         const lines = content.split('\n');
         let rows = 0;
@@ -112,7 +159,7 @@ class MarkdownViewerApp extends Widget {
         }
         return Math.max(rows + 2, 10); // small safety margin
     }
-
+    
     constructor(content: string, filePath: string) {
         super({ flexDirection: 'column', padding: 1, gap: 0 });
         this.filePath = filePath;
@@ -202,7 +249,19 @@ class MarkdownViewerApp extends Widget {
 
         return true;
     }
+    /**
 
+ * No custom rendering is required.
+
+ *
+
+ * This widget acts purely as a layout container that delegates rendering
+
+ * to its child widgets (title bar, scroll view, markdown renderer,
+
+ * and status bar).
+
+ */
     protected _renderSelf(): void {}
 }
 
