@@ -171,4 +171,79 @@ describe('EventEmitter', () => {
         expect(onceHandler).toHaveBeenCalled();
         expect(regularHandler).toHaveBeenCalled();
     });
+
+    it('re-entrant emit from regular handler does not fire once handlers early', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const log: string[] = [];
+
+        const onceHandler = vi.fn(() => { log.push('once'); });
+        const reentrant = vi.fn(() => {
+            log.push('reenter');
+            emitter.emit('message', 'inner');
+        });
+
+        emitter.on('message', reentrant);
+        emitter.once('message', onceHandler);
+
+        emitter.emit('message', 'outer');
+
+        expect(log).toEqual(['reenter', 'once']);
+        expect(onceHandler).toHaveBeenCalledTimes(1);
+    });
+
+    it('once handler registered during emit does not fire in current emit', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const log: string[] = [];
+
+        const innerOnce = vi.fn(() => { log.push('inner-once'); });
+        const outerHandler = vi.fn(() => {
+            log.push('outer');
+            emitter.once('message', innerOnce);
+        });
+
+        emitter.once('message', outerHandler);
+        emitter.emit('message', 'first');
+
+        expect(log).toEqual(['outer']);
+        expect(innerOnce).not.toHaveBeenCalled();
+
+        emitter.emit('message', 'second');
+        expect(innerOnce).toHaveBeenCalledTimes(1);
+    });
+
+    it('off removes empty Map entries for regular handlers', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const handler1 = vi.fn();
+        const handler2 = vi.fn();
+
+        emitter.on('message', handler1);
+        emitter.on('message', handler2);
+        emitter.off('message', handler1);
+        emitter.off('message', handler2);
+
+        expect(emitter.hasListeners('message')).toBe(false);
+        expect(emitter['_handlers'].has('message' as any)).toBe(false);
+    });
+
+    it('off removes empty Map entries for once handlers', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const handler = vi.fn();
+
+        emitter.once('message', handler);
+        emitter.off('message', handler);
+
+        expect(emitter.hasListeners('message')).toBe(false);
+        expect(emitter['_onceHandlers'].has('message' as any)).toBe(false);
+    });
+
+    it('emit clears OnceHandler Map entry so hasListeners returns false', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const handler = vi.fn();
+
+        emitter.once('message', handler);
+        emitter.emit('message', 'test');
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(emitter.hasListeners('message')).toBe(false);
+    });
 });
