@@ -1,3 +1,7 @@
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { homedir } from 'node:os';
+
 // ─────────────────────────────────────────────────────
 // @termuijs/core — Session Management API
 // ─────────────────────────────────────────────────────
@@ -8,6 +12,9 @@ export interface SessionOptions {
 
     /** Auto-save interval in milliseconds */
     interval?: number;
+
+    /** File path for persisting session data. Defaults to ~/.termui/session.json */
+    storagePath?: string;
 }
 
 export interface SessionData {
@@ -17,9 +24,11 @@ export interface SessionData {
 export class Session {
     private _data: SessionData = {};
     private _timer?: ReturnType<typeof setInterval>;
+    private _storagePath: string;
 
     constructor(private _options: SessionOptions = {}) {
-        // Start auto-save if enabled
+        this._storagePath = _options.storagePath ?? `${homedir()}/.termui/session.json`;
+        this.restore();
         if (this._options.autoSave) {
             this._timer = setInterval(() => {
                 this.save();
@@ -28,19 +37,35 @@ export class Session {
     }
 
     /**
-     * Save current session data.
-     * In future this can be connected
-     * to files, databases, or custom storage.
+     * Save current session data to a JSON file on disk.
      */
     save(): void {
-        console.log('Session saved:', this._data);
+        try {
+            const dir = dirname(this._storagePath);
+            if (!existsSync(dir)) {
+                mkdirSync(dir, { recursive: true });
+            }
+            writeFileSync(this._storagePath, JSON.stringify(this._data), 'utf-8');
+        } catch {
+            // Silently ignore persistence failures (e.g. read-only filesystem)
+        }
     }
 
     /**
-     * Restore previous session.
+     * Restore previous session from disk.
      */
     restore(): void {
-        console.log('Session restored');
+        try {
+            if (existsSync(this._storagePath)) {
+                const raw = readFileSync(this._storagePath, 'utf-8');
+                const parsed = JSON.parse(raw);
+                if (typeof parsed === 'object' && parsed !== null) {
+                    this._data = parsed;
+                }
+            }
+        } catch {
+            // Silently ignore if file is corrupt or missing on first run
+        }
     }
 
     /**
