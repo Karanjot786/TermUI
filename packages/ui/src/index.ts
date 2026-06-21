@@ -252,3 +252,6 @@ export { ChatThread } from './ChatThread.js';
 export type { ChatThreadOptions } from './ChatThread.js';
 export { TokenUsage } from './TokenUsage.js';
 export type { TokenUsageOptions } from './TokenUsage.js';
+
+export { createValidator } from './FormValidator.js';
+export type { ValidationRule, ValidationSchema, ValidationResult } from './FormValidator.js';
