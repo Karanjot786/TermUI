@@ -62,12 +62,12 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
         // Once handlers — fire and remove
         const onceHandlers = this._onceHandlers.get(event);
         if (onceHandlers) {
+            this._onceHandlers.delete(event);
             for (const handler of onceHandlers) {
                 try { handler(data); } catch (_err) {
                     // handler errors are silently ignored to prevent crash during rendering
                 }
             }
-            onceHandlers.clear();
         }
     }
 
