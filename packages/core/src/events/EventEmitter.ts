@@ -9,6 +9,7 @@
 export class EventEmitter<TEventMap extends Record<string, any>> {
     private _handlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
     private _onceHandlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
+    private _emitting: Set<keyof TEventMap> = new Set();
 
     /**
      * Subscribe to an event.
@@ -75,14 +76,18 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
             this._onceHandlers.delete(event);
         }
 
-        // Regular handlers
-        const handlers = this._handlers.get(event);
-        if (handlers) {
-            for (const handler of handlers) {
-                try { handler(data); } catch (_err) {
-                    // handler errors are silently ignored to prevent crash during rendering
+        // Regular handlers — skip if re-entrant for the same event
+        if (!this._emitting.has(event)) {
+            this._emitting.add(event);
+            const handlers = this._handlers.get(event);
+            if (handlers) {
+                for (const handler of handlers) {
+                    try { handler(data); } catch (_err) {
+                        // handler errors are silently ignored to prevent crash during rendering
+                    }
                 }
             }
+            this._emitting.delete(event);
         }
 
         // Once handlers — fire removed handlers
