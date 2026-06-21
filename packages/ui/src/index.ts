@@ -255,3 +255,9 @@ export type { TokenUsageOptions } from './TokenUsage.js';
 
 export { createValidator } from './FormValidator.js';
 export type { ValidationRule, ValidationSchema, ValidationResult } from './FormValidator.js';
+
+export { SearchPanel } from './SearchPanel.js';
+export type { SearchPanelOptions } from './SearchPanel.js';
+
+export { Workspace } from './Workspace.js';
+export type { WorkspaceOptions } from './Workspace.js';
