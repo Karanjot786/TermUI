@@ -22,6 +22,8 @@ export interface ListProps {
     onStateChange?: (state: ListState) => void;
     /** Message to display when the list is empty */
     emptyMessage?: string;
+    /** Allow items to be reordered via moveItem() */
+    reorderable?: boolean;
 }
 
 
@@ -43,6 +45,7 @@ export class List extends Widget {
     private _state?: ListState;
     private _onStateChange?: (state: ListState) => void;
     private _emptyMessage?: string;
+    private _reorderable = false;
 
     constructor(
         itemsOrProps: ListItem[] | ListProps,
@@ -61,7 +64,7 @@ export class List extends Widget {
             this._onStateChange = props.onStateChange;
             this._onSelect = props.onSelect ?? onSelect;
             this._emptyMessage = props.emptyMessage;
-
+            this._reorderable = props.reorderable ?? false;
 
             // Initialise from external state if provided
             if (props.state) {
@@ -88,6 +91,20 @@ export class List extends Widget {
         this._clampScroll();
         this.markDirty();
         this._pushState();
+    }
+
+    /** Move an item to a new position (requires reorderable: true). */
+    moveItem(from: number, to: number): void {
+        if (!this._reorderable) return;
+        if (from < 0 || to < 0 || from >= this._items.length || to >= this._items.length) return;
+        const [item] = this._items.splice(from, 1);
+        if (item) {
+            this._items.splice(to, 0, item);
+            this._selectedIndex = to;
+            this._clampScroll();
+            this.markDirty();
+            this._pushState();
+        }
     }
 
     /** Move selection up */
