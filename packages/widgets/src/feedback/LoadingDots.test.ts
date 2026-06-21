@@ -11,13 +11,13 @@ describe('LoadingDots', () => {
         vi.restoreAllMocks();
     });
 
-    it('renders the label', () => {
+    it('renders the label and initial dot', () => {
         const screen = new Screen(20, 1);
         const ld = new LoadingDots({}, { label: 'Thinking', maxDots: 3 });
         ld.updateRect({ x: 0, y: 0, width: 20, height: 1 });
         ld.render(screen);
         const row = screen.back[0].map(c => c.char).join('');
-        expect(row).toContain('Thinking   ');
+        expect(row).toContain('Thinking·  ');
     });
 
     it('tick adds a dot', () => {
@@ -28,26 +28,25 @@ describe('LoadingDots', () => {
         ld.tick();
         ld.render(screen);
         const row = screen.back[0].map(c => c.char).join('');
-        expect(row).toContain('Thinking·  ');
+        expect(row).toContain('Thinking·· ');
     });
 
-    it('the dot count cycles back to zero after maxDots', () => {
+    it('the dot count cycles back to one after maxDots', () => {
         vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
         const screen = new Screen(20, 1);
         const ld = new LoadingDots({}, { label: 'Thinking', maxDots: 3 });
         ld.updateRect({ x: 0, y: 0, width: 20, height: 1 });
         
-        ld.tick(); // 1
         ld.tick(); // 2
         ld.tick(); // 3
         ld.render(screen);
         let row = screen.back[0].map(c => c.char).join('');
         expect(row).toContain('Thinking···');
 
-        ld.tick(); // 0
+        ld.tick(); // 1
         ld.render(screen);
         row = screen.back[0].map(c => c.char).join('');
-        expect(row).toContain('Thinking   ');
+        expect(row).toContain('Thinking·  ');
     });
 
     it('setLabel updates the rendered output', () => {
@@ -58,7 +57,7 @@ describe('LoadingDots', () => {
         ld.setLabel('Done');
         ld.render(screen);
         const row = screen.back[0].map(c => c.char).join('');
-        expect(row).toContain('Done   ');
+        expect(row).toContain('Done·  ');
     });
 
     it('tick marks widget dirty', () => {
@@ -91,7 +90,7 @@ describe('LoadingDots', () => {
         ld.render(screen);
 
         const row = screen.back[0].map(c => c.char).join('');
-        expect(row).toContain('Loading·');
+        expect(row).toContain('Loading··');
     });
 
     it('ASCII fallback dot renders when caps.unicode is false', () => {
@@ -103,7 +102,7 @@ describe('LoadingDots', () => {
         ld.tick();
         ld.render(screen);
         const row = screen.back[0].map(c => c.char).join('');
-        expect(row).toContain('Thinking.  ');
+        expect(row).toContain('Thinking.. ');
     });
 
     it('does not mark dirty when label is unchanged', () => {

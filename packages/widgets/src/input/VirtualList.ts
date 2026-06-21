@@ -78,6 +78,7 @@ export class VirtualList extends Widget {
     private _spring: ScrollSpringState = { position: 0, velocity: 0 };
     private _lastUpdateTime = 0;
     private _isAnimating = false;
+    private _animationTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     constructor(options: VirtualListOptions) {
         super({ border: 'single', ...options.style });
@@ -211,6 +212,14 @@ export class VirtualList extends Widget {
         super.markDirty();
     }
 
+    override destroy(): void {
+        if (this._animationTimeoutId !== null) {
+            clearTimeout(this._animationTimeoutId);
+            this._animationTimeoutId = null;
+        }
+        super.destroy();
+    }
+
     // ── Rendering ──
 
     protected _renderSelf(screen: Screen): void {
@@ -240,11 +249,18 @@ export class VirtualList extends Widget {
                 this._scrollOffset = this._targetScrollOffset;
                 this._isAnimating = false;
                 this._lastUpdateTime = 0;
+                if (this._animationTimeoutId !== null) {
+                    clearTimeout(this._animationTimeoutId);
+                    this._animationTimeoutId = null;
+                }
             } else {
                 // Request next frame update
-                setTimeout(() => {
-                    this.markDirty();
-                }, 16);
+                if (this._animationTimeoutId === null) {
+                    this._animationTimeoutId = setTimeout(() => {
+                        this._animationTimeoutId = null;
+                        this.markDirty();
+                    }, 16);
+                }
             }
         }
 

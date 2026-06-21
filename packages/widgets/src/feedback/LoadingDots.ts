@@ -18,7 +18,7 @@ export class LoadingDots extends Widget {
     private _label: string;
     private _maxDots: number;
     private _color: Color;
-    private _dotCount = 0;
+    private _dotCount = 1;
 
     constructor(style: Partial<Style> = {}, opts: LoadingDotsOptions = {}) {
         super({ height: 1, ...style });
@@ -29,7 +29,7 @@ export class LoadingDots extends Widget {
 
     tick(): void {
         if (prefersReducedMotion()) return;
-        this._dotCount = (this._dotCount + 1) % (this._maxDots + 1);
+        this._dotCount = (this._dotCount % this._maxDots) + 1;
         this.markDirty();
     }
 
@@ -53,7 +53,6 @@ export class LoadingDots extends Widget {
             screen.writeString(currentX, y, this._label, attrs);
             currentX += stringWidth(this._label);
         }
-
 
         const dotChar = caps.unicode ? '·' : '.';
         const dots = dotChar.repeat(this._dotCount);

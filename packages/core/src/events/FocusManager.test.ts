@@ -197,3 +197,71 @@ describe('FocusManager Spatial Navigation', () => {
         expect(fm.currentId).toBe('close');
     });
 });
+
+describe('FocusManager Re-entrancy', () => {
+    it('unregister in blur handler does not corrupt _currentIndex', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('a', 0, true));
+        fm.register(makeWidget('b', 1, true));
+        fm.register(makeWidget('c', 2, true));
+
+        fm.focusWidget('a');
+        expect(fm.currentId).toBe('a');
+
+        // On blur of 'a', unregister 'a'
+        fm.on('blur', (event) => {
+            if (event.targetId === 'a') {
+                fm.unregister('a');
+            }
+        });
+
+        fm.focusWidget('b');
+
+        // After the blur handler unregistered 'a', focus should go to 'b'
+        expect(fm.currentId).toBe('b');
+        expect(fm.isFocused('b')).toBe(true);
+    });
+
+    it('unregister in focus handler does not cause out-of-bounds access', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('a', 0, true));
+        fm.register(makeWidget('b', 1, true));
+        fm.register(makeWidget('c', 2, true));
+
+        fm.focusWidget('a');
+
+        // On focus of 'c', unregister 'c'
+        fm.on('focus', (event) => {
+            if (event.targetId === 'c') {
+                fm.unregister('c');
+            }
+        });
+
+        fm.focusWidget('c');
+
+        // Focus should have moved to 'c' before it was unregistered
+        // After unregister, the next available widget gets focus
+        expect(fm.currentId).toBe('b');
+    });
+
+    it('re-entrant focusNext from focus handler does not corrupt state', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('a', 0, true));
+        fm.register(makeWidget('b', 1, true));
+        fm.register(makeWidget('c', 2, true));
+
+        fm.focusWidget('a');
+
+        // On focus of 'b', immediately move to next
+        fm.on('focus', (event) => {
+            if (event.targetId === 'b') {
+                fm.focusNext();
+            }
+        });
+
+        fm.focusWidget('b');
+
+        // After re-entrant focusNext, should end up on 'c'
+        expect(fm.currentId).toBe('c');
+    });
+});
