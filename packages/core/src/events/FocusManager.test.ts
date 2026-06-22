@@ -275,22 +275,10 @@ describe('FocusManager Re-entrancy', () => {
         fm.focusWidget('b');
         expect(fm.currentId).toBe('b');
 
-        // Inspect internal state before insertion
-        const beforeFocusables = (fm as any)._focusables.map((f: any) => f.id);
-        const beforeIndex = (fm as any)._currentIndex;
-
         // Register C with lower tabIndex that sorts before existing items
         fm.register(makeWidget('c', 5, true));
 
-        const afterFocusables = (fm as any)._focusables.map((f: any) => f.id);
-        const afterIndex = (fm as any)._currentIndex;
-
-        // Current focused ID should remain 'b'
+        // Observable behavior: focused id must remain 'b'
         expect(fm.currentId).toBe('b');
-
-        // For debugging/diagnostic purposes, ensure the array changed order
-        expect(beforeFocusables).not.toEqual(afterFocusables);
-        // And the index should have been adjusted so that it still points to 'b'
-        expect((fm as any)._focusables[afterIndex].id).toBe('b');
     });
 });
