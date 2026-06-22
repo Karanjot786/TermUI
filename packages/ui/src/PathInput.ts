@@ -209,6 +209,12 @@ export class PathInput extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
+        // Apply glow effect on focus by changing border style
+        if (this.isFocused) {
+            this._style.borderFg = 'cyan';
+        } else {
+            this._style.borderFg = undefined;
+        }
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
         if (width <= 0 || height <= 0) return;
