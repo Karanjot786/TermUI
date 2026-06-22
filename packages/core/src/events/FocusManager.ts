@@ -93,8 +93,19 @@ export class FocusManager {
      * they are not lost when App has not yet subscribed to them.
      */
     register(focusable: Focusable): void {
+        // Preserve currently focused id so that sorting the master list
+        // does not accidentally change which widget is focused.
+        const prevFocusedId = this.currentId;
+
         this._focusables.push(focusable);
         this._focusables.sort((a, b) => a.tabIndex - b.tabIndex);
+
+        // If there was a previously focused widget, relocate _currentIndex
+        // to point to the same widget after the sort.
+        if (prevFocusedId) {
+            const newIdx = this._focusables.findIndex(f => f.id === prevFocusedId);
+            if (newIdx >= 0) this._currentIndex = newIdx;
+        }
 
         // Auto-focus the first widget if nothing is focused
         if (this._currentIndex < 0 && focusable.focusable) {
