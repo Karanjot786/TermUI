@@ -201,9 +201,10 @@ class FlashcardApp extends Widget {
     }
 
     private showSummary(): void {
-        this.done = true;
-        this.refresh();
-    }
+    this.done = true;
+    this._feedback.setContent('');
+    this.refresh();
+}
 
     private restart(): void {
         this.cardIndex = 0;
