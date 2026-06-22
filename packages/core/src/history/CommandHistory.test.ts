@@ -118,10 +118,10 @@ describe('CommandHistory', () => {
     });
 
     it('search() is case-insensitive', () => {
-        const ch = new CommandHistory();
-        ch.add('Git Status');
-        expect(ch.search('git')).toHaveLength(1);
-    });
+    const ch = new CommandHistory();
+    ch.add('Git Status');
+    expect(ch.search('git')).toEqual(['Git Status']);
+});
 
     it('search() returns empty array when no match', () => {
         const ch = new CommandHistory();
