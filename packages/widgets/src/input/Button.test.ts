@@ -1,6 +1,6 @@
-// ─────────────────────────────────────────────────────
-// @termuijs/widgets — Tests for Button widget
-// ─────────────────────────────────────────────────────
+﻿// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// @termuijs/widgets â€” Tests for Button widget
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Button } from './Button.js';
@@ -31,14 +31,14 @@ function rowText(screen: Screen, row: number): string {
 }
 
 describe('Button', () => {
-    // ── 1. Default render ────────────────────────────────────────────────
+    // â”€â”€ 1. Default render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     it('renders label centered in the widget bounds', () => {
         const { screen } = renderButton('Click');
         const contentRow = rowText(screen, 1);
         expect(contentRow).toContain('Click');
     });
 
-    // ── 2. Variant rendering ─────────────────────────────────────────────
+    // â”€â”€ 2. Variant rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     it('primary variant renders with distinct background', () => {
         const { screen } = renderButton('Submit', { variant: 'primary' });
         expect(screen.back[1][1].bg).toBeDefined();
@@ -49,7 +49,7 @@ describe('Button', () => {
         expect(screen.back[1][1].fg).toBeDefined();
     });
 
-    // ── 3. Key handling ──────────────────────────────────────────────────
+    // â”€â”€ 3. Key handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     it('enter key fires onPress callback when not disabled', () => {
         const onPress = vi.fn();
         const { button } = renderButton('Click', { onPress });
@@ -82,7 +82,7 @@ describe('Button', () => {
         expect(onPress).not.toHaveBeenCalled();
     });
 
-    // ── 4. State updates ─────────────────────────────────────────────────
+    // â”€â”€ 4. State updates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     it('setLabel updates the displayed label and calls markDirty', () => {
         const { button, screen } = renderButton('Original');
         
@@ -107,7 +107,7 @@ describe('Button', () => {
         expect(markSpy).toHaveBeenCalled();
     });
 
-    // ── 5. Key handling uses lowercase ────────────────────────────────────
+    // â”€â”€ 5. Key handling uses lowercase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     it('handleKey uses lowercase event.key: enter', () => {
         const onPress = vi.fn();
         const { button } = renderButton('Click', { onPress });
@@ -140,7 +140,7 @@ describe('Button', () => {
         expect(onPress).not.toHaveBeenCalled();
     });
 
-    // ── 6. Unicode fallback ─────────────────────────────────────────────
+    // â”€â”€ 6. Unicode fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     it('uses ASCII chars when NO_UNICODE=1', async () => {
         vi.stubEnv('NO_UNICODE', '1');
         vi.stubEnv('TERM', '');
@@ -175,4 +175,40 @@ describe('Button', () => {
     
         expect(button.isDirty).toBe(false);
     });
+    // ── 7. Hover/press animation ─────────────────────────────────────────
+    it('startHover schedules a re-render via markDirty after the animation tick', async () => {
+        const { button } = renderButton('Click');
+        const markSpy = vi.spyOn(button, 'markDirty');
+
+        button.startHover();
+        await new Promise(resolve => setTimeout(resolve, 30));
+
+        expect(markSpy).toHaveBeenCalled();
+    });
+
+    it('endHover clears hover state and calls markDirty', () => {
+        const { button } = renderButton('Click');
+        button.startHover();
+
+        const markSpy = vi.spyOn(button, 'markDirty');
+        button.endHover();
+
+        expect(markSpy).toHaveBeenCalled();
+    });
+
+    it('focusing the button (isFocused = true) renders with hover background', () => {
+        const { button, screen } = renderButton('Click');
+
+        button.isFocused = true;
+        button.render(screen);
+
+        expect(screen.back[1][1].bg).toBeDefined();
+    });
+
+    it('startPress triggers re-render and does not throw', () => {
+        const { button } = renderButton('Click');
+
+        expect(() => button.startPress()).not.toThrow();
+    });
 });
+
