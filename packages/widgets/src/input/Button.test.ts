@@ -1,6 +1,7 @@
-﻿// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// @termuijs/widgets â€” Tests for Button widget
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+import * as core from '@termuijs/core';
+// ─────────────────────────────────────────────────────
+// @termuijs/widgets — Tests for Button widget
+// ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Button } from './Button.js';
@@ -31,14 +32,14 @@ function rowText(screen: Screen, row: number): string {
 }
 
 describe('Button', () => {
-    // â”€â”€ 1. Default render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 1. Default render ────────────────────────────────────────────────
     it('renders label centered in the widget bounds', () => {
         const { screen } = renderButton('Click');
         const contentRow = rowText(screen, 1);
         expect(contentRow).toContain('Click');
     });
 
-    // â”€â”€ 2. Variant rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 2. Variant rendering ─────────────────────────────────────────────
     it('primary variant renders with distinct background', () => {
         const { screen } = renderButton('Submit', { variant: 'primary' });
         expect(screen.back[1][1].bg).toBeDefined();
@@ -49,7 +50,7 @@ describe('Button', () => {
         expect(screen.back[1][1].fg).toBeDefined();
     });
 
-    // â”€â”€ 3. Key handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 3. Key handling ──────────────────────────────────────────────────
     it('enter key fires onPress callback when not disabled', () => {
         const onPress = vi.fn();
         const { button } = renderButton('Click', { onPress });
@@ -82,7 +83,7 @@ describe('Button', () => {
         expect(onPress).not.toHaveBeenCalled();
     });
 
-    // â”€â”€ 4. State updates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 4. State updates ─────────────────────────────────────────────────
     it('setLabel updates the displayed label and calls markDirty', () => {
         const { button, screen } = renderButton('Original');
         
@@ -107,7 +108,7 @@ describe('Button', () => {
         expect(markSpy).toHaveBeenCalled();
     });
 
-    // â”€â”€ 5. Key handling uses lowercase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 5. Key handling uses lowercase ────────────────────────────────────
     it('handleKey uses lowercase event.key: enter', () => {
         const onPress = vi.fn();
         const { button } = renderButton('Click', { onPress });
@@ -140,7 +141,7 @@ describe('Button', () => {
         expect(onPress).not.toHaveBeenCalled();
     });
 
-    // â”€â”€ 6. Unicode fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 6. Unicode fallback ─────────────────────────────────────────────
     it('uses ASCII chars when NO_UNICODE=1', async () => {
         vi.stubEnv('NO_UNICODE', '1');
         vi.stubEnv('TERM', '');
@@ -175,8 +176,9 @@ describe('Button', () => {
     
         expect(button.isDirty).toBe(false);
     });
-    // ── 7. Hover/press animation ─────────────────────────────────────────
+    // -- 7. Hover/press animation -----------------------------------------
     it('startHover schedules a re-render via markDirty after the animation tick', async () => {
+    vi.spyOn(core, 'prefersReducedMotion').mockReturnValue(false);
         const { button } = renderButton('Click');
         const markSpy = vi.spyOn(button, 'markDirty');
 
@@ -187,6 +189,8 @@ describe('Button', () => {
     });
 
     it('endHover clears hover state and calls markDirty', () => {
+    vi.spyOn(core, 'prefersReducedMotion').mockReturnValue(false);
+    vi.spyOn(core, 'prefersReducedMotion').mockReturnValue(false);
         const { button } = renderButton('Click');
         button.startHover();
 
@@ -211,4 +215,8 @@ describe('Button', () => {
         expect(() => button.startPress()).not.toThrow();
     });
 });
+
+
+
+
 
