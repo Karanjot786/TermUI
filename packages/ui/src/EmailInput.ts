@@ -142,9 +142,9 @@ export class EmailInput extends Widget {
     protected _renderSelf(screen: Screen): void {
         // Apply glow effect on focus by changing border style
         if (this.isFocused) {
-            this._style.fg = 'cyan';
+            this._style.border = 'single';
         } else {
-            this._style.fg = undefined;
+            
         }
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
