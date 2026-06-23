@@ -355,6 +355,31 @@ describe('Tree', () => {
         });
     });
 
+    it('clamps selectedIndex when visible nodes shrink (external collapse)', () => {
+        const nodes: TreeNode[] = [
+            { label: 'Parent', expanded: true, children: [
+                { label: 'Child A' },
+                { label: 'Child B' },
+            ] },
+            { label: 'Sibling' },
+        ];
+
+        const tree = makeTree(nodes);
+        // visible: Parent(0), Child A(1), Child B(2), Sibling(3)
+        tree.handleKey('down'); // -> 1
+        tree.handleKey('down'); // -> 2 (Child B)
+        expect(tree.selectedIndex).toBe(2);
+
+        // Simulate external mutation and force a rebuild.
+        // No public API reproduces this scenario while preserving selection,
+        // so we call the private rebuild to simulate an external data change.
+        nodes[0].expanded = false;
+        (tree as any)._buildVisibleNodes();
+
+        // Observable behavior: selectedIndex must update to remain valid.
+        expect(tree.selectedIndex).toBe(1);
+    });
+
         describe('Virtualization', () => {
         it('updates scroll offset via keyboard navigation when moving past viewport', () => {
             // Generate many nodes
