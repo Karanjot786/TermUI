@@ -7,26 +7,20 @@ export interface Notification {
     duration?: number;
 }
 
+const PRIORITY_ORDER: Record<NotificationPriority, number> = { high: 3, medium: 2, low: 1 };
+
 export class NotificationQueue {
     private queue: Notification[] = [];
     private paused = false;
 
     add(notification: Notification): void {
-        this.queue.push({
-            priority: "medium",
-            duration: 3000,
-            ...notification,
-        });
+        if (this.paused) return;
+        this.queue.push({ priority: "medium", duration: 3000, ...notification });
+        this.queue.sort((a, b) => PRIORITY_ORDER[b.priority!] - PRIORITY_ORDER[a.priority!]);
+    }
 
-        this.queue.sort((a, b) => {
-            const order = {
-                high: 3,
-                medium: 2,
-                low: 1,
-            };
-
-            return order[b.priority!] - order[a.priority!];
-        });
+    next(): Notification | undefined {
+        return this.queue.shift();
     }
 
     getAll(): Notification[] {
@@ -34,24 +28,14 @@ export class NotificationQueue {
     }
 
     remove(id: string): void {
-        this.queue = this.queue.filter(
-            item => item.id !== id
-        );
+        this.queue = this.queue.filter(item => item.id !== id);
     }
 
     clear(): void {
         this.queue = [];
     }
 
-    pause(): void {
-        this.paused = true;
-    }
-
-    resume(): void {
-        this.paused = false;
-    }
-
-    isPaused(): boolean {
-        return this.paused;
-    }
+    pause(): void { this.paused = true; }
+    resume(): void { this.paused = false; }
+    isPaused(): boolean { return this.paused; }
 }
