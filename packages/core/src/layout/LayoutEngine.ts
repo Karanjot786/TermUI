@@ -210,6 +210,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
         let currentAutoRow = 0;
         let currentAutoCol = 0;
+        const maxAutoRow = Math.max(numCols * 100, 1000);
 
         for (const child of autoChildren) {
             const s = child.style;
@@ -218,7 +219,8 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
             const clampedColSpan = Math.max(1, Math.min(colInfo.span, numCols));
 
-            while (true) {
+            let placed = false;
+            while (currentAutoRow < maxAutoRow) {
                 let available = true;
                 for (let r = currentAutoRow; r < currentAutoRow + rowInfo.span; r++) {
                     for (let c = currentAutoCol; c < currentAutoCol + clampedColSpan; c++) {
@@ -254,6 +256,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
                         currentAutoCol = 0;
                         currentAutoRow++;
                     }
+                    placed = true;
                     break;
                 } else {
                     currentAutoCol++;

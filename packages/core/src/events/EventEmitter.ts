@@ -7,8 +7,9 @@
  * Supports `on`, `off`, `once`, `emit` with type-safe event maps.
  */
 export class EventEmitter<TEventMap extends Record<string, any>> {
-    private _handlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map(); // any: handler type erased here; callers constrain via generics
-    private _onceHandlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map(); // any: handler type erased here; callers constrain via generics
+    private _handlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
+    private _onceHandlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
+    private _emitting: Set<keyof TEventMap> = new Set();
 
     /**
      * Subscribe to an event.
@@ -41,33 +42,59 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
      * Unsubscribe from an event.
      */
     off<K extends keyof TEventMap>(event: K, handler: (data: TEventMap[K]) => void): void {
-        this._handlers.get(event)?.delete(handler);
-        this._onceHandlers.get(event)?.delete(handler);
+        const reg = this._handlers.get(event);
+        if (reg) {
+            reg.delete(handler);
+            if (reg.size === 0) {
+                this._handlers.delete(event);
+            }
+        }
+
+        const once = this._onceHandlers.get(event);
+        if (once) {
+            once.delete(handler);
+            if (once.size === 0) {
+                this._onceHandlers.delete(event);
+            }
+        }
     }
 
     /**
      * Emit an event to all subscribed handlers.
+     *
+     * Once handlers are removed from storage _before_ any handler executes
+     * so that re-entrant `emit()` calls on the same event cannot re-fire them.
      */
     emit<K extends keyof TEventMap>(event: K, data: TEventMap[K]): void {
-        // Regular handlers
-        const handlers = this._handlers.get(event);
-        if (handlers) {
-            for (const handler of handlers) {
-                try { handler(data); } catch (_err) {
-                    // handler errors are silently ignored to prevent crash during rendering
-                }
+        // Snap-shot and remove once handlers before firing anything
+        const onceSet = this._onceHandlers.get(event);
+        const onceSnapshot: ((data: any) => void)[] = [];
+        if (onceSet) {
+            for (const handler of onceSet) {
+                onceSnapshot.push(handler);
             }
+            this._onceHandlers.delete(event);
         }
 
-        // Once handlers — fire and remove
-        const onceHandlers = this._onceHandlers.get(event);
-        if (onceHandlers) {
-            for (const handler of onceHandlers) {
-                try { handler(data); } catch (_err) {
-                    // handler errors are silently ignored to prevent crash during rendering
+        // Regular handlers — skip if re-entrant for the same event
+        if (!this._emitting.has(event)) {
+            this._emitting.add(event);
+            const handlers = this._handlers.get(event);
+            if (handlers) {
+                for (const handler of handlers) {
+                    try { handler(data); } catch (_err) {
+                        // handler errors are silently ignored to prevent crash during rendering
+                    }
                 }
             }
-            onceHandlers.clear();
+            this._emitting.delete(event);
+        }
+
+        // Once handlers — fire removed handlers
+        for (const handler of onceSnapshot) {
+            try { handler(data); } catch (_err) {
+                // handler errors are silently ignored to prevent crash during rendering
+            }
         }
     }
 

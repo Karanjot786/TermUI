@@ -273,6 +273,12 @@ export class Tree extends Widget {
     private _buildVisibleNodes(): void {
         this._visibleNodes = [];
         _collectVisible(this._nodes, 0, [], this._visibleNodes);
+        // If the visible set shrank (e.g. a parent collapsed elsewhere),
+        // ensure the selected index remains in-bounds.
+        if (this._selectedIndex >= this._visibleNodes.length) {
+            this._selectedIndex = Math.max(0, this._visibleNodes.length - 1);
+            this._clampScroll();
+        }
     }
 
     /** Ensure scroll keeps the selected index in view */
