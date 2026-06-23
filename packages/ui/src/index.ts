@@ -265,3 +265,5 @@ export type {
   ValidationSchema,
   ValidationResult,
 } from "./FormValidator.js";
+export { Tooltip, createTooltip } from './Tooltip.js';
+export type { TooltipProps, TooltipState } from './Tooltip.js';
