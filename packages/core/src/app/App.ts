@@ -589,15 +589,49 @@ export class App {
     }
 
     private _findWidgetAt(x: number, y: number): any { // any: widget shape varies; narrowed at retrieval
-        let found: any = null; // any: WidgetNode shape not statically known at traversal
+        // 1. Use LayerManager hitTest for overlay layers (respects z-order)
+        const layerHitId = this.layers.hitTest(x, y);
+        if (layerHitId) {
+            const layerWidget = this._widgetById.get(layerHitId);
+            if (layerWidget) {
+                const r = layerWidget.rect;
+                if (r && x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
+                    return layerWidget;
+                }
+            }
+        }
+
+        // 2. Collect all matching widgets, filtering out hidden ones
+        const matches: Array<{ widget: any; zIndex: number }> = [];
         for (const widget of this._widgetById.values()) {
             const r = widget.rect;
             if (!r) continue;
+            if (widget.style?.visible === false) continue;
             if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
-                found = widget;
+                matches.push({ widget, zIndex: widget.style?.zIndex ?? 0 });
             }
         }
-        return found;
+        if (matches.length === 0) return null;
+
+        // 3. Sort by z-index descending (topmost wins)
+        matches.sort((a, b) => b.zIndex - a.zIndex);
+        const topZ = matches[0].zIndex;
+        const topMatches = matches.filter(m => m.zIndex === topZ);
+
+        // 4. Among same z-index, prefer deepest child widget (most specific)
+        if (topMatches.length > 1) {
+            for (const m of topMatches) {
+                let p = m.widget.parent;
+                while (p) {
+                    if (topMatches.some(x => x.widget === p)) {
+                        return m.widget;
+                    }
+                    p = p.parent;
+                }
+            }
+        }
+
+        return matches[0].widget;
     }
 
     private _isFocusAwareWidget(widget: unknown): widget is FocusAwareWidget {
