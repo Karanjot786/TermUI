@@ -371,8 +371,9 @@ describe('Tree', () => {
         expect(tree.selectedIndex).toBe(2);
 
         // Simulate external mutation and force a rebuild.
-        // No public API reproduces this scenario while preserving selection,
-        // so we call the private rebuild to simulate an external data change.
+        // The cast is required: there is no public API that reproduces an
+        // external node mutation while preserving the pre-mutation selection,
+        // so the test invokes the private rebuild helper to simulate that case.
         nodes[0].expanded = false;
         (tree as any)._buildVisibleNodes();
 
