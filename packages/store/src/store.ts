@@ -80,12 +80,12 @@ export function batch<T>(fn: () => T): T {
         return (res as Promise<any>).then(
             (val) => {
                 _batchDepth--;
-                if (_batchDepth === 0) flushBatch(false);
+                if (_batchDepth === 0) flushBatch(false, true);
                 return val;
             },
             (err) => {
                 _batchDepth--;
-                if (_batchDepth === 0) flushBatch(true);
+                if (_batchDepth === 0) flushBatch(true, true);
                 throw err;
             }
         ) as T;
@@ -98,7 +98,7 @@ export function batch<T>(fn: () => T): T {
     }
 }
 
-function flushBatch(threw: boolean) {
+function flushBatch(threw: boolean, immediate = false) {
     if (threw) {
         for (const [, { prevState, rollback }] of _batchStores) {
             rollback();
@@ -106,7 +106,7 @@ function flushBatch(threw: boolean) {
         _batchStores.clear(); // Don't notify listeners with partial state
     } else {
         if (_batchStores.size === 0) return;
-        queueMicrotask(() => {
+        const notify = () => {
             const stores = Array.from(_batchStores.entries());
             _batchStores.clear();
             for (const [listeners, { prevState, commit }] of stores) {
@@ -115,7 +115,12 @@ function flushBatch(threw: boolean) {
                     listener(newState, prevState);
                 }
             }
-        });
+        };
+        if (immediate) {
+            notify();
+        } else {
+            queueMicrotask(notify);
+        }
     }
 }
 

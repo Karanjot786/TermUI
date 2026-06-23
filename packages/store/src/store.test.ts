@@ -292,6 +292,31 @@ describe('batch', () => {
     })
 })
 
+    it('async batch does not overwrite concurrent non-batched setState calls', async () => {
+        const useStore = createStore((set) => ({
+            a: 0,
+            b: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        // Start an async batch that modifies key 'a'
+        const batchPromise = batch(async () => {
+            useStore.setState({ a: 1 })
+            // Yield to allow interleaving
+            await Promise.resolve()
+        })
+
+        // Non-batched setState on key 'b' between async batch microtasks
+        useStore.setState({ b: 2 })
+
+        await batchPromise
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        // Both changes should be preserved
+        expect(useStore.getState()).toEqual({ a: 1, b: 2 })
+    })
+
 describe('middleware', () => {
     it('middleware is called during setState', () => {
         const spy = vi.fn((prev, update, next) => next(update))
