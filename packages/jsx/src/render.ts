@@ -15,13 +15,17 @@ import { createElement } from './createElement.js';
 import { setCurrentApp } from './runtime.js';
 
 /**
- * Shared inline unmount helper — used by both the dev-server-backed path
- * and the fallback path so cleanup logic stays synchronized.
+ * Unmount a list of apps. Swallow any errors thrown by `unmount()` but log
+ * a single error message for observability. Exported only for tests.
  */
-function _unmountApps(apps: Array<{ unmount?: () => void }>): void {
+export function unmountApps(apps: Array<{ unmount?: () => void }>): void {
     apps.forEach((app) => {
         if (typeof app.unmount === 'function') {
-            try { app.unmount(); } catch {}
+            try {
+                app.unmount();
+            } catch (err) {
+                console.error('[jsx] Error during unmount():', err);
+            }
         }
     });
 }
@@ -162,7 +166,7 @@ export async function render(
                     // dev-server unavailable — use local helper for cleanup
                     const apps = (globalThis as any).__termuijs_apps;
                     if (Array.isArray(apps)) {
-                        _unmountApps(apps);
+                        unmountApps(apps);
                         (globalThis as any).__termuijs_apps = [];
                     }
                 });

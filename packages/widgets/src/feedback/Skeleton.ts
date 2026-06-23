@@ -4,6 +4,8 @@ import { timerPoolSubscribe } from '@termuijs/motion';
 
 export interface SkeletonOptions {
     variant?: 'pulse' | 'shimmer';
+    speed?: 'slow' | 'normal' | 'fast';
+    shape?: 'text' | 'card' | 'table' | 'list';
     intervalMs?: number;
     chars?: [string, string];
     color?: Color;
@@ -13,6 +15,7 @@ export class Skeleton extends Widget {
     private _frame = 0;
     private _shimmerPos = 0;
     private _variant: 'pulse' | 'shimmer';
+    private _shape: 'text' | 'card' | 'table' | 'list';
     private _chars: [string, string];
     private _intervalMs: number;
     private _unsubscribe?: () => void;
@@ -21,7 +24,10 @@ export class Skeleton extends Widget {
         super(style);
 
         this._variant = opts.variant ?? 'pulse';
-        this._intervalMs = opts.intervalMs ?? 600;
+        this._shape = opts.shape ?? 'text';
+
+        const speeds = { slow: 1000, normal: 600, fast: 300 };
+        this._intervalMs = opts.intervalMs ?? speeds[opts.speed ?? 'normal'];
 
         this._chars = opts.chars ?? (caps.unicode ? ['░', '▒'] : ['-', '#']);
 
@@ -41,7 +47,12 @@ export class Skeleton extends Widget {
 
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
-        const { x, y, width, height } = rect;
+        const { x, y, width } = rect;
+
+        let height = rect.height;
+        if (this._shape === 'text') height = Math.min(height, 3);
+        else if (this._shape === 'list') height = Math.min(height, 5);
+        else if (this._shape === 'table') height = Math.min(height, 6);
 
         if (width <= 0 || height <= 0) return;
 

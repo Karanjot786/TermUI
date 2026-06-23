@@ -93,8 +93,19 @@ export class FocusManager {
      * they are not lost when App has not yet subscribed to them.
      */
     register(focusable: Focusable): void {
+        // Preserve currently focused id so that sorting the master list
+        // does not accidentally change which widget is focused.
+        const prevFocusedId = this.currentId;
+
         this._focusables.push(focusable);
         this._focusables.sort((a, b) => a.tabIndex - b.tabIndex);
+
+        // If there was a previously focused widget, relocate _currentIndex
+        // to point to the same widget after the sort.
+        if (prevFocusedId) {
+            const newIdx = this._focusables.findIndex(f => f.id === prevFocusedId);
+            if (newIdx >= 0) this._currentIndex = newIdx;
+        }
 
         // Auto-focus the first widget if nothing is focused
         if (this._currentIndex < 0 && focusable.focusable) {
@@ -122,8 +133,9 @@ export class FocusManager {
         this._focusables.splice(idx, 1);
 
         if (wasFocused) {
+            // The focused widget is being removed — emit blur for it, then
+            // move focus to the next available widget if one exists.
             this._events.emit('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
-            // Try to focus the next widget
             if (this._focusables.length > 0) {
                 this._currentIndex = Math.min(this._currentIndex, this._focusables.length - 1);
                 this._events.emit('focus', {
@@ -135,18 +147,10 @@ export class FocusManager {
                 this._currentIndex = -1;
             }
         } else if (idx < this._currentIndex) {
-            // Silent focus shift: the widget that preceded the removed item
-            // now occupies the focused position. Emit blur + focus to notify
-            // downstream so the visual focus state stays in sync.
+            // A non-focused widget before the focused one was removed —
+            // just adjust the index. No blur/focus events because the
+            // focused widget hasn't changed.
             this._currentIndex--;
-            this._events.emit('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
-            if (this._currentIndex >= 0 && this._currentIndex < this._focusables.length) {
-                this._events.emit('focus', {
-                    targetId: this._focusables[this._currentIndex].id,
-                    type: 'focus',
-                    epoch: this._epoch++,
-                });
-            }
         }
     }
 

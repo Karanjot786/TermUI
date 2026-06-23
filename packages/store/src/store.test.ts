@@ -290,6 +290,136 @@ describe('batch', () => {
         expect(spy).toHaveBeenCalledOnce()
         expect(spy.mock.calls[0][0]).toEqual({ a: 1, b: 2 })
     })
+
+    it('nested batch does not lose intermediate state from outer batch', async () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            name: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ count: 1 })
+            batch(() => {
+                useStore.setState({ name: 'test' })
+            })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ count: 1, name: 'test' })
+    })
+
+    it('consecutive batches do not interfere with each other', async () => {
+        const useStore = createStore((set) => ({
+            a: 0,
+            b: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ a: 1 })
+        })
+
+        batch(() => {
+            useStore.setState({ b: 2 })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState()).toEqual({ a: 1, b: 2 })
+    })
+
+    it('stale microtask from old batch does not dispatch when new batch starts', async () => {
+        const useStore = createStore((set) => ({
+            x: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        // Start first batch but manually prevent its microtask from firing
+        batch(() => {
+            useStore.setState({ x: 1 })
+        })
+
+        // Immediately start a second batch before the first microtask fires
+        batch(() => {
+            useStore.setState({ x: 2 })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        // Listener should only see the final value, not be called twice
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState().x).toBe(2)
+    })
+
+    it('mutate inside batch merges correctly with setState', async () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            label: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ count: 5 })
+            useStore.mutate((draft) => {
+                draft.label = 'mutated'
+            })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ count: 5, label: 'mutated' })
+    })
+
+    it('multiple mutate calls inside batch coalesce into one notification', async () => {
+        const useStore = createStore((set) => ({
+            a: 0,
+            b: 0,
+            c: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.mutate((draft) => { draft.a = 1 })
+            useStore.mutate((draft) => { draft.b = 2 })
+            useStore.mutate((draft) => { draft.c = 3 })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ a: 1, b: 2, c: 3 })
+    })
+
+    it('batch rollback restores state before any updates including mutate', () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            label: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        try {
+            batch(() => {
+                useStore.setState({ count: 5 })
+                useStore.mutate((draft) => {
+                    draft.label = 'mutated'
+                })
+                throw new Error('abort')
+            })
+        } catch {}
+
+        expect(useStore.getState()).toEqual({ count: 0, label: '' })
+        expect(spy).not.toHaveBeenCalled()
+    })
 })
 
 describe('middleware', () => {

@@ -111,6 +111,105 @@ describe('FocusManager', () => {
         expect(fm.isFocused('a')).toBe(false);
         expect(fm.isFocused('b')).toBe(true);
     });
+
+    describe('unregister', () => {
+        it('does not emit blur when unregistering a non-focused widget', () => {
+            const fm = new FocusManager();
+            const blurHandler = vi.fn();
+            fm.on('blur', blurHandler);
+
+            fm.register(makeWidget('a'));
+            fm.register(makeWidget('b'));
+            fm.register(makeWidget('c'));
+            // 'a' is focused
+
+            fm.unregister('b'); // 'b' is NOT focused
+
+            expect(blurHandler).not.toHaveBeenCalled();
+            expect(fm.currentId).toBe('a');
+        });
+
+        it('emits blur when unregistering the focused widget', () => {
+            const fm = new FocusManager();
+            const blurHandler = vi.fn();
+            fm.on('blur', blurHandler);
+
+            fm.register(makeWidget('a'));
+            fm.register(makeWidget('b'));
+            // 'a' is focused
+
+            fm.unregister('a');
+
+            expect(blurHandler).toHaveBeenCalledWith(
+                expect.objectContaining({ targetId: 'a', type: 'blur' })
+            );
+        });
+
+        it('moves focus to next widget when focused widget is unregistered', () => {
+            const fm = new FocusManager();
+            fm.register(makeWidget('a'));
+            fm.register(makeWidget('b'));
+            fm.register(makeWidget('c'));
+            // 'a' is focused
+
+            fm.unregister('a');
+
+            expect(fm.currentId).toBe('b');
+        });
+
+        it('sets currentId to null when last widget is unregistered', () => {
+            const fm = new FocusManager();
+            fm.register(makeWidget('a'));
+
+            fm.unregister('a');
+
+            expect(fm.currentId).toBeNull();
+        });
+
+        it('adjusts index correctly when non-focused widget before focused is removed', () => {
+            const fm = new FocusManager();
+            fm.register(makeWidget('a'));
+            fm.register(makeWidget('b'));
+            fm.register(makeWidget('c'));
+            fm.focusWidget('c');
+            // focused index = 2
+
+            fm.unregister('a');
+            // 'c' should still be focused, index adjusted from 2 to 1
+
+            expect(fm.currentId).toBe('c');
+        });
+
+        it('unregistering a non-focused widget after focused one does not affect focus', () => {
+            const fm = new FocusManager();
+            fm.register(makeWidget('a'));
+            fm.register(makeWidget('b'));
+            fm.register(makeWidget('c'));
+            // 'a' is focused
+
+            fm.unregister('c');
+
+            expect(fm.currentId).toBe('a');
+        });
+
+        it('does not emit any events when unregistering a non-focused widget', () => {
+            const fm = new FocusManager();
+            const focusHandler = vi.fn();
+            const blurHandler = vi.fn();
+            fm.on('focus', focusHandler);
+            fm.on('blur', blurHandler);
+
+            fm.register(makeWidget('a'));
+            fm.register(makeWidget('b'));
+            focusHandler.mockClear();
+            blurHandler.mockClear();
+
+            fm.unregister('b');
+
+            expect(focusHandler).not.toHaveBeenCalled();
+            expect(blurHandler).not.toHaveBeenCalled();
+        });
+    });
 });
 
 describe('FocusManager Spatial Navigation', () => {
@@ -263,5 +362,22 @@ describe('FocusManager Re-entrancy', () => {
 
         // After re-entrant focusNext, should end up on 'c'
         expect(fm.currentId).toBe('c');
+    });
+
+    it('registering a new focusable that sorts before current does not change current focus', () => {
+        const fm = new FocusManager();
+        // A (10), B (20)
+        fm.register(makeWidget('a', 10, true));
+        fm.register(makeWidget('b', 20, true));
+
+        // Focus B
+        fm.focusWidget('b');
+        expect(fm.currentId).toBe('b');
+
+        // Register C with lower tabIndex that sorts before existing items
+        fm.register(makeWidget('c', 5, true));
+
+        // Observable behavior: focused id must remain 'b'
+        expect(fm.currentId).toBe('b');
     });
 });

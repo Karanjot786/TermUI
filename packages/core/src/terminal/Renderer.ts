@@ -102,6 +102,7 @@ export class Renderer {
      */
     fullRender(): void {
         this._screen.invalidate();
+        this._terminal.writeSync('\x1b[2J\x1b[H');
         this._flush();
     }
 

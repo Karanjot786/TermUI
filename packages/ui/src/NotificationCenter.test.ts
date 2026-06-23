@@ -339,6 +339,38 @@ describe('NotificationCenter rendering and lifecycle', () => {
         expect(renderCenter(center)).not.toContain('+ After');
     });
 
+    it('destroy() cleans up store subscription and ignores later store updates', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const center = new NotificationCenter({ width: 24 });
+
+        store.push('Before', 'info');
+        expect(renderCenter(center)).toContain('i Before');
+
+        center.destroy();
+        expect(renderCenter(center)).not.toContain('i Before');
+
+        store.push('After', 'success');
+        expect(renderCenter(center)).not.toContain('+ After');
+    });
+
+    it('destroy() is safe to call multiple times', () => {
+        const center = new NotificationCenter({ width: 24 });
+        center.destroy();
+        center.destroy();
+        // No error thrown
+    });
+
+    it('destroy() stops store callbacks from firing on the widget', () => {
+        const center = new NotificationCenter({ width: 24 });
+        const markDirtySpy = vi.spyOn(center, 'markDirty');
+
+        center.destroy();
+        markDirtySpy.mockClear();
+
+        store.push('After destroy', 'info');
+        expect(markDirtySpy).not.toHaveBeenCalled();
+    });
+
     it('renders safely for zero-sized screens, empty messages, many notifications, and long messages', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const center = new NotificationCenter({ width: 80, maxVisible: 100 });
