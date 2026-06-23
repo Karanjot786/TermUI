@@ -369,17 +369,21 @@ function SuspenseBoundary(props: Record<string, any>): any {
         children,
     } as any;
 
+    // Capture fiber before reconcile: renderComponent clears _currentFiber
+    // when a Promise is thrown (to prevent stale hook context for error
+    // boundaries), so currentFiber() in the catch block would fail.
+    const thisFiber = currentFiber();
+
     try {
         return reconcile(child);
     } catch (err) {
         if (err instanceof Promise) {
-            const fiber = currentFiber();
-            _suspendedFibers.set(fiber.id, { promise: err, fiber });
+            _suspendedFibers.set(thisFiber.id, { promise: err, fiber: thisFiber });
             err.then(() => {
-                const entry = _suspendedFibers.get(fiber.id);
+                const entry = _suspendedFibers.get(thisFiber.id);
                 if (entry && entry.promise === err) {
-                    _suspendedFibers.delete(fiber.id);
-                    scheduleRender(fiber);
+                    _suspendedFibers.delete(thisFiber.id);
+                    scheduleRender(thisFiber);
                 }
             });
             return reconcile(props.fallback ?? null);
