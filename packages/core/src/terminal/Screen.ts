@@ -243,13 +243,22 @@ export class Screen {
      * any parent clip already on the stack (nested clipping).
      */
     pushClip(region: { x: number; y: number; width: number; height: number }): void {
+        // Convert region from absolute to the current visual coordinate space.
+        // setCell applies _translateY before checking the clip stack, so stored
+        // clip regions must be in the same visual space for the check to be correct.
+        const adjustedRegion = {
+            x: region.x,
+            y: region.y + this._translateY,
+            width: region.width,
+            height: region.height,
+        };
         if (this._clipStack.length > 0) {
             // Intersect with the current clip
             const parent = this._clipStack[this._clipStack.length - 1];
-            const x = Math.max(region.x, parent.x);
-            const y = Math.max(region.y, parent.y);
-            const right = Math.min(region.x + region.width, parent.x + parent.width);
-            const bottom = Math.min(region.y + region.height, parent.y + parent.height);
+            const x = Math.max(adjustedRegion.x, parent.x);
+            const y = Math.max(adjustedRegion.y, parent.y);
+            const right = Math.min(adjustedRegion.x + adjustedRegion.width, parent.x + parent.width);
+            const bottom = Math.min(adjustedRegion.y + adjustedRegion.height, parent.y + parent.height);
             if (right <= x || bottom <= y) {
                 // Fully clipped — push a zero-size region
                 this._clipStack.push({ x: 0, y: 0, width: 0, height: 0 });
@@ -257,7 +266,7 @@ export class Screen {
                 this._clipStack.push({ x, y, width: right - x, height: bottom - y });
             }
         } else {
-            this._clipStack.push({ ...region });
+            this._clipStack.push({ ...adjustedRegion });
         }
     }
 

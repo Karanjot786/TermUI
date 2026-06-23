@@ -264,10 +264,10 @@ describe('Form — text editing', () => {
         expect(form.values).toEqual({ first: '', email: '' });
     });
 
-    it('editing clears existing validation error for that field', () => {
+    it('editing clears existing validation error for that field', async () => {
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text', required: true }];
         const { form, width, height } = makeForm(fields);
-        form.submit(); // triggers required error
+        await form.submit(); // triggers required error
         let rows = render_(form, width, height);
         expect(rows.join('\n')).toContain('Name is required');
 
@@ -280,43 +280,43 @@ describe('Form — text editing', () => {
 // ── 5. Required Validation ────────────────────────────
 
 describe('Form — required validation', () => {
-    it('required field with empty value generates error', () => {
+    it('required field with empty value generates error', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text', required: true }];
         const { form, width, height } = makeForm(fields, { onSubmit });
-        form.submit();
+        await form.submit();
         const rows = render_(form, width, height);
         expect(rows.join('\n')).toContain('Name is required');
         expect(onSubmit).not.toHaveBeenCalled();
     });
 
-    it('whitespace-only value is treated as empty by required validation', () => {
+    it('whitespace-only value is treated as empty by required validation', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text', required: true }];
         const { form } = makeForm(fields, { onSubmit });
         form.insertChar(' ');
         form.insertChar(' ');
-        form.submit();
+        await form.submit();
         expect(onSubmit).not.toHaveBeenCalled();
     });
 
-    it('multiple required fields each produce their own errors', () => {
+    it('multiple required fields each produce their own errors', async () => {
         const fields: FormField[] = [
             { name: 'a', label: 'Alpha', type: 'text', required: true },
             { name: 'b', label: 'Beta', type: 'text', required: true },
         ];
         const { form, width, height } = makeForm(fields);
-        form.submit();
+        await form.submit();
         const out = render_(form, width, height).join('\n');
         expect(out).toContain('Alpha is required');
         expect(out).toContain('Beta is required');
     });
 
-    it('non-required empty field does not block submission', () => {
+    it('non-required empty field does not block submission', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [{ name: 'opt', label: 'Optional', type: 'text' }];
         const { form } = makeForm(fields, { onSubmit });
-        form.submit();
+        await form.submit();
         expect(onSubmit).toHaveBeenCalledTimes(1);
     });
 });
@@ -324,7 +324,7 @@ describe('Form — required validation', () => {
 // ── 6. Custom Validation ──────────────────────────────
 
 describe('Form — custom validation', () => {
-    it('custom validator blocks submit when it returns an error string', () => {
+    it('custom validator blocks submit when it returns an error string', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [
             {
@@ -334,13 +334,13 @@ describe('Form — custom validation', () => {
         ];
         const { form, width, height } = makeForm(fields, { onSubmit });
         form.insertChar('x');
-        form.submit();
+        await form.submit();
         const out = render_(form, width, height).join('\n');
         expect(out).toContain('Must be a number');
         expect(onSubmit).not.toHaveBeenCalled();
     });
 
-    it('custom validator does not block submit when it returns null', () => {
+    it('custom validator does not block submit when it returns null', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [
             {
@@ -351,32 +351,32 @@ describe('Form — custom validation', () => {
         const { form } = makeForm(fields, { onSubmit });
         form.insertChar('4');
         form.insertChar('2');
-        form.submit();
+        await form.submit();
         expect(onSubmit).toHaveBeenCalledWith({ age: '42' });
     });
 
-    it('validator runs even when the field has a value', () => {
+    it('validator runs even when the field has a value', async () => {
         const validate = vi.fn().mockReturnValue(null);
         const fields: FormField[] = [{ name: 'n', label: 'N', type: 'text', validate }];
         const { form } = makeForm(fields);
         form.insertChar('X');
-        form.submit();
+        await form.submit();
         expect(validate).toHaveBeenCalledWith('X');
     });
 
-    it('multiple validators failing independently each render errors', () => {
+    it('multiple validators failing independently each render errors', async () => {
         const fields: FormField[] = [
             { name: 'a', label: 'A', type: 'text', validate: () => 'Error A' },
             { name: 'b', label: 'B', type: 'text', validate: () => 'Error B' },
         ];
         const { form, width, height } = makeForm(fields);
-        form.submit();
+        await form.submit();
         const out = render_(form, width, height).join('\n');
         expect(out).toContain('Error A');
         expect(out).toContain('Error B');
     });
 
-    it('required and custom validator can coexist – submit is blocked when value is empty', () => {
+    it('required and custom validator can coexist – submit is blocked when value is empty', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [
             {
@@ -385,7 +385,7 @@ describe('Form — custom validation', () => {
             },
         ];
         const { form } = makeForm(fields, { onSubmit });
-        form.submit();
+        await form.submit();
         expect(onSubmit).not.toHaveBeenCalled();
     });
 });
@@ -393,7 +393,7 @@ describe('Form — custom validation', () => {
 // ── 7. Successful Submission ──────────────────────────
 
 describe('Form — successful submission', () => {
-    it('onSubmit fires exactly once when all validation passes', () => {
+    it('onSubmit fires exactly once when all validation passes', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [
             { name: 'first', label: 'First', type: 'text', required: true },
@@ -403,29 +403,29 @@ describe('Form — successful submission', () => {
         form.insertChar('J'); form.insertChar('o'); form.insertChar('e');
         form.nextField();
         form.insertChar('4'); form.insertChar('2');
-        form.submit();
+        await form.submit();
         expect(onSubmit).toHaveBeenCalledTimes(1);
         expect(onSubmit).toHaveBeenCalledWith({ first: 'Joe', num: '42' });
     });
 
-    it('submitted payload matches values getter at submission time', () => {
+    it('submitted payload matches values getter at submission time', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [{ name: 'x', label: 'X', type: 'text' }];
         const { form } = makeForm(fields, { onSubmit });
         form.insertChar('H'); form.insertChar('i');
         const expected = form.values;
-        form.submit();
+        await form.submit();
         expect(onSubmit).toHaveBeenCalledWith(expected);
     });
 
-    it('no errors remain visible after successful submit', () => {
+    it('no errors remain visible after successful submit', async () => {
         // First submit fails, then we fix and resubmit
         const onSubmit = vi.fn();
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text', required: true }];
         const { form, width, height } = makeForm(fields, { onSubmit });
-        form.submit(); // fails
+        await form.submit(); // fails
         form.insertChar('A');
-        form.submit(); // succeeds
+        await form.submit(); // succeeds
         const out = render_(form, width, height).join('\n');
         expect(out).not.toContain('Name is required');
         expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -501,10 +501,10 @@ describe('Form — rendering', () => {
         expect(out).toContain('[ Submit ]');
     });
 
-    it('renders inline validation error message', () => {
+    it('renders inline validation error message', async () => {
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text', required: true }];
         const { form, width, height } = makeForm(fields);
-        form.submit();
+        await form.submit();
         const out = render_(form, width, height).join('\n');
         expect(out).toContain('Name is required');
     });
@@ -572,15 +572,13 @@ describe('Form — edge cases', () => {
         }).not.toThrow();
     });
 
-    it('multiple consecutive submits do not throw', () => {
+    it('multiple consecutive submits do not throw', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text' }];
         const { form } = makeForm(fields, { onSubmit });
-        expect(() => {
-            form.submit();
-            form.submit();
-            form.submit();
-        }).not.toThrow();
+        await form.submit();
+        await form.submit();
+        await form.submit();
     });
 });
 
@@ -617,10 +615,10 @@ describe('Form — markDirty', () => {
         expect(spy).toHaveBeenCalled();
     });
 
-    it('markDirty is called on submit', () => {
+    it('markDirty is called on submit', async () => {
         const { form } = makeForm(TEXT_FIELDS);
         const spy = vi.spyOn(form as unknown as { markDirty(): void }, 'markDirty');
-        form.submit();
+        await form.submit();
         expect(spy).toHaveBeenCalled();
     });
 
@@ -642,39 +640,39 @@ describe('Form — markDirty', () => {
 // ── 11. Error Lifecycle ───────────────────────────────
 
 describe('Form — error lifecycle', () => {
-    it('errors appear after a failed submit', () => {
+    it('errors appear after a failed submit', async () => {
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text', required: true }];
         const { form, width, height } = makeForm(fields);
-        form.submit();
+        await form.submit();
         const out = render_(form, width, height).join('\n');
         expect(out).toContain('Name is required');
     });
 
-    it('errors disappear when the affected field is edited', () => {
+    it('errors disappear when the affected field is edited', async () => {
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text', required: true }];
         const { form, width, height } = makeForm(fields);
-        form.submit();
+        await form.submit();
         form.insertChar('A'); // edit clears error
         const out = render_(form, width, height).join('\n');
         expect(out).not.toContain('Name is required');
     });
 
-    it('re-submitting with empty field re-generates the error', () => {
+    it('re-submitting with empty field re-generates the error', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text', required: true }];
         const { form } = makeForm(fields, { onSubmit });
-        form.submit(); // first fail
-        form.submit(); // second fail
+        await form.submit(); // first fail
+        await form.submit(); // second fail
         expect(onSubmit).not.toHaveBeenCalled();
     });
 
-    it('successful submit clears all previous errors', () => {
+    it('successful submit clears all previous errors', async () => {
         const onSubmit = vi.fn();
         const fields: FormField[] = [{ name: 'n', label: 'Name', type: 'text', required: true }];
         const { form, width, height } = makeForm(fields, { onSubmit });
-        form.submit(); // fail
+        await form.submit(); // fail
         form.insertChar('B');
-        form.submit(); // pass
+        await form.submit(); // pass
         const out = render_(form, width, height).join('\n');
         expect(out).not.toContain('Name is required');
         expect(onSubmit).toHaveBeenCalledOnce();
@@ -708,7 +706,7 @@ describe('Form — existing tests', () => {
         screen.unmount();
     });
 
-    it('validation runs on submit and blocks invalid fields', () => {
+    it('validation runs on submit and blocks invalid fields', async () => {
         let form!: Form;
         const onSubmit = vi.fn();
         const fields: FormField[] = [
@@ -726,7 +724,7 @@ describe('Form — existing tests', () => {
         }, null));
 
         // Submit with no values -> should produce required error and not call onSubmit
-        form.submit();
+        await form.submit();
         screen.rerender();
 
         // Validation message should be rendered in the UI
@@ -739,7 +737,7 @@ describe('Form — existing tests', () => {
         form.insertChar('A'); form.insertChar('l'); form.insertChar('i');
         form.nextField();
         form.insertChar('x'); // invalid number
-        form.submit();
+        await form.submit();
         screen.rerender();
 
         const out2 = screen.lastFrame().join('\n');
@@ -749,7 +747,7 @@ describe('Form — existing tests', () => {
         screen.unmount();
     });
 
-    it('onSubmit fires with collected values when validation passes', () => {
+    it('onSubmit fires with collected values when validation passes', async () => {
         let form!: Form;
         const onSubmit = vi.fn();
         const fields: FormField[] = [
@@ -772,7 +770,7 @@ describe('Form — existing tests', () => {
         // Fill numeric field
         form.insertChar('4'); form.insertChar('2');
 
-        form.submit();
+        await form.submit();
         screen.rerender();
 
         expect(onSubmit).toHaveBeenCalledTimes(1);

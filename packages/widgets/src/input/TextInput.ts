@@ -107,6 +107,31 @@ export class TextInput extends Widget {
         }
     }
 
+    deleteWordBack(): void {
+        if (this._cursorPos === 0) return;
+
+        const graphemes = splitGraphemes(this._value);
+        let i = this._cursorPos - 1;
+        
+        // Skip trailing spaces
+        while (i >= 0 && graphemes[i] === ' ') {
+            i--;
+        }
+        
+        // Find the start of the word
+        while (i >= 0 && graphemes[i] !== ' ') {
+            i--;
+        }
+        
+        const deleteStart = i + 1;
+        
+        graphemes.splice(deleteStart, this._cursorPos - deleteStart);
+        this._value = graphemes.join('');
+        this._cursorPos = deleteStart;
+        this._onChange?.(this._value);
+        this.markDirty();
+    }
+
     moveCursorLeft(): void {
         const next = Math.max(0, this._cursorPos - 1);
 
@@ -154,6 +179,13 @@ export class TextInput extends Widget {
     }
 
     clear(): void {
+        this._value = '';
+        this._cursorPos = 0;
+        this._onChange?.('');
+        this.markDirty();
+    }
+
+    clearLine(): void {
         this._value = '';
         this._cursorPos = 0;
         this._onChange?.('');
@@ -249,6 +281,20 @@ export class TextInput extends Widget {
                     event.stopPropagation();
                     return;
                 }
+            }
+        }
+
+        if (event.ctrl) {
+            if (event.key === 'u') {
+                this.clearLine();
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            } else if (event.key === 'w') {
+                this.deleteWordBack();
+                event.preventDefault();
+                event.stopPropagation();
+                return;
             }
         }
 

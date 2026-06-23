@@ -43,12 +43,37 @@ export interface TemporalStoreActions<T> {
  * immutable from the caller's perspective: `getHistory()` returns copies
  * of the arrays so external consumers cannot mutate internal state.
  */
-export function createHistoryStore<T>(initialPresent: T): TemporalStoreActions<T> {
+
+export interface HistoryStoreOptions<T> {
+    /**
+     * Custom equality function used to decide whether a new state is
+     * identical to the current present. Defaults to JSON.stringify
+     * structural equality. Pass a custom comparator for types that are
+     * not JSON-serialisable (e.g. containing Date, Map, Set).
+     *
+     * @example
+     * // Using a shallow comparator for flat objects:
+     * createHistoryStore(initial, {
+     *   equals: (a, b) => Object.keys(a).every(k => (a as any)[k] === (b as any)[k])
+     * })
+     */
+    equals?: (a: T, b: T) => boolean;
+}
+
+export function createHistoryStore<T>(initialPresent: T, options: HistoryStoreOptions<T>={}): TemporalStoreActions<T> {
     let timeline: TemporalHistory<T> = {
         past: [],
         present: initialPresent,
         future: [],
     }
+
+    const equals = options.equals ?? ((a: T, b: T): boolean => {
+        try {
+            return JSON.stringify(a) === JSON.stringify(b);
+        } catch {
+            return Object.is(a, b);
+        }
+    });
 
     return {
         // Readonly accessor for the current state.
@@ -58,7 +83,7 @@ export function createHistoryStore<T>(initialPresent: T): TemporalStoreActions<T
 
         // Push a new state if it is different from the current `present`.
         set(newState: T): void {
-            if (Object.is(timeline.present, newState)) return;
+            if(equals(timeline.present, newState)) return;
 
             timeline = {
                 past: [...timeline.past, timeline.present],

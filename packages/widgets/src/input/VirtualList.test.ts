@@ -89,6 +89,41 @@ describe('VirtualList', () => {
         });
     });
 
+    describe('pageUp/pageDown with viewport smaller than itemHeight', () => {
+        // Create a list with layout so _getContentRect() is computed.
+        function createListSmallViewport() {
+            const list = new VirtualList({
+                totalItems: 10,
+                renderItem: (i) => `Item ${i}`,
+                itemHeight: 5, // large item height
+                style: { width: 40, height: 6 }, // content height will be 4 (< itemHeight)
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 6);
+            list.syncLayout();
+            return list;
+        }
+
+        it('pageDown moves at least one when pageSize would be 0', () => {
+            const list = createListSmallViewport();
+            expect(list.selectedIndex).toBe(0);
+
+            list.pageDown();
+            // pageDown should advance by exactly 1 (pageSize === 1 in this setup)
+            expect(list.selectedIndex).toBe(1);
+        });
+
+        it('pageUp moves at least one when pageSize would be 0', () => {
+            const list = createListSmallViewport();
+            list.scrollTo(3);
+            expect(list.selectedIndex).toBe(3);
+
+            list.pageUp();
+            // pageUp should move up by exactly 1 (from 3 -> 2)
+            expect(list.selectedIndex).toBe(2);
+        });
+    });
+
     describe('data management', () => {
         it('setTotalItems updates the count', () => {
             const list = createList(100);

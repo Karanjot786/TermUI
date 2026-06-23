@@ -336,18 +336,19 @@ export function useKeymap(bindings: KeyBinding[]): void {
     const fiber = currentFiber();
     const idx = fiber.hookIndex++;
 
-    if (idx >= fiber.hooks.length) {
-        // Dev-mode conflict detection on first render
-        if (process.env.NODE_ENV !== 'production') {
-            const seen = new Map<string, KeyBinding>();
-            for (const b of bindings) {
-                const key = `${b.key}|${b.ctrl ?? false}|${b.alt ?? false}|${b.shift ?? false}`;
-                if (seen.has(key)) {
-                    // Conflicting keybinding — silently ignore in dev mode
-                }
-                seen.set(key, b);
+    // Dev-mode conflict detection on every render (moved outside the init block)
+    if (process.env.NODE_ENV !== 'production') {
+        const seen = new Map<string, KeyBinding>();
+        for (const b of bindings) {
+            const key = `${b.key}|${b.ctrl ?? false}|${b.alt ?? false}|${b.shift ?? false}`;
+            if (seen.has(key)) {
+                console.warn(`[useKeymap] Conflicting keybinding detected for key: ${key}`);
             }
+            seen.set(key, b);
         }
+    }
+
+    if (idx >= fiber.hooks.length) {
         fiber.hooks.push({ value: bindings });
     } else {
         fiber.hooks[idx].value = bindings;
@@ -368,6 +369,7 @@ export function useKeymap(bindings: KeyBinding[]): void {
         }
     };
 }
+
 
 /**
  * useInsertBefore — register a persistent line above the inline viewport.

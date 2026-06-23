@@ -470,7 +470,33 @@ describe('App', () => {
             await mountPromise.catch(() => {});
         });
 
-        it('unsubscribes focus handlers on unmount', async () => {
+        it('requestRender schedules new callback after clean-tree early return', async () => {
+        const root = createMockRootWidget();
+        const renderSpy = vi.fn();
+        (root as any).render = renderSpy;
+
+        const app = new App(root, createInteractiveTestOptions());
+        const mountPromise = app.mount();
+        await new Promise(r => setImmediate(r));
+
+        // Root is clean now. requestRender should hit the early return path.
+        (root as any).isDirty = false;
+        app.requestRender();
+        await new Promise(r => setImmediate(r));
+
+        // Mark dirty and request another render — should NOT be silently dropped
+        (root as any).isDirty = true;
+        const renderCountBefore = renderSpy.mock.calls.length;
+        app.requestRender();
+        await new Promise(r => setImmediate(r));
+
+        expect(renderSpy.mock.calls.length).toBeGreaterThan(renderCountBefore);
+
+        app.exit(0);
+        await mountPromise.catch(() => {});
+    });
+
+    it('unsubscribes focus handlers on unmount', async () => {
             const { root, first, second } = createFocusTestRoot();
             const app = new App(root, createInteractiveTestOptions());
 

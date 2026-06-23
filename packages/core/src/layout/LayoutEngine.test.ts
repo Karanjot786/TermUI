@@ -225,3 +225,69 @@ describe('border offset in LayoutEngine', () => {
         expect(root.children[0].computed.height).toBe(6);
     });
 });
+
+describe('CSS Grid auto-placement', () => {
+    it('places children in a 2-column grid', () => {
+        const root = makeNode('root', {
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+        }, [
+            makeNode('a', { height: 3 }),
+            makeNode('b', { height: 3 }),
+            makeNode('c', { height: 3 }),
+        ]);
+        computeLayout(root, 20, 10);
+
+        expect(root.children[0].computed.x).toBe(0);
+        expect(root.children[0].computed.y).toBe(0);
+        expect(root.children[1].computed.x).toBe(10);
+        expect(root.children[1].computed.y).toBe(0);
+        expect(root.children[2].computed.x).toBe(0);
+        // Row heights are resolved from gridTemplateRows (1fr default),
+        // so the third child lands at the start of row 1.
+        expect(root.children[2].computed.y).toBeGreaterThan(0);
+    });
+
+    it('terminates when rowSpan exceeds available space', () => {
+        const children = [];
+        for (let i = 0; i < 5; i++) {
+            children.push(makeNode(`c${i}`, { height: 10 }));
+        }
+        const root = makeNode('root', {
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+        }, children);
+
+        expect(() => computeLayout(root, 20, 10)).not.toThrow();
+    });
+
+    it('does not loop forever when grid is completely full', () => {
+        const root = makeNode('root', {
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+        }, [
+            makeNode('a', { gridRowStart: 1, gridRowEnd: 3, gridColumnStart: 1, gridColumnEnd: 2, height: 4 }),
+            makeNode('b', { gridRowStart: 1, gridRowEnd: 3, gridColumnStart: 2, gridColumnEnd: 3, height: 4 }),
+            makeNode('c', { height: 2 }),
+            makeNode('d', { height: 2 }),
+        ]);
+
+        expect(() => computeLayout(root, 20, 10)).not.toThrow();
+    });
+
+    it('handles explicit grid positions alongside auto-placement', () => {
+        const root = makeNode('root', {
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+        }, [
+            makeNode('a', { gridRowStart: 1, gridColumnStart: 1, height: 3 }),
+            makeNode('b', { height: 3 }),
+        ]);
+        computeLayout(root, 20, 10);
+
+        expect(root.children[0].computed.x).toBe(0);
+        expect(root.children[0].computed.y).toBe(0);
+        expect(root.children[1].computed.x).toBe(10);
+        expect(root.children[1].computed.y).toBe(0);
+    });
+});
