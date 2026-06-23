@@ -24,18 +24,10 @@ export class Skeleton extends Widget {
         super(style);
 
         this._variant = opts.variant ?? 'pulse';
-this._shape = opts.shape ?? 'text';
+        this._shape = opts.shape ?? 'text';
 
-const speeds = {
-    slow: 1000,
-    normal: 600,
-    fast: 300,
-};
-
-this._intervalMs =
-    opts.intervalMs ??
-    speeds[opts.speed ?? 'normal'];
-        this._intervalMs = opts.intervalMs ?? 600;
+        const speeds = { slow: 1000, normal: 600, fast: 300 };
+        this._intervalMs = opts.intervalMs ?? speeds[opts.speed ?? 'normal'];
 
         this._chars = opts.chars ?? (caps.unicode ? ['░', '▒'] : ['-', '#']);
 
@@ -57,15 +49,10 @@ this._intervalMs =
         const rect = this._getContentRect();
         const { x, y, width } = rect;
 
-let height = rect.height;
-
-if (this._shape === 'text') {
-    height = Math.min(height, 3);
-} else if (this._shape === 'list') {
-    height = Math.min(height, 5);
-} else if (this._shape === 'table') {
-    height = Math.min(height, 6);
-}
+        let height = rect.height;
+        if (this._shape === 'text') height = Math.min(height, 3);
+        else if (this._shape === 'list') height = Math.min(height, 5);
+        else if (this._shape === 'table') height = Math.min(height, 6);
 
         if (width <= 0 || height <= 0) return;
 
