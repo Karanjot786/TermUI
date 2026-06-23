@@ -5,23 +5,22 @@ export interface ThemeConfig {
   secondary: string;
 }
 
+const THEME_KEYS: (keyof ThemeConfig)[] = ['foreground', 'background', 'primary', 'secondary'];
+
 export class ThemeEditor {
   private theme: ThemeConfig;
 
   constructor(initialTheme?: Partial<ThemeConfig>) {
     this.theme = {
-      foreground: "#ffffff",
-      background: "#000000",
-      primary: "#00ff00",
-      secondary: "#888888",
+      foreground: '#ffffff',
+      background: '#000000',
+      primary: '#00ff00',
+      secondary: '#888888',
       ...initialTheme,
     };
   }
 
-  setColor(
-    key: keyof ThemeConfig,
-    value: string
-  ): void {
+  setColor(key: keyof ThemeConfig, value: string): void {
     this.theme[key] = value;
   }
 
@@ -30,14 +29,7 @@ export class ThemeEditor {
   }
 
   preview(): string {
-    return `
-Theme Preview
--------------
-Foreground: ${this.theme.foreground}
-Background: ${this.theme.background}
-Primary: ${this.theme.primary}
-Secondary: ${this.theme.secondary}
-`;
+    return Object.entries(this.theme).map(([k, v]) => `${k}: ${v}`).join('\n');
   }
 
   exportTheme(): string {
@@ -45,6 +37,10 @@ Secondary: ${this.theme.secondary}
   }
 
   importTheme(json: string): void {
-    this.theme = JSON.parse(json);
+    const parsed = JSON.parse(json);
+    if (typeof parsed !== 'object' || parsed === null) throw new Error('Invalid theme JSON');
+    for (const k of THEME_KEYS) {
+      if (typeof parsed[k] === 'string') this.theme[k] = parsed[k];
+    }
   }
 }
