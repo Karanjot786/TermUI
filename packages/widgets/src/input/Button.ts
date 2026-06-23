@@ -1,4 +1,4 @@
-﻿// @termuijs/widgets - Button widget
+// @termuijs/widgets - Button widget
 import { type Screen, type Style, type Color, type KeyEvent, stringWidth, caps, prefersReducedMotion } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import { Widget } from '../base/Widget.js';
@@ -265,3 +265,4 @@ export class Button extends Widget {
         }
     }
 }
+
