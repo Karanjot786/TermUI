@@ -17,7 +17,8 @@ import { type VimMode } from './vim.js';
 export type { VimMode };
 
 /**
- * TextInput — a single-line text input field.
+ * TextInput — a single-line text input field
+ * with optional command auto-completion support.
  */
 export class TextInput extends Widget {
     private _value = '';
@@ -28,6 +29,8 @@ export class TextInput extends Widget {
     private _onChange?: (value: string) => void;
     private _onSubmit?: (value: string) => void;
     private _vimMode: VimMode = process.env.TERMUI_KEYBINDINGS === 'vim' ? 'normal' : 'insert';
+    private _suggestions: string[] = [];
+    private _suggestionIndex = 0;
 
     constructor(
         style: Partial<Style> = {},
@@ -35,6 +38,7 @@ export class TextInput extends Widget {
             placeholder?: string;
             mask?: string;
             maxLength?: number;
+            suggestions?: string[];
             onChange?: (value: string) => void;
             onSubmit?: (value: string) => void;
         } = {},
@@ -46,6 +50,7 @@ export class TextInput extends Widget {
         this._maxLength = options.maxLength ?? Infinity;
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
+        this._suggestions = options.suggestions ?? [];
 
         this.focusable = true;
 
@@ -76,12 +81,25 @@ export class TextInput extends Widget {
         this.markDirty();
     }
 
+    getSuggestions(input: string): string[] {
+        return this._suggestions.filter(s => s.toLowerCase().includes(input.toLowerCase()));
+    }
+
+    acceptSuggestion(): void {
+        const suggestions = this.getSuggestions(this._value);
+        if (suggestions.length === 0) return;
+        this.value = suggestions[this._suggestionIndex % suggestions.length];
+        this._cursorPos = splitGraphemes(this._value).length;
+        this.markDirty();
+    }
+
     insertChar(char: string): void {
         const graphemes = splitGraphemes(this._value);
         if (graphemes.length >= this._maxLength) return;
         graphemes.splice(this._cursorPos, 0, char);
         this._value = graphemes.join('');
         this._cursorPos++;
+        this._suggestionIndex = 0;
         this._onChange?.(this._value);
         this.markDirty();
     }
@@ -112,19 +130,19 @@ export class TextInput extends Widget {
 
         const graphemes = splitGraphemes(this._value);
         let i = this._cursorPos - 1;
-        
+
         // Skip trailing spaces
         while (i >= 0 && graphemes[i] === ' ') {
             i--;
         }
-        
+
         // Find the start of the word
         while (i >= 0 && graphemes[i] !== ' ') {
             i--;
         }
-        
+
         const deleteStart = i + 1;
-        
+
         graphemes.splice(deleteStart, this._cursorPos - deleteStart);
         this._value = graphemes.join('');
         this._cursorPos = deleteStart;
@@ -181,6 +199,7 @@ export class TextInput extends Widget {
     clear(): void {
         this._value = '';
         this._cursorPos = 0;
+        this._suggestionIndex = 0;
         this._onChange?.('');
         this.markDirty();
     }
@@ -299,6 +318,11 @@ export class TextInput extends Widget {
         }
 
         switch (event.key) {
+            case 'tab':
+                this.acceptSuggestion();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
             case 'backspace':
                 this.deleteBack();
                 event.preventDefault();
@@ -431,6 +455,12 @@ export class TextInput extends Widget {
             if (counterX >= x) {
                 screen.writeString(counterX, y, counterText, { ...attrs, dim: true });
             }
+        }
+
+        // Inline suggestions (only visible when height > 1, e.g. opts.style.height > 3)
+        const suggestions = this.getSuggestions(this._value).slice(0, height - 1);
+        for (let i = 0; i < suggestions.length; i++) {
+            screen.writeString(x, y + i + 1, truncate(suggestions[i], width), { ...attrs, dim: true });
         }
     }
 }

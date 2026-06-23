@@ -38,6 +38,7 @@ interface BatchEntry<T> {
 }
 
 let _batchDepth = 0;
+let _batchEpoch = 0;
 // Map store instance to batch entry. Using any for listener set type because
 // the batch mechanism operates on the raw Set<Listener<T>> without knowing T at this level.
 const _batchStores = new Map<Set<any>, BatchEntry<any>>();
@@ -62,7 +63,9 @@ const _batchStores = new Map<Set<any>, BatchEntry<any>>();
  * ```
  */
 export function batch<T>(fn: () => T): T {
+    const isOutermost = _batchDepth === 0;
     _batchDepth++;
+    if (isOutermost) _batchEpoch++;
     let threw = false;
     let res: any;
     try {
@@ -100,13 +103,18 @@ export function batch<T>(fn: () => T): T {
 
 function flushBatch(threw: boolean) {
     if (threw) {
-        for (const [, { prevState, rollback }] of _batchStores) {
+        for (const [, { rollback }] of _batchStores) {
             rollback();
         }
-        _batchStores.clear(); // Don't notify listeners with partial state
+        _batchStores.clear();
     } else {
         if (_batchStores.size === 0) return;
+        // Snapshot the current epoch so the microtask can bail out if a new
+        // batch has started before it runs.
+        const epochAtFlush = _batchEpoch;
         queueMicrotask(() => {
+            // A new batch started between the flush and this microtask — skip.
+            if (_batchEpoch !== epochAtFlush) return;
             const stores = Array.from(_batchStores.entries());
             _batchStores.clear();
             for (const [listeners, { prevState, commit }] of stores) {
@@ -421,6 +429,8 @@ export function createStore<T extends object>(
             } else {
                 Object.assign(existing.changes, changes);
                 existing.nextState = nextState;
+                existing.commit = () => { state = nextState; persistState(); };
+                existing.rollback = () => { state = existing.prevState; };
             }
         } else {
             state = nextState;

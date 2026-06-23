@@ -33,8 +33,17 @@ export interface AutocompleteOptions {
     highlightColor?: Color;
 }
 
-const defaultFilter = (query: string, item: string) =>
-    item.toLowerCase().startsWith(query.toLowerCase());
+const defaultFilter = (query: string, item: string) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    const t = item.toLowerCase();
+    let qIdx = 0;
+    for (let i = 0; i < t.length; i++) {
+        if (t[i] === q[qIdx]) qIdx++;
+        if (qIdx === q.length) return true;
+    }
+    return false;
+};
 
 export class Autocomplete extends Widget {
     private _items: string[] = [];

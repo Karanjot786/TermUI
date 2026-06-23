@@ -139,6 +139,18 @@
         "typescript": "^5.4.0",
       },
     },
+    "examples/flashcard-app": {
+      "name": "@termuijs/example-flashcard-app",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/node": "^22.0.0",
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/forms-and-validation": {
       "name": "@termuijs/example-forms",
       "version": "0.1.0",
@@ -806,6 +818,8 @@
 
     "@termuijs/example-file-manager": ["@termuijs/example-file-manager@workspace:examples/file-manager"],
 
+    "@termuijs/example-flashcard-app": ["@termuijs/example-flashcard-app@workspace:examples/flashcard-app"],
+
     "@termuijs/example-forms": ["@termuijs/example-forms@workspace:examples/forms-and-validation"],
 
     "@termuijs/example-git-client": ["@termuijs/example-git-client@workspace:examples/git-client"],
@@ -1170,6 +1184,8 @@
 
     "@termuijs/data/@types/node": ["@types/node@22.19.21", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA=="],
 
+    "@termuijs/example-flashcard-app/@types/node": ["@types/node@22.19.21", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA=="],
+
     "@termuijs/example-quiz-app/@types/node": ["@types/node@22.19.21", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA=="],
 
     "@termuijs/example-todo/@types/node": ["@types/node@22.19.21", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-VMeFBSCKQKmm2swI2kW51SFusDqekC6q9trBCvJ/JliDchFSuoYYKN7yVNjPthP1HKZcx3U1gI/wTcEBjEFKTA=="],
@@ -1199,6 +1215,8 @@
     "@termuijs/core/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "@termuijs/data/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
+
+    "@termuijs/example-flashcard-app/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "@termuijs/example-quiz-app/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
