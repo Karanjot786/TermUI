@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+﻿import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
     esbuild: {
@@ -8,7 +8,8 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'node',
-        bail: 0,\n        pool: 'forks',
+        bail: 0,
+        pool: 'forks',
         include: ['packages/*/src/**/*.test.ts', 'packages/*/src/**/*.test.tsx'],
         coverage: {
             provider: 'v8',
