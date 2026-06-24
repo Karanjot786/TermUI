@@ -19,6 +19,7 @@ export interface NumberInputOptions {
     allowDecimal?: boolean;
     onChange?: (value: number | null) => void;
     onSubmit?: (value: number | null) => void;
+    signal?: AbortSignal;
 }
 
 export class NumberInput extends Widget {
@@ -32,6 +33,7 @@ export class NumberInput extends Widget {
     private _onChange?: (value: number | null) => void;
     private _onSubmit?: (value: number | null) => void;
     focusable = true;
+    public signal?: AbortSignal;
 
     constructor(
         style: Partial<Style> = {},
@@ -45,6 +47,7 @@ export class NumberInput extends Widget {
         this._allowDecimal = options.allowDecimal ?? true;
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
+        this.signal = options.signal;
     }
 
     /** The numeric value, or null if the field is empty / invalid. */

@@ -31,6 +31,7 @@ export class TextInput extends Widget {
     private _vimMode: VimMode = process.env.TERMUI_KEYBINDINGS === 'vim' ? 'normal' : 'insert';
     private _suggestions: string[] = [];
     private _suggestionIndex = 0;
+    public signal?: AbortSignal;
 
     constructor(
         style: Partial<Style> = {},
@@ -41,6 +42,7 @@ export class TextInput extends Widget {
             suggestions?: string[];
             onChange?: (value: string) => void;
             onSubmit?: (value: string) => void;
+            signal?: AbortSignal;
         } = {},
     ) {
         super({ border: 'single', height: 3, ...style });
@@ -51,6 +53,7 @@ export class TextInput extends Widget {
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
         this._suggestions = options.suggestions ?? [];
+        this.signal = options.signal;
 
         this.focusable = true;
 

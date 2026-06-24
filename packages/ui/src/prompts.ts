@@ -1,12 +1,13 @@
 // ─────────────────────────────────────────────────────
 // @termuijs/ui — Imperative Prompts
-//
-// Pure Node.js readline-based prompts for CLI scripts
-// that don't need a full TUI app. Zero dependency on
-// @termuijs/core, @termuijs/widgets, or @termuijs/jsx.
 // ─────────────────────────────────────────────────────
 
 import * as readline from 'readline';
+import { App, TermUIAbortError } from '@termuijs/core';
+import { TextInput, Widget } from '@termuijs/widgets';
+import { Select, type SelectOption, type SelectOptions } from './Select.js';
+import { NumberInput, type NumberInputOptions } from './NumberInput.js';
+import { Form, type FormField, type FormOptions } from './Form.js';
 
 export class NonInteractiveError extends Error {
     constructor() {
@@ -126,22 +127,130 @@ async function promptSelect<T = string>(options: SelectPromptOptions<T>): Promis
     });
 }
 
-/**
- * Imperative prompts for CLI scripts — no widget stack required.
- *
- * ```ts
- * const name = await prompt.text({ message: 'Project name:', default: 'my-app' });
- * const ok = await prompt.confirm({ message: 'Continue?', default: true });
- * const pkg = await prompt.select({ message: 'Package manager:', options: [
- *     { label: 'pnpm', value: 'pnpm' },
- *     { label: 'npm', value: 'npm' },
- * ]});
- * ```
- *
- * Throws `NonInteractiveError` when stdin is not a TTY.
- */
-export const prompt = {
+export async function promptWidget<T = any /* Allow resolving any prompt value type */>(widget: Widget): Promise<T> {
+    if (!process.stdin.isTTY) throw new NonInteractiveError();
+
+    let inlineRows = 3;
+    if (widget instanceof Form) {
+        inlineRows = typeof widget.style?.height === 'number' ? widget.style.height : 5;
+    } else if (widget instanceof Select) {
+        inlineRows = 1 + (widget as any /* Bypass private options access */)._options.length;
+    } else if (widget instanceof NumberInput) {
+        inlineRows = typeof widget.style?.height === 'number' ? widget.style.height : 3;
+    } else if (widget instanceof TextInput) {
+        inlineRows = typeof widget.style?.height === 'number' ? widget.style.height : 3;
+    }
+
+    const app = new App(widget, {
+        screenMode: 'inline',
+        inlineRows,
+        skipFallback: true,
+    });
+
+    const signal = (widget as any /* Bypass private signal access */).signal;
+
+    return new Promise<T>((resolve, reject) => {
+        let completed = false;
+
+        const cleanup = () => {
+            if (completed) return;
+            completed = true;
+            if (signal) {
+                signal.removeEventListener('abort', onAbort);
+            }
+            app.unmount();
+        };
+
+        const onAbort = () => {
+            cleanup();
+            reject(new TermUIAbortError());
+        };
+
+        if (signal) {
+            if (signal.aborted) {
+                cleanup();
+                reject(new TermUIAbortError());
+                return;
+            }
+            signal.addEventListener('abort', onAbort);
+        }
+
+        if (widget instanceof Select) {
+            const originalOnSelect = (widget as any /* Bypass private access */)._onSelect;
+            (widget as any /* Bypass private access */)._onSelect = (option: any /* Callback signature uses any */, index: number) => {
+                originalOnSelect?.(option, index);
+                cleanup();
+                resolve(option.value as T);
+            };
+        } else if (widget instanceof TextInput) {
+            const originalOnSubmit = (widget as any /* Bypass private access */)._onSubmit;
+            (widget as any /* Bypass private access */)._onSubmit = (value: string) => {
+                originalOnSubmit?.(value);
+                cleanup();
+                resolve(value as unknown as T);
+            };
+        } else if (widget instanceof NumberInput) {
+            const originalOnSubmit = (widget as any /* Bypass private access */)._onSubmit;
+            (widget as any /* Bypass private access */)._onSubmit = (value: number | null) => {
+                originalOnSubmit?.(value);
+                cleanup();
+                resolve(value as unknown as T);
+            };
+        } else if (widget instanceof Form) {
+            const originalOnSubmit = (widget as any /* Bypass private access */)._onSubmit;
+            (widget as any /* Bypass private access */)._onSubmit = (values: Record<string, string>) => {
+                originalOnSubmit?.(values);
+                cleanup();
+                resolve(values as unknown as T);
+            };
+        } else {
+            const originalOnSubmit = (widget as any /* Bypass private access */)._onSubmit;
+            if (typeof originalOnSubmit === 'function') {
+                (widget as any /* Bypass private access */)._onSubmit = (value: any /* Custom widget onSubmit values */) => {
+                    originalOnSubmit?.(value);
+                    cleanup();
+                    resolve(value as T);
+                };
+            }
+        }
+
+        app.mount().catch((err) => {
+            cleanup();
+            reject(err);
+        });
+    });
+}
+
+export function select(config: { options: string[]; placeholder?: string; activeColor?: any /* Keep color type flexible */; signal?: AbortSignal }) {
+    const formattedOptions = config.options.map(o => ({ label: o, value: o }));
+    return new Select(formattedOptions, {
+        placeholder: config.placeholder,
+        activeColor: config.activeColor,
+        signal: config.signal,
+    });
+}
+
+export function textInput(options: { placeholder?: string; mask?: string; maxLength?: number; suggestions?: string[]; signal?: AbortSignal } = {}) {
+    return new TextInput({}, options);
+}
+
+export function numberInput(options: NumberInputOptions & { signal?: AbortSignal } = {}) {
+    return new NumberInput({}, options);
+}
+
+export function form(fields: FormField[], options: FormOptions & { signal?: AbortSignal } = {}) {
+    return new Form(fields, options);
+}
+
+export interface Prompt {
+    <T = any /* Default prompt value type */>(widget: Widget): Promise<T>;
+    text: typeof promptText;
+    confirm: typeof promptConfirm;
+    select: typeof promptSelect;
+}
+
+export const prompt: Prompt = Object.assign(promptWidget, {
     text: promptText,
     confirm: promptConfirm,
     select: promptSelect,
-} as const;
+});

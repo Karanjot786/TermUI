@@ -102,7 +102,7 @@ export type { Command, CommandPaletteOptions } from './CommandPalette.js';
 export { useCommandPalette } from './hooks/useCommandPalette.js';
 export type { UseCommandPaletteOptions, UseCommandPaletteReturn } from './hooks/useCommandPalette.js';
 
-export { prompt, NonInteractiveError } from './prompts.js';
+export { prompt, NonInteractiveError, select, textInput, numberInput, form } from './prompts.js';
 export type { TextPromptOptions, ConfirmPromptOptions, SelectPromptOptions } from './prompts.js';
 
 export { NotificationCenter, NotificationStore, notifications, useNotifications } from './NotificationCenter.js';
