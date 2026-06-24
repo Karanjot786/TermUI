@@ -8,7 +8,7 @@ export default defineConfig({
     test: {
         globals: true,
         environment: 'node',
-        bail: 0,
+        bail: 0,\n        pool: 'forks',
         include: ['packages/*/src/**/*.test.ts', 'packages/*/src/**/*.test.tsx'],
         coverage: {
             provider: 'v8',
