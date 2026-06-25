@@ -92,7 +92,6 @@ out/
 *.un~
 
 # --- Project-Specific / Local Settings ---
-website/
 scratch/
 .worktrees/
 docs/superpowers/

@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/**
+ * TermUI Premium Dark Theme Variables
+ */
+:root {
+  --vp-font-family-base: 'Inter', sans-serif;
+  
+  /* Primary brand colors */
+  --vp-c-brand-1: #646cff;
+  --vp-c-brand-2: #747bff;
+  --vp-c-brand-3: #535bf2;
+  
+  /* Make the background a deep rich dark */
+  --vp-c-bg: #0a0a0a;
+  --vp-c-bg-alt: #111111;
+  
+  /* Custom glow effects for glassmorphism */
+  --termui-glow: rgba(100, 108, 255, 0.15);
+  --termui-border: rgba(255, 255, 255, 0.1);
+}
+
+.dark {
+  --vp-c-bg: #0a0a0a;
+  --vp-c-bg-alt: #111111;
+  --vp-c-bg-soft: #1a1a1a;
+  --vp-c-border: #222222;
+}
+
+/* Glassmorphism nav bar */
+.VPNavBar {
+  background-color: rgba(10, 10, 10, 0.7) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--termui-border);
+}
+
+/* Vibrant Hero button */
+.VPHero .action .VPButton.brand {
+  background: linear-gradient(135deg, var(--vp-c-brand-1), #b047ff);
+  border: none;
+  box-shadow: 0 4px 14px var(--termui-glow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.VPHero .action .VPButton.brand:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(176, 71, 255, 0.3);
+}
+
+/* Beautiful code blocks */
+.vp-doc [class*='language-'] {
+  background-color: #121212;
+  border: 1px solid var(--termui-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.custom-block {
+  background-color: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--termui-border);
+}
+
+.VPFeature {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--termui-border) !important;
+  transition: border-color 0.3s ease, background-color 0.3s ease, transform 0.3s ease;
+}
+
+.VPFeature:hover {
+  border-color: var(--vp-c-brand-1) !important;
+  background-color: rgba(100, 108, 255, 0.05) !important;
+  transform: translateY(-2px);
+}
