@@ -187,6 +187,58 @@ export interface Store<T> {
     /** Read the state captured at creation */
     getInitialState(): T;
 }
+
+// ── Safe Deep Clone Helper ──
+function safeDeepClone<T>(obj: T, seen = new WeakMap()): T {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (seen.has(obj as any)) return seen.get(obj as any);
+
+    if (obj instanceof Date) return new Date(obj.getTime()) as any;
+    if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags) as any;
+    
+    if (obj instanceof Map) {
+        const m = new Map();
+        seen.set(obj as any, m);
+        for (const [k, v] of obj) m.set(k, safeDeepClone(v, seen));
+        return m as any;
+    }
+    if (obj instanceof Set) {
+        const s = new Set();
+        seen.set(obj as any, s);
+        for (const v of obj) s.add(safeDeepClone(v, seen));
+        return s as any;
+    }
+    if (obj instanceof ArrayBuffer) {
+        const buf = new ArrayBuffer(obj.byteLength);
+        new Uint8Array(buf).set(new Uint8Array(obj));
+        return buf as any;
+    }
+    if (Array.isArray(obj)) {
+        const arr = [] as any[];
+        seen.set(obj as any, arr);
+        for (let i = 0; i < obj.length; i++) {
+            arr[i] = safeDeepClone(obj[i], seen);
+        }
+        return arr as any;
+    }
+
+    const cloned = {} as Record<string | symbol, any>;
+    seen.set(obj as any, cloned);
+
+    const keys = Reflect.ownKeys(obj as any);
+    for (const key of keys) {
+        const value = (obj as any)[key];
+        // Filter out functions from initial state capture
+        if (typeof value === 'function') continue; 
+        try {
+            cloned[key] = safeDeepClone(value, seen);
+        } catch (e) {
+            cloned[key] = value;
+        }
+    }
+    return cloned as T;
+}
+
 // ── Store Implementation ──
 
 /**
@@ -447,20 +499,14 @@ export function createStore<T extends object>(
         : { ...(creator as any) } as T;
     
     // Capture initial state BEFORE persist rehydration
-    const initialState = structuredClone(
-        Object.fromEntries(
-            Object.entries(state).filter(
-                ([, value]) => typeof value !== 'function',
-            ),
-        ),
-    ) as Partial<T>;
+    const initialState = safeDeepClone(state) as Partial<T>;
     
     const getInitialState = (): T => {
-        return structuredClone(initialState) as T;
+        return safeDeepClone(initialState) as T;
     };
     
     const reset = (): void => {
-        setState(structuredClone(initialState) as Partial<T>);
+        setState(safeDeepClone(initialState) as Partial<T>);
     };
 
     // Rehydrate saved state if persist file exists
