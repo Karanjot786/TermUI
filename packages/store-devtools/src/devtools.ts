@@ -28,22 +28,18 @@ export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> {
     let isTimeTraveling = false;
     let history: DevToolsState<T> = { past: [], present: null as any, future: [] };
 
-    return (prevState: T, update: Partial<T>, next: (update: Partial<T>, actionName?: string) => T, actionName?: string) => {
+    return async (prevState, update, next, actionName, abort, set) => {
         if (isTimeTraveling) {
-            next(update, actionName);
-            return;
+            await next(update, actionName);
+            return true;
         }
 
         if (history.present === null) {
             history.present = prevState;
         }
 
-        next(update, actionName);
-        
-        // At this point, the update is applied, but we need the store's reference to getState.
-        // Wait, the middleware doesn't give us the computed nextState easily, but we know
-        // `update` is merged into `prevState`.
-        const nextState = { ...prevState, ...update };
+        // Apply update and get nextState
+        const nextState = await next(update, actionName);
         
         const action: DevToolsAction<T> = {
             type: actionName || 'anonymous',
@@ -78,5 +74,7 @@ export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> {
                 }
             });
         }
+        
+        return true;
     };
 }

@@ -132,7 +132,7 @@ function flushBatch(threw: boolean) {
 export type SetState<T> = (
     partial: Partial<T> | ((state: T) => Partial<T>),
     actionName?: string
-) => void;
+) => void | Promise<void>;
 
 export type GetState<T> = () => T;
 
@@ -145,12 +145,16 @@ export type Selector<T, U> = (state: T) => U;
 
 export type Listener<T> = (state: T, prevState: T) => void;
 
+export type NextMiddleware<T> = (update: Partial<T>, actionName?: string) => T | Promise<T>;
+
 export type Middleware<T> = (
     prevState: T,
     update: Partial<T>,
-    next: (update: Partial<T>, actionName?: string) => T,
-    actionName?: string
-) => void;
+    next: NextMiddleware<T>,
+    actionName: string | undefined,
+    abort: () => void,
+    set: SetState<T>
+) => boolean | Promise<boolean> | void | Promise<void>;
 
 export interface PersistOptions {
     key?: string;
@@ -170,6 +174,49 @@ export interface Computed<U> {
     subscribe(listener: (value: U) => void): () => void;
     /** Remove the internal store subscription and clear all computed listeners — call when done to prevent memory leaks */
     dispose(): void;
+}
+
+/**
+ * Compose multiple middlewares into a single middleware.
+ */
+export function compose<T>(...middlewares: Middleware<T>[]): Middleware<T> {
+    return (prevState, update, next, actionName, abort, set) => {
+        let index = -1;
+        const dispatch = (i: number, currentPartial: Partial<T>, currentActionName?: string): T | Promise<T> => {
+            if (i <= index) throw new Error('next() called multiple times in compose');
+            index = i;
+            if (i === middlewares.length) {
+                return next(currentPartial, currentActionName);
+            }
+            
+            let res: T | Promise<T> = prevState;
+            const mw = middlewares[i];
+            
+            const nextFn = (transformed: Partial<T>, nextActionName?: string): T | Promise<T> => {
+                res = dispatch(i + 1, transformed, nextActionName ?? currentActionName);
+                return res;
+            };
+
+            const mwResult = mw(prevState, currentPartial, nextFn, currentActionName, abort, set);
+            
+            if (mwResult && typeof (mwResult as any).then === 'function') {
+                return (mwResult as Promise<any>).then((v) => {
+                    if (v === false) return prevState;
+                    return res;
+                });
+            }
+            
+            if (mwResult === false) return prevState;
+            
+            return res;
+        };
+        
+        const finalRes = dispatch(0, update, actionName);
+        if (finalRes && typeof (finalRes as any).then === 'function') {
+            return (finalRes as Promise<T>).then(() => true) as any;
+        }
+        return true;
+    };
 }
 
 export interface Store<T> {
@@ -339,21 +386,45 @@ export function createStore<T extends object>(
 
         if (options?.middleware && options.middleware.length > 0) {
             let index = -1;
-            const dispatch = (i: number, currentPartial: Partial<T>, currentActionName?: string): T => {
+            let isAborted = false;
+            const abort = () => { isAborted = true; };
+
+            const dispatch = (i: number, currentPartial: Partial<T>, currentActionName?: string): T | Promise<T> => {
+                if (isAborted) return state;
                 if (i <= index) throw new Error('next() called multiple times');
                 index = i;
                 if (i === options.middleware!.length) {
                     return applyUpdate(currentPartial);
                 }
-                let res: T | undefined;
+                
+                let res: T | Promise<T> = state;
                 const mw = options.middleware![i];
-                mw(prevState, currentPartial, (transformed, nextActionName) => {
+                
+                const nextFn = (transformed: Partial<T>, nextActionName?: string): T | Promise<T> => {
+                    if (isAborted) return state;
                     res = dispatch(i + 1, transformed, nextActionName ?? currentActionName);
                     return res;
-                }, currentActionName);
-                return res !== undefined ? res : state;
+                };
+
+                const mwResult = mw(prevState, currentPartial, nextFn, currentActionName, abort, setState);
+                
+                if (mwResult && typeof (mwResult as any).then === 'function') {
+                    return (mwResult as Promise<any>).then((v) => {
+                        if (v === false || isAborted) return state;
+                        return res;
+                    });
+                }
+                
+                if (mwResult === false || isAborted) return state;
+                
+                return res;
             };
-            dispatch(0, nextPartial, actionName);
+            
+            const finalRes = dispatch(0, nextPartial, actionName);
+            if (finalRes && typeof (finalRes as any).then === 'function') {
+                return (finalRes as Promise<T>).then(() => {}) as any;
+            }
+            return;
         } else {
             applyUpdate(nextPartial);
         }

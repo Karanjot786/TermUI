@@ -6,6 +6,7 @@ export {
     createStore,
     createPersistentStore,
     batch,
+    compose,
 } from './store.js';
 export type {
     Store,
@@ -17,6 +18,7 @@ export type {
     Selector,
     Listener,
     Middleware,
+    NextMiddleware,
     StoreOptions,
     PersistOptions,
 } from './store.js';
@@ -24,11 +26,20 @@ export type {
 export { slices } from './slices.js';
 export type { SliceDef } from './slices.js';
 
-export { createHistoryStore } from './history.js';
-export type { TemporalHistory, TemporalStoreActions } from './history.js';
+export { undoRedo } from './middleware/history.js';
+export type { UndoRedoOptions, UndoRedoMiddleware } from './middleware/history.js';
 
-export { createLogger, logger } from './logger.js';
-export type { LoggerOptions } from './logger.js';
+export { logger } from './middleware/logger.js';
+export type { LoggerOptions } from './middleware/logger.js';
+
+export { persist } from './middleware/persist.js';
+export type { PersistMiddlewareOptions } from './middleware/persist.js';
+
+export { throttle } from './middleware/throttle.js';
+export type { ThrottleOptions } from './middleware/throttle.js';
+
+export { validator } from './middleware/validator.js';
+export type { ValidatorOptions } from './middleware/validator.js';
 
 export { signal, mutate } from './mutate.js';
 export type { Signal } from './mutate.js';
