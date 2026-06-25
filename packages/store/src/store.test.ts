@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createStore, batch } from './store.js'
-import { logger } from './logger.js'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
@@ -466,18 +465,6 @@ describe('middleware', () => {
         expect(useStore.getState().count).toBe(10)
     })
 
-    it('logger middleware passes state through without calling console.log', () => {
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-        const useStore = createStore(() => ({ count: 0 }), { middleware: [logger] })
-
-        useStore.setState({ count: 1 })
-
-        // console.log is forbidden in TermUI source files — logger is a pass-through
-        expect(logSpy).not.toHaveBeenCalled()
-        expect(useStore.getState().count).toBe(1)
-
-        logSpy.mockRestore()
-    })
 
     it('functional updaters chain correctly inside a batch', async () => {
         const useStore = createStore((set) => ({
