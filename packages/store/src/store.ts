@@ -131,6 +131,7 @@ function flushBatch(threw: boolean) {
 
 export type SetState<T> = (
     partial: Partial<T> | ((state: T) => Partial<T>),
+    actionName?: string
 ) => void;
 
 export type GetState<T> = () => T;
@@ -147,7 +148,8 @@ export type Listener<T> = (state: T, prevState: T) => void;
 export type Middleware<T> = (
     prevState: T,
     update: Partial<T>,
-    next: (transformedUpdate: Partial<T>) => T,
+    next: (update: Partial<T>, actionName?: string) => T,
+    actionName?: string
 ) => void;
 
 export interface PersistOptions {
@@ -284,7 +286,7 @@ export function createStore<T extends object>(
         }, debounceMs);
     };
 
-    const setState: SetState<T> = (partial) => {
+    const setState: SetState<T> = (partial, actionName) => {
         const prevState = state;
 
         // When in a batch, function updaters should see the pending batch state
@@ -337,7 +339,7 @@ export function createStore<T extends object>(
 
         if (options?.middleware && options.middleware.length > 0) {
             let index = -1;
-            const dispatch = (i: number, currentPartial: Partial<T>): T => {
+            const dispatch = (i: number, currentPartial: Partial<T>, currentActionName?: string): T => {
                 if (i <= index) throw new Error('next() called multiple times');
                 index = i;
                 if (i === options.middleware!.length) {
@@ -345,13 +347,13 @@ export function createStore<T extends object>(
                 }
                 let res: T | undefined;
                 const mw = options.middleware![i];
-                mw(prevState, currentPartial, (transformed) => {
-                    res = dispatch(i + 1, transformed);
+                mw(prevState, currentPartial, (transformed, nextActionName) => {
+                    res = dispatch(i + 1, transformed, nextActionName ?? currentActionName);
                     return res;
-                });
+                }, currentActionName);
                 return res !== undefined ? res : state;
             };
-            dispatch(0, nextPartial);
+            dispatch(0, nextPartial, actionName);
         } else {
             applyUpdate(nextPartial);
         }
