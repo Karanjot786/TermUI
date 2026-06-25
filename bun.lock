@@ -561,6 +561,19 @@
         "typescript": "^5.3.0",
       },
     },
+    "packages/store-devtools": {
+      "name": "@termuijs/store-devtools",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/store": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+      },
+      "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0",
+      },
+    },
     "packages/testing": {
       "name": "@termuijs/testing",
       "version": "0.1.6",
@@ -865,6 +878,8 @@
     "@termuijs/router": ["@termuijs/router@workspace:packages/router"],
 
     "@termuijs/store": ["@termuijs/store@workspace:packages/store"],
+
+    "@termuijs/store-devtools": ["@termuijs/store-devtools@workspace:packages/store-devtools"],
 
     "@termuijs/testing": ["@termuijs/testing@workspace:packages/testing"],
 
