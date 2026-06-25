@@ -2,7 +2,7 @@
 // @termuijs/widgets — Spinner widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, type Color, caps, BRAILLE_SPIN } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, type Color, caps, BRAILLE_SPIN, prefersReducedMotion, stringWidth } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import { Widget } from '../base/Widget.js';
 
@@ -11,6 +11,16 @@ import { Widget } from '../base/Widget.js';
  */
 export const SPINNER_FRAMES: Record<string, { frames: string[]; asciiFrames: string[]; interval: number }> = {
     dots: {
+        frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
+        asciiFrames: ['|', '/', '-', '\\'],
+        interval: 80,
+    },
+    /**
+     * Alias for `dots`. Uses the same braille character frames and interval.
+     * Provided as a more semantically descriptive name when the intent is to
+     * convey a "braille spinner" rather than a generic dots animation.
+     */
+    braille: {
         frames: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
         asciiFrames: ['|', '/', '-', '\\'],
         interval: 80,
@@ -67,6 +77,13 @@ export interface SpinnerOptions {
     spinner?: string | { frames: string[]; interval: number };
     /** Spinner preset name (preferred option) */
     preset?: string;
+    /**
+     * Animation variant (dots, line, braille, etc.).
+     * Equivalent to `preset` — provided for semantic clarity when callers
+     * prefer to think of the choice as a visual "variant" rather than a
+     * configuration preset. If both are supplied, `variant` takes precedence.
+     */
+    variant?: string;
     /** Text label displayed after the spinner */
     label?: string;
     /** Color for the spinner frames */
@@ -106,7 +123,7 @@ export class Spinner extends Widget {
     constructor(style: Partial<Style> = {}, options: SpinnerOptions = {}) {
         super({ height: 1, ...style });
 
-        const presetName = options.preset ?? (typeof options.spinner === 'string' ? options.spinner : undefined);
+        const presetName = options.variant ?? options.preset ?? (typeof options.spinner === 'string' ? options.spinner : undefined);
         const spinnerDef = presetName
             ? (SPINNER_FRAMES[presetName] ?? SPINNER_FRAMES.dots)
             : (typeof options.spinner === 'object' ? options.spinner : SPINNER_FRAMES.dots);
@@ -119,8 +136,8 @@ export class Spinner extends Widget {
         if (!caps.unicode) {
             if (presetName && SPINNER_FRAMES[presetName]?.asciiFrames) {
                 framesToUse = SPINNER_FRAMES[presetName].asciiFrames;
-            } else if (spinnerDef && 'asciiFrames' in spinnerDef && Array.isArray((spinnerDef as any).asciiFrames)) {
-                framesToUse = (spinnerDef as any).asciiFrames;
+            } else if (spinnerDef && 'asciiFrames' in spinnerDef && Array.isArray((spinnerDef as any).asciiFrames)) { // as any: asciiFrames is an optional SpinnerDef extension not in the base interface
+                framesToUse = (spinnerDef as any).asciiFrames; // as any: asciiFrames is an optional SpinnerDef extension not in the base interface
             } else if (framesToUse.some(f => f.codePointAt(0)! > 127)) {
                 // Generic fallback for custom unicode frames
                 framesToUse = Array.from(BRAILLE_SPIN);
@@ -144,7 +161,7 @@ export class Spinner extends Widget {
         // Dynamically manage timer if mounted
         this._timerUnsub?.();
         this._timerUnsub = undefined;
-        if (active && caps.motion) {
+        if (active && !prefersReducedMotion()) {
             this._startTime = Date.now();
             this._timerUnsub = timerPoolSubscribe(this._interval, () => {
                 this.markDirty();
@@ -169,7 +186,7 @@ export class Spinner extends Widget {
      * Call this with a delta (ms) from the render loop.
      */
     tick(deltaMs: number): void {
-        if (!caps.motion || !this._active) return;
+        if (prefersReducedMotion() || !this._active) return;
 
         this._elapsed += deltaMs;
         this._frameIndex = Math.floor(this._elapsed / this._interval) % this._frames.length;
@@ -178,7 +195,7 @@ export class Spinner extends Widget {
     /** Lifecycle: start the frame-advance timer (only when motion is enabled). */
     mount(): void {
         super.mount();
-        if (!caps.motion || !this._active) return;
+        if (prefersReducedMotion() || !this._active) return;
         this._startTime = Date.now();
         this._timerUnsub = timerPoolSubscribe(this._interval, () => {
             this.markDirty();
@@ -201,7 +218,7 @@ export class Spinner extends Widget {
 
         let char = '';
         if (this._active) {
-            if (!caps.motion) {
+            if (prefersReducedMotion()) {
                 // Static fallback when motion is disabled
                 char = '[...]';
             } else {
@@ -223,7 +240,7 @@ export class Spinner extends Widget {
 
         // Render label
         if (this._label) {
-            const labelX = char ? x + char.length + 1 : x;
+            const labelX = char ? x + stringWidth(char) + 1 : x;
             screen.writeString(labelX, y, this._label, attrs);
         }
     }

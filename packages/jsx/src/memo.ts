@@ -14,6 +14,12 @@
 
 import type { FC, VNode } from './vnode.js';
 import type { Widget } from '@termuijs/widgets';
+import { currentFiber, type Fiber } from './hooks.js';
+
+interface MemoCacheEntry<P> {
+    prevProps: P;
+    prevResult: VNode | Widget;
+}
 
 /**
  * Shallow comparison of two objects.
@@ -57,18 +63,28 @@ export function memo<P extends Record<string, any>>(
 ): FC<P> {
     const compare = areEqual ?? shallowEqual;
 
-    // Cache the previous props and VNode output
-    let prevProps: P | null = null;
-    let prevResult: VNode | Widget | null = null;
+    // Per-instance cache keyed by fiber — avoids shared closure across siblings
+    const cache = new WeakMap<Fiber, MemoCacheEntry<P>>();
 
     const memoized: FC<P> = (props: P & { children?: VNode | VNode[] }) => {
-        // On first render, or when props change — call the component
-        if (prevProps === null || !compare(prevProps, props as P)) {
-            prevProps = { ...props } as P;
-            prevResult = component(props);
+        let fiber: Fiber | null = null;
+        try {
+            fiber = currentFiber();
+        } catch {
+            // No fiber context (e.g. direct call outside render) — skip cache
         }
 
-        return prevResult!;
+        if (fiber) {
+            const entry = cache.get(fiber);
+            if (entry && compare(entry.prevProps, props as P)) {
+                return entry.prevResult;
+            }
+            const result = component(props);
+            cache.set(fiber, { prevProps: { ...props } as P, prevResult: result });
+            return result;
+        }
+
+        return component(props);
     };
 
     // Tag for debugging

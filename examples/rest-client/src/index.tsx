@@ -68,7 +68,15 @@ class RestClientExampleApp extends Widget {
                 type: 'select',
                 options: METHOD_OPTIONS,
                 placeholder: 'GET',
-                validate: (value) => !value.trim() || METHOD_OPTIONS.includes(value.toUpperCase()) ? null : 'Use GET, POST, PUT, PATCH, DELETE, or HEAD',
+                validate: (value) => {
+                    if (typeof value !== 'string') {
+                        return 'Use GET, POST, PUT, PATCH, DELETE, or HEAD';
+                    }
+
+                    return !value.trim() || METHOD_OPTIONS.includes(value.toUpperCase())
+                        ? null
+                        : 'Use GET, POST, PUT, PATCH, DELETE, or HEAD';
+                },
             },
             {
                 name: 'url',
@@ -77,6 +85,10 @@ class RestClientExampleApp extends Widget {
                 placeholder: 'https://api.github.com/repos/Karanjot786/TermUI',
                 required: true,
                 validate: (value) => {
+                    if (typeof value !== 'string') {
+                        return 'Enter a valid absolute URL';
+                    }
+
                     try {
                         new URL(value);
                         return null;

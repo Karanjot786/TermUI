@@ -4,7 +4,8 @@
 // ─────────────────────────────────────────────────────
 
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { join, resolve, relative, sep } from 'node:path';
 
 /**
  * Validate documentation target to prevent command injection
@@ -33,6 +34,36 @@ function validateDocTarget(target) {
       'Invalid documentation target. Only lowercase letters, numbers, hyphens, underscores and forward slashes are allowed.'
     );
   }
+
+  // Reject reserved directory names that could conflict with project structure
+  const RESERVED_NAMES = ['src', 'docs', 'node_modules', '.git'];
+  const topLevelSegment = target.split('/')[0];
+  if (RESERVED_NAMES.includes(topLevelSegment)) {
+    throw new Error(
+      `Documentation target "${topLevelSegment}" is a reserved directory name and cannot be used.`
+    );
+  }
+}
+
+/**
+ * Recursively collect files matching a given extension under a directory.
+ * Uses only Node built-ins (no external glob package required).
+ * @param {string} dir  Root directory to search
+ * @param {string} ext  File extension to match (e.g. '.ts')
+ * @returns {string[]}  Sorted list of matching file paths
+ */
+function findFiles(dir, ext) {
+  const results = [];
+  if (!existsSync(dir)) return results;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...findFiles(fullPath, ext));
+    } else if (entry.isFile() && entry.name.endsWith(ext)) {
+      results.push(fullPath);
+    }
+  }
+  return results;
 }
 
 /**
@@ -43,6 +74,26 @@ function generateDocs(target) {
   try {
     validateDocTarget(target);
 
+    // Defense-in-depth: ensure the output path stays inside the docs directory
+    const docsRoot = resolve('docs');
+    const targetOut = resolve(join('docs', target));
+
+    const rel = relative(docsRoot, targetOut);
+
+    if (
+      rel.startsWith('..') ||
+      rel.includes('..' + sep)
+    ) {
+      throw new Error(
+        `Documentation output path "${targetOut}" escapes the docs directory.`
+      );
+    }
+
+    // Verify the source directory exists before running any tooling
+    if (!existsSync('src')) {
+      throw new Error('Source directory "src" does not exist. Cannot generate documentation.');
+    }
+
     console.log(`Generating documentation for: ${target}...`);
 
     // Use execFileSync with argument array (safe from injection)
@@ -50,6 +101,7 @@ function generateDocs(target) {
     execFileSync('tsc', ['--noEmit'], {
       stdio: 'inherit',
       encoding: 'utf-8',
+      timeout: 300000,
     });
 
     // Generate documentation using typedoc (if available)
@@ -57,20 +109,34 @@ function generateDocs(target) {
       execFileSync('typedoc', ['--out', join('docs', target), 'src'], {
         stdio: 'inherit',
         encoding: 'utf-8',
+        timeout: 300000,
       });
       console.log(`✓ Documentation generated at: docs/${target}`);
     } catch (err) {
       // typedoc not available, try alternative
       console.log('📝 TypeDoc not available, generating from JSDoc comments instead');
-      execFileSync('jsdoc', ['-d', join('docs', target), 'src/**/*.ts'], {
+      // Expand glob pattern using Node built-ins so jsdoc receives real file paths
+      const files = findFiles('src', '.ts');
+      if (files.length === 0) {
+        throw new Error('No TypeScript source files found under "src".');
+      }
+      execFileSync('jsdoc', ['-d', join('docs', target), ...files], {
         stdio: 'inherit',
         encoding: 'utf-8',
+        timeout: 300000,
       });
       console.log(`✓ Documentation generated at: docs/${target}`);
     }
   } catch (err) {
     if (err instanceof Error) {
       console.error(`✗ Failed to generate documentation: ${err.message}`);
+      // Print subprocess output when available to aid CI debugging
+      if (err.stderr) {
+        console.error('stderr:', err.stderr);
+      }
+      if (err.stdout) {
+        console.error('stdout:', err.stdout);
+      }
     } else {
       console.error('✗ Failed to generate documentation');
     }

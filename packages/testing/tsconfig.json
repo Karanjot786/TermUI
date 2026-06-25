@@ -4,7 +4,9 @@
         "outDir": "dist",
         "rootDir": "src",
         "declaration": true,
-        "declarationDir": "dist"
+        "declarationDir": "dist",
+        "jsx": "react-jsx",
+        "jsxImportSource": "@termuijs/jsx"
     },
     "include": [
         "src"

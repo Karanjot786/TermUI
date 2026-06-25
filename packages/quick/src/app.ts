@@ -91,11 +91,16 @@ function parseInterval(interval: string): number {
 function walkWidgets(root: Widget, predicate: (w: Widget) => boolean): Widget[] {
     const result: Widget[] = [];
     const stack: Widget[] = [root];
+
     while (stack.length > 0) {
         const w = stack.pop()!;
         if (predicate(w)) result.push(w);
-        for (const child of w.children) stack.push(child);
+        // Push children in reverse order so pop() visits them left-to-right
+        for (let i = w.children.length - 1; i >= 0; i--) {
+            stack.push(w.children[i]);
+        }
     }
+
     return result;
 }
 
@@ -119,6 +124,7 @@ export class AppBuilder {
     private _children: LayoutChild[] = [];
     private _keyMap: Record<string, string | (() => void)> = {};
     private _refreshInterval: number | null = null;
+    private _onError: ((err: unknown) => void) | null = null;
     private _fullscreen = true;
     private _app: App | null = null;
 
@@ -150,6 +156,12 @@ export class AppBuilder {
      */
     refresh(interval: string): this {
         this._refreshInterval = parseInterval(interval);
+        return this;
+    }
+
+    /** Register an error handler for reactive widget errors. */
+    onError(handler: (err: unknown) => void): this {
+        this._onError = handler;
         return this;
     }
 
@@ -251,10 +263,8 @@ export class AppBuilder {
         const appInstance = new App(root, { fullscreen: this._fullscreen, skipFallback: true });
         this._app = appInstance;
 
-        // ── Discover focusable widgets (List, TextInput) ──
-        const listWidgets = walkWidgets(root, w => w instanceof List) as List[];
-        const inputWidgets = walkWidgets(root, w => w instanceof TextInput) as TextInput[];
-        const focusableWidgets: Widget[] = [...listWidgets, ...inputWidgets];
+        // ── Discover focusable widgets (List, TextInput) in tree order ──
+        const focusableWidgets = walkWidgets(root, w => w instanceof List || w instanceof TextInput) as Array<List | TextInput>;
 
         // Register focusable widgets with the focus manager
         let _focusedIdx = -1;
@@ -293,8 +303,18 @@ export class AppBuilder {
                 return;
             }
 
-            // 2. Check app-level key bindings
-            const action = this._keyMap[event.key];
+            // 2. Check app-level key bindings (support modifier-aware tokens)
+            // Build normalized token: prefixed modifiers (ctrl, alt, shift) in that order
+            const modParts: string[] = [];
+            if (event.ctrl) modParts.push('ctrl');
+            if (event.alt) modParts.push('alt');
+            if (event.shift) modParts.push('shift');
+            const baseKey = String(event.key).toLowerCase();
+            const modToken = modParts.length > 0 ? `${modParts.join('+')}+${baseKey}` : baseKey;
+
+            // Lookup order: modifier-specific token first, then exact plain key,
+            // then lowercase plain-key fallback for backward compatibility.
+            const action = this._keyMap[modToken] ?? this._keyMap[event.key] ?? this._keyMap[baseKey];
             if (action) {
                 if (action === 'quit') {
                     appInstance.exit();
@@ -392,7 +412,7 @@ export class AppBuilder {
                     appInstance.requestRender();
                 } catch (err) {
                     // Reactive widget error — don't crash the process
-                    console.error('[quick] reactive widget error:', err);
+                    this._onError?.(err);
                 }
             }, this._refreshInterval);
         }
@@ -415,7 +435,7 @@ export class AppBuilder {
      */
     private _refreshReactiveWidgets(widget: Widget): void {
         try {
-            const w = widget as any;
+            const w = widget as any; // as any: reactive metadata is monkey-patched onto Widget instances in widgets.ts
 
             // Text — reactive content
             if (widget instanceof Text && w.__reactiveContent) {

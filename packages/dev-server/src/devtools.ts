@@ -65,9 +65,10 @@ export class DevTools {
         while (this._eventLog.length > this._maxEvents) this._eventLog.shift();
     }
 
-    /** Store the latest rendered frame rows */
+    /** Store the latest rendered frame rows (a defensive copy is taken so
+     *  subsequent mutations of the caller's array do not affect the stored frame). */
     setFrame(rows: string[]): void {
-        this._frameRows = rows;
+        this._frameRows = rows.slice();
     }
 
     /** Capture the stored frame, trimmed and joined with newlines. Returns empty string if no frame has been stored. */

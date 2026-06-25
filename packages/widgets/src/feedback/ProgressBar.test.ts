@@ -38,6 +38,15 @@ describe('ProgressBar', () => {
         pb.setValue(-0.5);
         expect(pb.value).toBe(0);
     });
+        it('handles negative initialization by clamping to 0', () => {
+        const pb = new ProgressBar({}, { value: -0.5 });
+        expect(pb.value).toBe(0);
+    });
+
+    it('handles value above 1 by clamping to 1', () => {
+        const pb = new ProgressBar({}, { value: 1.5 });
+        expect(pb.value).toBe(1);
+    });
 });
 
 describe('ProgressBar — rendering', () => {
@@ -160,5 +169,27 @@ describe('ProgressBar — ASCII fallback', () => {
         const pb = new ProgressBar({}, { fillChar: '=' });
         const fillChar = (pb as unknown as { _fillChar: string })._fillChar;
         expect(fillChar).toBe('=');
+    });
+});
+
+describe('Performance optimizations', () => {
+    it('does not mark dirty when setValue receives the same value', () => {
+        const pb = new ProgressBar({}, { value: 0.5 });
+
+        pb.clearDirty();
+
+        pb.setValue(0.5);
+
+        expect(pb.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setValue receives a different value', () => {
+        const pb = new ProgressBar({}, { value: 0.5 });
+
+        pb.clearDirty();
+
+        pb.setValue(0.75);
+
+        expect(pb.isDirty).toBe(true);
     });
 });

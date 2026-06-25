@@ -22,12 +22,30 @@ export class EmptyState extends Widget {
     }
 
     setTitle(title: string): void {
+        if (this._title === title) return;
+
         this._title = title;
         this.markDirty();
     }
 
     setDescription(description: string): void {
+        if (this._description === description) return;
+
         this._description = description;
+        this.markDirty();
+    }
+
+    setIcon(icon: string): void {
+        if (this._icon === icon) return;
+    
+        this._icon = icon;
+        this.markDirty();
+    }
+    
+    setHint(hint: string): void {
+        if (this._hint === hint) return;
+    
+        this._hint = hint;
         this.markDirty();
     }
 

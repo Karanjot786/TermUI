@@ -49,6 +49,7 @@ export class Digits extends Widget {
     }
 
     setValue(value: string): void {
+        if (this._value === value) return;
         this._value = value;
         this.markDirty();
     }
@@ -58,6 +59,7 @@ export class Digits extends Widget {
     }
 
     setColor(color: Color): void {
+        if (this._color === color) return;
         this._color = color;
         this.markDirty();
     }

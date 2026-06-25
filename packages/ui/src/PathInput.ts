@@ -9,8 +9,8 @@
 // - Handles relative and absolute paths gracefully
 // ─────────────────────────────────────────────────────
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { Widget } from '@termuijs/widgets';
 import { type Style, type Screen, type KeyEvent, styleToCellAttrs, truncate, caps } from '@termuijs/core';
 
@@ -187,7 +187,11 @@ export class PathInput extends Widget {
      */
     handleKey(event: KeyEvent): void {
         switch (event.key) {
-            case 'tab': this.triggerCompletion(); break;
+            case 'tab':
+                this.triggerCompletion();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
             case 'escape': this._dismissCompletions(); this.markDirty(); break;
             case 'backspace': this.deleteBack(); break;
             case 'delete': this.deleteForward(); break;

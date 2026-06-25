@@ -90,4 +90,51 @@ describe('TemporalHistory Middleware', () => {
         expect(history.past).toEqual(['State 1', 'State 2']);
         expect(history.future).toEqual([]); // 'State 3' is erased forever
     });
+
+    // ── Object state deduplication ──────────────────────────────────────
+
+    it('does not push duplicate entries for structurally equal object states', () => {
+        const objectStore = createHistoryStore({ count: 0 });
+
+        objectStore.set({ count: 0 }); // different reference, identical content
+        objectStore.set({ count: 0 }); // again
+
+        const history = objectStore.getHistory();
+        expect(history.past.length).toBe(0); // was 2 before the fix
+    });
+
+    it('does push an entry when object content actually changes', () => {
+        const objectStore = createHistoryStore({ count: 0 });
+
+        objectStore.set({ count: 1 }); // genuinely different content
+
+        const history = objectStore.getHistory();
+        expect(history.past.length).toBe(1);
+        expect(objectStore.present).toEqual({ count: 1 });
+    });
+
+    it('does not push duplicate entries for structurally equal array states', () => {
+        const arrayStore = createHistoryStore([1, 2, 3]);
+
+        arrayStore.set([1, 2, 3]); // new array reference, same content
+
+        const history = arrayStore.getHistory();
+        expect(history.past.length).toBe(0);
+    });
+
+    it('accepts a custom equals function for non-serialisable types', () => {
+        const mapStore = createHistoryStore(
+            new Map([['x', 1]]),
+            {
+                equals: (a, b) =>
+                    a.size === b.size &&
+                    [...a.entries()].every(([k, v]) => b.get(k) === v),
+            }
+        );
+
+        mapStore.set(new Map([['x', 1]])); // same content, different reference
+
+        const history = mapStore.getHistory();
+        expect(history.past.length).toBe(0);
+    });
 });

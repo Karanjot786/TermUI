@@ -103,6 +103,17 @@ bench-main.json
 bench-head.txt
 bench-main.txt
 bench-comment.md
+docs/superpowers/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
 
 # ====================================================================
 # Cross-Platform OS & Local Developer Environment Rules (Issue #727)

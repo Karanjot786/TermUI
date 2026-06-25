@@ -1,5 +1,9 @@
+// ─────────────────────────────────────────────────────
+// @termuijs/widgets — CandlestickChart widget
+// ─────────────────────────────────────────────────────
+
+import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
-import { type Style, type Color, caps } from '@termuijs/core';
 
 export interface Candle {
     open: number;
@@ -9,52 +13,67 @@ export interface Candle {
 }
 
 export interface CandlestickChartOptions {
+    /** Color for bullish (close > open) candles */
     upColor?: Color;
+    /** Color for bearish (close < open) candles */
     downColor?: Color;
+    /** Color for the wick (high/low lines) */
     wickColor?: Color;
 }
 
+const DEFAULT_UP_COLOR: Color = { type: 'named', name: 'green' };
+const DEFAULT_DOWN_COLOR: Color = { type: 'named', name: 'red' };
+
+/**
+ * CandlestickChart — renders OHLC candle data as a terminal chart.
+ *
+ * Each candle occupies one column. The body shows open/close range,
+ * wicks extend to high/low. Bullish candles use upColor, bearish use downColor.
+ */
 export class CandlestickChart extends Widget {
-    private candles: Candle[] = [];
-    private options: CandlestickChartOptions;
+    private _candles: Candle[] = [];
+    private _upColor: Color;
+    private _downColor: Color;
+    private _wickColor: Color | undefined;
 
     constructor(style?: Partial<Style>, opts?: CandlestickChartOptions) {
         super(style);
-        this.options = {
-            upColor: opts?.upColor || ('green' as unknown as Color),
-            downColor: opts?.downColor || ('red' as unknown as Color),
-            wickColor: opts?.wickColor,
-            ...opts
-        };
+        this._upColor = opts?.upColor ?? DEFAULT_UP_COLOR;
+        this._downColor = opts?.downColor ?? DEFAULT_DOWN_COLOR;
+        this._wickColor = opts?.wickColor;
     }
 
     setData(candles: Candle[]): void {
-        this.candles = candles;
+        this._candles = candles;
         this.markDirty();
     }
 
-    protected _renderSelf(screen: any): void {
-        if (this.candles.length === 0) return;
+    protected _renderSelf(screen: Screen): void {
+        if (this._candles.length === 0) return;
 
-        const self = this as any;
-        const startX = self.style?.left || self.x || 0;
-        const startY = self.style?.top || self.y || 0;
-        const width = self.style?.width || self.width || 10;
-        const height = self.style?.height || self.height || 10;
+        const rect = this._getContentRect();
+        const { x: startX, y: startY, width, height } = rect;
+        if (width <= 0 || height <= 0) return;
 
-        const highs = this.candles.map(c => c.high);
-        const lows = this.candles.map(c => c.low);
-        const maxHigh = Math.max(...highs);
-        const minLow = Math.min(...lows);
+        const attrs = styleToCellAttrs(this._style);
+
+        const candleCount = Math.min(this._candles.length, width);
+        const visibleCandles = this._candles.slice(0, candleCount);
+
+        let maxHigh = 0;
+        let minLow = 0;
+        if (visibleCandles.length > 0) {
+            maxHigh = Math.max(...visibleCandles.map(c => c.high));
+            minLow = Math.min(...visibleCandles.map(c => c.low));
+        }
+
         const priceRange = maxHigh - minLow || 1;
 
-        const candleCount = Math.min(this.candles.length, width);
-
         for (let i = 0; i < candleCount; i++) {
-            const candle = this.candles[i];
+            const candle = this._candles[i];
             const colX = startX + i;
 
-            const mapY = (val: number) => {
+            const mapY = (val: number): number => {
                 const ratio = (val - minLow) / priceRange;
                 return Math.round(startY + height - 1 - ratio * (height - 1));
             };
@@ -68,18 +87,17 @@ export class CandlestickChart extends Widget {
             const bodyBottom = Math.max(openY, closeY);
 
             const isBullish = candle.close > candle.open;
-            const bodyColor = isBullish ? this.options.upColor : this.options.downColor;
-            const wickColor = this.options.wickColor || bodyColor;
+            const bodyColor = isBullish ? this._upColor : this._downColor;
+            const wickColor = this._wickColor ?? bodyColor;
 
-            const useUnicode = caps.unicode;
             const wickChar = '|';
-            const bodyChar = useUnicode ? '┃' : '=';
+            const bodyChar = caps.unicode ? '┃' : '=';
 
             for (let rowY = Math.min(highY, lowY); rowY <= Math.max(highY, lowY); rowY++) {
                 if (rowY >= bodyTop && rowY <= bodyBottom) {
-                    screen.setCell(colX, rowY, bodyChar, bodyColor);
+                    screen.setCell(colX, rowY, { char: bodyChar, ...attrs, fg: bodyColor });
                 } else {
-                    screen.setCell(colX, rowY, wickChar, wickColor);
+                    screen.setCell(colX, rowY, { char: wickChar, ...attrs, fg: wickColor });
                 }
             }
         }

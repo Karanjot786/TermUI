@@ -19,7 +19,8 @@ describe('Built-in Themes', () => {
         expect(names).toContain('gruvbox');
         expect(names).toContain('tokyo-night');
         expect(names).toContain('everforest');
-        expect(names).toHaveLength(11);
+        expect(names).toContain('rose-pine');
+        expect(names).toHaveLength(12);
     });
 
     it('tokyo-night theme contains expected palette values', () => {
@@ -102,5 +103,14 @@ describe('Built-in Themes', () => {
         expect(src).toContain('#a7c080');
         expect(src).toContain('#2d353b');
         expect(src).toContain('#e67e80');
+    });
+
+    it('rose-pine theme exposes correct Rosé Pine base hex colors', () => {
+        const src = getBuiltinTheme('rose-pine');
+        expect(src).toBeDefined();
+        expect(src).toContain('@theme rose-pine');
+        expect(src).toContain('#c4a7e7');
+        expect(src).toContain('#191724');
+        expect(src).toContain('#eb6f92');
     });
 });
