@@ -247,12 +247,21 @@ export function createStore<T extends object>(
     let persistFilePath = '';
     if (options?.persist) {
         const persistOpt = options.persist;
+        const persistDir = path.join(getAppConfigDir(), 'termuijs-stores');
         if (persistOpt.file) {
             persistFilePath = path.isAbsolute(persistOpt.file)
                 ? persistOpt.file
-                : path.join(getAppConfigDir(), persistOpt.file);
+                : path.join(persistDir, persistOpt.file);
+            const resolvedPath = path.resolve(persistFilePath);
+            if (!resolvedPath.startsWith(path.resolve(persistDir))) {
+                throw new Error(`Persist file path must be within ${persistDir}`);
+            }
+            persistFilePath = resolvedPath;
         } else if (persistOpt.key) {
-            persistFilePath = path.join(getAppConfigDir(), `${persistOpt.key}.json`);
+            if (!/^[a-zA-Z0-9._-]+$/.test(persistOpt.key)) {
+                throw new Error('Persist key must contain only alphanumeric characters, hyphens, underscores, and dots.');
+            }
+            persistFilePath = path.join(persistDir, `${persistOpt.key}.json`);
         }
     }
 

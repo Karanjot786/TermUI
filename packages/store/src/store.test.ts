@@ -3,6 +3,7 @@ import { createStore, batch } from './store.js'
 import { logger } from './logger.js'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import * as os from 'node:os'
 
 describe('createStore', () => {
     it('initializes state from creator function', () => {
@@ -553,7 +554,11 @@ describe('middleware', () => {
 })
 
 describe('persistence', () => {
-    const testDir = path.join(__dirname, 'temp-test-store-dir')
+    let appConfig = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    if (process.platform === 'win32') appConfig = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+    if (process.platform === 'darwin') appConfig = path.join(os.homedir(), 'Library', 'Application Support');
+    
+    const testDir = path.join(appConfig, 'termuijs-stores', 'temp-test-store-dir')
     const testFile = path.join(testDir, 'test-store.json')
 
     afterEach(() => {
@@ -638,6 +643,26 @@ describe('persistence', () => {
 
         vi.advanceTimersByTime(100)
         expect(fs.existsSync(testFile)).toBe(false)
+    })
+
+    it('throws error on path traversal in file option', () => {
+        expect(() => {
+            createStore({ count: 0 }, {
+                persist: {
+                    file: '../../etc/passwd',
+                }
+            })
+        }).toThrow(/Persist file path must be within/)
+    })
+
+    it('throws error on path traversal in key option', () => {
+        expect(() => {
+            createStore({ count: 0 }, {
+                persist: {
+                    key: '../evil',
+                }
+            })
+        }).toThrow(/Persist key must contain only alphanumeric characters/)
     })
 })
 
