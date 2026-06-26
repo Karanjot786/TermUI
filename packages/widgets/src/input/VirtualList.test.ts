@@ -87,6 +87,43 @@ describe('VirtualList', () => {
             list.scrollTo(200);
             expect(list.selectedIndex).toBe(99);
         });
+
+        it('scrollToIndex jumps instantly to specified index with alignment', () => {
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem: (i) => `Item ${i}`,
+                springScroll: true,
+                style: { width: 40, height: 10 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            
+            // test start alignment
+            list.scrollToIndex(50, 'start');
+            expect(list.scrollOffset).toBe(50);
+            expect(list.selectedIndex).toBe(50);
+            
+            // test center alignment (content height is 8)
+            list.scrollToIndex(50, 'center');
+            // offset = 50 - floor(8/2) = 46
+            expect(list.scrollOffset).toBe(46);
+            expect(list.selectedIndex).toBe(50);
+            
+            // test end alignment
+            list.scrollToIndex(50, 'end');
+            // offset = 50 - 8 + 1 = 43
+            expect(list.scrollOffset).toBe(43);
+            expect(list.selectedIndex).toBe(50);
+            
+            // test out of bounds clamping (returns early)
+            const previousOffset = list.scrollOffset;
+            list.scrollToIndex(-10);
+            expect(list.scrollOffset).toBe(previousOffset);
+            
+            list.scrollToIndex(200);
+            expect(list.scrollOffset).toBe(previousOffset);
+        });
     });
 
     describe('pageUp/pageDown with viewport smaller than itemHeight', () => {
