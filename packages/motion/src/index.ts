@@ -35,4 +35,5 @@ export type { VirtualClock } from './virtual-clock.js'
 // Interpolation
 export { mapRange, interpolate } from './interpolate.js';
 export type { InterpolateOptions } from './interpolate.js';
-
+export { Timeline } from './timeline.js';
+export type { TimelineOptions, TimelineTrack, CallbackMarker, SyncedTimeline } from './timeline.js';
