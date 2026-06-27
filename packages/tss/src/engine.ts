@@ -5,6 +5,9 @@
 import { tokenize } from './tokenizer.js';
 import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValue } from './parser.js';
 import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
+import { evalCalc } from './calc.js';
+import { matchesPseudo } from './pseudo.js';
+import { extractKeyframes, type KeyframesDeclaration } from './animations.js';
 
 export function compile(source: string): string {
     const tokens = tokenize(source);
@@ -21,7 +24,7 @@ export function compile(source: string): string {
     function processRule(rule: TSSRule, parentSelStr: string) {
         const selStr = serializeSelector(rule.selector);
         const fullSelStr = parentSelStr ? `${parentSelStr} ${selStr}` : selStr;
-        
+
         if (rule.properties.length > 0) {
             let block = `${fullSelStr} {`;
             for (const prop of rule.properties) {
@@ -75,12 +78,13 @@ export class ThemeEngine {
 
     /** Load multiple .tss sources (merged) */
     loadAll(sources: string[]): void {
-        const merged: TSSStylesheet = { themes: [], rules: [], mixins: new Map() };
+        const merged: TSSStylesheet = { themes: [], rules: [], mixins: new Map(), keyframes: [] };
         for (const src of sources) {
             const tokens = tokenize(src);
             const ast = parse(tokens);
             merged.themes.push(...ast.themes);
             merged.rules.push(...ast.rules);
+            merged.keyframes.push(...ast.keyframes);
             for (const [name, props] of ast.mixins) {
                 merged.mixins.set(name, props);
             }
@@ -92,6 +96,7 @@ export class ThemeEngine {
     /** Switch active theme */
     setTheme(name: string): void {
         this._activeTheme = name;
+        this._overrides = {}; // clear overrides only when explicitly changing theme
         this._applyTheme();
     }
 
@@ -102,6 +107,11 @@ export class ThemeEngine {
     /** Get list of available theme names */
     get availableThemes(): string[] {
         return this._stylesheet?.themes.map(t => t.name) ?? [];
+    }
+
+    /** Get parsed @keyframes declarations from the loaded stylesheet */
+    getKeyframes(): KeyframesDeclaration[] {
+        return this._stylesheet ? extractKeyframes(this._stylesheet) : [];
     }
 
     /** Subscribe to theme changes */
@@ -117,6 +127,9 @@ export class ThemeEngine {
             if (!this._matchesSelector(rule.selector, widgetType, className, pseudo)) continue;
             this._applyProperties(rule.properties, style);
         }
+
+        // Contrast adjustment handled in styleToCellAttrs; no adjustment here.
+
         return style;
     }
 
@@ -152,9 +165,6 @@ export class ThemeEngine {
             if (active) Object.assign(this._themeVariables, active.variables);
         }
 
-        // Runtime overrides are cleared when a new theme is applied or re-applied.
-        this._overrides = {};
-
         this._rebuildVariablesAndRules();
     }
 
@@ -162,7 +172,8 @@ export class ThemeEngine {
         this._variables = { ...this._themeVariables, ...this._overrides };
 
         // Resolve top-level rules — expand mixin includes at compile time.
-        // ThemeEngine's selector matching is flat; nested rules are skipped here.
+        // NOTE: ThemeEngine's selector matching is flat. Rules nested inside another rule
+        // in the TSS source are silently ignored here. Only top-level rules are resolved.
         this._resolvedRules = this._stylesheet?.rules.map(rule => ({
             selector: rule.selector,
             properties: this._resolveProperties(rule),
@@ -189,22 +200,37 @@ export class ThemeEngine {
         return result;
     }
 
-    private _resolveValue(value: TSSValue): string {
+    private _resolveValue(value: TSSValue, _visited: Set<string> = new Set()): string {
         switch (value.kind) {
             case 'var': {
-                const resolved = this._variables[value.name];
-                return resolved ?? '';
+                if (_visited.has(value.name)) return ''; // circular guard
+                const rawValue = this._variables[value.name];
+                if (!rawValue) return '';
+                _visited.add(value.name);
+                // If stored value is itself a var() reference, resolve recursively
+                const varMatch = rawValue.match(/^var\(--([^)]+)\)$/);
+                if (varMatch) {
+                    return this._resolveValue({ kind: 'var', name: varMatch[1] }, _visited);
+                }
+                return rawValue;
             }
             case 'color': return value.value;
             case 'number': return String(value.value);
-            case 'literal': return value.value;
+            case 'literal': {
+                if (value.value.startsWith('calc(') && value.value.endsWith(')')) {
+                    return String(evalCalc(value.value, this._variables));
+                }
+                return value.value;
+            }
         }
     }
 
     private _matchesSelector(sel: TSSSelector, widgetType: string, className?: string, pseudo?: string): boolean {
+        // Widget type match (* = universal)
         if (sel.widget !== '*' && sel.widget.toLowerCase() !== widgetType.toLowerCase()) return false;
+        // Class name match
         if (sel.className && sel.className !== className) return false;
-        if (sel.pseudo && sel.pseudo !== pseudo) return false;
+        if (!matchesPseudo(sel.pseudo, pseudo)) return false;
         return true;
     }
 
@@ -223,7 +249,7 @@ export class ThemeEngine {
                     style.border = val as BorderStyle;
                     break;
                 case 'border-color':
-                    style.fg = this._parseColor(val);
+                    style.borderColor = this._parseColor(val);
                     break;
                 case 'bold':
                     style.bold = val === 'true';

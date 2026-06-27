@@ -17,6 +17,11 @@ export const caps = {
 
     return 'dark';
   },
+  get keybindingMode(): 'vim' | 'emacs' | 'default' {
+    const mode = process.env.TERMUI_KEYBINDINGS;
+    if (mode === 'vim' || mode === 'emacs') return mode;
+    return 'default';
+  },
 } as const;
 
 /**

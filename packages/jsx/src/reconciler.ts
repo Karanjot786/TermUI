@@ -26,8 +26,8 @@ import { Suspense } from './Suspense.js';
 
 interface ComponentInstance {
     fiber: Fiber;
-    component: FC<any>;
-    props: Record<string, any>;
+    component: FC<any>; // any: per-instance slot; specific type not knowable at interface definition
+    props: Record<string, any>; // any: per-instance slot; specific type not knowable at interface definition
     children: VNode[];
     widget: Widget;
     childInstances: ComponentInstance[];
@@ -35,8 +35,11 @@ interface ComponentInstance {
 }
 
 const _instanceMap = new Map<Widget, ComponentInstance>();
-// Expose globally so render() and @termuijs/testing can dispatch to useInput handlers
+/** Reverse map: Fiber → Widget for O(1) cleanup in destroyFiber */
+const _fiberToWidgetMap = new Map<Fiber, Widget>();
+// Expose globally so render() and @termuijs/testing can dispatch to useInput handlers and destroyFiber
 (globalThis as any).__termuijs_instances = _instanceMap;
+(globalThis as any).__termuijs_fiberToWidget = _fiberToWidgetMap;
 
 // ── Parent fiber tracking ──
 // Tracks the currently-rendering fiber so child components
@@ -129,8 +132,7 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
             return new Grid({ ...style }, {
                 columns: props.columns ?? 12,
                 gap: props.gap,
-                rowGap: props.rowGap,
-                colGap: props.colGap,
+                rows: props.rows,
             });
         }
 
@@ -233,7 +235,7 @@ function extractStyle(props: Record<string, any>): Partial<Style> {
 }
 
 /** Parse a color prop — accepts a named color string, hex string, or Color object */
-function parseColorProp(value: any): Color | undefined {
+function parseColorProp(value: any): Color | undefined { // any: JSX prop values are untyped at this call site
     if (!value) return undefined;
     if (typeof value === 'string') {
         if (value.startsWith('#')) return parseColor(value);
@@ -291,28 +293,14 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
         else if (t === Sidebar) type = 'sidebar';
         else if (t === Spinner) type = 'spinner';
 
-        // Suspense boundary
+        // Suspense boundary — go through renderComponent so fiber context is set
         if (type === Suspense) {
-            try {
-                const suspenseChild = children.length === 1 ? children[0] : {
-                    type: Fragment,
-                    props: {},
-                    children,
-                } as any;
-
-                return reconcile(suspenseChild);
-            } catch (err) {
-                if (err instanceof Promise) {
-                    return reconcile(props.fallback);
-                }
-
-                throw err;
-            }
+            return renderComponent(SuspenseBoundary as any, props, children, (vnode as VElement).key);
         }
 
         // Functional component
         if (typeof type === 'function') {
-            return renderComponent(type, props, children);
+            return renderComponent(type, props, children, (vnode as VElement).key);
         }
 
         // Intrinsic element (string tag)
@@ -357,6 +345,32 @@ function defaultErrorVNode(err: Error): VNode {
     } as any;
 }
 
+/**
+ * SuspenseBoundary — a component wrapper that reconciles children and, if a
+ * lazy-loaded component throws a Promise, renders the fallback instead.
+ * Because it goes through renderComponent(), the fiber context
+ * (_currentFiber, _parentFiber) is correctly set, so the fallback subtree
+ * has proper parent references, context propagation, and error boundary
+ * traversal.
+ */
+function SuspenseBoundary(props: Record<string, any>): any {
+    const children = Array.isArray(props.children) ? props.children : [props.children];
+    const child = children.length === 1 ? children[0] : {
+        type: Fragment,
+        props: {},
+        children,
+    } as any;
+
+    try {
+        return reconcile(child);
+    } catch (err) {
+        if (err instanceof Promise) {
+            return reconcile(props.fallback ?? null);
+        }
+        throw err;
+    }
+}
+
 /** Destroy child fibers in _prevChildFibers that were not re-visited this render */
 function cleanupStaleChildFibers(fiber: Fiber): void {
     if (!fiber._prevChildFibers) return;
@@ -378,6 +392,7 @@ function renderComponent(
     component: FC<any>,
     props: Record<string, any>,
     children: VNode[] = [],
+    key?: string | number
 ): Widget {
     const parentFiber = _parentFiber;
 
@@ -388,7 +403,7 @@ function renderComponent(
     if (parentFiber) parentFiber._nextChildIdx = childIdx + 1;
 
     const componentName = (component as any).displayName ?? (component as any).name ?? 'anon';
-    const identityKey = `${childIdx}:${componentName}`;
+    const identityKey = key != null ? String(key) : `${childIdx}:${componentName}`;
 
     let fiber: Fiber;
     if (parentFiber?._prevChildFibers) {
@@ -443,11 +458,13 @@ function renderComponent(
         const error = err instanceof Error ? err : new Error(String(err));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
+            destroyFiber(fiber);
+            _parentFiber = boundary;
             const fallbackVNode = boundary.errorFallback(error);
             return reconcile(fallbackVNode);
         }
-        // No boundary found — show default error widget and log
-        console.error('[TermUI] Unhandled component error:', error);
+        // No boundary found — destroy fiber and show default error widget
+        destroyFiber(fiber);
         return reconcile(defaultErrorVNode(error));
     }
 
@@ -469,6 +486,7 @@ function renderComponent(
             childInstances: [],
             lastVNode: vnode,
         });
+        _fiberToWidgetMap.set(fiber, vnode);
 
         return vnode;
     }
@@ -496,19 +514,36 @@ function renderComponent(
         childInstances: [],
         lastVNode: vnode,
     });
+    _fiberToWidgetMap.set(fiber, widget);
 
     return widget;
 }
 
 /**
  * Recursively remove stale _instanceMap entries for a widget and all its
- * descendants. Fibers are NOT destroyed here — cleanupStaleChildFibers
- * already handles orphaned fibers after each reconcile pass. This function
- * only prevents _instanceMap from retaining dead widget references.
+ * descendants. Fiber destruction is handled separately by
+ * cleanupStaleChildFibers for stale subtrees after each reconcile pass.
  */
-function _pruneInstancesForWidget(widget: Widget): void {
+/** @internal exposed for testing */
+export function _pruneInstancesForWidget(widget: Widget): void {
+    const inst = _instanceMap.get(widget);
+    if (inst && _fiberToWidgetMap.get(inst.fiber) === widget) {
+        _fiberToWidgetMap.delete(inst.fiber);
+    }
     _instanceMap.delete(widget);
-    const children = (widget as any)._children ?? (widget as any).children ?? [];
+
+    // Recursively clean up portal children registered on the fiber
+    // so they are removed from their target widgets when the portal owner is destroyed.
+    if (inst?.fiber?.portalChildren) {
+        for (const entry of inst.fiber.portalChildren) {
+            for (const portalWidget of entry.widgets) {
+                _pruneInstancesForWidget(portalWidget);
+            }
+        }
+        inst.fiber.portalChildren = undefined;
+    }
+
+    const children = widget.children;
     if (Array.isArray(children)) {
         for (const child of children) {
             if (child && typeof child === 'object') {
@@ -545,9 +580,16 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         const err = rawErr instanceof Error ? rawErr : new Error(String(rawErr));
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
+            destroyFiber(fiber);
+            _pruneInstancesForWidget(instance.widget);
+            invalidateLayout(instance.widget.getLayoutNode());
+            _parentFiber = boundary;
             return reconcile(boundary.errorFallback(err));
         }
-        console.error('[TermUI] Unhandled component error:', err);
+        // No error boundary found — destroy fiber and prune old widget
+        destroyFiber(fiber);
+        _pruneInstancesForWidget(instance.widget);
+        invalidateLayout(instance.widget.getLayoutNode());
         return reconcile(defaultErrorVNode(err));
     }
 
@@ -568,6 +610,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         instance.widget = vnode;
         instance.lastVNode = vnode;
         _instanceMap.set(vnode, instance);
+        _fiberToWidgetMap.set(fiber, vnode);
 
         return vnode;
     }
@@ -582,9 +625,10 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     }
 
     // Rebuild the widget tree (fiber state is preserved via childFibers reuse)
+    // Push fiber as parent so child components maintain their parent reference
+    // for context lookups and error boundary traversal during re-renders.
+    _parentFiber = fiber;
     const newWidget = reconcile(vnode);
-
-    // Restore parent fiber
     _parentFiber = prevParent;
 
     // Destroy child fibers not visited during this render
@@ -604,6 +648,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
 
     // Re-register with new widget
     _instanceMap.set(newWidget, instance);
+    _fiberToWidgetMap.set(fiber, newWidget);
 
     return newWidget;
 }
@@ -616,4 +661,5 @@ export function unmountAll(): void {
         destroyFiber(instance.fiber);
     }
     _instanceMap.clear();
+    _fiberToWidgetMap.clear();
 }

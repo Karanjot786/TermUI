@@ -55,3 +55,50 @@ describe('Digits', () => {
         expect(rows.some(row => row.includes('*'))).toBe(true);
     });
 });
+
+describe('Digits – mutation regression tests', () => {
+    it('does not mark dirty when value is unchanged', () => {
+        const widget = new Digits({ value: '42' } as never);
+
+        widget.clearDirty();
+        widget.setValue('42');
+
+        expect(widget.isDirty).toBe(false);
+    });
+
+    it('marks dirty when value changes', () => {
+        const widget = new Digits({ value: '42' } as never);
+
+        widget.clearDirty();
+        widget.setValue('99');
+
+        expect(widget.getValue()).toBe('99');
+        expect(widget.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when color is unchanged', () => {
+        const color = { type: 'named', name: 'cyan' } as const;
+
+        const widget = new Digits(
+            { value: '1' } as never,
+            { color },
+        );
+
+        widget.clearDirty();
+        widget.setColor(color);
+
+        expect(widget.isDirty).toBe(false);
+    });
+
+    it('marks dirty when color changes', () => {
+        const widget = new Digits(
+            { value: '1' } as never,
+            { color: { type: 'named', name: 'cyan' } },
+        );
+
+        widget.clearDirty();
+        widget.setColor({ type: 'named', name: 'red' });
+
+        expect(widget.isDirty).toBe(true);
+    });
+});

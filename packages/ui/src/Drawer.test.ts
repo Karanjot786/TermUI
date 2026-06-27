@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, createKeyEvent } from '@termuijs/core';
 import { Box } from '@termuijs/widgets';
 import { Drawer } from './Drawer.js';
 
@@ -139,6 +139,32 @@ describe('Drawer', () => {
         drawer.handleKey({ key: 'tab', ctrl: false, alt: false, shift: false } as any);
         expect(childA.isFocused).toBe(true);
         expect(childB.isFocused).toBe(false);
+    });
+
+    it('consumes Tab events so Drawer focus trapping does not fall through', () => {
+        const onClose = vi.fn();
+        const drawer = new Drawer({ position: 'left', width: 20, onClose });
+        drawer.open();
+
+        const childA = new Box();
+        childA.focusable = true;
+        drawer.addChild(childA);
+
+        const event = createKeyEvent({
+            key: 'tab',
+            raw: Buffer.alloc(0),
+            ctrl: false,
+            alt: false,
+            shift: false,
+        });
+        vi.spyOn(event, 'preventDefault');
+        vi.spyOn(event, 'stopPropagation');
+
+        drawer.handleKey(event);
+
+        expect(childA.isFocused).toBe(true);
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
     });
 
     it('cycles focus backwards on Shift+Tab', () => {

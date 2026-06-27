@@ -30,6 +30,7 @@ export class Kbd extends Widget {
 
     /** Update the kbd keys. */
     setKeys(keys: string): void {
+        if (this._keys === keys) return; 
         this._keys = keys;
         this.markDirty();
     }

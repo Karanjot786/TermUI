@@ -111,4 +111,21 @@ describe('SearchInput', () => {
         // The icon and placeholder should start at x=2
         expect(row[2]?.char).not.toBe(' ');
     });
+
+        it('clears the debounce timer when destroyed to prevent memory leaks', () => {
+        vi.useFakeTimers();
+        const onSearch = vi.fn();
+        const input = new SearchInput({ debounce: 100, onSearch });
+        
+        input.handleKey(typeChar('a'));
+        
+        // Destroy the component while the timer is still running
+        input.destroy();
+        
+        vi.advanceTimersByTime(100);
+        
+        // The timer should have been cleared, so onSearch should NOT fire
+        expect(onSearch).not.toHaveBeenCalled();
+    });
+
 });

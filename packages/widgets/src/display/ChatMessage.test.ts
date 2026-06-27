@@ -247,3 +247,45 @@ describe('ChatMessage', () => {
         });
     });
 });
+
+describe('9. Performance optimizations', () => {
+    it('does not mark dirty when setContent receives the same value', () => {
+        const widget = makeChat('user', 'Hello');
+
+        widget.clearDirty();
+
+        widget.setContent('Hello');
+
+        expect(widget.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setContent receives a different value', () => {
+        const widget = makeChat('user', 'Hello');
+
+        widget.clearDirty();
+
+        widget.setContent('Updated');
+
+        expect(widget.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when setRole receives the same role', () => {
+        const widget = makeChat('assistant', 'Hello');
+
+        widget.clearDirty();
+
+        widget.setRole('assistant');
+
+        expect(widget.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setRole receives a different role', () => {
+        const widget = makeChat('assistant', 'Hello');
+
+        widget.clearDirty();
+
+        widget.setRole('system');
+
+        expect(widget.isDirty).toBe(true);
+    });
+});

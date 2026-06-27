@@ -35,6 +35,20 @@ export class EmptyState extends Widget {
         this.markDirty();
     }
 
+    setIcon(icon: string): void {
+        if (this._icon === icon) return;
+    
+        this._icon = icon;
+        this.markDirty();
+    }
+    
+    setHint(hint: string): void {
+        if (this._hint === hint) return;
+    
+        this._hint = hint;
+        this.markDirty();
+    }
+
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;

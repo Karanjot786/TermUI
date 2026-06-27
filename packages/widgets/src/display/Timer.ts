@@ -43,7 +43,7 @@ export class Timer extends Widget {
      * Assign a function to this property to receive the event.
      *
      * @example
-     * timer.onComplete = () => console.log('Time is up!');
+     * timer.onComplete = () => {};
      */
     onComplete: (() => void) | undefined;
 
@@ -76,7 +76,14 @@ export class Timer extends Widget {
      * running countdown.
      */
     reset(): void {
+        const wasRunning = this._running;
+    
         this.stop();
+    
+        if (!wasRunning && this._remaining === this._duration) {
+            return;
+        }
+    
         this._remaining = this._duration;
         this.markDirty();
     }

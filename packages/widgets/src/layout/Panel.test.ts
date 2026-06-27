@@ -14,7 +14,8 @@ class TestChild extends Widget {
 describe('Panel widget', () => {
   it('has correct title after construction', () => {
     const panel = new Panel({}, { title: 'My Panel' });
-    expect(panel).toBeDefined();
+    const titleProp = (panel as unknown as { _title: string })._title;
+    expect(titleProp).toBe('My Panel');
   });
 
   it('updates title with setTitle and marks dirty', () => {

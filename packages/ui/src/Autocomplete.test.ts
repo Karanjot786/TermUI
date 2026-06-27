@@ -2,10 +2,9 @@
 // @termuijs/ui — Tests for Autocomplete widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { Screen, caps, type KeyEvent } from '@termuijs/core';
 import { Autocomplete } from './Autocomplete.js';
-import { type KeyEvent } from '@termuijs/core';
 
 function makeKey(key: string, overrides: Partial<KeyEvent> = {}): KeyEvent {
     return {
@@ -25,46 +24,164 @@ function makeKey(key: string, overrides: Partial<KeyEvent> = {}): KeyEvent {
 // ─────────────────────────────────────────────────────
 
 describe('Autocomplete', () => {
-    it('typing characters appends to query', () => {
-        const widget = new Autocomplete();
+    let screen: Screen;
 
-        widget.handleKey(makeKey('h'));
-        widget.handleKey(makeKey('i'));
-
-        expect(widget.query).toBe('hi');
+    beforeEach(() => {
+        screen = new Screen(40, 10);
     });
 
-    it('backspace removes last character from query', () => {
-        const widget = new Autocomplete();
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('initializes with default values', () => {
+        const widget = new Autocomplete({}, { items: ['apple', 'banana', 'cherry'] });
+        expect(widget.query).toBe('');
+        expect(widget.items).toEqual(['apple', 'banana', 'cherry']);
+    });
+
+    it('typing characters appends to query and filters suggestions', () => {
+        const onChange = vi.fn();
+        const widget = new Autocomplete({}, {
+            items: ['apple', 'banana', 'apricot'],
+            onChange
+        });
 
         widget.handleKey(makeKey('a'));
-        widget.handleKey(makeKey('b'));
+        expect(widget.query).toBe('a');
+        expect(onChange).toHaveBeenCalledWith('a');
+
+        widget.handleKey(makeKey('p'));
+        expect(widget.query).toBe('ap');
+        expect(onChange).toHaveBeenCalledWith('ap');
+    });
+
+    it('backspace removes last character and refilters suggestions', () => {
+        const onChange = vi.fn();
+        const widget = new Autocomplete({}, {
+            items: ['apple', 'banana', 'apricot'],
+            onChange
+        });
+
+        widget.query = 'app';
         widget.handleKey(makeKey('backspace'));
 
-        expect(widget.query).toBe('a');
+        expect(widget.query).toBe('ap');
+        expect(onChange).toHaveBeenCalledWith('ap');
     });
 
-    it('ctrl+key does not append to query', () => {
-        const widget = new Autocomplete();
+    it('arrow keys and tab navigate suggestions list', () => {
+        const widget = new Autocomplete({}, {
+            items: ['apple', 'apricot', 'banana'],
+        });
+        widget.query = 'ap'; // matches 'apple', 'apricot'
 
-        widget.handleKey({ ...makeKey('c'), ctrl: true });
+        widget.handleKey(makeKey('down')); // highlights index 0 ('apple')
+        
+        // We can simulate rendering to verify list is open and rendered
+        widget.isFocused = true;
+        widget.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        widget.render(screen);
 
-        expect(widget.query).toBe('');
+        const lines = screen.back.map(row => row.map(c => c.char).join('').trim());
+        expect(lines[1]).toContain('apple');
+        expect(lines[2]).toContain('apricot');
     });
 
-    it('alt+key does not append to query', () => {
-        const widget = new Autocomplete();
+    it('enter selects highlighted suggestion', () => {
+        const onSelect = vi.fn();
+        const widget = new Autocomplete({}, {
+            items: ['apple', 'apricot', 'banana'],
+            onSelect
+        });
+        widget.query = 'ap';
 
-        widget.handleKey({ ...makeKey('x'), alt: true });
+        widget.handleKey(makeKey('down')); // Highlight 'apple'
+        widget.handleKey(makeKey('down')); // Highlight 'apricot'
+        widget.handleKey(makeKey('enter')); // Select 'apricot'
 
-        expect(widget.query).toBe('');
+        expect(widget.query).toBe('apricot');
+        expect(onSelect).toHaveBeenCalledWith('apricot');
     });
 
-    it('backspace on empty query does not throw', () => {
-        const widget = new Autocomplete();
+    it('escape closes suggestions dropdown', () => {
+        const widget = new Autocomplete({}, {
+            items: ['apple', 'apricot'],
+        });
+        widget.query = 'ap';
+        widget.isFocused = true;
 
-        expect(() => widget.handleKey(makeKey('backspace'))).not.toThrow();
-        expect(widget.query).toBe('');
+        widget.handleKey(makeKey('down')); // Opens and highlights first item
+        widget.handleKey(makeKey('escape')); // Closes dropdown
+
+        widget.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        widget.render(screen);
+
+        const lines = screen.back.map(row => row.map(c => c.char).join('').trim());
+        expect(lines[1]).toBe(''); // suggestions dropdown is closed
+    });
+
+    it('uses custom filter function when provided', () => {
+        // Custom filter matching elements containing the query substring anywhere
+        const customFilter = (query: string, item: string) => item.includes(query);
+        const widget = new Autocomplete({}, {
+            items: ['apple', 'pineapple', 'banana'],
+            filter: customFilter
+        });
+
+        widget.query = 'apple'; // Matches 'apple' and 'pineapple'
+        widget.isFocused = true;
+        widget.handleKey(makeKey('down')); // Opens dropdown
+        
+        widget.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        widget.render(screen);
+
+        const lines = screen.back.map(row => row.map(c => c.char).join('').trim());
+        expect(lines[1]).toContain('apple');
+        expect(lines[2]).toContain('pineapple');
+    });
+
+    it('respects caps.unicode for rendering pointer and selected indicator', () => {
+        // Mock unicode support to true
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        
+        const widget = new Autocomplete({}, {
+            items: ['apple'],
+            placeholder: 'Search...'
+        });
+        widget.query = 'ap';
+        widget.isFocused = true;
+        widget.handleKey(makeKey('down')); // Highlight first item
+
+        widget.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        widget.render(screen);
+
+        let lines = screen.back.map(row => row.map(c => c.char).join('').trim());
+        expect(lines[0]).toContain('➔ ap');
+        expect(lines[1]).toContain('● apple');
+
+        // Mock unicode support to false
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        screen = new Screen(40, 10);
+        widget.render(screen);
+
+        lines = screen.back.map(row => row.map(c => c.char).join('').trim());
+        expect(lines[0]).toContain('> ap');
+        expect(lines[1]).toContain('* apple');
+    });
+
+    it('renders placeholder when query is empty and not focused', () => {
+        const widget = new Autocomplete({}, {
+            items: ['apple'],
+            placeholder: 'Type here...'
+        });
+        widget.isFocused = false;
+
+        widget.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        widget.render(screen);
+
+        const lines = screen.back.map(row => row.map(c => c.char).join('').trim());
+        expect(lines[0]).toContain('Type here...');
     });
 });
 
@@ -321,11 +438,11 @@ describe('Autocomplete — rendering displays query', () => {
         widget.handleKey(makeKey('h'));
         widget.handleKey(makeKey('i'));
 
-        const screen = new Screen(40, 5);
+        const screenInstance = new Screen(40, 5);
         widget.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        widget.render(screen);
+        widget.render(screenInstance);
 
-        const row0 = screen.back[0].map((c: { char: string }) => c.char).join('');
+        const row0 = screenInstance.back[0].map((c: { char: string }) => c.char).join('');
         expect(row0).toContain('h');
         expect(row0).toContain('i');
     });
@@ -337,11 +454,11 @@ describe('Autocomplete — rendering displays query', () => {
         widget.handleKey(makeKey('o'));
         widget.handleKey(makeKey('o'));
 
-        const screen = new Screen(40, 5);
+        const screenInstance = new Screen(40, 5);
         widget.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        widget.render(screen);
+        widget.render(screenInstance);
 
-        const row0 = screen.back[0].map((c: { char: string }) => c.char).join('');
+        const row0 = screenInstance.back[0].map((c: { char: string }) => c.char).join('');
         expect(row0).toContain('foo');
     });
 });
@@ -353,20 +470,20 @@ describe('Autocomplete — rendering displays query', () => {
 describe('Autocomplete — rendering with empty query', () => {
     it('renders successfully without throwing on construction', () => {
         const widget = new Autocomplete();
-        const screen = new Screen(40, 5);
+        const screenInstance = new Screen(40, 5);
 
         widget.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        expect(() => widget.render(screen)).not.toThrow();
+        expect(() => widget.render(screenInstance)).not.toThrow();
     });
 
     it('displays a pointer character when query is empty', () => {
         const widget = new Autocomplete();
-        const screen = new Screen(40, 5);
+        const screenInstance = new Screen(40, 5);
 
         widget.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        widget.render(screen);
+        widget.render(screenInstance);
 
-        const row0 = screen.back[0].map((c: { char: string }) => c.char).join('');
+        const row0 = screenInstance.back[0].map((c: { char: string }) => c.char).join('');
         // pointer is either '➔' (unicode) or '>' (ASCII)
         expect(row0).toMatch(/[➔>]/);
     });
@@ -385,11 +502,11 @@ describe('Autocomplete — unicode and ASCII pointer rendering', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
 
         const widget = new Autocomplete();
-        const screen = new Screen(40, 5);
+        const screenInstance = new Screen(40, 5);
         widget.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        widget.render(screen);
+        widget.render(screenInstance);
 
-        const row0 = screen.back[0].map((c: { char: string }) => c.char).join('');
+        const row0 = screenInstance.back[0].map((c: { char: string }) => c.char).join('');
         expect(row0).toContain('➔');
     });
 
@@ -397,11 +514,11 @@ describe('Autocomplete — unicode and ASCII pointer rendering', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
 
         const widget = new Autocomplete();
-        const screen = new Screen(40, 5);
+        const screenInstance = new Screen(40, 5);
         widget.updateRect({ x: 0, y: 0, width: 40, height: 5 });
-        widget.render(screen);
+        widget.render(screenInstance);
 
-        const row0 = screen.back[0].map((c: { char: string }) => c.char).join('');
+        const row0 = screenInstance.back[0].map((c: { char: string }) => c.char).join('');
         expect(row0).toContain('>');
         expect(row0).not.toContain('➔');
     });

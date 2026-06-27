@@ -2,19 +2,20 @@
 // @termuijs/widgets — Tests for Tag widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
-import { Tag } from './Tag.js';
+import { describe, it, expect, vi } from 'vitest';
+import { Tag, type TagOptions } from './Tag.js';
 import { Screen, caps } from '@termuijs/core';
+import type { Style } from '@termuijs/core';
 
 /** Helper: create widget, set rect, render to a screen, return both. */
 function renderTag(
     text: string,
-    opts: ConstructorParameters<typeof Tag>[1] = {},
-    style: ConstructorParameters<typeof Tag>[2] = {},
+    style: Partial<Style> = {},
+    opts: TagOptions = {},
     width = 20,
     height = 3,
 ) {
-    const tag = new Tag(text, opts, style);
+    const tag = new Tag(text, style, opts);
     const screen = new Screen(width, height);
     tag.updateRect({ x: 0, y: 0, width, height });
     tag.render(screen);
@@ -46,7 +47,7 @@ describe('Tag', () => {
     });
 
     it('does not apply a background fill to content cells', () => {
-        const { screen } = renderTag('ts', { variant: 'info' });
+        const { screen } = renderTag('ts', {}, { variant: 'info' });
         // Tag should NOT set a bg color on content cells (unlike Badge)
         // The bg should remain the default (type: 'none')
         expect(screen.back[1][2].bg).toEqual({ type: 'none' });
@@ -54,7 +55,7 @@ describe('Tag', () => {
 
     // ── 2. Variant colors (foreground) ───────────────────────────────────
     it('applies cyan foreground for info variant', () => {
-        const { screen } = renderTag('info', { variant: 'info' });
+        const { screen } = renderTag('info', {}, { variant: 'info' });
         // Border corner should have cyan foreground
         expect(screen.back[0][0].fg).toEqual({ type: 'named', name: 'cyan' });
         // Text cell should also have cyan foreground
@@ -62,22 +63,22 @@ describe('Tag', () => {
     });
 
     it('applies green foreground for success variant', () => {
-        const { screen } = renderTag('ok', { variant: 'success' });
+        const { screen } = renderTag('ok', {}, { variant: 'success' });
         expect(screen.back[0][0].fg).toEqual({ type: 'named', name: 'green' });
     });
 
     it('applies yellow foreground for warning variant', () => {
-        const { screen } = renderTag('warn', { variant: 'warning' });
+        const { screen } = renderTag('warn', {}, { variant: 'warning' });
         expect(screen.back[0][0].fg).toEqual({ type: 'named', name: 'yellow' });
     });
 
     it('applies red foreground for error variant', () => {
-        const { screen } = renderTag('err', { variant: 'error' });
+        const { screen } = renderTag('err', {}, { variant: 'error' });
         expect(screen.back[0][0].fg).toEqual({ type: 'named', name: 'red' });
     });
 
     it('applies white foreground for neutral variant', () => {
-        const { screen } = renderTag('ok', { variant: 'neutral' });
+        const { screen } = renderTag('ok', {}, { variant: 'neutral' });
         expect(screen.back[0][0].fg).toEqual({ type: 'named', name: 'white' });
     });
 
@@ -129,7 +130,7 @@ describe('Tag', () => {
     });
 
     it('does not mark dirty when variant is unchanged', () => {
-        const tag = new Tag('Hello', { variant: 'success' });
+        const tag = new Tag('Hello', {}, { variant: 'success' });
 
         tag.clearDirty();
         tag.setVariant('success');
@@ -146,4 +147,10 @@ describe('Tag', () => {
         expect(() => renderTag('test', {}, {}, 0, 0)).not.toThrow();
     });
 
+    // ── 6. Constructor signature ────────────────────────────────────────────
+    it('canonical signature Tag(text, style, opts) works correctly', () => {
+        const { tag } = renderTag('test', {}, { variant: 'info' });
+        expect(tag.getText()).toBe('test');
+        expect(tag.getVariant()).toBe('info');
+    });
 });

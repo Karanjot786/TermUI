@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
+import { Screen } from '@termuijs/core';
 import { List, type ListItem } from './List.js';
 
 describe('List', () => {
@@ -71,4 +72,16 @@ describe('List', () => {
         list.selectNext();
         expect(list.isDirty).toBe(true);
     });
+
+        it('renders emptyMessage when the list is empty', () => {
+        const list = new List({ items: [], emptyMessage: 'No files found' });
+        list.updateRect({ x: 0, y: 0, width: 20, height: 3 });
+        
+        const screen = new Screen(20, 3);
+        list.render(screen);
+
+        const rendered = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
+        expect(rendered).toContain('No files found');
+    });
+
 });

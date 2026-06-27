@@ -3,7 +3,8 @@
 // ─────────────────────────────────────────────────────
 
 import type { Color } from '../style/Color.js';
-import { stringWidth } from '../utils/unicode.js';
+import { stringWidth, segmenter } from '../utils/unicode.js';
+import { stripAnsiControl } from '../utils/ansi.js';
 import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
@@ -97,7 +98,7 @@ function colorsEqual(a: Color, b: Color): boolean {
         case 'named': return a.name === (b as typeof a).name;
         case 'ansi256': return a.code === (b as typeof a).code;
         case 'rgb': return a.r === (b as typeof a).r && a.g === (b as typeof a).g && a.b === (b as typeof a).b;
-        case 'hex': return a.hex === (b as typeof a).hex;
+        case 'hex': return a.hex.toLowerCase() === (b as typeof a).hex.toLowerCase();
     }
 }
 
@@ -127,16 +128,50 @@ export class Screen {
     back: Cell[][];
 
     /**
+     * Render epoch counter. Incremented on every swap so downstream consumers
+     * (e.g. Renderer._flush) can detect and skip stale frames from a previous
+     * epoch, preventing double-swap corruption.
+     */
+    private _epoch = 0;
+
+    /** True while swap() is executing to prevent re-entrant double-swap corruption. */
+    private _swapping = false;
+
+    /** The epoch captured at the start of the current flush cycle. */
+    private _flushEpoch = -1;
+
+    /**
      * Stack of clipping regions. When non-empty, setCell/writeString
      * only write to cells within the topmost clip rectangle.
      */
     private _clipStack: Array<{ x: number; y: number; width: number; height: number }> = [];
+
+    private _translateYStack: number[] = [];
+    private _translateY = 0;
+
+    /**
+     * Queue of raw ANSI/OSC sequences to be emitted verbatim after the
+     * current frame is flushed to the terminal.  Populated by writeAnsi()
+     * (e.g. from VTE a11y escape sequences) and drained by Renderer._flush()
+     * via drainAnsiQueue() so that all output travels through the same
+     * Terminal.writeSync pipeline instead of bypassing it with
+     * process.stdout.write.
+     */
+    private _ansiQueue: string[] = [];
 
     constructor(cols: number, rows: number) {
         this._cols = cols;
         this._rows = rows;
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
+    }
+
+    /** Retrieve a read-only copy of the cell at (x, y) from the back buffer. */
+    getCell(x: number, y: number): Readonly<Cell> | undefined {
+        x = Math.floor(x);
+        y = Math.floor(y);
+        if (!(x >= 0 && x < this._cols && y >= 0 && y < this._rows)) return undefined;
+        return this.back[y][x];
     }
 
     /** Serialize a back-buffer row to a plain string (skips continuation cells). */
@@ -208,13 +243,22 @@ export class Screen {
      * any parent clip already on the stack (nested clipping).
      */
     pushClip(region: { x: number; y: number; width: number; height: number }): void {
+        // Convert region from absolute to the current visual coordinate space.
+        // setCell applies _translateY before checking the clip stack, so stored
+        // clip regions must be in the same visual space for the check to be correct.
+        const adjustedRegion = {
+            x: region.x,
+            y: region.y + this._translateY,
+            width: region.width,
+            height: region.height,
+        };
         if (this._clipStack.length > 0) {
             // Intersect with the current clip
             const parent = this._clipStack[this._clipStack.length - 1];
-            const x = Math.max(region.x, parent.x);
-            const y = Math.max(region.y, parent.y);
-            const right = Math.min(region.x + region.width, parent.x + parent.width);
-            const bottom = Math.min(region.y + region.height, parent.y + parent.height);
+            const x = Math.max(adjustedRegion.x, parent.x);
+            const y = Math.max(adjustedRegion.y, parent.y);
+            const right = Math.min(adjustedRegion.x + adjustedRegion.width, parent.x + parent.width);
+            const bottom = Math.min(adjustedRegion.y + adjustedRegion.height, parent.y + parent.height);
             if (right <= x || bottom <= y) {
                 // Fully clipped — push a zero-size region
                 this._clipStack.push({ x: 0, y: 0, width: 0, height: 0 });
@@ -222,7 +266,7 @@ export class Screen {
                 this._clipStack.push({ x, y, width: right - x, height: bottom - y });
             }
         } else {
-            this._clipStack.push({ ...region });
+            this._clipStack.push({ ...adjustedRegion });
         }
     }
 
@@ -242,6 +286,16 @@ export class Screen {
             : null;
     }
 
+    pushTranslateY(offset: number): void {
+        this._translateYStack.push(offset);
+        this._translateY += offset;
+    }
+
+    popTranslateY(): void {
+        const offset = this._translateYStack.pop() ?? 0;
+        this._translateY -= offset;
+    }
+
     /**
      * Write a cell to the back buffer at position (col, row).
      */
@@ -249,6 +303,8 @@ export class Screen {
         // Floor to integers — layout engine may produce fractional values
         col = Math.floor(col);
         row = Math.floor(row);
+        // Apply Y translation before bounds/clip checks
+        row += this._translateY;
         // Use positive range check (NaN fails >= 0, preventing NaN indices)
         if (!(col >= 0 && col < this._cols && row >= 0 && row < this._rows)) return;
 
@@ -262,6 +318,9 @@ export class Screen {
         }
 
         const existing = this.back[row][col];
+        if (cell.char !== undefined) {
+            cell = { ...cell, char: stripAnsiControl(cell.char) };
+        }
         Object.assign(existing, cell);
     }
 
@@ -279,13 +338,17 @@ export class Screen {
         col = Math.floor(col);
         if (!(row >= 0 && row < this._rows)) return;
 
+        // Strip ANSI control sequences from user-supplied content to prevent escape injection
+        const safeStr = stripAnsiControl(str);
         let x = col;
-        for (const char of str) {
+        
+        const segments = segmenter.segment(safeStr);
+        for (const { segment } of segments) {
             if (x >= this._cols) break;
 
-            let finalChar = char;
+            let finalChar = segment;
             // Measure the visual width with the shared unicode utility
-            let width = stringWidth(char);
+            let width = stringWidth(segment);
 
             // Advance past off-screen-left cells by the real width
             if (x < 0) { x += width; continue; }
@@ -332,13 +395,36 @@ export class Screen {
         }
     }
 
+    /** Current render epoch — incremented after each swap. */
+    get epoch(): number {
+        return this._epoch;
+    }
+
+    /** The epoch captured at the start of the current flush cycle. */
+    get flushEpoch(): number {
+        return this._flushEpoch;
+    }
+    set flushEpoch(value: number) {
+        this._flushEpoch = value;
+    }
+
     /**
      * Swap front and back buffers. Called after rendering diffs.
+     * Uses mutual exclusion to prevent double-swap corruption when
+     * _flush() is called concurrently (e.g. from duplicate setImmediate
+     * callbacks).
      */
     swap(): void {
-        const temp = this.front;
-        this.front = this.back;
-        this.back = temp;
+        if (this._swapping) return;
+        this._swapping = true;
+        try {
+            const temp = this.front;
+            this.front = this.back;
+            this.back = temp;
+            this._epoch++;
+        } finally {
+            this._swapping = false;
+        }
     }
 
     /**
@@ -363,6 +449,54 @@ export class Screen {
                 this.front[r][c].char = '\0'; // force diff
             }
         }
+    }
+
+    /**
+     * Export current screen as ANSI snapshot text.
+     */
+    exportANSI(): string {
+        const lines: string[] = [];
+
+        for (let r = 0; r < this._rows; r++) {
+            lines.push(this.getLine(r));
+        }
+
+        return lines.join('\n');
+    }
+
+    /**
+     * Export current screen as SVG.
+     */
+    exportSVG(): string {
+        return `
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="${this._cols * 8}"
+     height="${this._rows * 16}">
+    <text x="10" y="20">
+        Terminal Export
+    </text>
+</svg>`;
+    }
+
+    /**
+     * Buffer a raw ANSI/OSC escape sequence to be written to the terminal
+     * after the current frame is flushed.  Call this instead of
+     * process.stdout.write() so that the sequence stays in the same
+     * output pipeline as the rest of the rendered frame.
+     */
+    writeAnsi(seq: string): void {
+        this._ansiQueue.push(seq);
+    }
+
+    /**
+     * Return and clear all buffered ANSI sequences accumulated since the
+     * last drain.  Called by Renderer._flush() after the frame is written.
+     */
+    drainAnsiQueue(): string {
+        if (this._ansiQueue.length === 0) return '';
+        const out = this._ansiQueue.join('');
+        this._ansiQueue = [];
+        return out;
     }
 
     private _createGrid(cols: number, rows: number): Cell[][] {

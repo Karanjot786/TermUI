@@ -45,11 +45,15 @@ export class ThemeWatcher {
                     const ext = extname(filename);
                     if (ext !== '.tss') return;
 
-                    // Debounce: coalesce rapid saves
-                    const existing = this._debounceTimers.get(filename);
+                    // Use a per-directory resolved path as the debounce key so files
+                    // with the same basename in different watched directories don't collide.
+                    const resolved = resolve(dir, filename);
+
+                    // Debounce: coalesce rapid saves for the same resolved file path
+                    const existing = this._debounceTimers.get(resolved);
                     if (existing) clearTimeout(existing);
-                    this._debounceTimers.set(filename, setTimeout(() => {
-                        this._debounceTimers.delete(filename);
+                    this._debounceTimers.set(resolved, setTimeout(() => {
+                        this._debounceTimers.delete(resolved);
                         const change: ThemeChange = { filename, timestamp: Date.now() };
 
                         // Notify listeners

@@ -241,6 +241,8 @@ describe('TSSWatcher', () => {
     // ── 6. Missing watch directories ────────────────────────────────────────
 
     describe('missing watch directories', () => {
+        afterEach(() => vi.restoreAllMocks());
+
         it('does not create a watcher when the directory does not exist', () => {
             resetFsState(false);
 

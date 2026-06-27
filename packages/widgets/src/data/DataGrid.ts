@@ -141,18 +141,26 @@ export class DataGrid extends Table {
             case 'S':
                 if (!event.ctrl && !event.alt) this.cycleSort();
                 break;
+        
             case '/':
                 this._filterOpen = true;
                 this.markDirty();
                 break;
+        
             case 'escape':
                 this.clearFilter();
                 break;
+        
             case 'left':
                 this.setSelectedColumn(this._selectedCol - 1);
                 break;
+        
             case 'right':
                 this.setSelectedColumn(this._selectedCol + 1);
+                break;
+        
+            default:
+                super.handleKey(event);
                 break;
         }
     }

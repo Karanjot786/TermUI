@@ -127,7 +127,30 @@ export class RadioGroup extends Widget {
             case 'down':
                 this.selectNext();
                 break;
+            case 'home': {
+                // Move focus to first enabled option (no-op if already there)
+                let n = 0;
+                while (n < this._options.length && this._options[n]?.disabled) n++;
+                if (n < this._options.length && n !== this._focusedIndex) {
+                    this._focusedIndex = n;
+                    this.markDirty();
+                }
+                break;
+            }
+            case 'end': {
+                // Move focus to last enabled option (no-op if already there)
+                let m = this._options.length - 1;
+                while (m >= 0 && this._options[m]?.disabled) m--;
+                if (m >= 0 && m !== this._focusedIndex) {
+                    this._focusedIndex = m;
+                    this.markDirty();
+                }
+                break;
+            }
             case 'enter':
+                this.confirm();
+                break;
+            case 'space':
                 this.confirm();
                 break;
         }

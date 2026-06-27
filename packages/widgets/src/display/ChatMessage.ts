@@ -55,12 +55,14 @@ export class ChatMessage extends Widget {
 
     /** Update the message content and mark dirty. */
     setContent(content: string): void {
+        if (this._content === content) return; 
         this._content = content;
         this.markDirty();
     }
 
     /** Update the message role and mark dirty. */
     setRole(role: MessageRole): void {
+        if (this._role === role) return;
         this._role = role;
         this.markDirty();
     }

@@ -9,8 +9,10 @@ import {
     truncate,
     stringWidth,
     caps,
+    normalizeNavigationKey,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { computeRange } from '../input/virtual-scroll.js';
 
 export interface TreeNode {
     label: string;
@@ -41,6 +43,7 @@ interface VisibleEntry {
  * - onSelect callback for leaf nodes
  * - Unicode and ASCII fallback symbols
  * - Scrolling when tree exceeds visible height
+ * - Virtualized rendering
  */
 export class Tree extends Widget {
     private _nodes: TreeNode[];
@@ -169,16 +172,14 @@ export class Tree extends Widget {
      * when this widget is focused.
      */
     handleKey(key: string): void {
-        const normalized = key.toLowerCase();
+        const normalized = normalizeNavigationKey(key.toLowerCase());
         switch (normalized) {
             case 'arrowup':
             case 'up':
-            case 'k':
                 this.movePrev();
                 break;
             case 'arrowdown':
             case 'down':
-            case 'j':
                 this.moveNext();
                 break;
             case 'enter':
@@ -188,12 +189,10 @@ export class Tree extends Widget {
                 break;
             case 'arrowleft':
             case 'left':
-            case 'h':
                 this.collapse();
                 break;
             case 'arrowright':
             case 'right':
-            case 'l':
                 this.expand();
                 break;
             case 'home':
@@ -219,16 +218,16 @@ export class Tree extends Widget {
         const expandedChevron  = useUnicode ? '▼ ' : 'v ';
         const leafPrefix       = useUnicode ? '• ' : '* ';
 
-        const visibleCount = Math.min(
-            this._visibleNodes.length - this._scrollOffset,
-            height,
-        );
+        // Use the virtualization engine
+        const range = computeRange(this._scrollOffset, height, this._visibleNodes.length, 0);
 
-        for (let i = 0; i < visibleCount; i++) {
-            const entryIdx = this._scrollOffset + i;
+        for (let entryIdx = range.start; entryIdx < range.end; entryIdx++) {
             const entry = this._visibleNodes[entryIdx];
             const { node, depth } = entry;
             const isSelected = entryIdx === this._selectedIndex;
+
+            const screenY = y + (entryIdx - this._scrollOffset);
+            if (screenY < y || screenY >= y + height) continue;
 
             // Build line text
             const indentStr = ' '.repeat(this._indent * depth);
@@ -252,14 +251,14 @@ export class Tree extends Widget {
                     ? { ...attrs, bold: true }
                     : attrs;
 
-            screen.writeString(x, y + i, line, cellStyle);
+            screen.writeString(x, screenY, line, cellStyle);
 
             // Fill rest of row for selection highlight
             if (isSelected && this.isFocused) {
                 const lineWidth = stringWidth(line);
                 const remaining = width - lineWidth;
                 for (let c = 0; c < remaining; c++) {
-                    screen.setCell(x + lineWidth + c, y + i, {
+                    screen.setCell(x + lineWidth + c, screenY, {
                         char: ' ',
                         ...cellStyle,
                     });
@@ -274,6 +273,12 @@ export class Tree extends Widget {
     private _buildVisibleNodes(): void {
         this._visibleNodes = [];
         _collectVisible(this._nodes, 0, [], this._visibleNodes);
+        // If the visible set shrank (e.g. a parent collapsed elsewhere),
+        // ensure the selected index remains in-bounds.
+        if (this._selectedIndex >= this._visibleNodes.length) {
+            this._selectedIndex = Math.max(0, this._visibleNodes.length - 1);
+            this._clampScroll();
+        }
     }
 
     /** Ensure scroll keeps the selected index in view */

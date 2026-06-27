@@ -9,5 +9,8 @@
   "dependencies": {
     "@termuijs/quick": "workspace:*",
     "@termuijs/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.2"
   }
 }
