@@ -54,7 +54,7 @@ export function createKeyEvent(base: {
  */
 export type MouseEventType =
     | 'mousedown' | 'mouseup' | 'mousemove' | 'scroll'
-    | 'dblclick' | 'drag' | 'dragend';
+    | 'dblclick' | 'drag' | 'dragend' | 'mouseenter' | 'mouseleave';
 export type MouseButton = 'left' | 'middle' | 'right' | 'none';
 
 /**
@@ -69,8 +69,12 @@ export interface MouseEvent {
     button: MouseButton;
     /** Type of mouse event */
     type: MouseEventType;
-    /** Scroll direction (-1 = up, 1 = down) */
+    /** Vertical scroll delta: -1 = up, 1 = down. Set for vertical wheel events. */
     scrollDelta?: number;
+    /** Horizontal scroll delta: -1 = left, 1 = right. Set for horizontal wheel events. */
+    scrollDeltaX?: number;
+    /** Which axis a scroll event used. Set only for type 'scroll'. */
+    scrollAxis?: 'vertical' | 'horizontal';
     /** Ctrl modifier held during the mouse event. SGR bit 0b10000. */
     ctrl?: boolean;
     /** Alt/Meta modifier held during the mouse event. SGR bit 0b1000. */
@@ -95,6 +99,8 @@ export interface FocusEvent {
     targetId: string;
     /** Type of focus event */
     type: 'focus' | 'blur';
+    /** Monotonically increasing sequence number for ordering / staleness detection */
+    epoch?: number;
 }
 
 /**

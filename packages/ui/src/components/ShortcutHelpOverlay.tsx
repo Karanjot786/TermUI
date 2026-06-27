@@ -23,7 +23,7 @@ function ShortcutHelpOverlayContent({ shortcuts, onClose }: { shortcuts: Shortcu
 
     function Sentinel() {
         useFocus({ id: 'shortcut-sentinel', autoFocus: true });
-        return null as any;
+        return null as any; // as any: reconciler requires non-null return; null as any is workaround for no-content state
     }
 
     useEffect(() => {
@@ -121,5 +121,3 @@ export function ShortcutHelpOverlay({ shortcuts = DEFAULT_SHORTCUTS }: ShortcutH
     if (!visible) return null as any;
     return <ShortcutHelpOverlayContent shortcuts={shortcuts} onClose={() => setVisible(false)} />;
 }
-
-export default ShortcutHelpOverlay;

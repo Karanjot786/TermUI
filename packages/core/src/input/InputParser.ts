@@ -3,11 +3,13 @@
 // ─────────────────────────────────────────────────────
 
 import { Buffer } from 'node:buffer';
+import { StringDecoder } from 'node:string_decoder';
 import type { KeyEvent, MouseEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './KeyMap.js';
 import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
+import { splitGraphemes } from './grapheme.js';
 
 export interface CursorPosition {
     row: number;
@@ -28,11 +30,15 @@ interface InputEvents {
 export class InputParser {
     private _events = new EventEmitter<InputEvents>();
     private _stdin: NodeJS.ReadStream;
+    private _decoder = new StringDecoder('utf8');
+    private _graphemeBuffer = '';
+    private _graphemeTimeout: ReturnType<typeof setTimeout> | null = null;
     private _handler: ((data: Buffer) => void) | null = null;
     private _escapeTimeout: ReturnType<typeof setTimeout> | null = null;
     private _escapeBuffer: Buffer = Buffer.alloc(0);
     private _isPasting = false;
     private _pasteBuffer = '';
+    private _pasteTimeout: ReturnType<typeof setTimeout> | null = null;
     private _cursorRequests: Array<{
         resolve: (position: CursorPosition) => void;
         reject: (error: Error) => void;
@@ -97,33 +103,75 @@ export class InputParser {
             clearTimeout(this._escapeTimeout);
             this._escapeTimeout = null;
         }
+        if (this._graphemeTimeout) {
+            clearTimeout(this._graphemeTimeout);
+            this._graphemeTimeout = null;
+        }
+        if (this._pasteTimeout) {
+            clearTimeout(this._pasteTimeout);
+            this._pasteTimeout = null;
+        }
         this._escapeBuffer = Buffer.alloc(0);
+        this._graphemeBuffer = '';
+        this._decoder.end();
+        for (const req of this._cursorRequests) {
+            clearTimeout(req.timeout);
+            req.reject(new Error('InputParser stopped'));
+        }
+        this._cursorRequests = [];
     }
 
     /**
      * Process a chunk of raw input bytes.
      */
     private _processInput(data: Buffer): void {
-        const str = data.toString('utf8');
-        const PASTE_START = '\x1b[200~';
-        const PASTE_END = '\x1b[201~';
-
-        if (str.includes(PASTE_START) && str.includes(PASTE_END)) {
-            const pastedText = str
-                .replace(PASTE_START, '')
-                .replace(PASTE_END, '');
-
-            this._events.emit('paste', pastedText);
-            return;
-        }
-        // If we're collecting an escape sequence
+        // If we are currently collecting an escape sequence, continue collecting it
         if (this._escapeBuffer.length > 0) {
             this._escapeBuffer = Buffer.concat([this._escapeBuffer, data]);
             if (this._escapeTimeout) {
                 clearTimeout(this._escapeTimeout);
                 this._escapeTimeout = null;
             }
-            this._tryParseEscape(data);
+            this._tryParseEscape();
+            return;
+        }
+
+        const str = data.toString('utf8');
+        const PASTE_START = '\x1b[200~';
+        const PASTE_END = '\x1b[201~';
+
+        // ── Multi-chunk bracketed paste handling ──
+
+        // Check if this chunk contains the paste-start marker
+        if (!this._isPasting && str.includes(PASTE_START)) {
+            this._isPasting = true;
+            this._pasteBuffer = str.slice(str.indexOf(PASTE_START) + PASTE_START.length);
+            this._startPasteTimeout();
+
+            // Check if paste-end is also in this same chunk
+            if (this._pasteBuffer.includes(PASTE_END)) {
+                const pastedText = this._pasteBuffer.slice(0, this._pasteBuffer.indexOf(PASTE_END));
+                this._isPasting = false;
+                this._pasteBuffer = '';
+                this._clearPasteTimeout();
+                this._events.emit('paste', pastedText);
+            }
+            return;
+        }
+
+        // If we are inside a paste, accumulate content
+        if (this._isPasting) {
+            if (str.includes(PASTE_END)) {
+                this._pasteBuffer += str.slice(0, str.indexOf(PASTE_END));
+                const pastedText = this._pasteBuffer;
+                this._isPasting = false;
+                this._pasteBuffer = '';
+                this._clearPasteTimeout();
+                this._events.emit('paste', pastedText);
+            } else {
+                this._pasteBuffer += str;
+                this._startPasteTimeout();
+            }
             return;
         }
 
@@ -148,12 +196,41 @@ export class InputParser {
 
         if (str.startsWith('\x1b')) {
             this._escapeBuffer = data;
-            this._tryParseEscape(data);
+            this._tryParseEscape();
             return;
         }
 
-        // Process each code point for non-escape input
-        for (const ch of str) {
+        // Decode input and append to grapheme buffer
+        const decoded = this._decoder.write(data);
+        this._graphemeBuffer += decoded;
+
+        if (this._graphemeTimeout) {
+            clearTimeout(this._graphemeTimeout);
+            this._graphemeTimeout = null;
+        }
+
+        // Process after a short 10ms delay to merge split chunks (like modifiers or ZWJ sequences)
+        this._graphemeTimeout = setTimeout(() => {
+            this._processGraphemeBuffer();
+            this._graphemeTimeout = null;
+        }, 10);
+    }
+
+    private _processGraphemeBuffer(): void {
+        if (!this._graphemeBuffer) return;
+
+        const graphemes = splitGraphemes(this._graphemeBuffer);
+        if (graphemes.length === 0) return;
+
+        let processCount = graphemes.length;
+        // Check if the last grapheme is potentially incomplete
+        const lastGrapheme = graphemes[graphemes.length - 1];
+        if (this._isPossiblyIncompleteGrapheme(lastGrapheme)) {
+            processCount = graphemes.length - 1;
+        }
+
+        for (let i = 0; i < processCount; i++) {
+            const ch = graphemes[i];
             const code = ch.codePointAt(0)!;
             const raw = Buffer.from(ch, 'utf8');
 
@@ -194,12 +271,65 @@ export class InputParser {
                 }));
             }
         }
+
+        // Update the remaining buffer
+        this._graphemeBuffer = graphemes.slice(processCount).join('');
+    }
+
+    private _isPossiblyIncompleteGrapheme(ch: string): boolean {
+        if (!ch) return false;
+        // ZWJ sequence continuation check
+        if (ch.endsWith('\u200D')) return true;
+        // Surrogate pair incomplete check (last char is high surrogate)
+        const lastCharCode = ch.charCodeAt(ch.length - 1);
+        if (lastCharCode >= 0xD800 && lastCharCode <= 0xDBFF) return true;
+        
+        // Regional Indicator Symbols (flags: U+1F1E6 to U+1F1FF)
+        // Check if there's an odd number of regional indicator symbols in this grapheme
+        const codePoints = Array.from(ch);
+        const lastCpVal = codePoints[codePoints.length - 1].codePointAt(0)!;
+        if (lastCpVal >= 0x1F1E6 && lastCpVal <= 0x1F1FF) {
+            let riCount = 0;
+            for (let i = codePoints.length - 1; i >= 0; i--) {
+                const cp = codePoints[i].codePointAt(0)!;
+                if (cp >= 0x1F1E6 && cp <= 0x1F1FF) {
+                    riCount++;
+                } else {
+                    break;
+                }
+            }
+            if (riCount % 2 !== 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Start or restart the paste inactivity timeout.
+     * If no additional paste data arrives within the timeout,
+     * the paste state is aborted to prevent stale state.
+     */
+    private _startPasteTimeout(): void {
+        this._clearPasteTimeout();
+        this._pasteTimeout = setTimeout(() => {
+            this._isPasting = false;
+            this._pasteBuffer = '';
+            this._pasteTimeout = null;
+        }, 500);
+    }
+
+    private _clearPasteTimeout(): void {
+        if (this._pasteTimeout) {
+            clearTimeout(this._pasteTimeout);
+            this._pasteTimeout = null;
+        }
     }
 
     /**
      * Try to parse buffered escape sequence.
      */
-    private _tryParseEscape(rawData: Buffer): void {
+    private _tryParseEscape(): void {
         const seq = this._escapeBuffer.toString('utf8');
 
         // Check for mouse event first
@@ -263,7 +393,7 @@ export class InputParser {
 
             this._events.emit('key', createKeyEvent({
                 key: cleanKey,
-                raw: rawData,
+                raw: this._escapeBuffer,
                 ctrl: isCtrl,
                 alt: isAlt,
                 shift: isShift,
@@ -273,11 +403,16 @@ export class InputParser {
         }
 
         // Alt+key: ESC followed by a regular character
-        if (seq.length === 2 && seq[0] === '\x1b') {
+        if (
+            seq.length === 2 &&
+            seq[0] === '\x1b' &&
+            seq[1] !== '[' &&
+            seq[1] !== 'O'
+        ) {
             const ch = seq[1];
             this._events.emit('key', createKeyEvent({
                 key: ch,
-                raw: rawData,
+                raw: this._escapeBuffer,
                 ctrl: false,
                 alt: true,
                 shift: ch !== ch.toLowerCase() && ch === ch.toUpperCase(),

@@ -219,6 +219,9 @@ class ChatExampleApp extends Widget {
             case 'end':
                 this.textInput.moveCursorEnd();
                 break;
+            case 'space':
+                this.textInput.insertChar(' ');
+                break;
             case 'enter':
             case 'return':
                 this.textInput.submit();

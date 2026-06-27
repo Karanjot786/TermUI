@@ -2,13 +2,15 @@
 
 import { useCallback, useState } from "@termuijs/jsx";
 
-export type HttpMethod = 'POST' | 'PUT' | 'DELETE'
+export type HttpMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
 export interface UseMutationReturn<T> {
-    mutate: (payload: any) => Promise<T>;
+    mutate: (payload: unknown) => Promise<T>;
+    reset: ()  => void;
     data: T | null;
     error: Error | null;
     loading: boolean;
+    mutationCount: number;
 }
 
 /**
@@ -19,14 +21,15 @@ export interface UseMutationReturn<T> {
  * `loading`, `data`, and `error` state.
  *
  * @param url - The endpoint URL to mutate.
- * @param method - HTTP method: 'POST' (default), 'PUT', or 'DELETE'.
+ * @param method - HTTP method: 'POST' (default), 'PUT', 'PATCH', or 'DELETE'.
  */
-export function useMutation<T = any>(url: string, method: HttpMethod = 'POST'): UseMutationReturn<T> {
+export function useMutation<T = unknown>(url: string, method: HttpMethod = 'POST'): UseMutationReturn<T> {
     const [loading, setLoading] = useState<boolean>(false)
     const [error, setError] = useState<Error | null>(null)
     const [data, setData] = useState<T | null>(null)
+    const [mutationCount, setMutationCount] = useState<number>(0)
 
-    const mutate = useCallback(async (payload: any): Promise<T> => {
+    const mutate = useCallback(async (payload: unknown): Promise<T> => {
         setLoading(true)
         setError(null)
 
@@ -45,6 +48,7 @@ export function useMutation<T = any>(url: string, method: HttpMethod = 'POST'): 
 
             const result = (await response.json()) as T
             setData(result)
+            setMutationCount((c)=> c+1)
             return result;
 
         } catch (err) {
@@ -57,5 +61,11 @@ export function useMutation<T = any>(url: string, method: HttpMethod = 'POST'): 
 
     }, [url, method])
 
-    return { mutate, data, error, loading };
+    const reset = useCallback(() => {
+    setData(null)
+    setError(null)
+    setLoading(false)
+}, [])
+
+    return { mutate,reset, data, error, loading,mutationCount };
 }

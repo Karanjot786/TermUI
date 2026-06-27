@@ -99,7 +99,7 @@ export class ToolCall extends Widget {
     }
 
     handleKey(key: string): void {
-        if (key === ' ' || key === 'Enter') {
+        if (key === ' ' || key === 'enter') {
             this._collapsed = !this._collapsed;
             this.markDirty();
         }
@@ -231,9 +231,9 @@ export class ToolApproval extends ToolCall {
     }
 
     handleKey(key: string): void {
-        if (key === 'y' || key === 'Enter') {
+        if (key === 'y' || key === 'enter') {
             this._onApprove?.();
-        } else if (key === 'n' || key === 'Escape') {
+        } else if (key === 'n' || key === 'escape') {
             this._onDeny?.();
         } else {
             super.handleKey(key);

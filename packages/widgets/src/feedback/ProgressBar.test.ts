@@ -171,3 +171,25 @@ describe('ProgressBar — ASCII fallback', () => {
         expect(fillChar).toBe('=');
     });
 });
+
+describe('Performance optimizations', () => {
+    it('does not mark dirty when setValue receives the same value', () => {
+        const pb = new ProgressBar({}, { value: 0.5 });
+
+        pb.clearDirty();
+
+        pb.setValue(0.5);
+
+        expect(pb.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setValue receives a different value', () => {
+        const pb = new ProgressBar({}, { value: 0.5 });
+
+        pb.clearDirty();
+
+        pb.setValue(0.75);
+
+        expect(pb.isDirty).toBe(true);
+    });
+});

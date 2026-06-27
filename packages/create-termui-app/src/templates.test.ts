@@ -121,6 +121,32 @@ describe('generateProject', () => {
     expect(indexFile?.content).toContain('Form Wizard')
 })
 
+it('ai-assistant template generates files and contains dependencies', () => {
+    const files = generateProject({
+        ...baseConfig,
+        template: 'ai-assistant',
+        features: {
+            router: false,
+            dataProviders: false,
+            hotReload: true,
+        },
+    })
+
+    const paths = files.map((f) => f.path)
+    expect(paths).toContain('package.json')
+    expect(paths).toContain('src/index.tsx')
+
+    const pkg = files.find((f) => f.path === 'package.json')!
+    const parsed = JSON.parse(pkg.content)
+    expect(parsed.dependencies['@termuijs/adapters']).toBe('latest')
+    expect(parsed.dependencies['@termuijs/ui']).toBe('latest')
+
+    const indexFile = files.find((f) => f.path === 'src/index.tsx')!
+    expect(indexFile.content).toContain('ClaudeAdapter')
+    expect(indexFile.content).toContain('ChatThread')
+    expect(indexFile.content).toContain('TokenUsage')
+})
+
 it('cli-tool template generates a minimal entry under 15 source lines', () => {
     const files = generateProject({
         ...baseConfig,

@@ -68,4 +68,32 @@ describe('CLI integration', () => {
     expect(generateSpy).not.toHaveBeenCalled();
     expect(existsSync(unsafePath)).toBe(false);
   });
+
+  it('scaffolds project in non-interactive mode without calling prompts', async () => {
+    const addSpy = vi.spyOn(addModule, 'runAddCommand').mockResolvedValue(undefined);
+    const textPromptSpy = vi.spyOn(prompts, 'textPrompt');
+    const selectPromptSpy = vi.spyOn(prompts, 'selectPrompt');
+    const multiSelectPromptSpy = vi.spyOn(prompts, 'multiSelectPrompt');
+    const generateSpy = vi.spyOn(templates, 'generateProject').mockReturnValue(createProjectFiles as any);
+
+    const indexModule = await import('./index');
+    await indexModule.runCli(['non-interactive-app', '--yes']);
+
+    expect(textPromptSpy).not.toHaveBeenCalled();
+    expect(selectPromptSpy).not.toHaveBeenCalled();
+    expect(multiSelectPromptSpy).not.toHaveBeenCalled();
+    expect(generateSpy).toHaveBeenCalledWith({
+      name: 'non-interactive-app',
+      template: 'empty',
+      theme: 'default',
+      features: {
+        router: false,
+        dataProviders: false,
+        hotReload: true,
+      },
+    });
+
+    expect(existsSync(join(tempDir, 'non-interactive-app', 'package.json'))).toBe(true);
+    expect(addSpy).not.toHaveBeenCalled();
+  });
 });

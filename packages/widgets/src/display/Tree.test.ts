@@ -2,9 +2,9 @@
 // @termuijs/widgets — Tests for Tree widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Tree, type TreeNode } from './Tree.js';
-import { Screen } from '@termuijs/core';
+import { Screen, caps } from '@termuijs/core';
 
 // ── Helpers ──────────────────────────────────────────
 
@@ -154,11 +154,13 @@ describe('Tree', () => {
         });
 
         it('j moves cursor down (vim keybinding)', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
             const nodes = makeNodes();
             const tree = makeTree(nodes);
 
             tree.handleKey('j');
             expect(tree.selectedIndex).toBe(1);
+            vi.restoreAllMocks();
         });
 
         it('up moves cursor up', () => {
@@ -171,12 +173,14 @@ describe('Tree', () => {
         });
 
         it('k moves cursor up (vim keybinding)', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
             const nodes = makeNodes();
             const tree = makeTree(nodes);
 
             tree.handleKey('j'); // → 1
             tree.handleKey('k'); // → 0
             expect(tree.selectedIndex).toBe(0);
+            vi.restoreAllMocks();
         });
 
         it('up at first item is a no-op', () => {
@@ -207,12 +211,14 @@ describe('Tree', () => {
         });
 
         it('l expands collapsed parent (vim keybinding)', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
             const nodes = makeNodes();
             const tree = makeTree(nodes);
 
             tree.handleKey('l');
 
             expect(nodes[0].expanded).toBe(true);
+            vi.restoreAllMocks();
         });
 
         it('right on already-expanded parent is a no-op', () => {
@@ -242,6 +248,7 @@ describe('Tree', () => {
         });
 
         it('h collapses expanded parent (vim keybinding)', () => {
+            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
             const nodes = makeNodes();
             nodes[0].expanded = true;
             const tree = makeTree(nodes);
@@ -249,6 +256,7 @@ describe('Tree', () => {
             tree.handleKey('h');
 
             expect(nodes[0].expanded).toBe(false);
+            vi.restoreAllMocks();
         });
 
         it('left on collapsed node moves to parent', () => {
@@ -346,4 +354,57 @@ describe('Tree', () => {
             expect((tree as any)._visibleNodes.length).toBe(1);
         });
     });
+
+    it('clamps selectedIndex when visible nodes shrink (external collapse)', () => {
+        const nodes: TreeNode[] = [
+            { label: 'Parent', expanded: true, children: [
+                { label: 'Child A' },
+                { label: 'Child B' },
+            ] },
+            { label: 'Sibling' },
+        ];
+
+        const tree = makeTree(nodes);
+        // visible: Parent(0), Child A(1), Child B(2), Sibling(3)
+        tree.handleKey('down'); // -> 1
+        tree.handleKey('down'); // -> 2 (Child B)
+        expect(tree.selectedIndex).toBe(2);
+
+        // Simulate external mutation and force a rebuild.
+        // The cast is required: there is no public API that reproduces an
+        // external node mutation while preserving the pre-mutation selection,
+        // so the test invokes the private rebuild helper to simulate that case.
+        nodes[0].expanded = false;
+        (tree as any)._buildVisibleNodes();
+
+        // Observable behavior: selectedIndex must update to remain valid.
+        expect(tree.selectedIndex).toBe(1);
+    });
+
+        describe('Virtualization', () => {
+        it('updates scroll offset via keyboard navigation when moving past viewport', () => {
+            // Generate many nodes
+            const manyNodes = Array.from({ length: 50 }).map((_, i) => ({ label: `Node${i}` }));
+            
+            // makeTree helper in this file accepts (nodes, onSelect, width, height)
+            // We set height to 10
+            const tree = makeTree(manyNodes, undefined, 40, 10);
+            
+            // Initially, selectedIndex is 0, offset is 0
+            expect(tree.selectedIndex).toBe(0);
+            expect((tree as any)._scrollOffset).toBe(0);
+
+            // Move down past the viewport
+            for (let i = 0; i < 20; i++) {
+                tree.handleKey('down');
+            }
+            
+            expect(tree.selectedIndex).toBe(20);
+            
+            // Viewport height is 10
+            // So if selected is 20, offset should be clamped to 20 - 10 + 1 = 11
+            expect((tree as any)._scrollOffset).toBe(11);
+        });
+    });
+
 });

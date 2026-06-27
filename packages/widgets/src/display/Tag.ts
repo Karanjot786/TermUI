@@ -27,15 +27,17 @@ const FG_COLORS: Record<TagVariant, Color> = {
  * Used for categorical labels such as "typescript", "react", "v2.0".
  * Renders a bordered box with the text colored by variant but no background.
  * Uses `caps.unicode` to choose between Unicode box-drawing and ASCII fallback.
+ *
+ * CONSTRUCTOR: (text, style?, opts?)
  */
 export class Tag extends Widget {
     private _text: string;
     private _variant: TagVariant;
 
-    constructor(text: string, opts: TagOptions = {}, style: Partial<Style> = {}) {
-        super(style);
+    constructor(text: string, style?: Partial<Style>, opts?: TagOptions) {
+        super(style ?? {});
         this._text = text;
-        this._variant = opts.variant ?? 'neutral';
+        this._variant = opts?.variant ?? 'neutral';
     }
 
     /** Update the tag text. */

@@ -81,17 +81,18 @@ function main(): void {
         const result = benchSize(terminal, cols, rows);
         results.push(result);
         const mcps = (result.cellsPerSec / 1e6).toFixed(2);
-        console.log(`${cols}x${rows}: ${mcps}M cells/sec  (${result.frames} frames in ${result.durationMs.toFixed(0)}ms)`);
+        process.stdout.write(`${cols}x${rows}: ${mcps}M cells/sec  (${result.frames} frames in ${result.durationMs.toFixed(0)}ms)` + '\n');
     }
 
     const payload = {
+        benchmark: 'render-loop',
         version: 1,
         runMs: RUN_MS,
         node: process.versions.node,
         bun: process.versions.bun ?? null,
         results,
     };
-    console.log(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}`);
+    process.stdout.write(`BENCH_RESULT_JSON: ${JSON.stringify(payload)}` + '\n');
 }
 
 main();

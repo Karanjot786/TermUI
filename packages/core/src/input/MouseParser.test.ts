@@ -54,6 +54,9 @@ describe('parseMouseEvent', () => {
     it('parses left button press at (10, 5) → 0-based (9, 4)', () => {
         const evt = parseMouseEvent('\x1b[<0;10;5M');
         expect(evt).toMatchObject({ x: 9, y: 4, button: 'left', type: 'mousedown' });
+        expect(evt?.scrollAxis).toBeUndefined();
+        expect(evt?.scrollDeltaX).toBeUndefined();
+        expect(evt?.scrollDelta).toBeUndefined();
     });
 
     it('parses right button release', () => {
@@ -63,12 +66,24 @@ describe('parseMouseEvent', () => {
 
     it('parses scroll up event', () => {
         const evt = parseMouseEvent('\x1b[<64;10;5M');
-        expect(evt).toMatchObject({ type: 'scroll', scrollDelta: -1 });
+        expect(evt).toMatchObject({ type: 'scroll', scrollAxis: 'vertical', scrollDelta: -1 });
     });
 
     it('parses scroll down event', () => {
         const evt = parseMouseEvent('\x1b[<65;10;5M');
-        expect(evt).toMatchObject({ type: 'scroll', scrollDelta: 1 });
+        expect(evt).toMatchObject({ type: 'scroll', scrollAxis: 'vertical', scrollDelta: 1 });
+    });
+
+    it('parses horizontal scroll left', () => {
+        const ev = parseMouseEvent('\x1b[<70;5;5M');
+        expect(ev?.scrollAxis).toBe('horizontal');
+        expect(ev?.scrollDeltaX).toBe(-1);
+    });
+
+    it('parses horizontal scroll right', () => {
+        const ev = parseMouseEvent('\x1b[<71;5;5M');
+        expect(ev?.scrollAxis).toBe('horizontal');
+        expect(ev?.scrollDeltaX).toBe(1);
     });
 
     it('parses mouse move (drag)', () => {

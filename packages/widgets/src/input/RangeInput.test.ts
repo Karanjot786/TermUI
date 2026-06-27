@@ -70,6 +70,22 @@ describe('RangeInput', () => {
         expect(r.getLow()).toBe(20);  // low unchanged
     });
 
+    it('prevents default tab focus behavior when toggling handles', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price');
+        const event = makeKey('tab');
+        const preventDefault = vi.fn();
+        const stopPropagation = vi.fn();
+
+        event.preventDefault = preventDefault;
+        event.stopPropagation = stopPropagation;
+
+        r.handleKey(event);
+
+        expect(preventDefault).toHaveBeenCalled();
+        expect(stopPropagation).toHaveBeenCalled();
+    });
+
     it('arrow keys move low handle by step', async () => {
         const { RangeInput } = await import('./RangeInput.js');
         const r = new RangeInput('Price');
@@ -113,6 +129,30 @@ describe('RangeInput', () => {
 
         r.handleKey(makeKey('right')); // low 0 → 1
         expect(onChange).toHaveBeenCalledWith(1, 100);
+    });
+
+    it('arrow keys clamp low handle at min boundary', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price');
+        r.handleKey(makeKey('left')); // already at min (0), should stay 0
+        expect(r.getLow()).toBe(0);
+    });
+
+    it('arrow keys clamp high handle at max boundary', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price');
+        r.handleKey(makeKey('tab')); // switch to high handle
+        r.handleKey(makeKey('right')); // already at max (100), should stay 100
+        expect(r.getHigh()).toBe(100);
+    });
+
+    it('respects custom step option for arrow key movement', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price', {}, { step: 5 });
+        r.handleKey(makeKey('right')); // low 0 → 5
+        expect(r.getLow()).toBe(5);
+        r.handleKey(makeKey('right')); // low 5 → 10
+        expect(r.getLow()).toBe(10);
     });
 
     it('renders unicode track chars', async () => {

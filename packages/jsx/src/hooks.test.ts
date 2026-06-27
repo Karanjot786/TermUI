@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { timerPoolUnsubscribeAll } from '@termuijs/motion';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
-    useState, useEffect, useRef, useId, useCallback,
+    useState, useEffect, useRef, useId, useCallback, useKeymap,
     useAsync, useInterval, useInsertBefore, setRequestRender, setInsertBefore, runEffects, destroyFiber,
     type Fiber, type AsyncState,
 } from './hooks.js';
@@ -295,5 +295,55 @@ describe('useId', () => {
         clearCurrentFiber();
 
         expect(idA).not.toBe(idB);
+    });
+});
+
+
+describe('useKeymap conflict detection', () => {
+    let fiber: Fiber;
+    
+    beforeEach(() => {
+        fiber = createFiber();
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+        setRequestRender(() => { });
+    });
+
+    afterEach(() => {
+        clearCurrentFiber();
+        vi.restoreAllMocks();
+    });
+
+    it('warns about conflicting keybindings on initial render', () => {
+        setCurrentFiber(fiber);
+        useKeymap([
+            { key: 'q', action: () => {} },
+            { key: 'q', action: () => {} }
+        ]);
+        clearCurrentFiber();
+        
+        expect(console.warn).toHaveBeenCalledTimes(1);
+    });
+
+    it('warns about conflicting keybindings on subsequent renders (dynamic bindings)', () => {
+        setCurrentFiber(fiber);
+        useKeymap([
+            { key: 'q', action: () => {} },
+        ]);
+        clearCurrentFiber();
+        
+        // No conflicts yet
+        expect(console.warn).not.toHaveBeenCalled();
+
+        // Trigger re-render with a dynamic conflict added
+        fiber.hookIndex = 0;
+        setCurrentFiber(fiber);
+        useKeymap([
+            { key: 'q', action: () => {} },
+            { key: 'q', action: () => {} }
+        ]);
+        clearCurrentFiber();
+        
+        // Warning should now be triggered on the re-render
+        expect(console.warn).toHaveBeenCalledTimes(1);
     });
 });

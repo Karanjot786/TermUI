@@ -4,6 +4,7 @@ import { type Screen, type Style, caps, styleToCellAttrs } from '@termuijs/core'
 export interface QRCodePatternOptions {
     darkChar?: string;
     lightChar?: string;
+    showText?: boolean;
 }
 
 export interface QRCodeOptions extends QRCodePatternOptions {
@@ -35,6 +36,7 @@ export class QRCodePattern extends Widget {
     }
 
     setData(data: string): void {
+        if(this.data === data) return;
         this.data = data;
         this.markDirty();
     }
@@ -76,7 +78,7 @@ export class QRCodePattern extends Widget {
         for (let row = 0; row < drawHeight; row++) {
             for (let col = 0; col < drawWidth; col++) {
                 let char: string;
-
+        
                 if (this.isFinder(col, row)) {
                     char = this.renderFinder(col, row);
                 } else {
@@ -84,9 +86,18 @@ export class QRCodePattern extends Widget {
                     const bit = (hash >> bitIndex) & 1;
                     char = bit ? dark : light;
                 }
-
+        
                 screen.writeString(baseX + col, baseY + row, char, attrs);
             }
+        }
+        
+        if (this.opts.showText && height > drawHeight) {
+            screen.writeString(
+                baseX,
+                baseY + drawHeight,
+                this.data.slice(0, width),
+                attrs
+            );
         }
     }
 }

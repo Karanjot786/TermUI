@@ -191,4 +191,20 @@ describe('DataGrid', () => {
         expect(grid.sortDirection).toBe('asc');
         expect(grid.sortKey).toBe('name');
     });
+    
+    it('up and down keys move the selected row', () => {
+        const grid = new DataGrid(COLUMNS, ROWS);
+
+        expect(grid.selectedRow).toBe(0);
+
+        grid.handleKey(keyOf('down'));
+        expect(grid.selectedRow).toBe(1);
+
+        grid.handleKey(keyOf('down'));
+        expect(grid.selectedRow).toBe(2);
+
+        grid.handleKey(keyOf('up'));
+        expect(grid.selectedRow).toBe(1);
+    });
+
 });

@@ -2,18 +2,23 @@
 // @termuijs/widgets — TextInput widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
+import {
+    type Screen,
+    type Style,
+    styleToCellAttrs,
+    stringWidth,
+    truncate,
+    type KeyEvent,
+    splitGraphemes
+} from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { type VimMode } from './vim.js';
+
+export type { VimMode };
 
 /**
- * TextInput — a single-line text input field.
- *
- * Supports:
- * - Cursor movement (left/right/Home/End)
- * - Character insertion and deletion
- * - Placeholder text
- * - Password masking
- * - Max length constraint
+ * TextInput — a single-line text input field
+ * with optional command auto-completion support.
  */
 export class TextInput extends Widget {
     private _value = '';
@@ -23,6 +28,9 @@ export class TextInput extends Widget {
     private _maxLength: number;
     private _onChange?: (value: string) => void;
     private _onSubmit?: (value: string) => void;
+    private _vimMode: VimMode = process.env.TERMUI_KEYBINDINGS === 'vim' ? 'normal' : 'insert';
+    private _suggestions: string[] = [];
+    private _suggestionIndex = 0;
 
     constructor(
         style: Partial<Style> = {},
@@ -30,82 +38,334 @@ export class TextInput extends Widget {
             placeholder?: string;
             mask?: string;
             maxLength?: number;
+            suggestions?: string[];
             onChange?: (value: string) => void;
             onSubmit?: (value: string) => void;
         } = {},
     ) {
         super({ border: 'single', height: 3, ...style });
+
         this._placeholder = options.placeholder ?? '';
         this._mask = options.mask ?? null;
         this._maxLength = options.maxLength ?? Infinity;
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
+        this._suggestions = options.suggestions ?? [];
+
         this.focusable = true;
+
+        this.events.on('key', (event: KeyEvent) => this.handleKey(event));
     }
 
-    get value(): string { return this._value; }
+    get value(): string {
+        return this._value;
+    }
+
     set value(v: string) {
-        this._value = v.slice(0, this._maxLength);
-        this._cursorPos = Math.min(this._cursorPos, this._value.length);
+        const graphemes = splitGraphemes(v);
+        if (graphemes.length > this._maxLength) {
+            this._value = graphemes.slice(0, this._maxLength).join('');
+        } else {
+            this._value = v;
+        }
+        this._cursorPos = Math.min(this._cursorPos, splitGraphemes(this._value).length);
         this.markDirty();
     }
 
-    /**
-     * Handle a typed character.
-     */
+    get vimMode(): VimMode {
+        return this._vimMode;
+    }
+
+    set vimMode(mode: VimMode) {
+        this._vimMode = mode;
+        this.markDirty();
+    }
+
+    getSuggestions(input: string): string[] {
+        return this._suggestions.filter(s => s.toLowerCase().includes(input.toLowerCase()));
+    }
+
+    acceptSuggestion(): void {
+        const suggestions = this.getSuggestions(this._value);
+        if (suggestions.length === 0) return;
+        this.value = suggestions[this._suggestionIndex % suggestions.length];
+        this._cursorPos = splitGraphemes(this._value).length;
+        this.markDirty();
+    }
+
     insertChar(char: string): void {
-        if (this._value.length >= this._maxLength) return;
-        this._value =
-            this._value.slice(0, this._cursorPos) +
-            char +
-            this._value.slice(this._cursorPos);
+        const graphemes = splitGraphemes(this._value);
+        if (graphemes.length >= this._maxLength) return;
+        graphemes.splice(this._cursorPos, 0, char);
+        this._value = graphemes.join('');
         this._cursorPos++;
+        this._suggestionIndex = 0;
         this._onChange?.(this._value);
         this.markDirty();
     }
 
-    /**
-     * Delete the character before the cursor.
-     */
     deleteBack(): void {
         if (this._cursorPos > 0) {
-            this._value =
-                this._value.slice(0, this._cursorPos - 1) +
-                this._value.slice(this._cursorPos);
+            const graphemes = splitGraphemes(this._value);
+            graphemes.splice(this._cursorPos - 1, 1);
+            this._value = graphemes.join('');
             this._cursorPos--;
             this._onChange?.(this._value);
             this.markDirty();
         }
     }
 
-    /**
-     * Delete the character after the cursor.
-     */
     deleteForward(): void {
-        if (this._cursorPos < this._value.length) {
-            this._value =
-                this._value.slice(0, this._cursorPos) +
-                this._value.slice(this._cursorPos + 1);
+        const graphemes = splitGraphemes(this._value);
+        if (this._cursorPos < graphemes.length) {
+            graphemes.splice(this._cursorPos, 1);
+            this._value = graphemes.join('');
             this._onChange?.(this._value);
             this.markDirty();
         }
     }
 
-    moveCursorLeft(): void { this._cursorPos = Math.max(0, this._cursorPos - 1); 
+    deleteWordBack(): void {
+        if (this._cursorPos === 0) return;
+
+        const graphemes = splitGraphemes(this._value);
+        let i = this._cursorPos - 1;
+
+        // Skip trailing spaces
+        while (i >= 0 && graphemes[i] === ' ') {
+            i--;
+        }
+
+        // Find the start of the word
+        while (i >= 0 && graphemes[i] !== ' ') {
+            i--;
+        }
+
+        const deleteStart = i + 1;
+
+        graphemes.splice(deleteStart, this._cursorPos - deleteStart);
+        this._value = graphemes.join('');
+        this._cursorPos = deleteStart;
+        this._onChange?.(this._value);
         this.markDirty();
     }
-    moveCursorRight(): void { this._cursorPos = Math.min(this._value.length, this._cursorPos + 1); 
+
+    moveCursorLeft(): void {
+        const next = Math.max(0, this._cursorPos - 1);
+
+        if (next === this._cursorPos) {
+            return;
+        }
+
+        this._cursorPos = next;
         this.markDirty();
     }
-    moveCursorHome(): void { this._cursorPos = 0; 
+
+    moveCursorRight(): void {
+        const graphemes = splitGraphemes(this._value);
+        const next = Math.min(graphemes.length, this._cursorPos + 1);
+
+        if (next === this._cursorPos) {
+            return;
+        }
+
+        this._cursorPos = next;
         this.markDirty();
     }
-    moveCursorEnd(): void { this._cursorPos = this._value.length;
+
+    moveCursorHome(): void {
+        if (this._cursorPos === 0) {
+            return;
+        }
+
+        this._cursorPos = 0;
         this.markDirty();
-     }
-    submit(): void { this._onSubmit?.(this._value); }
-    clear(): void { this._value = ''; this._cursorPos = 0; this._onChange?.(''); 
+    }
+
+    moveCursorEnd(): void {
+        const graphemes = splitGraphemes(this._value);
+        if (this._cursorPos === graphemes.length) {
+            return;
+        }
+
+        this._cursorPos = graphemes.length;
         this.markDirty();
+    }
+
+    submit(): void {
+        this._onSubmit?.(this._value);
+    }
+
+    clear(): void {
+        this._value = '';
+        this._cursorPos = 0;
+        this._suggestionIndex = 0;
+        this._onChange?.('');
+        this.markDirty();
+    }
+
+    clearLine(): void {
+        this._value = '';
+        this._cursorPos = 0;
+        this._onChange?.('');
+        this.markDirty();
+    }
+
+    handleKey(event: KeyEvent): void {
+        const isVim = process.env.TERMUI_KEYBINDINGS === 'vim';
+
+        if (isVim) {
+            if (this._vimMode === 'normal') {
+                switch (event.key) {
+                    case 'i':
+                        this._vimMode = 'insert';
+                        this.markDirty();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'a':
+                        this._vimMode = 'insert';
+                        this.moveCursorRight();
+                        this.markDirty();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'v':
+                        this._vimMode = 'visual';
+                        this.markDirty();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'h':
+                        this.moveCursorLeft();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'l':
+                        this.moveCursorRight();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    case 'x': {
+                        const graphemes = splitGraphemes(this._value);
+                        if (this._cursorPos < graphemes.length) {
+                            graphemes.splice(this._cursorPos, 1);
+                            this._value = graphemes.join('');
+                            this._cursorPos = Math.min(this._cursorPos, graphemes.length - 1);
+                            this._cursorPos = Math.max(0, this._cursorPos);
+                            this._onChange?.(this._value);
+                            this.markDirty();
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    }
+                    case 'j':
+                        event.key = 'tab';
+                        event.shift = false;
+                        break;
+                    case 'k':
+                        event.key = 'tab';
+                        event.shift = true;
+                        break;
+                    case 'enter':
+                    case 'return':
+                        this.submit();
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                    default:
+                        event.preventDefault();
+                        event.stopPropagation();
+                        break;
+                }
+                return;
+            } else if (this._vimMode === 'visual') {
+                if (event.key === 'escape') {
+                    this._vimMode = 'normal';
+                    this.markDirty();
+                    event.preventDefault();
+                    event.stopPropagation();
+                } else {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                return;
+            } else if (this._vimMode === 'insert') {
+                if (event.key === 'escape') {
+                    this._vimMode = 'normal';
+                    this.moveCursorLeft();
+                    this.markDirty();
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                }
+            }
+        }
+
+        if (event.ctrl) {
+            if (event.key === 'u') {
+                this.clearLine();
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            } else if (event.key === 'w') {
+                this.deleteWordBack();
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+        }
+
+        switch (event.key) {
+            case 'tab':
+                this.acceptSuggestion();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'backspace':
+                this.deleteBack();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'delete':
+                this.deleteForward();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'left':
+                this.moveCursorLeft();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'right':
+                this.moveCursorRight();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'home':
+                this.moveCursorHome();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'end':
+                this.moveCursorEnd();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            case 'return':
+            case 'enter':
+                this.submit();
+                event.preventDefault();
+                event.stopPropagation();
+                break;
+            default:
+                if (event.key && splitGraphemes(event.key).length === 1 && !event.ctrl && !event.alt) {
+                    this.insertChar(event.key);
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+        }
     }
 
     protected _renderSelf(screen: Screen): void {
@@ -116,39 +376,91 @@ export class TextInput extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         if (this._value.length === 0 && !this.isFocused) {
-            // Show placeholder
             screen.writeString(x, y, truncate(this._placeholder, width), { ...attrs, dim: true });
             return;
         }
 
-        // Display value (optionally masked)
-        const displayValue = this._mask
-            ? this._mask.repeat(this._value.length)
-            : this._value;
+        const graphemes = splitGraphemes(this._value);
+        const displayGraphemes = this._mask
+            ? Array(graphemes.length).fill(this._mask)
+            : graphemes;
 
-        // Scroll the view if cursor is beyond visible area
-        const visibleWidth = width - 1; // Leave room for cursor
-        let scrollX = 0;
-        if (this._cursorPos > visibleWidth) {
-            scrollX = this._cursorPos - visibleWidth;
+        let rightReserved = 0;
+        let modeIndicator = '';
+        if (process.env.TERMUI_KEYBINDINGS === 'vim' && this.isFocused && width > 15) {
+            modeIndicator = ` -- ${this._vimMode.toUpperCase()} -- `;
+            rightReserved = modeIndicator.length;
+        } else if (this.isFocused) {
+            const length = this._value.length;
+            const max = this._maxLength === Infinity ? null : this._maxLength;
+            const counterText = max ? `${length}/${max}` : `${length}`;
+            const counterWidth = stringWidth(counterText);
+            if (x + width - counterWidth >= x) {
+                rightReserved = counterWidth;
+            }
         }
 
-        const visibleText = displayValue.slice(scrollX, scrollX + visibleWidth);
+        const maxVisibleWidth = width - rightReserved;
+        if (maxVisibleWidth <= 0) return;
+
+        // Calculate visual width prefix sums
+        const prefixWidths: number[] = [0];
+        for (let i = 0; i < displayGraphemes.length; i++) {
+            prefixWidths.push(prefixWidths[i] + stringWidth(displayGraphemes[i]));
+        }
+
+        let scrollGraphemeIndex = 0;
+        const targetVisualEnd = this._cursorPos < displayGraphemes.length
+            ? prefixWidths[this._cursorPos + 1]
+            : prefixWidths[this._cursorPos];
+
+        while (scrollGraphemeIndex < this._cursorPos && targetVisualEnd - prefixWidths[scrollGraphemeIndex] > maxVisibleWidth) {
+            scrollGraphemeIndex++;
+        }
+
+        let endGraphemeIndex = scrollGraphemeIndex;
+        while (endGraphemeIndex < displayGraphemes.length && prefixWidths[endGraphemeIndex + 1] - prefixWidths[scrollGraphemeIndex] <= maxVisibleWidth) {
+            endGraphemeIndex++;
+        }
+
+        const visibleGraphemes = displayGraphemes.slice(scrollGraphemeIndex, endGraphemeIndex);
+        const visibleText = visibleGraphemes.join('');
         screen.writeString(x, y, visibleText, attrs);
 
-        // Draw cursor when focused
         if (this.isFocused) {
-            const cursorScreenPos = x + this._cursorPos - scrollX;
-            if (cursorScreenPos >= x && cursorScreenPos < x + width) {
-                const cursorChar = this._cursorPos < displayValue.length
-                    ? displayValue[this._cursorPos]
+            const cursorOffset = prefixWidths[this._cursorPos] - prefixWidths[scrollGraphemeIndex];
+            const cursorScreenPos = x + cursorOffset;
+            if (cursorScreenPos >= x && cursorScreenPos < x + maxVisibleWidth) {
+                const cursorChar = this._cursorPos < displayGraphemes.length
+                    ? displayGraphemes[this._cursorPos]
                     : ' ';
+                const isBlock = this._vimMode === 'normal' || this._vimMode === 'visual';
                 screen.setCell(cursorScreenPos, y, {
-                    char: cursorChar,
+                    char: cursorChar[0] || ' ',
                     ...attrs,
-                    inverse: true,
+                    inverse: isBlock,
+                    underline: !isBlock,
                 });
             }
+        }
+
+        if (modeIndicator) {
+            screen.writeString(x + width - modeIndicator.length, y, modeIndicator, { ...attrs, dim: true });
+        } else if (this.isFocused) {
+            const length = this._value.length;
+            const max = this._maxLength === Infinity ? null : this._maxLength;
+            const counterText = max ? `${length}/${max}` : `${length}`;
+            const counterWidth = stringWidth(counterText);
+            const counterX = x + width - counterWidth;
+            if (counterX >= x) {
+                screen.writeString(counterX, y, counterText, { ...attrs, dim: true });
+            }
+        }
+
+        // Inline suggestions (only visible when height > 1, e.g. opts.style.height > 3)
+        const suggestions = this.getSuggestions(this._value).slice(0, height - 1);
+        for (let i = 0; i < suggestions.length; i++) {
+            screen.writeString(x, y + i + 1, truncate(suggestions[i], width), { ...attrs, dim: true });
         }
     }
 }

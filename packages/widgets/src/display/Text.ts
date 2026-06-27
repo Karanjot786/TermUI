@@ -36,6 +36,9 @@ export class Text extends Widget {
 
     /** Update the text content */
     setContent(content: string): void {
+        if (content === this._content) {
+            return;
+        }
         this._content = content;
         this.markDirty();
     }
@@ -45,15 +48,27 @@ export class Text extends Widget {
         return this._content;
     }
 
+    toString(): string {
+        return this._content;
+    }
+
     /** Set vertical scroll offset (lines to skip). */
     setScrollY(offset: number): void {
-        this._scrollY = Math.max(0, offset);
+        const normalized = Math.max(0, offset);
+        if (normalized === this._scrollY) {
+            return;
+        }
+        this._scrollY = normalized;
         this.markDirty();
     }
 
     /** Set horizontal scroll offset (columns to skip). */
     setScrollX(offset: number): void {
-        this._scrollX = Math.max(0, offset);
+        const normalized = Math.max(0, offset);
+        if (normalized === this._scrollX) {
+            return;
+        }
+        this._scrollX = normalized;
         this.markDirty();
     }
 

@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { Box, Text } from '@termuijs/widgets';
 import { Screen } from '@termuijs/core';
 import type { VNode } from './vnode.js';
-import { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
+import { reconcile, reRenderComponent, unmountAll, _pruneInstancesForWidget } from './reconciler.js';
 import { destroyFiber } from './hooks.js';
 
 // ── Helper: make a functional component VNode ──
@@ -167,5 +167,11 @@ describe('re-render dirty propagation', () => {
         const newerWidget = reRenderComponent(inst2);
 
         expect(newerWidget.isDirty).toBe(true);
+    });
+
+    it('_pruneInstancesForWidget handles null/undefined children without throwing', () => {
+        const widget = new Box();
+        (widget as any)._children = [null, undefined, 'string', 42];
+        expect(() => _pruneInstancesForWidget(widget)).not.toThrow();
     });
 });

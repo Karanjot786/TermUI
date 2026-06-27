@@ -4,7 +4,7 @@
 
 import { createContext, useContext } from '@termuijs/jsx';
 import type { Router } from './router.js';
-import type { RouteParams, RouteMeta } from './route.js';
+import type { RouteParams, RouteMeta, QueryParams } from './route.js';
 
 export const RouterContext = createContext<Router | null>(null);
 
@@ -22,17 +22,17 @@ export function useParams(): RouteParams {
 /**
  * Returns a function to trigger navigation.
  */
-export function useNavigate(): (path: string, options?: { replace?: boolean }) => void {
+export function useNavigate(): (path: string, options?: { replace?: boolean; query?: QueryParams }) => void {
     const router = useContext(RouterContext);
     
-    return (path: string, options?: { replace?: boolean }) => {
+    return (path: string, options?: { replace?: boolean; query?: QueryParams }) => {
         if (!router) {
             return;
         }
         if (options?.replace) {
-            router.replace(path);
+            router.replace(path, { query: options?.query });
         } else {
-            router.push(path);
+            router.push(path, { query: options?.query });
         }
     };
 }
@@ -43,4 +43,15 @@ export function useNavigate(): (path: string, options?: { replace?: boolean }) =
 export function useRouteMeta(): RouteMeta {
     const router = useContext(RouterContext);
     return router?.current?.meta ?? {};
+}
+
+/**
+ * Returns the current query parameters.
+ */
+export function useQueryParams(): QueryParams {
+    const router = useContext(RouterContext);
+    if (!router) {
+        return {};
+    }
+    return router.query;
 }

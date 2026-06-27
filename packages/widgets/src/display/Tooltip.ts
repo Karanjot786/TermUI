@@ -82,6 +82,7 @@ export class Tooltip extends Widget {
     }
 
     setText(text: string): void {
+        if (this._text === text) return;
         this._text = text;
         this.markDirty();
     }
@@ -91,6 +92,7 @@ export class Tooltip extends Widget {
     }
 
     setVisible(visible: boolean): void {
+        if (this._visible === visible) return;
         this._visible = visible;
         this.markDirty();
     }

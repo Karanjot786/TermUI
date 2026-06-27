@@ -99,6 +99,9 @@ export class OrderedList extends Widget {
     }
 
     setItems(items: OrderedListItem[]): void {
+        if (items === this._items) {
+            return;
+        }
         this._items = items;
         this.markDirty();
     }

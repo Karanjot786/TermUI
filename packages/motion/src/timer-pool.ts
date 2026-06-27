@@ -14,6 +14,18 @@ import type { VirtualClock } from './virtual-clock.js';
 const pool = new Map<number, { id: ReturnType<typeof setInterval>; subs: Set<() => void> }>();
 let virtualClock: VirtualClock | null = null;
 
+// Saved pool callbacks from before clock injection — restored on detach.
+const savedSubs = new Map<number, Set<() => void>>();
+
+// Track callbacks registered with the clock via subscribe(delayMs, cb)
+// so they can be migrated back to real timers when the clock is detached.
+interface ClockSubEntry {
+    delayMs: number;
+    cb: () => void;
+    unsub: () => void;
+}
+const clockSubs: ClockSubEntry[] = [];
+
 /**
  * Subscribe a callback to a shared interval at `delayMs`.
  * Returns an unsubscribe function. The underlying setInterval
@@ -45,15 +57,50 @@ export function subscribe(...args: unknown[]): () => void {
     // Overload 2: VirtualClock injection.
     if (typeof first === 'object' && first !== null && 'advance' in (first as object)) {
         const clock = first as VirtualClock;
-        // Clear any real timers; the clock takes over.
-        for (const entry of pool.values()) {
+        // Save existing pool callbacks before the clock takes over.
+        for (const [delay, entry] of pool) {
             clearInterval(entry.id);
+            if (!savedSubs.has(delay)) {
+                savedSubs.set(delay, new Set());
+            }
+            for (const cb of entry.subs) {
+                savedSubs.get(delay)!.add(cb);
+            }
         }
         pool.clear();
         virtualClock = clock;
         return () => {
             if (virtualClock === clock) {
                 virtualClock = null;
+
+                // Restore previously saved pool callbacks with real timers.
+                for (const [delay, subs] of savedSubs) {
+                    for (const cb of subs) {
+                        if (!pool.has(delay)) {
+                            const newSubs = new Set<() => void>();
+                            const id = setInterval(() => {
+                                for (const s of newSubs) s();
+                            }, delay);
+                            pool.set(delay, { id, subs: newSubs });
+                        }
+                        pool.get(delay)!.subs.add(cb);
+                    }
+                }
+                savedSubs.clear();
+
+                // Migrate clock-registered callbacks back to real timers.
+                for (const entry of clockSubs) {
+                    entry.unsub();
+                    if (!pool.has(entry.delayMs)) {
+                        const newSubs = new Set<() => void>();
+                        const id = setInterval(() => {
+                            for (const s of newSubs) s();
+                        }, entry.delayMs);
+                        pool.set(entry.delayMs, { id, subs: newSubs });
+                    }
+                    pool.get(entry.delayMs)!.subs.add(entry.cb);
+                }
+                clockSubs.length = 0;
             }
         };
     }
@@ -62,7 +109,14 @@ export function subscribe(...args: unknown[]): () => void {
     if (virtualClock) {
         const delayMs = first as number;
         const cb = second as () => void;
-        return virtualClock._setInterval(delayMs, cb);
+        const unsub = virtualClock._setInterval(delayMs, cb);
+        const entry: ClockSubEntry = { delayMs, cb, unsub };
+        clockSubs.push(entry);
+        return () => {
+            unsub();
+            const idx = clockSubs.indexOf(entry);
+            if (idx !== -1) clockSubs.splice(idx, 1);
+        };
     }
 
     // Default: real setInterval.
@@ -98,5 +152,11 @@ export function unsubscribeAll(): void {
         clearInterval(entry.id);
     }
     pool.clear();
+    // Cancel any clock-registered subscribers
+    for (const entry of clockSubs) {
+        entry.unsub();
+    }
+    clockSubs.length = 0;
+    savedSubs.clear();
     virtualClock = null;
 }

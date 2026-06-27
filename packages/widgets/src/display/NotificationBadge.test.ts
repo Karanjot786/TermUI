@@ -132,3 +132,59 @@ describe('NotificationBadge', () => {
         expect(badge.getPosition()).toBe('top-right');
     });
 });
+
+describe('NotificationBadge – mutation regression tests', () => {
+    it('does not mark dirty when count is unchanged', () => {
+        const badge = new NotificationBadge({ count: 5 });
+
+        badge.clearDirty();
+        badge.setCount(5);
+
+        expect(badge.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when position is unchanged', () => {
+        const badge = new NotificationBadge({ position: 'top-right' });
+
+        badge.clearDirty();
+        badge.setPosition('top-right');
+
+        expect(badge.isDirty).toBe(false);
+    });
+
+    it('marks dirty when count changes', () => {
+        const badge = new NotificationBadge({ count: 1 });
+
+        badge.clearDirty();
+        badge.setCount(2);
+
+        expect(badge.getCount()).toBe(2);
+        expect(badge.isDirty).toBe(true);
+    });
+
+    it('marks dirty when position changes', () => {
+        const badge = new NotificationBadge({ position: 'top-right' });
+
+        badge.clearDirty();
+        badge.setPosition('bottom-left');
+
+        expect(badge.getPosition()).toBe('bottom-left');
+        expect(badge.isDirty).toBe(true);
+    });
+
+    it('setCount updates stored count across multiple mutations', () => {
+        const badge = new NotificationBadge({ count: 1 });
+
+        badge.setCount(5);
+
+        expect(badge.getCount()).toBe(5);
+    });
+
+    it('setPosition updates stored position across multiple mutations', () => {
+        const badge = new NotificationBadge({ position: 'top-right' });
+
+        badge.setPosition('bottom-left');
+
+        expect(badge.getPosition()).toBe('bottom-left');
+    });
+});
