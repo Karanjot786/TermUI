@@ -348,7 +348,7 @@ export class App {
      */
     exit(code = 0): void {
     this.unmount(code); // unmount() resolves _exitResolve and nulls it
-}
+    }
 
     /**
      * Read from the system clipboard.
