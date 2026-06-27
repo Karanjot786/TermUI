@@ -2,7 +2,7 @@
 // @termuijs/widgets — List widget (selectable)
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
+import { type Screen, type Style, type MouseEvent, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type ListState } from '../data/ListState.js';
 
@@ -74,6 +74,7 @@ export class List extends Widget {
         }
 
         this.focusable = true;
+        this.events.on('mouse', (event) => this.handleMouse(event));
     }
 
     // ── Getters ───────────────────────────────────────
@@ -220,6 +221,30 @@ export class List extends Widget {
         }
         if (this._selectedIndex >= this._scrollOffset + visibleHeight) {
             this._scrollOffset = this._selectedIndex - visibleHeight + 1;
+        }
+    }
+
+    handleMouse(event: MouseEvent): void {
+        if (event.button !== 'left') return;
+        if (event.type !== 'mousedown' && event.type !== 'mouseup') return;
+
+        const rect = this._getContentRect();
+        if (event.x < rect.x || event.x >= rect.x + rect.width) return;
+        if (event.y < rect.y || event.y >= rect.y + rect.height) return;
+
+        const clickedIndex = this._scrollOffset + (event.y - rect.y);
+        const item = this._items[clickedIndex];
+        if (!item || item.disabled) return;
+
+        if (this._selectedIndex !== clickedIndex) {
+            this._selectedIndex = clickedIndex;
+            this._clampScroll();
+            this.markDirty();
+            this._pushState();
+        }
+
+        if (event.type === 'mouseup') {
+            this.confirm();
         }
     }
 }

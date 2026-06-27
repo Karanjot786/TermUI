@@ -10,7 +10,7 @@ import { InputParser } from '../input/InputParser.js';
 import { FocusManager } from '../events/FocusManager.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import { computeLayout, type LayoutNode } from '../layout/LayoutEngine.js';
-import type { EventMap, FocusEvent } from '../events/types.js';
+import type { EventMap, FocusEvent, MouseEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
 import { mergeBorders } from '../renderer/border-merge.js';
@@ -219,6 +219,13 @@ export class App {
         // Forward mouse events
         this._unsubMouse = this.input.onMouse((event) => {
             this.events.emit('mouse', event);
+
+            if (event.type === 'mousedown' || event.type === 'mouseup') {
+                const hitWidget = this._findWidgetAt(event.x, event.y);
+                if (hitWidget) {
+                    hitWidget.events.emit('mouse', event);
+                }
+            }
 
             if (event.type === 'mousemove') {
                 const hitWidget = this._findWidgetAt(event.x, event.y);
