@@ -2,7 +2,7 @@
 // @termuijs/widgets — Tests for Table widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Table } from './Table.js';
 
 const COLUMNS = [

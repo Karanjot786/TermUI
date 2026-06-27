@@ -138,6 +138,14 @@ export class DataGrid extends Table {
 
         // Normal mode: navigation + sort + filter
         switch (event.key) {
+            case 'enter':
+                if (this.selectedRow === -1) {
+                    this.cycleSort();
+                } else {
+                    super.handleKey(event);
+                }
+                break;
+                
             case 's':
             case 'S':
                 if (!event.ctrl && !event.alt) this.cycleSort();
