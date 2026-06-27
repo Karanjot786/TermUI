@@ -98,7 +98,7 @@ export class App {
             diffRenderer: true,
             // Default screenMode: if fullscreen explicitly disabled, treat as 'main', otherwise 'alternate'
             screenMode: options.fullscreen === false ? 'main' : 'alternate',
-            inlineRows: 0,
+            inlineRows: 10,
             ...options,
         };
 
@@ -328,16 +328,14 @@ export class App {
         // is preserved. It also emits any registered `insertBefore` lines
         // above the live UI.
         if (this._options.screenMode === 'inline') {
-            // Render any insertBefore lines first
-            for (const item of this._insertBefore) {
-                this.terminal.write(item.text + '\n');
-            }
-            // Render bottom N rows as plain text
-            // Ensure we pass an object with a `write` method. Support Terminal instance
-            // or raw stdout-like streams used in tests.
-            const writer = (this.terminal && typeof (this.terminal as any).write === 'function')
+            const writer = (typeof (this.terminal as any).write === 'function')
                 ? (this.terminal as any)
                 : { write: (s: string) => (this.terminal as any).stdout.write(s) };
+            // insertBefore lines are pushed above the live block via Screen's
+            // lastRenderedHeight cursor-up, so emit them before the viewport.
+            for (const item of this._insertBefore) {
+                writer.write(item.text + '\n');
+            }
             renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
             return;
         }
@@ -349,12 +347,8 @@ export class App {
      * Exit the app (convenience method).
      */
     exit(code = 0): void {
-        this.unmount(code);
-        if (this._exitResolve) {
-            this._exitResolve(code);
-            this._exitResolve = null;
-        }
-    }
+    this.unmount(code); // unmount() resolves _exitResolve and nulls it
+}
 
     /**
      * Read from the system clipboard.

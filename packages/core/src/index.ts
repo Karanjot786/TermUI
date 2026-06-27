@@ -84,8 +84,8 @@ export type { TestScreen } from './terminal/TestBackend.js';
 export { App } from './app/App.js';
 export type { AppOptions, RootWidget } from './app/App.js';
 export { shouldUseFallback, renderFallback } from './app/Fallback.js';
-export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.js';
-
+export {renderInlineToTerminal,createInlineViewport,usesAlternateScreen,ALT_SCREEN_ENTER,ALT_SCREEN_EXIT,} from './inline-viewport.js';
+export type { ScreenMode, InlineViewportOptions, InsertBeforeFn } from './inline-viewport.js';
 // ── Utilities ─────────────────────────────────────────
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';
 export * as ansi from './utils/ansi.js';
