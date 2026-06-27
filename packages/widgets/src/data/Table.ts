@@ -2,10 +2,10 @@
 // @termuijs/widgets — Table widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
+import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate, wordWrap } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type TableState } from './TableState.js';
-import { computeRange } from '../input/virtual-scroll.js';
+import { computeVariableRange } from '../input/virtual-scroll.js';
 
 export interface TableColumn {
     /** Column header label */
@@ -16,6 +16,8 @@ export interface TableColumn {
     width?: number;
     /** Text alignment within the column */
     align?: 'left' | 'center' | 'right';
+    /** Overflow behavior for cell content */
+    overflow?: 'truncate' | 'wrap';
 }
 
 export type TableRow = Record<string, string | number>;
@@ -155,6 +157,21 @@ export class Table extends Widget {
         this._clampScroll();
         this.markDirty();
     }
+    
+    protected _computeRowHeights(colWidths: number[]): number[] {
+        return this._rows.map(row => {
+            let maxLines = 1;
+            for (let c = 0; c < this._columns.length; c++) {
+                const col = this._columns[c];
+                if (col.overflow === 'wrap') {
+                    const text = String(row[col.key] ?? '');
+                    const lines = wordWrap(text, colWidths[c]).split('\n').length;
+                    if (lines > maxLines) maxLines = lines;
+                }
+            }
+            return maxLines;
+        });
+    }
 
     private _clampScroll(): void {
         const rect = this._getContentRect();
@@ -164,11 +181,20 @@ export class Table extends Widget {
         }
         if (visibleHeight <= 0) { this._scrollOffset = 0; return; }
 
-        if (this._selectedRow < this._scrollOffset) {
-            this._scrollOffset = this._selectedRow;
+        const sepWidth = stringWidth(this._separator);
+        const colWidths = this._computeColumnWidths(Math.max(0, rect.width - (this._columns.length - 1) * sepWidth));
+        const sizes = this._computeRowHeights(colWidths);
+
+        let selectedTop = 0;
+        for (let i = 0; i < this._selectedRow; i++) {
+            selectedTop += sizes[i] ?? 1;
         }
-        if (this._selectedRow >= this._scrollOffset + visibleHeight) {
-            this._scrollOffset = this._selectedRow - visibleHeight + 1;
+        const selectedBottom = selectedTop + (sizes[this._selectedRow] ?? 1);
+
+        if (selectedTop < this._scrollOffset) {
+            this._scrollOffset = selectedTop;
+        } else if (selectedBottom > this._scrollOffset + visibleHeight) {
+            this._scrollOffset = selectedBottom - visibleHeight;
         }
         this._scrollOffset = Math.max(0, this._scrollOffset);
     }
@@ -220,8 +246,9 @@ export class Table extends Widget {
         const dataHeight = height - headerOffset;
         if (dataHeight <= 0) return;
 
-        // Use the virtualization engine
-        const range = computeRange(this._scrollOffset, dataHeight, this._rows.length, 0);
+        const sizes = this._computeRowHeights(colWidths);
+        // Use the virtualization engine with variable heights
+        const range = computeVariableRange(this._scrollOffset, dataHeight, sizes, 0);
 
         // Render data rows within the virtual range
         for (let r = range.start; r < range.end; r++) {
@@ -229,40 +256,58 @@ export class Table extends Widget {
             const isStripe = this._stripe && r % 2 === 1;
             const isSelected = r === this._selectedRow;
             
-            const screenY = y + headerOffset + (r - this._scrollOffset);
-            if (screenY < y || screenY >= y + height) continue;
-
-            let cx = x;
-
-            for (let c = 0; c < this._columns.length; c++) {
-                const col = this._columns[c];
-                const rawValue = String(dataRow[col.key] ?? '');
-                const cellText = this._alignText(rawValue, colWidths[c], col.align ?? 'left');
-
-                screen.writeString(cx, screenY, cellText, {
-                    ...attrs,
-                    bg: isSelected
-                        ? { type: 'named', name: 'blue' }
-                        : isStripe
-                            ? this._stripeColor
-                            : attrs.bg,
-                });
-                cx += colWidths[c];
-                if (c < this._columns.length - 1) {
-                    screen.writeString(cx, screenY, this._separator, {
-                        ...attrs,
-                        dim: true,
-                        bg: isStripe ? this._stripeColor : attrs.bg,
-                    });
-                    cx += sepWidth;
-                }
+            let rowTop = 0;
+            for (let i = 0; i < r; i++) {
+                rowTop += sizes[i] ?? 1;
             }
+            
+            const rowHeight = sizes[r] ?? 1;
 
-            // Fill remaining width for stripe/selection highlight
-            if (isStripe || isSelected) {
-                const rowBg = isSelected ? { type: 'named' as const, name: 'blue' as const } : this._stripeColor;
-                for (let fx = cx; fx < x + width; fx++) {
-                    screen.setCell(fx, screenY, { char: ' ', bg: rowBg });
+            for (let line = 0; line < rowHeight; line++) {
+                const screenY = y + headerOffset + (rowTop - this._scrollOffset) + line;
+                if (screenY < y + headerOffset || screenY >= y + height) continue;
+
+                let cx = x;
+
+                for (let c = 0; c < this._columns.length; c++) {
+                    const col = this._columns[c];
+                    const rawValue = String(dataRow[col.key] ?? '');
+                    
+                    let cellText = '';
+                    if (col.overflow === 'wrap') {
+                        const wrapped = wordWrap(rawValue, colWidths[c]).split('\n');
+                        cellText = wrapped[line] ?? '';
+                    } else {
+                        cellText = line === 0 ? rawValue : '';
+                    }
+                    
+                    const alignedText = this._alignText(cellText, colWidths[c], col.align ?? 'left');
+
+                    screen.writeString(cx, screenY, alignedText, {
+                        ...attrs,
+                        bg: isSelected
+                            ? { type: 'named', name: 'blue' }
+                            : isStripe
+                                ? this._stripeColor
+                                : attrs.bg,
+                    });
+                    cx += colWidths[c];
+                    if (c < this._columns.length - 1) {
+                        screen.writeString(cx, screenY, this._separator, {
+                            ...attrs,
+                            dim: true,
+                            bg: isStripe ? this._stripeColor : attrs.bg,
+                        });
+                        cx += sepWidth;
+                    }
+                }
+
+                // Fill remaining width for stripe/selection highlight
+                if (isStripe || isSelected) {
+                    const rowBg = isSelected ? { type: 'named' as const, name: 'blue' as const } : this._stripeColor;
+                    for (let fx = cx; fx < x + width; fx++) {
+                        screen.setCell(fx, screenY, { char: ' ', bg: rowBg });
+                    }
                 }
             }
         }
