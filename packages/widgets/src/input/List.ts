@@ -41,6 +41,7 @@ export class List extends Widget {
     private _items: ListItem[];
     private _selectedIndex = 0;
     private _scrollOffset = 0;
+    private _mouseDownValid = false;
     private _onSelect?: (item: ListItem, index: number) => void;
     private _state?: ListState;
     private _onStateChange?: (state: ListState) => void;
@@ -228,23 +229,39 @@ export class List extends Widget {
         if (event.button !== 'left') return;
         if (event.type !== 'mousedown' && event.type !== 'mouseup') return;
 
-        const rect = this._getContentRect();
-        if (event.x < rect.x || event.x >= rect.x + rect.width) return;
-        if (event.y < rect.y || event.y >= rect.y + rect.height) return;
+        if (event.type === 'mousedown') {
+            const rect = this._getContentRect();
+            if (event.x < rect.x || event.x >= rect.x + rect.width) {
+                this._mouseDownValid = false;
+                return;
+            }
+            if (event.y < rect.y || event.y >= rect.y + rect.height) {
+                this._mouseDownValid = false;
+                return;
+            }
 
-        const clickedIndex = this._scrollOffset + (event.y - rect.y);
-        const item = this._items[clickedIndex];
-        if (!item || item.disabled) return;
+            const clickedIndex = this._scrollOffset + (event.y - rect.y);
+            const item = this._items[clickedIndex];
+            if (!item || item.disabled) {
+                this._mouseDownValid = false;
+                return;
+            }
 
-        if (this._selectedIndex !== clickedIndex) {
-            this._selectedIndex = clickedIndex;
-            this._clampScroll();
-            this.markDirty();
-            this._pushState();
+            this._mouseDownValid = true;
+            if (this._selectedIndex !== clickedIndex) {
+                this._selectedIndex = clickedIndex;
+                this._clampScroll();
+                this.markDirty();
+                this._pushState();
+            }
+            return;
         }
 
         if (event.type === 'mouseup') {
-            this.confirm();
+            if (this._mouseDownValid) {
+                this.confirm();
+            }
+            this._mouseDownValid = false;
         }
     }
 }

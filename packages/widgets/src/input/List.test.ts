@@ -69,6 +69,19 @@ describe('List', () => {
         expect(handler).toHaveBeenCalledWith(items[1], 1);
     });
 
+    it('mousedown on one item and mouseup on another confirms the originally selected item', () => {
+        const handler = vi.fn();
+        const list = new List(items, {}, handler);
+        list.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+
+        list.events.emit('mouse', { x: 1, y: 2, type: 'mousedown', button: 'left' });
+        expect(list.selectedIndex).toBe(1);
+
+        list.events.emit('mouse', { x: 1, y: 3, type: 'mouseup', button: 'left' });
+        expect(list.selectedIndex).toBe(1);
+        expect(handler).toHaveBeenCalledWith(items[1], 1);
+    });
+
     it('mouse clicks on disabled items do not select or confirm', () => {
         const handler = vi.fn();
         const disabledItems: ListItem[] = [
