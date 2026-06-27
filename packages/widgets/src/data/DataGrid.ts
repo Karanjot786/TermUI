@@ -28,7 +28,7 @@ export interface DataGridColumn extends TableColumn {
 
 export type DataGridRow = TableRow;
 
-export interface DataGridOptions extends TableOptions {
+export interface DataGridOptions extends Omit<TableOptions, 'onSort'> {
     /** Callback fired when sort changes. */
     onSort?: (key: string, direction: SortDirection) => void;
     /** Callback fired when the filter changes. */
@@ -57,8 +57,9 @@ export class DataGrid extends Table {
             ...c,
             sortable: c.sortable ?? true,
         }));
-        super(normalizedColumns, rows, style, options);
-        this._onSort = options.onSort;
+        const { onSort, ...tableOptions } = options;
+        super(normalizedColumns, rows, style, tableOptions);
+        this._onSort = onSort;
         this._onFilter = options.onFilter;
     }
 

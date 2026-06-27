@@ -2,7 +2,7 @@
 // @termuijs/widgets — Table widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
+import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type TableState } from './TableState.js';
 import { computeRange } from '../input/virtual-scroll.js';
@@ -31,6 +31,8 @@ export interface TableOptions {
     stripeColor?: Color;
     /** Column separator character */
     separator?: string;
+    /** Callback when a column header is activated to sort */
+    onSort?: (colIndex: number, direction: 'asc' | 'desc') => void;
 }
 
 export interface TableProps {
@@ -56,6 +58,7 @@ export interface TableProps {
  * - Truncation for overflow
  * - External state via `state` prop and `useTableState` hook
  * - Virtualized scrolling
+ * - Column sorting (internal or callback-driven)
  */
 export class Table extends Widget {
     focusable = true;
@@ -70,7 +73,10 @@ export class Table extends Widget {
     private _onStateChange?: (state: TableState) => void;
     private _selectedRow = 0;
     private _scrollOffset = 0;
-    private _sortColumn = '';
+    
+    private _focusedHeaderIndex = 0;
+    private _tableOnSort?: (colIndex: number, direction: 'asc' | 'desc') => void;
+    private _sortState: { colIndex: number; direction: 'asc' | 'desc' } | null = null;
 
     constructor(
         columnsOrProps: TableColumn[] | TableProps,
@@ -104,6 +110,7 @@ export class Table extends Widget {
         this._separator = options.separator ?? ' │ ';
         this._state = state;
         this._onStateChange = onStateChange;
+        this._tableOnSort = options.onSort;
     }
 
     // ── Public API ────────────────────────────────────
@@ -119,15 +126,36 @@ export class Table extends Widget {
         this._pushState();
     }
 
-    sortByColumn(columnKey: string): void {
-        this._sortColumn = columnKey;
+    sortByColumn(columnKey: string, direction: 'asc' | 'desc' = 'asc'): void {
+        const colIndex = this._columns.findIndex(c => c.key === columnKey);
+        if (colIndex !== -1) {
+            this._sortState = { colIndex, direction };
+        }
 
-        this._rows.sort((a, b) =>
-            String(a[columnKey] ?? '').localeCompare(
-                String(b[columnKey] ?? '')
-            )
-        );
+        this._rows.sort((a, b) => {
+            const cmp = String(a[columnKey] ?? '').localeCompare(String(b[columnKey] ?? ''));
+            return direction === 'asc' ? cmp : -cmp;
+        });
 
+        this.markDirty();
+    }
+
+    toggleSort(colIndex: number): void {
+        if (colIndex < 0 || colIndex >= this._columns.length) return;
+        
+        if (this._sortState?.colIndex === colIndex) {
+            this._sortState.direction = this._sortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            this._sortState = { colIndex, direction: 'asc' };
+        }
+        
+        if (this._tableOnSort) {
+            this._tableOnSort(colIndex, this._sortState.direction);
+        } else {
+            // Fallback to internal sort if no callback provided
+            const key = this._columns[colIndex].key;
+            this.sortByColumn(key, this._sortState.direction);
+        }
         this.markDirty();
     }
 
@@ -141,8 +169,10 @@ export class Table extends Widget {
     }
 
     handleKey(event: KeyEvent): void {
+        const minRow = this._showHeader ? -1 : 0;
+
         if (event.key === 'up') {
-            this._selectedRow = Math.max(0, this._selectedRow - 1);
+            this._selectedRow = Math.max(minRow, this._selectedRow - 1);
         }
 
         if (event.key === 'down') {
@@ -150,6 +180,19 @@ export class Table extends Widget {
                 this._rows.length - 1,
                 this._selectedRow + 1
             );
+        }
+
+        // Header Navigation Mode
+        if (this._selectedRow === -1) {
+            if (event.key === 'left') {
+                this._focusedHeaderIndex = Math.max(0, this._focusedHeaderIndex - 1);
+            }
+            if (event.key === 'right') {
+                this._focusedHeaderIndex = Math.min(this._columns.length - 1, this._focusedHeaderIndex + 1);
+            }
+            if (event.key === 'enter') {
+                this.toggleSort(this._focusedHeaderIndex);
+            }
         }
 
         this._clampScroll();
@@ -165,7 +208,7 @@ export class Table extends Widget {
         if (visibleHeight <= 0) { this._scrollOffset = 0; return; }
 
         if (this._selectedRow < this._scrollOffset) {
-            this._scrollOffset = this._selectedRow;
+            this._scrollOffset = Math.max(0, this._selectedRow);
         }
         if (this._selectedRow >= this._scrollOffset + visibleHeight) {
             this._scrollOffset = this._selectedRow - visibleHeight + 1;
@@ -195,10 +238,21 @@ export class Table extends Widget {
             let cx = x;
             for (let c = 0; c < this._columns.length; c++) {
                 const col = this._columns[c];
-                const cellText = this._alignText(col.header, colWidths[c], col.align ?? 'left');
+                
+                let headerText = col.header;
+                if (this._sortState?.colIndex === c) {
+                    const ascIcon = caps.unicode ? ' ▲' : ' ^';
+                    const descIcon = caps.unicode ? ' ▼' : ' v';
+                    headerText += this._sortState.direction === 'asc' ? ascIcon : descIcon;
+                }
+
+                const cellText = this._alignText(headerText, colWidths[c], col.align ?? 'left');
+                const isHeaderFocused = this.isFocused && this._selectedRow === -1 && this._focusedHeaderIndex === c;
+                
                 screen.writeString(cx, y + headerOffset, cellText, {
                     ...attrs,
-                    fg: this._headerColor,
+                    fg: isHeaderFocused ? attrs.bg : this._headerColor,
+                    bg: isHeaderFocused ? this._headerColor : attrs.bg,
                     bold: true,
                 });
                 cx += colWidths[c];
