@@ -510,4 +510,26 @@ export class Screen {
         }
         return grid;
     }
+
+        /**
+     * Applies a backdrop filter (dark gray foreground, black background) 
+     * to all cells outside the specified exclude rectangle.
+     */
+    applyBackdropFilter(excludeRect: { x: number; y: number; width: number; height: number; }): void {
+        for (let y = 0; y < this._rows; y++) {
+            for (let x = 0; x < this._cols; x++) {
+                if (x >= excludeRect.x && x < excludeRect.x + excludeRect.width &&
+                    y >= excludeRect.y && y < excludeRect.y + excludeRect.height) {
+                    continue;
+                }
+                // Access back buffer directly to bypass Readonly<Cell> constraint
+                const cell = this.back[y]?.[x];
+                if (cell) {
+                    cell.fg = { type: 'named', name: 'brightBlack' }; // dark gray
+                    cell.bg = { type: 'named', name: 'black' };
+                }
+            }
+        }
+    }
+
 }
