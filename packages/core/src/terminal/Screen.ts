@@ -90,7 +90,6 @@ export function cellsEqual(a: Cell, b: Cell): boolean {
         a.inverse === b.inverse &&
         a.width === b.width &&
         a.link === b.link &&
-        a.debugWidgetId === b.debugWidgetId &&
         colorsEqual(a.fg, b.fg) &&
         colorsEqual(a.bg, b.bg)
     );

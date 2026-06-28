@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────
 // DevTools Panel — widget tree inspector, perf metrics
 // ─────────────────────────────────────────────────────
-import { type Screen } from '@termuijs/core';
+import { type Screen, caps } from '@termuijs/core';
 
 
 export interface WidgetNode {
@@ -195,34 +195,73 @@ export function getWidgetRect(root: WidgetNode | null, id: string): { x: number;
     return null;
 }
 
-export function renderDebugRect(screen: Screen, rect: { x: number; y: number; width: number; height: number; }): void {
+let lastHoverWidgetId: string | null = null;
+let lastHoverCells: { x: number; y: number; cell: any }[] = [];
+
+export function renderDebugRect(screen: Screen, rect: { x: number; y: number; width: number; height: number; }): { x: number; y: number; cell: any }[] {
     const color = { type: 'hex', hex: '#FF00FF' } as const;
     const bg = { type: 'none' } as const;
+    const savedCells: { x: number; y: number; cell: any }[] = [];
+
+    const saveCell = (x: number, y: number) => {
+        const cell = screen.getCell(x, y);
+        if (cell) {
+            savedCells.push({ x, y, cell: { ...cell } });
+        }
+    };
+
+    const hBar = caps.unicode ? '─' : '-';
+    const vBar = caps.unicode ? '│' : '|';
+    const tl = caps.unicode ? '┌' : '+';
+    const tr = caps.unicode ? '┐' : '+';
+    const bl = caps.unicode ? '└' : '+';
+    const br = caps.unicode ? '┘' : '+';
 
     // Draw top & bottom borders safely
     for (let x = rect.x; x < rect.x + rect.width; x++) {
-        screen.setCell(x, rect.y, { char: '─', fg: color, bg });
-        screen.setCell(x, rect.y + rect.height - 1, { char: '─', fg: color, bg });
+        saveCell(x, rect.y);
+        screen.setCell(x, rect.y, { char: hBar, fg: color, bg });
+        saveCell(x, rect.y + rect.height - 1);
+        screen.setCell(x, rect.y + rect.height - 1, { char: hBar, fg: color, bg });
     }
     // Draw left & right borders safely
     for (let y = rect.y; y < rect.y + rect.height; y++) {
-        screen.setCell(rect.x, y, { char: '│', fg: color, bg });
-        screen.setCell(rect.x + rect.width - 1, y, { char: '│', fg: color, bg });
+        saveCell(rect.x, y);
+        screen.setCell(rect.x, y, { char: vBar, fg: color, bg });
+        saveCell(rect.x + rect.width - 1, y);
+        screen.setCell(rect.x + rect.width - 1, y, { char: vBar, fg: color, bg });
     }
     
     // Draw corners
-    screen.setCell(rect.x, rect.y, { char: '┌', fg: color, bg });
-    screen.setCell(rect.x + rect.width - 1, rect.y, { char: '┐', fg: color, bg });
-    screen.setCell(rect.x, rect.y + rect.height - 1, { char: '└', fg: color, bg });
-    screen.setCell(rect.x + rect.width - 1, rect.y + rect.height - 1, { char: '┘', fg: color, bg });
+    saveCell(rect.x, rect.y);
+    screen.setCell(rect.x, rect.y, { char: tl, fg: color, bg });
+    saveCell(rect.x + rect.width - 1, rect.y);
+    screen.setCell(rect.x + rect.width - 1, rect.y, { char: tr, fg: color, bg });
+    saveCell(rect.x, rect.y + rect.height - 1);
+    screen.setCell(rect.x, rect.y + rect.height - 1, { char: bl, fg: color, bg });
+    saveCell(rect.x + rect.width - 1, rect.y + rect.height - 1);
+    screen.setCell(rect.x + rect.width - 1, rect.y + rect.height - 1, { char: br, fg: color, bg });
+
+    return savedCells;
 }
 
 export function handleDevToolsHover(x: number, y: number, screen: Screen, widgetTree: WidgetNode | null): void {
     const cell = screen.getCell(x, y);
-    if (cell && cell.debugWidgetId) {
-        const rect = getWidgetRect(widgetTree, cell.debugWidgetId);
+    const newId = (cell && cell.debugWidgetId) ? cell.debugWidgetId : null;
+
+    if (newId === lastHoverWidgetId) return;
+
+    // Restore old cells
+    for (const saved of lastHoverCells) {
+        screen.setCell(saved.x, saved.y, saved.cell);
+    }
+    lastHoverCells = [];
+    lastHoverWidgetId = newId;
+
+    if (newId) {
+        const rect = getWidgetRect(widgetTree, newId);
         if (rect) {
-            renderDebugRect(screen, rect);
+            lastHoverCells = renderDebugRect(screen, rect);
         }
     }
 }
