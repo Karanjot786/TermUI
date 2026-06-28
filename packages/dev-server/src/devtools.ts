@@ -1,6 +1,8 @@
 // ─────────────────────────────────────────────────────
 // DevTools Panel — widget tree inspector, perf metrics
 // ─────────────────────────────────────────────────────
+import { type Screen } from '@termuijs/core';
+
 
 export interface WidgetNode {
     type: string;
@@ -179,6 +181,48 @@ export class DevTools {
             }
             default:
                 return '';
+        }
+    }
+}
+
+export function getWidgetRect(root: WidgetNode | null, id: string): { x: number; y: number; width: number; height: number; } | null {
+    if (!root) return null;
+    if (root.id === id) return root.rect;
+    for (const child of root.children) {
+        const found = getWidgetRect(child, id);
+        if (found) return found;
+    }
+    return null;
+}
+
+export function renderDebugRect(screen: Screen, rect: { x: number; y: number; width: number; height: number; }): void {
+    const color = { type: 'hex', hex: '#FF00FF' } as const;
+    const bg = { type: 'none' } as const;
+
+    // Draw top & bottom borders safely
+    for (let x = rect.x; x < rect.x + rect.width; x++) {
+        screen.setCell(x, rect.y, { char: '─', fg: color, bg });
+        screen.setCell(x, rect.y + rect.height - 1, { char: '─', fg: color, bg });
+    }
+    // Draw left & right borders safely
+    for (let y = rect.y; y < rect.y + rect.height; y++) {
+        screen.setCell(rect.x, y, { char: '│', fg: color, bg });
+        screen.setCell(rect.x + rect.width - 1, y, { char: '│', fg: color, bg });
+    }
+    
+    // Draw corners
+    screen.setCell(rect.x, rect.y, { char: '┌', fg: color, bg });
+    screen.setCell(rect.x + rect.width - 1, rect.y, { char: '┐', fg: color, bg });
+    screen.setCell(rect.x, rect.y + rect.height - 1, { char: '└', fg: color, bg });
+    screen.setCell(rect.x + rect.width - 1, rect.y + rect.height - 1, { char: '┘', fg: color, bg });
+}
+
+export function handleDevToolsHover(x: number, y: number, screen: Screen, widgetTree: WidgetNode | null): void {
+    const cell = screen.getCell(x, y);
+    if (cell && cell.debugWidgetId) {
+        const rect = getWidgetRect(widgetTree, cell.debugWidgetId);
+        if (rect) {
+            renderDebugRect(screen, rect);
         }
     }
 }

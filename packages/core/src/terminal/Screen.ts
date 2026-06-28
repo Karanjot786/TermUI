@@ -40,6 +40,8 @@ export interface Cell {
     width: number;
     /** Optional OSC 8 hyperlink target for this cell. */
     link?: string;
+    /** DevTools Widget ID for Inspector Mode */
+    debugWidgetId?: string;
 }
 
 /** Create a blank cell with default attributes */
@@ -56,6 +58,7 @@ export function emptyCell(): Cell {
         inverse: false,
         width: 1,
         link: undefined,
+         debugWidgetId: undefined,
     };
 }
 
@@ -72,6 +75,7 @@ export function resetCell(cell: Cell): void {
     cell.inverse = false;
     cell.width = 1;
     cell.link = undefined;
+    cell.debugWidgetId = undefined;
 }
 
 /** Check if two cells are visually identical */
@@ -86,6 +90,7 @@ export function cellsEqual(a: Cell, b: Cell): boolean {
         a.inverse === b.inverse &&
         a.width === b.width &&
         a.link === b.link &&
+        a.debugWidgetId === b.debugWidgetId &&
         colorsEqual(a.fg, b.fg) &&
         colorsEqual(a.bg, b.bg)
     );
