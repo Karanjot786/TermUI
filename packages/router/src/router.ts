@@ -266,7 +266,7 @@ export class Router {
                 const notFoundMatch = this._createNotFoundMatch(resolvedPath);
                 this._currentMatch = notFoundMatch;
 
-                unmountAll();
+
 
                 const screen = this._wrapScreen(notFoundMatch);
                 const emitEvent = direction === 'back' ? 'back' : 'navigate';
@@ -311,7 +311,7 @@ export class Router {
 
         this._currentMatch = match;
 
-        unmountAll();
+
 
         const screen = this._wrapScreen(match);
 
@@ -378,7 +378,7 @@ export class Router {
 
         this._currentMatch = match;
 
-        unmountAll();
+
 
         const screen = this._wrapScreen(match);
 
@@ -415,7 +415,7 @@ export class Router {
         this._history.push(nextPath);
         this._currentMatch = match;
 
-        unmountAll();
+
         const screen = this._wrapScreen(match);
         this.events.emit('navigate', { match, screen, direction: 'forward' });
 
