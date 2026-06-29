@@ -374,7 +374,6 @@ export function useKeymap(bindings: KeyBinding[]): void {
                 }
                 fiber._keymapKeys.set(compositeKey, b);
             }
-            seen.set(key, b);
         }
     }
 

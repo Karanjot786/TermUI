@@ -8,7 +8,6 @@ import {
     createFiber, setCurrentFiber, clearCurrentFiber,
     useState, useEffect, useRef, useId, useCallback, useKeymap,
     useAsync, useInterval, useInsertBefore, setRequestRender, setInsertBefore, runEffects, destroyFiber,
-    useKeymap,
     type Fiber, type AsyncState,
 } from './hooks.js';
 
