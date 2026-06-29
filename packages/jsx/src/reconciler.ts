@@ -624,8 +624,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         runEffects(fiber);
         fiber.isDirty = false;
 
-        // Destroy old widget to run lifecycle cleanup before replacing
-        instance.widget.destroy();
+        // Invalidate old widget's layout cache before replacing
         invalidateLayout(instance.widget.getLayoutNode());
         _pruneInstancesForWidget(instance.widget);
 
@@ -660,8 +659,7 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     runEffects(fiber);
     fiber.isDirty = false;
 
-    // Destroy old widget to run lifecycle cleanup before replacing
-    instance.widget.destroy();
+    // Invalidate old widget's layout cache before replacing
     invalidateLayout(instance.widget.getLayoutNode());
     // Remove old widget and all its descendant instances from the map to prevent memory leak
     _pruneInstancesForWidget(instance.widget);
