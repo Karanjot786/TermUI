@@ -363,95 +363,63 @@ export class App {
      * Batches rapid structural updates via setImmediate scheduling so that
      * multiple synchronous state mutations collapse into a single render frame.
      */
-    requestRender(): void {
-        if (!this._mounted) return;
+   requestRender(): void {
+    if (!this._mounted) return;
 
-        // If a render is already queued for this tick, bail out — it will
-        // pick up all dirty state when it eventually runs.
-        if (this._isRenderPending) return;
+    if (this._isRenderPending) return;
 
-        this._isRenderPending = true;
-        setImmediate(() => {
-            if (!this._mounted) {
+    this._isRenderPending = true;
+    setImmediate(() => {
+        if (!this._mounted) {
+            this._isRenderPending = false;
+            return;
+        }
+
+        try {
+            if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
                 this._isRenderPending = false;
                 return;
             }
 
-            try {
-                // Skip full render pass if neither the widget tree nor overlay
-                // layers have reported any changes. Done inside the deferred
-                // callback so the dirty check and the _isRenderPending guard
-                // are never racy with concurrent requestRender() calls.
-                if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
-                    this._isRenderPending = false;
-                    return;
+            if (this._rootWidget.isDirty !== false) {
+                const layoutRoot = this._rootWidget.getLayoutNode();
+                computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+                this._rootWidget.syncLayout?.();
+                this._buildWidgetMap(this._rootWidget);
+                this.screen.clear();
+                this._rootWidget.render(this.screen);
+                this._rootWidget.clearDirty?.();
+                if (this._options.dockBorders) {
+                    mergeBorders(this.screen);
                 }
-
-                if (this._rootWidget.isDirty !== false) {
-                    // Compute layout
-                    const layoutRoot = this._rootWidget.getLayoutNode();
-                    computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
-
-                    // Sync computed rects from layout tree back to widgets
-                    this._rootWidget.syncLayout?.();
-
-                    // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
-                    this._buildWidgetMap(this._rootWidget);
-
-            // Sync computed rects from layout tree back to widgets
-            this._rootWidget.syncLayout?.();
-
-            // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
-            this._buildWidgetMap(this._rootWidget);
-
-            // Clear the back buffer and render widgets into it
-            this.screen.clear();
-            this._rootWidget.render(this.screen);
-
-            // Clear dirty flags now that we've rendered — future requestRender()
-            // calls will skip layout until markDirty() is called again.
-            this._rootWidget.clearDirty?.();
-            // Merge adjacent borders into junction characters for a cleaner look
-            if (this._options.dockBorders) {
-               mergeBorders(this.screen);
             }
-            // Composite overlay layers on top of the base rendering
-            this.layers.composite(this.screen);
 
+            this.layers.composite(this.screen);
             this._consecutiveRenderFailures = 0;
-        }   catch (err) {
+
+            if (this._options.screenMode === 'inline') {
+                for (const item of this._insertBefore) {
+                    this.terminal.write(item.text + '\n');
+                }
+                renderInlineToTerminal(this.terminal, this.screen, this._options.inlineRows ?? 0);
+            } else {
+                this.renderer.requestFrame();
+            }
+        } catch (err) {
             this._consecutiveRenderFailures++;
             console.error('[TermUI] Render cycle error:', err);
             if (this._consecutiveRenderFailures >= App.MAX_RENDER_FAILURES) {
                 console.error('[TermUI] Too many consecutive render failures — exiting');
                 this.exit(1);
-                return;
             }
-            return;
-        }
-        if (this._options.screenMode === 'inline') {
-            for (const item of this._insertBefore) {
-                this.terminal.write(item.text + '\n');
-            }
-            renderInlineToTerminal(this.terminal, this.screen, this._options.inlineRows ?? 0);
-            return;
         } finally {
             this._isRenderPending = false;
             if (this._rootWidget.isDirty === true) {
                 this.requestRender();
             }
         }
-
-        if (this._options.screenMode === 'inline') {
-            for (const item of this._insertBefore) {
-                this.terminal.write(item.text + '\n');
-            }
-            renderInlineToTerminal(this.terminal, this.screen, this._options.inlineRows ?? 0);
-            return;
-        }
-
-        this.renderer.requestFrame();
-    }
+    });
+}
 
     /**
      * Exit the app (convenience method).
