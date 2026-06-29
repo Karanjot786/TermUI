@@ -263,6 +263,19 @@ describe('Widget', () => {
             expect(c1.parent).toBeNull();
             expect(c2.parent).toBeNull();
         });
+
+        it('destroy() calls the overridden unmount() method', () => {
+            let unmountCalled = false;
+            class LifecycleWidget extends TestWidget {
+                override unmount(): void {
+                    unmountCalled = true;
+                    super.unmount();
+                }
+            }
+            const w = new LifecycleWidget();
+            w.destroy();
+            expect(unmountCalled).toBe(true);
+        });
     });
 
     describe('isActive() Lifecycle', () => {

@@ -180,6 +180,7 @@ export abstract class Widget {
         const idx = this._children.indexOf(child);
         if (idx >= 0) {
             this._children.splice(idx, 1);
+            child.unmount();
             child.destroy();
         }
     }
@@ -189,6 +190,7 @@ export abstract class Widget {
         const children = [...this._children];
         this._children = [];
         for (const child of children) {
+            child.unmount();
             child.destroy();
         }
     }
@@ -199,6 +201,7 @@ export abstract class Widget {
      * Fiber-level cleanup is handled by the reconciler's _pruneInstancesForWidget.
      */
     destroy(): void {
+        this.unmount();
         const children = [...this._children];
         this._children = [];
         for (const child of children) {
