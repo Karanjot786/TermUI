@@ -20,7 +20,7 @@ export interface PerfMetrics {
 
 export class DevTools {
     private _visible = false;
-    private _tab: 'tree' | 'styles' | 'perf' | 'events' = 'tree';
+    private _tab: 'tree' | 'perf' | 'events' = 'tree';
     private _widgetTree: WidgetNode | null = null;
     private _metrics: PerfMetrics = { renderTimeMs: 0, widgetCount: 0, lastRenderAt: 0, fps: 0, memoryMB: 0 };
     private _eventLog: Array<{ time: number; type: string; detail: string }> = [];
@@ -34,7 +34,7 @@ export class DevTools {
     hide(): void { this._visible = false; }
 
     get activeTab(): string { return this._tab; }
-    setTab(tab: 'tree' | 'styles' | 'perf' | 'events'): void { this._tab = tab; }
+    setTab(tab: 'tree' | 'perf' | 'events'): void { this._tab = tab; }
 
     /** Update widget tree snapshot */
     updateTree(root: WidgetNode): void { this._widgetTree = root; }
@@ -94,7 +94,7 @@ export class DevTools {
     /** Get displayable panel content (plain text for rendering) */
     getPanel(width: number, height: number): string[] {
         const lines: string[] = [];
-        const tabBar = `  [${this._tab === 'tree' ? '▸' : ' '}Tree]  [${this._tab === 'styles' ? '▸' : ' '}Styles]  [${this._tab === 'perf' ? '▸' : ' '}Perf]  [${this._tab === 'events' ? '▸' : ' '}Events]`;
+        const tabBar = `  [${this._tab === 'tree' ? '▸' : ' '}Tree]  [${this._tab === 'perf' ? '▸' : ' '}Perf]  [${this._tab === 'events' ? '▸' : ' '}Events]`;
         lines.push('─'.repeat(width));
         lines.push('  🔧 DevTools (F12 to close)');
         lines.push(tabBar);
@@ -104,9 +104,6 @@ export class DevTools {
             case 'tree':
                 if (this._widgetTree) this._renderTree(this._widgetTree, 0, lines, height - 5);
                 else lines.push('  No widget tree data');
-                break;
-            case 'styles':
-                lines.push('  Style inspector — select a widget in the tree');
                 break;
             case 'perf':
                 lines.push(`  Render: ${this._metrics.renderTimeMs.toFixed(1)}ms`);

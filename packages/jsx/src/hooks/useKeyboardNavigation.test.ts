@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createKeyEvent } from '@termuijs/core';
+import { caps, createKeyEvent } from '@termuijs/core';
 import { createFiber, setCurrentFiber, clearCurrentFiber, setRequestRender } from '../hooks.js';
 import { useKeyboardNavigation } from './useKeyboardNavigation.js';
 
@@ -152,5 +152,24 @@ describe('useKeyboardNavigation', () => {
         fiber.onInput?.(mockKeyEvent('end'));
         result = renderHook({ itemCount: 0 });
         expect(result.selectedIndex).toBe(0);
+    });
+
+    it('supports emacs ctrl+p / ctrl+n navigation when keybindingMode=emacs', () => {
+        const spy = vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('emacs');
+        try {
+            let result = renderHook({ itemCount: 3, loop: true });
+
+            // Ctrl+P should behave like 'up' (wraps from 0 -> 2)
+            fiber.onInput?.(createKeyEvent({ key: 'p', raw: Buffer.alloc(0), ctrl: true, alt: false, shift: false }));
+            result = renderHook({ itemCount: 3, loop: true });
+            expect(result.selectedIndex).toBe(2);
+
+            // Ctrl+N should behave like 'down' (2 -> 0)
+            fiber.onInput?.(createKeyEvent({ key: 'n', raw: Buffer.alloc(0), ctrl: true, alt: false, shift: false }));
+            result = renderHook({ itemCount: 3, loop: true });
+            expect(result.selectedIndex).toBe(0);
+        } finally {
+            spy.mockRestore();
+        }
     });
 });

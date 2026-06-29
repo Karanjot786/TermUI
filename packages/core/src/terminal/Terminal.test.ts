@@ -314,4 +314,23 @@ describe('Terminal', () => {
             expect((term as any)._restored).toBe(false);
         });
     });
+
+    describe('Write Queue', () => {
+        it('processes many writes without stack overflow', async () => {
+            const stdout = createFakeStdout();
+            const terminal = new Terminal({ stdout });
+
+            // Queue 1000 writes to simulate high-throughput scenario
+            for (let i = 0; i < 1000; i++) {
+                terminal.write(`chunk${i}`);
+            }
+
+            // Allow event loop to process all writes via setImmediate
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // All writes should have been processed
+            expect((terminal as any)._writeQueue.length).toBe(0);
+            expect((terminal as any)._isWriting).toBe(false);
+        });
+    });
 });

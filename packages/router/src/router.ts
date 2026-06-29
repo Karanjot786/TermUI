@@ -4,7 +4,7 @@
 
 import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
-import { type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern, serializeQuery } from './route.js';
+import { type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern } from './route.js';
 import { RouterContext } from './hooks.js';
 
 function defaultErrorScreen(err: Error): VNode {
@@ -332,7 +332,7 @@ export class Router {
     push(path: string, options?: { query?: QueryParams }): void {
         let targetPath = path;
         if (options?.query) {
-            const qs = serializeQuery(options.query);
+            const qs = new URLSearchParams(options.query).toString();
             if (qs) targetPath += (targetPath.includes('?') ? '&' : '?') + qs;
         }
         this._executeNavigation(targetPath, { clearForwardStack: true, direction: 'push' });
@@ -342,7 +342,7 @@ export class Router {
     replace(path: string, options?: { query?: QueryParams }): void {
         let targetPath = path;
         if (options?.query) {
-            const qs = serializeQuery(options.query);
+            const qs = new URLSearchParams(options.query).toString();
             if (qs) targetPath += (targetPath.includes('?') ? '&' : '?') + qs;
         }
         this._executeNavigation(targetPath, { modifyHistory: 'replace', direction: 'replace' });
@@ -367,7 +367,11 @@ export class Router {
         }
 
         if (typeof guardResult === 'string') {
-            this.push(guardResult);
+            const poppedPath = this._history.pop();
+            if (poppedPath) {
+                this._forwardStack.push(poppedPath);
+            }
+            this._executeNavigation(guardResult, { clearForwardStack: false, direction: 'back' });
             return;
         }
 

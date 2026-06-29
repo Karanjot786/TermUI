@@ -225,6 +225,8 @@ export class Terminal {
 
     /**
      * Sequentially unshifts and drains string frames to stdout safely.
+     * Yields to the event loop via setImmediate when the queue is large
+     * to prevent stack overflow from unbounded synchronous recursion.
      */
     private _processWriteQueue(): void {
         if (this._writeQueue.length === 0) {
@@ -243,9 +245,12 @@ export class Terminal {
             this.stdout.once('drain', () => {
                 this._processWriteQueue();
             });
+        } else if (this._writeQueue.length > 0) {
+            // Yield to the event loop to prevent stack overflow when
+            // many widgets emit multiple ANSI sequences per frame.
+            setImmediate(() => { this._processWriteQueue(); });
         } else {
-            // Proceed instantly via synchronous event-loop cycle
-            this._processWriteQueue();
+            this._isWriting = false;
         }
     }
 

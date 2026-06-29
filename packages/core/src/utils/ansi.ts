@@ -95,7 +95,7 @@ export const inverse = `${CSI}7m`;
 export const strikethrough = `${CSI}9m`;
 
 export const resetBold = `${CSI}22m`;
-export const resetDim = `${CSI}22m`;
+export const resetDim = resetBold;
 export const resetItalic = `${CSI}23m`;
 export const resetUnderline = `${CSI}24m`;
 export const resetBlink = `${CSI}25m`;
@@ -180,17 +180,18 @@ export function writeClipboard(text: string, stdout: NodeJS.WriteStream = proces
 }
 export function readClipboard(
     stdin: NodeJS.ReadStream = process.stdin,
-    stdout: NodeJS.WriteStream = process.stdout
+    stdout: NodeJS.WriteStream = process.stdout,
+    timeoutMs = 1000,
 ): Promise<string> {
     return new Promise((resolve, reject) => {
+        let settled = false;
         const handler = (data: Buffer) => {
             const str = data.toString('utf8');
-
             const match = str.match(/\x1b\]52;c;([^\x07]+)\x07/);
 
             if (!match) return;
-
-            stdin.off('data', handler);
+            
+            cleanup();
 
             try {
                 resolve(
@@ -201,13 +202,21 @@ export function readClipboard(
             }
         };
 
+        const timer = setTimeout(() => {
+            cleanup();
+            reject(new Error('Clipboard read timed out'));
+        }, timeoutMs);
+
+        const cleanup = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            stdin.off('data', handler);
+        };
+
         stdin.on('data', handler);
 
         stdout.write(`${OSC}52;c;?\x07`);
     });
 }
 
-export const clipboard = {
-    write: writeClipboard,
-    read: readClipboard,
-};

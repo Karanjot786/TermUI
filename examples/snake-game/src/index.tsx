@@ -1,4 +1,4 @@
-import { App, type KeyEvent, type Screen, type Style, styleToCellAttrs } from '@termuijs/core';
+import { App, type KeyEvent, type Screen, type Style, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget, Box, Text, Center } from '@termuijs/widgets';
 
 const GRID_SIZE = 15;
@@ -36,10 +36,10 @@ class SnakeBoard extends Widget {
         const grid: string[][] = Array(this.gridSize).fill(null).map(() => Array(this.gridSize).fill(' '));
         for (const seg of this.snake) {
             if (seg.x >= 0 && seg.x < this.gridSize && seg.y >= 0 && seg.y < this.gridSize)
-                grid[seg.y][seg.x] = '■';
+                grid[seg.y][seg.x] = caps.unicode ? '■' : '#';
         }
         if (this.food.x >= 0 && this.food.x < this.gridSize && this.food.y >= 0 && this.food.y < this.gridSize)
-            grid[this.food.y][this.food.x] = '●';
+            grid[this.food.y][this.food.x] = caps.unicode ? '●' : 'o';
 
         for (let row = 0; row < this.gridSize; row++) {
             let line = '';

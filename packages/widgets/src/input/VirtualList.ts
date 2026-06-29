@@ -192,6 +192,43 @@ export class VirtualList extends Widget {
         });
     }
 
+    /** Scroll directly to an index with the specified alignment */
+    scrollToIndex(index: number, alignment: 'start' | 'center' | 'end' = 'start'): void {
+        this._runScrollAction(() => {
+            if (index < 0 || index >= this._totalItems) return;
+            
+            const rect = this._getContentRect();
+            const visibleItems = Math.floor(rect.height / this._itemHeight);
+            
+            if (visibleItems <= 0) return;
+
+            let targetOffset = index;
+            if (alignment === 'center') {
+                targetOffset -= Math.floor(visibleItems / 2);
+            } else if (alignment === 'end') {
+                targetOffset -= visibleItems - 1;
+            }
+
+            // Clamp offset
+            const maxOffset = Math.max(0, this._totalItems - visibleItems);
+            this._targetScrollOffset = Math.max(0, Math.min(targetOffset, maxOffset));
+
+            // Adjust instantly
+            this._scrollOffset = this._targetScrollOffset;
+            this._spring.position = this._targetScrollOffset;
+            this._spring.velocity = 0;
+            
+            // Keep selected index within the new viewport bounds
+            if (this._selectedIndex < this._targetScrollOffset) {
+                this._selectedIndex = this._targetScrollOffset;
+            } else if (this._selectedIndex >= this._targetScrollOffset + visibleItems) {
+                this._selectedIndex = Math.min(this._totalItems - 1, this._targetScrollOffset + visibleItems - 1);
+            }
+
+            this.markDirty();
+        });
+    }
+
     /** Confirm the current selection */
     confirm(): void {
         if (this._totalItems > 0) {

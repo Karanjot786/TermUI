@@ -627,6 +627,12 @@ export function destroyFiber(fiber: Fiber): void {
         }
         fiber.portalChildren = undefined;
     }
+    // Clean up suspended promises (SuspenseBoundary tracking)
+    const _suspendedFibers: Map<number, any> | undefined = (globalThis as any).__termuijs_suspendedFibers;
+    if (_suspendedFibers instanceof Map) {
+        _suspendedFibers.delete(fiber.id);
+    }
+
     // Clean up global _instanceMap via reverse fiber→widget mapping (O(1))
     const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
     if (_fiberToWidget instanceof Map) {

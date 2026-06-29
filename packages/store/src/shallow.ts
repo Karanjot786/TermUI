@@ -22,23 +22,3 @@ export function shallow<U>(a: U, b: U): boolean {
 
   return true
 }
-
-export function deepEqual<U>(a: U, b: U): boolean {
-  if (Object.is(a, b)) return true
-  if (typeof a !== 'object' || a === null) return false
-  if (typeof b !== 'object' || b === null) return false
-  if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false
-    for (let i = 0; i < a.length; i++) {
-      if (!deepEqual(a[i], b[i])) return false
-    }
-    return true
-  }
-  const aKeys = Object.keys(a as object)
-  const bKeys = Object.keys(b as object)
-  if (aKeys.length !== bKeys.length) return false
-  for (const key of aKeys) {
-    if (!bKeys.includes(key) || !deepEqual((a as any)[key], (b as any)[key])) return false
-  }
-  return true
-}

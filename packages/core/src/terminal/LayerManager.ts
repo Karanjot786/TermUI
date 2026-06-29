@@ -166,10 +166,11 @@ export class LayerManager {
             if (x < 0) { x += charWidth; continue; }
 
             this.setCell(layerId, x, row, { char, width: charWidth, ...style });
-            // For wide characters, fill the next cell with a placeholder space
-            // so the grid stays coherent (no stale character bleeds through).
+            // For wide characters, fill the continuation cell with width: 0
+            // to match Screen.writeString() behavior and prevent stray spaces
+            // during compositing.
             if (charWidth === 2 && x + 1 < this._cols) {
-                this.setCell(layerId, x + 1, row, { char: ' ', width: 1, ...style });
+                this.setCell(layerId, x + 1, row, { char: '', width: 0, ...style });
             }
             x += charWidth;
         }
