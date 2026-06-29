@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // ─────────────────────────────────────────────────────
 // install-theme — Install a TermUI theme (SECURED VERSION)
 // ─────────────────────────────────────────────────────
