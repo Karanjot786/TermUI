@@ -246,4 +246,28 @@ describe('EventEmitter', () => {
         expect(handler).toHaveBeenCalledTimes(1);
         expect(emitter.hasListeners('message')).toBe(false);
     });
+
+    it('off() during emit() does not skip other handlers (snapshot iteration)', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const log: string[] = [];
+
+        const handlerA = vi.fn(() => {
+            log.push('A');
+            // Remove handlerB while emitting
+            emitter.off('message', handlerB);
+        });
+        const handlerB = vi.fn(() => { log.push('B'); });
+        const handlerC = vi.fn(() => { log.push('C'); });
+
+        emitter.on('message', handlerA);
+        emitter.on('message', handlerB);
+        emitter.on('message', handlerC);
+        emitter.emit('message', 'test');
+
+        // A and C should be called; B should not (was off'd by A)
+        expect(log).toEqual(['A', 'C']);
+        expect(handlerA).toHaveBeenCalledTimes(1);
+        expect(handlerB).not.toHaveBeenCalled();
+        expect(handlerC).toHaveBeenCalledTimes(1);
+    });
 });

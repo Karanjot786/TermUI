@@ -189,20 +189,21 @@ export class InputParser {
 
         // Check if this starts an escape sequence
         if (str.startsWith('\x1b') && str.length === 1) {
-            // Lone ESC — wait a bit to see if more bytes follow
+            // Lone ESC — wait for more bytes (FSM via _escapeBuffer handles continuation)
             this._escapeBuffer = data;
             this._escapeTimeout = setTimeout(() => {
                 // Timeout — it was a standalone Escape key
+                const remained = this._escapeBuffer;
+                this._escapeBuffer = Buffer.alloc(0);
+                this._escapeTimeout = null;
                 this._events.emit('key', createKeyEvent({
                     key: 'escape',
-                    raw: this._escapeBuffer,
+                    raw: remained,
                     ctrl: false,
                     alt: false,
                     shift: false,
                 }));
-                this._escapeBuffer = Buffer.alloc(0);
-                this._escapeTimeout = null;
-            }, 50); // 50ms debounce for escape sequences
+            }, 200); // 200ms debounce (increased from 50ms to avoid race with render)
             return;
         }
 
@@ -365,16 +366,8 @@ export class InputParser {
                 this._escapeBuffer = Buffer.alloc(0);
                 return;
             }
-            // Might be incomplete mouse sequence — wait for more data
+            // Might be incomplete mouse sequence — wait for more data (no timeout, FSM handles via _escapeBuffer)
             if (seq.length < 20) { // safety cap
-                if (this._escapeTimeout) {
-                    clearTimeout(this._escapeTimeout);
-                    this._escapeTimeout = null;
-                }
-                this._escapeTimeout = setTimeout(() => {
-                    this._escapeBuffer = Buffer.alloc(0);
-                    this._escapeTimeout = null;
-                }, 100);
                 return;
             }
         }
@@ -452,15 +445,7 @@ export class InputParser {
             return;
         }
 
-        // Wait for more bytes (might be an incomplete sequence)
-        if (this._escapeTimeout) {
-            clearTimeout(this._escapeTimeout);
-            this._escapeTimeout = null;
-        }
-        this._escapeTimeout = setTimeout(() => {
-            // Timeout — emit as unknown escape and clear
-            this._escapeBuffer = Buffer.alloc(0);
-            this._escapeTimeout = null;
-        }, 100);
+        // Wait for more bytes (might be an incomplete sequence; FSM handles via _escapeBuffer)
+        return;
     }
 }
