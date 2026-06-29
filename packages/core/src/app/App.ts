@@ -14,7 +14,7 @@ import type { EventMap, FocusEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
 import { mergeBorders } from '../renderer/border-merge.js';
-import { renderInlineToTerminal } from '../inline-viewport.js';
+import { renderInlineToTerminal, usesAlternateScreen } from '../inline-viewport.js';
 
 export interface AppOptions extends TerminalOptions {
     /** Frames per second for the render loop */
@@ -371,12 +371,6 @@ export class App {
         if (this._isRenderPending) return;
 
         this._isRenderPending = true;
-
-        // Defer rendering to the end of the current macro-task poll pool.
-        // This guarantees that multiple state updates called synchronously
-        // collapse into a single render frame. The dirty check is performed
-        // INSIDE the deferred callback, eliminating the race window between
-        // the check and the guard flag being set.
         setImmediate(() => {
             if (!this._mounted) {
                 this._isRenderPending = false;
@@ -404,25 +398,46 @@ export class App {
                     // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
                     this._buildWidgetMap(this._rootWidget);
 
-        // Inline rendering bypasses the differential renderer and writes
-        // the bottom N rows directly into the main buffer so scrollback
-        // is preserved. It also emits any registered `insertBefore` lines
-        // above the live UI.
-        if (this._options.screenMode === 'inline') {
-            const writer = (typeof (this.terminal as any).write === 'function')
-                ? (this.terminal as any)
-                : { write: (s: string) => (this.terminal as any).stdout.write(s) };
-            // insertBefore lines are pushed above the live block via Screen's
-            // lastRenderedHeight cursor-up, so emit them before the viewport.
-            for (const item of this._insertBefore) {
-                writer.write(item.text + '\n');
+            // Sync computed rects from layout tree back to widgets
+            this._rootWidget.syncLayout?.();
+
+            // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
+            this._buildWidgetMap(this._rootWidget);
+
+            // Clear the back buffer and render widgets into it
+            this.screen.clear();
+            this._rootWidget.render(this.screen);
+
+            // Clear dirty flags now that we've rendered — future requestRender()
+            // calls will skip layout until markDirty() is called again.
+            this._rootWidget.clearDirty?.();
+            // Merge adjacent borders into junction characters for a cleaner look
+            if (this._options.dockBorders) {
+               mergeBorders(this.screen);
             }
-            renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
+            // Composite overlay layers on top of the base rendering
+            this.layers.composite(this.screen);
+
+             this.layers.composite(this.screen);
+ 
+            this._consecutiveRenderFailures = 0;
+        } catch (err) {
+            this._consecutiveRenderFailures++;
+            console.error('[TermUI] Render cycle error:', err);
+            if (this._consecutiveRenderFailures >= App.MAX_RENDER_FAILURES) {
+                console.error('[TermUI] Too many consecutive render failures — exiting');
+                this.exit(1);
+                return;
+            }
             return;
         }
-
-                // Inline rendering bypasses the differential renderer and writes
-                // the bottom N rows directly into the main buffer so scrollback is preserved.
+        if (this._options.screenMode === 'inline') {
+            for (const item of this._insertBefore) {
+                this.terminal.write(item.text + '\n');
+            }
+            renderInlineToTerminal(this.terminal, this.screen, this._options.inlineRows ?? 0);
+            return;
+        }
                 if (this._options.screenMode === 'inline') {
                     for (const item of this._insertBefore) {
                         this.terminal.write(item.text + '\n');
@@ -444,7 +459,9 @@ export class App {
                 }
             }
         });
-    }
+ 
+        // Alternate / main mode: use the differential renderer as normal.
+        this.renderer.requestFrame();    }
 
     /**
      * Exit the app (convenience method).

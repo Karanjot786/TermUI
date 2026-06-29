@@ -13,6 +13,8 @@ export interface InlineViewportOptions {
     rows: number;
 }
 
+export type InsertBeforeFn = (line: string) => (() => void) | void;
+
 // ── Constants ─────────────────────────────────────────
 
 /** ESC[?1049h — switch to alternate screen buffer */
@@ -23,7 +25,6 @@ export const ALT_SCREEN_EXIT  = '\x1b[?1049l';
 /**
  * Returns true only for 'alternate' mode.
  * App.mount() uses this to decide whether to call terminal.enterAltScreen().
- * Tests assert this to verify no ESC[?1049h is emitted in 'main' / 'inline'.
  */
 export function usesAlternateScreen(mode: ScreenMode): boolean {
     return mode === 'alternate';
@@ -37,33 +38,31 @@ export function usesAlternateScreen(mode: ScreenMode): boolean {
  * Preserves scrollback — never emits ESC[?1049h.
  * On subsequent calls it moves the cursor up to overwrite the previous block.
  *
- * @param terminal  Terminal (or any object with .write(s)).
+ * @param terminal  Any object with a .write(s: string) method.
  * @param screen    Fully-rendered Screen back-buffer.
  * @param rows      How many rows from the bottom to emit. 0 = all rows.
  */
-const _inlineHeights = new WeakMap<object, number>();
 export function renderInlineToTerminal(
-    terminal: Terminal | { write(s: string): void },
+    terminal: { write(s: string): void },
     screen: Screen,
     rows: number,
 ): void {
     const totalRows = screen.rows;
     const start = rows > 0 ? Math.max(0, totalRows - rows) : 0;
     const lines: string[] = [];
+
     for (let r = start; r < totalRows; r++) {
-        const row = (screen as any).back[r];
-        if (!row) continue;
-        lines.push(row.map((c: any) => c.char || ' ').join(''));
+        lines.push(screen.getLine(r));
     }
     if (lines.length === 0) return;
 
     // Move cursor up past the previous block so we overwrite it in-place.
-    const prev: number = _inlineHeights.get(screen) ?? 0;    let out = '';
+    const prev = screen.lastRenderedHeight;
+    let out = '';
     if (prev > 0) {
         out += `\x1b[${prev}A\r`;
     }
 
-    // Erase and rewrite each line.
     for (let i = 0; i < lines.length; i++) {
         out += '\x1b[2K\r' + lines[i];
         if (i < lines.length - 1) out += '\n';
@@ -71,26 +70,14 @@ export function renderInlineToTerminal(
     // Leave cursor below the block so scrollback is preserved.
     out += '\n';
 
-    (terminal as any).write(out);
+    terminal.write(out);
 
     // Track rendered height for next frame's cursor-up.
-    _inlineHeights.set(screen, lines.length);
+    screen.lastRenderedHeight = lines.length;
 }
 
 // ── createInlineViewport ──────────────────────────────
 
-/**
- * Returns a simple config object (rows).
- * Used by App to validate inlineRows and by tests.
- */
 export function createInlineViewport(opts: InlineViewportOptions): { rows: number } {
     return { rows: opts.rows };
 }
-
-// ── useInsertBefore hook wire-up ──────────────────────
-
-/**
- * Type for the function injected into the hooks layer via setInsertBefore().
- * App.insertBefore() matches this signature.
- */
-export type InsertBeforeFn = (line: string) => (() => void) | void;

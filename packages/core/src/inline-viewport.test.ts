@@ -21,7 +21,7 @@ class FakeTerminal {
     reset() { this.out = ''; }
 }
 
-// ── Existing tests (unchanged behaviour) ─────────────
+// ── Original tests (preserved exactly) ───────────────
 
 test('createInlineViewport returns rows', () => {
     const v = createInlineViewport({ rows: 3 });
@@ -36,13 +36,13 @@ test('renderInlineToTerminal writes last N rows', () => {
     screen.writeString(0, 3, 'row3');
 
     const term = new FakeTerminal();
-    renderInlineToTerminal(term as any, screen, 2);
+    renderInlineToTerminal(term, screen, 2);
     expect(term.out).toContain('row2');
     expect(term.out).toContain('row3');
     expect(term.out).not.toContain('row1');
 });
 
-// ── screenMode escape-sequence tests ─────────────────
+// ── usesAlternateScreen() ─────────────────────────────
 
 describe('usesAlternateScreen()', () => {
     test('returns true for alternate', () => {
@@ -55,6 +55,8 @@ describe('usesAlternateScreen()', () => {
         expect(usesAlternateScreen('inline')).toBe(false);
     });
 });
+
+// ── ALT_SCREEN constants ──────────────────────────────
 
 describe('ALT_SCREEN constants', () => {
     test('ENTER is ESC[?1049h', () => {
@@ -71,13 +73,11 @@ describe("screenMode='main'", () => {
     test('does NOT emit ESC[?1049h', () => {
         const mode: ScreenMode = 'main';
         const term = new FakeTerminal();
-        // Simulate App.mount() gate
         if (usesAlternateScreen(mode)) term.write(ALT_SCREEN_ENTER);
         expect(term.out).not.toContain('\x1b[?1049h');
     });
 
-    test('scrollback preserved — usesAlternateScreen returns false', () => {
-        // No alternate screen = cursor stays on main buffer = scrollback intact
+    test('scrollback preserved — usesAlternateScreen is false', () => {
         expect(usesAlternateScreen('main')).toBe(false);
     });
 });
@@ -98,7 +98,7 @@ describe("screenMode='alternate'", () => {
     });
 });
 
-// ── renderInlineToTerminal — extended ────────────────
+// ── renderInlineToTerminal() ──────────────────────────
 
 describe('renderInlineToTerminal()', () => {
     let term: FakeTerminal;
@@ -115,7 +115,7 @@ describe('renderInlineToTerminal()', () => {
     });
 
     test('renders only the requested number of rows', () => {
-        renderInlineToTerminal(term as any, screen, 3);
+        renderInlineToTerminal(term, screen, 3);
         expect(term.out).toContain('row2');
         expect(term.out).toContain('row3');
         expect(term.out).toContain('row4');
@@ -124,62 +124,67 @@ describe('renderInlineToTerminal()', () => {
     });
 
     test('rows=0 renders all rows', () => {
-        renderInlineToTerminal(term as any, screen, 0);
+        renderInlineToTerminal(term, screen, 0);
         expect(term.out).toContain('row0');
         expect(term.out).toContain('row4');
     });
 
-    test('does NOT emit ESC[?1049h (no alternate screen)', () => {
-        renderInlineToTerminal(term as any, screen, 3);
+    test('does NOT emit ESC[?1049h', () => {
+        renderInlineToTerminal(term, screen, 3);
         expect(term.out).not.toContain('\x1b[?1049h');
     });
 
     test('first frame has no cursor-up sequence', () => {
-        renderInlineToTerminal(term as any, screen, 3);
+        renderInlineToTerminal(term, screen, 3);
         expect(term.out).not.toMatch(/\x1b\[\d+A/);
     });
 
     test('second frame emits cursor-up to overwrite previous block', () => {
-        renderInlineToTerminal(term as any, screen, 3);
+        renderInlineToTerminal(term, screen, 3);
         term.reset();
-        renderInlineToTerminal(term as any, screen, 3);
+        renderInlineToTerminal(term, screen, 3);
         expect(term.out).toMatch(/\x1b\[\d+A/);
     });
 
-    test('each line is erased before writing (ESC[2K per line)', () => {
-        renderInlineToTerminal(term as any, screen, 3);
+    test('each line is erased before writing (ESC[2K per row)', () => {
+        renderInlineToTerminal(term, screen, 3);
         const eraseCount = (term.out.match(/\x1b\[2K/g) ?? []).length;
         expect(eraseCount).toBe(3);
     });
 
     test('output ends with newline to preserve scrollback', () => {
-        renderInlineToTerminal(term as any, screen, 2);
+        renderInlineToTerminal(term, screen, 2);
         expect(term.out.endsWith('\n')).toBe(true);
+    });
+
+    test('updates screen.lastRenderedHeight after render', () => {
+        renderInlineToTerminal(term, screen, 3);
+        expect(screen.lastRenderedHeight).toBe(3);
     });
 });
 
-// ── useInsertBefore — via App.insertBefore() ─────────
+// ── useInsertBefore (App.insertBefore wiring) ─────────
 
-describe('useInsertBefore (App.insertBefore integration)', () => {
-    test('inserted lines appear before live viewport in output order', () => {
-        // Simulate: App writes insertBefore lines, then calls renderInlineToTerminal
+describe('useInsertBefore / App.insertBefore()', () => {
+    test('inserted lines appear before live viewport in output', () => {
         const term = new FakeTerminal();
         const screen = new Screen(10, 2);
         screen.writeString(0, 0, 'live0');
         screen.writeString(0, 1, 'live1');
 
-        // This is what App.requestRender() does in inline mode:
+        // Mirrors what App.requestRender() does in inline mode
         term.write('permanent output\n');
-        renderInlineToTerminal(term as any, screen, 2);
+        renderInlineToTerminal(term, screen, 2);
 
         const insertPos = term.out.indexOf('permanent output');
         const livePos   = term.out.indexOf('live0');
         expect(insertPos).toBeLessThan(livePos);
     });
 
-    test('insertBefore unregister removes the line', () => {
-        // Simulate App._insertBefore array management
+    test('unregister function removes the line from the registry', () => {
+        // Mirrors App._insertBefore field + insertBefore() method
         const items: Array<{ id: symbol; text: string }> = [];
+
         function insertBefore(line: string): () => void {
             const id = Symbol();
             items.push({ id, text: line });
@@ -192,6 +197,28 @@ describe('useInsertBefore (App.insertBefore integration)', () => {
         const remove = insertBefore('task done');
         expect(items).toHaveLength(1);
         remove();
+        expect(items).toHaveLength(0);
+    });
+
+    test('multiple lines can be registered and removed independently', () => {
+        const items: Array<{ id: symbol; text: string }> = [];
+
+        function insertBefore(line: string): () => void {
+            const id = Symbol();
+            items.push({ id, text: line });
+            return () => {
+                const idx = items.findIndex(x => x.id === id);
+                if (idx >= 0) items.splice(idx, 1);
+            };
+        }
+
+        const removeA = insertBefore('line A');
+        const removeB = insertBefore('line B');
+        expect(items).toHaveLength(2);
+        removeA();
+        expect(items).toHaveLength(1);
+        expect(items[0].text).toBe('line B');
+        removeB();
         expect(items).toHaveLength(0);
     });
 });
