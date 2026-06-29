@@ -269,8 +269,16 @@ function parseOptionsInterface(content: string, optionsTypeName: string): ApiPro
   if (!m) return [];
   const inherited: ApiProp[] = [];
   if (m[1]) {
+    const heritage = m[1].trim();
+    // Unwrap a utility-type wrapper like `Omit<TableOptions, 'onSort'>` /
+    // `Pick<Parent, ...>` to the wrapped parent interface, so its inherited
+    // fields are still resolved (a locally-redeclared field overrides them).
+    const util = /^(?:Omit|Pick|Partial|Required|Readonly)<\s*([A-Za-z_$][\w$]*)/.exec(heritage);
+    const parents = util
+      ? [util[1]!]
+      : heritage.split(',').map(s => s.trim().split(/[<\s]/)[0]!).filter(Boolean);
     // `extends A, B` — parse each named parent interface.
-    for (const parent of m[1].split(',').map(s => s.trim().split(/[<\s]/)[0]!).filter(Boolean)) {
+    for (const parent of parents) {
       // Prefer the parent if defined in this file; otherwise look it up across
       // the scanned source tree (it may be imported from a sibling module).
       const parentSrc = new RegExp(`interface\\s+${parent}\\b`).test(content)
