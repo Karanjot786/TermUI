@@ -364,87 +364,62 @@ export class App {
      * multiple synchronous state mutations collapse into a single render frame.
      */
     requestRender(): void {
-        if (!this._mounted) return;
+    if (!this._mounted) return;
 
-        // If a render is already queued for this tick, bail out — it will
-        // pick up all dirty state when it eventually runs.
-        if (this._isRenderPending) return;
+    if (this._isRenderPending) return;
 
-        this._isRenderPending = true;
+    this._isRenderPending = true;
+    setImmediate(() => {
+        if (!this._mounted) {
+            this._isRenderPending = false;
+            return;
+        }
 
-        // Defer rendering to the end of the current macro-task poll pool.
-        // This guarantees that multiple state updates called synchronously
-        // collapse into a single render frame. The dirty check is performed
-        // INSIDE the deferred callback, eliminating the race window between
-        // the check and the guard flag being set.
-        setImmediate(() => {
-            if (!this._mounted) {
+        try {
+            if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
                 this._isRenderPending = false;
                 return;
             }
 
-            try {
-                // Skip full render pass if neither the widget tree nor overlay
-                // layers have reported any changes. Done inside the deferred
-                // callback so the dirty check and the _isRenderPending guard
-                // are never racy with concurrent requestRender() calls.
-                if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
-                    this._isRenderPending = false;
-                    return;
+            if (this._rootWidget.isDirty !== false) {
+                const layoutRoot = this._rootWidget.getLayoutNode();
+                computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+                this._rootWidget.syncLayout?.();
+                this._buildWidgetMap(this._rootWidget);
+                this.screen.clear();
+                this._rootWidget.render(this.screen);
+                this._rootWidget.clearDirty?.();
+                if (this._options.dockBorders) {
+                    mergeBorders(this.screen);
                 }
-
-                if (this._rootWidget.isDirty !== false) {
-                    // Compute layout
-                    const layoutRoot = this._rootWidget.getLayoutNode();
-                    computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
-
-                    // Sync computed rects from layout tree back to widgets
-                    this._rootWidget.syncLayout?.();
-
-                    // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
-                    this._buildWidgetMap(this._rootWidget);
-
-        // Inline rendering bypasses the differential renderer and writes
-        // the bottom N rows directly into the main buffer so scrollback
-        // is preserved. It also emits any registered `insertBefore` lines
-        // above the live UI.
-        if (this._options.screenMode === 'inline') {
-            const writer = (typeof (this.terminal as any).write === 'function')
-                ? (this.terminal as any)
-                : { write: (s: string) => (this.terminal as any).stdout.write(s) };
-            // insertBefore lines are pushed above the live block via Screen's
-            // lastRenderedHeight cursor-up, so emit them before the viewport.
-            for (const item of this._insertBefore) {
-                writer.write(item.text + '\n');
             }
-            renderInlineToTerminal(writer, this.screen as any, this._options.inlineRows ?? 0);
-            return;
+
+            this.layers.composite(this.screen);
+            this._consecutiveRenderFailures = 0;
+
+            if (this._options.screenMode === 'inline') {
+                for (const item of this._insertBefore) {
+                    this.terminal.write(item.text + '\n');
+                }
+                renderInlineToTerminal(this.terminal, this.screen, this._options.inlineRows ?? 0);
+            } else {
+                this.renderer.requestFrame();
+            }
+        } catch (err) {
+            this._consecutiveRenderFailures++;
+            console.error('[TermUI] Render cycle error:', err);
+            if (this._consecutiveRenderFailures >= App.MAX_RENDER_FAILURES) {
+                console.error('[TermUI] Too many consecutive render failures — exiting');
+                this.exit(1);
+            }
+        } finally {
+            this._isRenderPending = false;
+            if (this._rootWidget.isDirty === true) {
+                this.requestRender();
+            }
         }
-
-                // Inline rendering bypasses the differential renderer and writes
-                // the bottom N rows directly into the main buffer so scrollback is preserved.
-                if (this._options.screenMode === 'inline') {
-                    for (const item of this._insertBefore) {
-                        this.terminal.write(item.text + '\n');
-                    }
-                    renderInlineToTerminal(this.terminal, this.screen as any, this._options.inlineRows ?? 0);
-                } else {
-                    this.renderer.requestFrame();
-                }
-            } finally {
-                // Unlock the queue flag so subsequent frames can be scheduled
-                this._isRenderPending = false;
-                // Re-schedule if a widget became dirty during the render cycle —
-                // the previous early-return on _isRenderPending would have silently
-                // dropped that state change. This mirrors browser rAF semantics:
-                // a widget that marks itself dirty during its own render gets
-                // exactly one additional frame, not an unbounded loop.
-                if (this._rootWidget.isDirty === true) {
-                    this.requestRender();
-                }
-            }
-        });
-    }
+    });
+}
 
     /**
      * Exit the app (convenience method).
