@@ -264,10 +264,16 @@ describe('EventEmitter', () => {
         emitter.on('message', handlerC);
         emitter.emit('message', 'test');
 
-        // A and C should be called; B should not (was off'd by A)
-        expect(log).toEqual(['A', 'C']);
+        // All three are called in current emit (snapshot was taken before iteration)
+        // But handlerB is no longer registered for future emits
+        expect(log).toEqual(['A', 'B', 'C']);
         expect(handlerA).toHaveBeenCalledTimes(1);
-        expect(handlerB).not.toHaveBeenCalled();
+        expect(handlerB).toHaveBeenCalledTimes(1);
         expect(handlerC).toHaveBeenCalledTimes(1);
+        // Future emit should not fire handlerB
+        emitter.emit('message', 'test2');
+        expect(handlerA).toHaveBeenCalledTimes(2);
+        expect(handlerB).toHaveBeenCalledTimes(1); // Not called again
+        expect(handlerC).toHaveBeenCalledTimes(2);
     });
 });
