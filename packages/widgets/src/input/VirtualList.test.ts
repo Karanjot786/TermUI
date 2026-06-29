@@ -278,4 +278,34 @@ describe('VirtualList', () => {
         });
     });
 
+    describe('render cache eviction', () => {
+        it('evicts old entries outside visible range after scroll', () => {
+            const list = new VirtualList({
+                totalItems: 1000,
+                renderItem: (i) => `Item ${i}`,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            list.scrollTo(0);
+            list.render(screen);
+            const cache = (list as any)._renderCache as Map<number, any>;
+            const initialSize = cache.size;
+
+            // Scroll through large range - cache should stay bounded
+            for (let i = 1; i <= 50; i++) {
+                list.scrollTo(i * 10);
+                list.render(screen);
+            }
+
+            // Cache should not have grown unbounded with 1000 items
+            expect(cache.size).toBeLessThanOrEqual(initialSize + 20);
+            expect(cache.size).toBeLessThan(100);
+        });
+    });
+
 });
