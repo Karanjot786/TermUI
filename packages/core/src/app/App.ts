@@ -418,10 +418,8 @@ export class App {
             // Composite overlay layers on top of the base rendering
             this.layers.composite(this.screen);
 
-             this.layers.composite(this.screen);
- 
             this._consecutiveRenderFailures = 0;
-        } catch (err) {
+        }   catch (err) {
             this._consecutiveRenderFailures++;
             console.error('[TermUI] Render cycle error:', err);
             if (this._consecutiveRenderFailures >= App.MAX_RENDER_FAILURES) {
@@ -437,31 +435,23 @@ export class App {
             }
             renderInlineToTerminal(this.terminal, this.screen, this._options.inlineRows ?? 0);
             return;
-        }
-                if (this._options.screenMode === 'inline') {
-                    for (const item of this._insertBefore) {
-                        this.terminal.write(item.text + '\n');
-                    }
-                    renderInlineToTerminal(this.terminal, this.screen as any, this._options.inlineRows ?? 0);
-                } else {
-                    this.renderer.requestFrame();
-                }
-            } finally {
-                // Unlock the queue flag so subsequent frames can be scheduled
-                this._isRenderPending = false;
-                // Re-schedule if a widget became dirty during the render cycle —
-                // the previous early-return on _isRenderPending would have silently
-                // dropped that state change. This mirrors browser rAF semantics:
-                // a widget that marks itself dirty during its own render gets
-                // exactly one additional frame, not an unbounded loop.
-                if (this._rootWidget.isDirty === true) {
-                    this.requestRender();
-                }
+        } finally {
+            this._isRenderPending = false;
+            if (this._rootWidget.isDirty === true) {
+                this.requestRender();
             }
-        });
- 
-        // Alternate / main mode: use the differential renderer as normal.
-        this.renderer.requestFrame();    }
+        }
+
+        if (this._options.screenMode === 'inline') {
+            for (const item of this._insertBefore) {
+                this.terminal.write(item.text + '\n');
+            }
+            renderInlineToTerminal(this.terminal, this.screen, this._options.inlineRows ?? 0);
+            return;
+        }
+
+        this.renderer.requestFrame();
+    }
 
     /**
      * Exit the app (convenience method).
