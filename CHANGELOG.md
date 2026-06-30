@@ -1,6 +1,7 @@
 # Changelog
 
 All notable changes to TermUI are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows [Semantic Versioning](https://semver.org/).
+This log ensures absolute transparency regarding features, fixes, and ecosystem maintenance for all version updates.
 
 ---
 
