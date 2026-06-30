@@ -339,7 +339,7 @@ describe('LayerManager - Resize', () => {
         // Write to the new size
         lm.setCell('overlay', 10, 5, { char: 'Y' });
 
-        const screen = new (require('./Screen.js').Screen)(20, 15);
+        const screen = new Screen(20, 15);
         lm.composite(screen);
 
         // Content written after resize should appear
