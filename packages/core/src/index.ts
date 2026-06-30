@@ -13,7 +13,6 @@ export { LayerManager } from './terminal/LayerManager.js';
 export type { Layer } from './terminal/LayerManager.js';
 export { caps, prefersReducedMotion, shouldUseColor, prefersHighContrast } from './terminal/env-caps.js';
 export { BOX, BRAILLE_SPIN, BLOCK } from './terminal/ascii-map.js';
-export { bell } from './terminal/bell.js';
 
 // ── Renderer ──────────────────────────────────────────
 export { RenderHook } from './renderer/render-hook.js';
@@ -97,8 +96,7 @@ export * as ansi from './utils/ansi.js';
 export { debounce } from './utils/debounce.js';
 export type { DebounceOptions } from './utils/debounce.js';
 export * from './session/Session.js';
-export { writeClipboard, readClipboard, clipboard, stripAnsiControl } from './utils/ansi.js';
-export * from './session/Session.js';
+export { writeClipboard, readClipboard } from './utils/ansi.js';
 export { throttle } from './utils/throttle.js';
 export type { ThrottleOptions } from './utils/throttle.js';
 export { CommandHistory } from "./history/CommandHistory.js";

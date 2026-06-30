@@ -263,6 +263,19 @@ describe('Widget', () => {
             expect(c1.parent).toBeNull();
             expect(c2.parent).toBeNull();
         });
+
+        it('destroy() calls the overridden unmount() exactly once', () => {
+            const unmountFn = vi.fn();
+            class LifecycleWidget extends TestWidget {
+                override unmount(): void {
+                    unmountFn();
+                    super.unmount();
+                }
+            }
+            const w = new LifecycleWidget();
+            w.destroy();
+            expect(unmountFn).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('isActive() Lifecycle', () => {

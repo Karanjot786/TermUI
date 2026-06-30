@@ -86,4 +86,45 @@ describe('store reset', () => {
 
         expect(listener).toHaveBeenCalledTimes(1);
     });
+
+    it('safely clones complex types like Map, Set, Date, and nested functions', () => {
+        const date = new Date('2026-01-01');
+        const map = new Map([['a', 1]]);
+        const set = new Set([1, 2]);
+        const sym = Symbol('test');
+        
+        const useStore = createStore(() => ({
+            date,
+            map,
+            set,
+            nested: {
+                fn: () => true,
+                value: 42
+            },
+            [sym]: 'symbol_value'
+        }));
+
+        const initial = useStore.getInitialState();
+        
+        expect(initial.date).toEqual(date);
+        expect(initial.date).not.toBe(date); // should be cloned
+        
+        expect(initial.map).toEqual(map);
+        expect(initial.map).not.toBe(map);
+        
+        expect(initial.set).toEqual(set);
+        expect(initial.set).not.toBe(set);
+        
+        expect(initial.nested.value).toBe(42);
+        expect(initial.nested.fn).toBeUndefined(); // functions are stripped
+        
+        expect((initial as any)[sym]).toBe('symbol_value');
+        
+        useStore.setState({ date: new Date(), nested: { value: 99, fn: () => true } });
+        useStore.reset();
+        
+        const resetState = useStore.getState();
+        expect(resetState.date).toEqual(date);
+        expect(resetState.nested.value).toBe(42);
+    });
 });

@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "File-watching dev server for TermUI that restarts your app on save",
   "type": "module",
   "main": "./dist/index.cjs",

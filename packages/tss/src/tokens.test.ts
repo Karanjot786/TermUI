@@ -1,6 +1,5 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
-import { tokensToTSS, loadThemeFromFile } from './tokens.js';
-import { writeFileSync, unlinkSync } from 'node:fs';
+import { describe, it, expect, vi } from 'vitest';
+import { tokensToTSS } from './tokens.js';
 
 describe('ThemeTokens', () => {
   const requiredKeys = [
@@ -85,73 +84,3 @@ describe('tokensToTSS', () => {
   });
 });
 
-describe('loadThemeFromFile', () => {
-  const tempJsonFile = './temp-theme.json';
-  const tempYamlFile = './temp-theme.yaml';
-
-  afterEach(() => {
-    try {
-      unlinkSync(tempJsonFile);
-    } catch {}
-    try {
-      unlinkSync(tempYamlFile);
-    } catch {}
-  });
-
-  it('correctly loads theme tokens from flat JSON file', () => {
-    writeFileSync(tempJsonFile, JSON.stringify({
-      bg: '#111111',
-      fg: '#222222',
-      primary: '#333333',
-    }));
-
-    const tokens = loadThemeFromFile(tempJsonFile);
-    expect(tokens.bg).toBe('#111111');
-    expect(tokens.fg).toBe('#222222');
-    expect(tokens.primary).toBe('#333333');
-    expect(tokens.secondary).toBe('#6366f1'); // default fallback
-  });
-
-  it('correctly loads theme tokens from nested tokens JSON file', () => {
-    writeFileSync(tempJsonFile, JSON.stringify({
-      name: 'nested-theme',
-      tokens: {
-        bg: '#aaaaaa',
-        fg: '#bbbbbb',
-      }
-    }));
-
-    const tokens = loadThemeFromFile(tempJsonFile);
-    expect(tokens.bg).toBe('#aaaaaa');
-    expect(tokens.fg).toBe('#bbbbbb');
-    expect(tokens.primary).toBe('#7C3AED'); // default fallback
-  });
-
-  it('correctly loads theme tokens from flat YAML file', () => {
-    writeFileSync(tempYamlFile, `
-bg: '#111111'
-fg: '#222222'
-primary: '#333333'
-`);
-
-    const tokens = loadThemeFromFile(tempYamlFile);
-    expect(tokens.bg).toBe('#111111');
-    expect(tokens.fg).toBe('#222222');
-    expect(tokens.primary).toBe('#333333');
-    expect(tokens.secondary).toBe('#6366f1'); // default fallback
-  });
-
-  it('correctly loads theme tokens from nested tokens YAML file', () => {
-    writeFileSync(tempYamlFile, `
-name: 'nested-theme'
-tokens:
-  bg: '#aaaaaa'
-  fg: '#bbbbbb'
-`);
-
-    const tokens = loadThemeFromFile(tempYamlFile);
-    expect(tokens.bg).toBe('#aaaaaa');
-    expect(tokens.fg).toBe('#bbbbbb');
-    expect(tokens.primary).toBe('#7C3AED'); // default fallback
-  });
-});

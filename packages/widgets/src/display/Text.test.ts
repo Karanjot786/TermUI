@@ -42,6 +42,29 @@ describe('Text', () => {
         expect(screen.back[0][0].char).toBe('H');
         expect(screen.back[1][0].char).not.toBe(' ');
     });
+
+    it('handles horizontal scroll with wide characters at partial offset', () => {
+        // Test scrollX landing in the middle of a wide character
+        const { screen } = renderText('中a', {}, { scrollX: 1, wrap: false }, 10, 5);
+        // When scrollX=1 lands in the middle of '中' (2 columns), should show space + 'a'
+        expect(screen.back[0][0].char).toBe(' ');
+        expect(screen.back[0][1].char).toBe('a');
+    });
+
+    it('handles horizontal scroll with wide characters at full offset', () => {
+        // Test scrollX after a complete wide character
+        const { screen } = renderText('中a', {}, { scrollX: 2, wrap: false }, 10, 5);
+        // When scrollX=2 skips the entire '中', should show 'a'
+        expect(screen.back[0][0].char).toBe('a');
+    });
+
+    it('handles horizontal scroll with emoji at partial offset', () => {
+        // Test scrollX landing in the middle of an emoji
+        const { screen } = renderText('😀a', {}, { scrollX: 1, wrap: false }, 10, 5);
+        // When scrollX=1 lands in the middle of '😀' (2 columns), should show space + 'a'
+        expect(screen.back[0][0].char).toBe(' ');
+        expect(screen.back[0][1].char).toBe('a');
+    });
 });
 
 describe('Text – mutation regression tests', () => {

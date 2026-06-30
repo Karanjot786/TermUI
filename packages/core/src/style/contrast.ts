@@ -58,27 +58,50 @@ export function adjustForContrast(fg: Color, bg: Color, targetRatio = 4.5): Colo
     const [r, g, b] = colorToRgb(fg);
     const [h, s, l] = rgbToHsl(r, g, b);
 
-    let bestL = l;
-    let minDiff = Infinity;
+    // Binary search for the lowest L that meets targetRatio (dark end, L→0)
+    // and the highest L that meets targetRatio (light end, L→100).
+    // Then pick whichever is closer to the original L.
 
-    for (let newL = 0; newL <= 100; newL++) {
-        const [nr, ng, nb] = hslToRgb(h, s, newL);
-        const candidateColor: Color = { type: 'rgb', r: nr, g: ng, b: nb };
-        const candRatio = contrastRatio(candidateColor, bg);
-        if (candRatio >= targetRatio) {
-            const diff = Math.abs(newL - l);
-            if (diff < minDiff) {
-                minDiff = diff;
-                bestL = newL;
+    const bsearch = (lo: number, hi: number, findMax: boolean): number => {
+        while (lo < hi) {
+            const mid = findMax ? Math.ceil((lo + hi) / 2) : Math.floor((lo + hi) / 2);
+            const [nr, ng, nb] = hslToRgb(h, s, mid);
+            const midRatio = contrastRatio({ type: 'rgb', r: nr, g: ng, b: nb }, bg);
+            if (midRatio >= targetRatio) {
+                if (findMax) lo = mid; else hi = mid;
+            } else {
+                if (findMax) hi = mid - 1; else lo = mid + 1;
             }
         }
-    }
+        const [nr, ng, nb] = hslToRgb(h, s, lo);
+        return contrastRatio({ type: 'rgb', r: nr, g: ng, b: nb }, bg) >= targetRatio ? lo : -1;
+    };
 
-    if (minDiff === Infinity) {
+    const [nr0, ng0, nb0] = hslToRgb(h, s, 0);
+    const darkBest = contrastRatio({ type: 'rgb', r: nr0, g: ng0, b: nb0 }, bg) >= targetRatio
+        ? bsearch(0, Math.floor(l), true)
+        : -1;
+
+    const [nr100, ng100, nb100] = hslToRgb(h, s, 100);
+    const lightBest = contrastRatio({ type: 'rgb', r: nr100, g: ng100, b: nb100 }, bg) >= targetRatio
+        ? bsearch(Math.ceil(l), 100, false)
+        : -1;
+
+    let bestL: number;
+
+    if (darkBest === -1 && lightBest === -1) {
+        // No valid L found — fall back to white or black
         const whiteRatio = contrastRatio({ type: 'rgb', r: 255, g: 255, b: 255 }, bg);
         const blackRatio = contrastRatio({ type: 'rgb', r: 0, g: 0, b: 0 }, bg);
         const [nr, ng, nb] = whiteRatio > blackRatio ? [255, 255, 255] : [0, 0, 0];
         return { type: 'rgb', r: nr, g: ng, b: nb };
+    } else if (darkBest === -1) {
+        bestL = lightBest;
+    } else if (lightBest === -1) {
+        bestL = darkBest;
+    } else {
+        // Pick the closer boundary to the original L
+        bestL = (l - darkBest) <= (lightBest - l) ? darkBest : lightBest;
     }
 
     const [fr, fg_, fb] = hslToRgb(h, s, bestL);

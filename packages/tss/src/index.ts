@@ -11,21 +11,20 @@ export { parse } from './parser.js';
 export type { TSSStylesheet, TSSTheme, TSSSelector, TSSProperty, TSSValue, TSSRule } from './parser.js';
 
 // Theme Engine
-export { ThemeEngine, compile, compileRules } from './engine.js';
+export { ThemeEngine, compileRules } from './engine.js';
 export type { ThemeVariables, ResolvedRule } from './engine.js';
 export { evalCalc } from './calc.js';
 
 // Pseudo-class state matching
-export { isSupportedPseudo, matchesPseudo, SUPPORTED_PSEUDO_CLASSES } from './pseudo.js';
+export { matchesPseudo } from './pseudo.js';
 export type { PseudoClass } from './pseudo.js';
 
 // Built-in Themes
 export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThemes } from './themes.js';
 
 // Design Tokens
-export { systemTheme, defaultDark, defaultLight, detectDark, tokensToTSS, loadThemeFromFile } from './tokens.js';
+export { systemTheme, defaultDark, defaultLight, detectDark, tokensToTSS } from './tokens.js';
 export type { ThemeTokens } from './tokens.js';
-export { adaptive, type AdaptiveColor } from './adaptive.js';
 
 // Named ThemeTokens
 export {

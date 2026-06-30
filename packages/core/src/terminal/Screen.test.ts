@@ -291,4 +291,56 @@ describe('Screen and Cell Hyperlink Support', () => {
             expect(text).toBe('Hello, World!');
         });
     });
+
+    describe('Backdrop Filters (Compositing)', () => {
+        it('cells outside the modal rect are dimmed', () => {
+            const screen = new Screen(10, 10);
+            
+            // Draw some base content
+            screen.writeString(0, 0, 'Base text ');
+            screen.writeString(0, 9, 'Bottom txt');
+            
+            // Draw a modal in the center (x:2, y:2, w:4, h:4)
+            screen.writeString(2, 2, 'Modl');
+            screen.writeString(2, 3, 'Text');
+            
+            // Schedule backdrop filter
+            screen.applyBackdropFilter({ x: 2, y: 2, width: 4, height: 4 });
+            
+            // Apply them (normally called by App during compositing pass)
+            screen.flushBackdropFilters();
+            
+            // Cell inside the modal rect should NOT be dimmed
+            expect(screen.back[2][2].dim).toBe(false);
+            expect(screen.back[3][3].dim).toBe(false);
+            
+            // Cells outside the modal rect SHOULD be dimmed
+            expect(screen.back[0][0].dim).toBe(true);
+            expect(screen.back[9][9].dim).toBe(true);
+            expect(screen.back[2][1].dim).toBe(true); // just left of modal
+            expect(screen.back[2][6].dim).toBe(true); // just right of modal
+        });
+
+        it('multiple overlapping backdrop filters dim everything outside all rects', () => {
+            const screen = new Screen(10, 10);
+            
+            // Modal 1: top-left
+            screen.applyBackdropFilter({ x: 0, y: 0, width: 3, height: 3 });
+            // Modal 2: bottom-right
+            screen.applyBackdropFilter({ x: 7, y: 7, width: 3, height: 3 });
+            
+            screen.flushBackdropFilters();
+            
+            // Modal 1 area is NOT dimmed
+            expect(screen.back[1][1].dim).toBe(false);
+            
+            // Modal 2 area is NOT dimmed
+            expect(screen.back[8][8].dim).toBe(false);
+            
+            // Everything else IS dimmed
+            expect(screen.back[5][5].dim).toBe(true); // center
+            expect(screen.back[0][8].dim).toBe(true); // top right
+            expect(screen.back[8][0].dim).toBe(true); // bottom left
+        });
+    });
 });

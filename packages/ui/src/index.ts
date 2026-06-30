@@ -25,18 +25,10 @@ export {
 
 // ── New components ──
 export { Slider, RangeInput } from './Slider.js';
+export type { SliderOptions, RangeInputOptions } from './Slider.js';
 export { Divider } from './Divider.js';
 export type { DividerOptions } from './Divider.js';
 
-export { ShortcutManager } from "./ShortcutManager.js";
-export type { Shortcut as ShortcutManagerItem } from "./ShortcutManager.js";
-
-export { NotificationHistory } from "./NotificationHistory.js";
-
-export type {
-    Notification as NotificationHistoryItem,
-    NotificationType
-} from "./NotificationHistory.js";
 
 export { Spacer } from './Spacer.js';
 
@@ -49,8 +41,8 @@ export type { MenuBarOptions, MenuBarItem, MenuItem as MenuBarItemType } from '.
 export { Menu } from './Menu.js';
 export type { MenuItem, MenuOptions } from './Menu.js';
 
-export { Carousel } from './Carousel.js';
-export type { CarouselOptions } from './Carousel.js';
+export { Carousel } from '@termuijs/widgets';
+export type { CarouselOptions } from '@termuijs/widgets';
 
 export { Modal } from './Modal.js';
 export type { ModalOptions } from './Modal.js';
@@ -99,8 +91,6 @@ export type { FormField, FormOptions } from './Form.js';
 export { CommandPalette } from './CommandPalette.js';
 export type { Command, CommandPaletteOptions } from './CommandPalette.js';
 
-export { useCommandPalette } from './hooks/useCommandPalette.js';
-export type { UseCommandPaletteOptions, UseCommandPaletteReturn } from './hooks/useCommandPalette.js';
 
 export { prompt, NonInteractiveError } from './prompts.js';
 export type { TextPromptOptions, ConfirmPromptOptions, SelectPromptOptions } from './prompts.js';
@@ -141,8 +131,9 @@ export type { DateRange, DateRangePickerOptions } from './DateRangePicker.js';
 export { ColorPicker } from './ColorPicker.js';
 export type { ColorPickerOptions } from './ColorPicker.js';
 
-export { Accordion } from './Accordion.js';
-export type { AccordionOptions, AccordionItem } from './Accordion.js';
+export { Accordion } from '@termuijs/widgets';
+export type { AccordionOptions } from '@termuijs/widgets';
+export type { AccordionSection as AccordionItem } from '@termuijs/widgets';
 
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
@@ -158,12 +149,10 @@ export type { SegmentedControlOptions } from './SegmentedControl.js';
 export { SearchableSelect } from './SearchableSelect.js';
 export type { SearchableSelectOption, SearchableSelectOptions } from './SearchableSelect.js';
 export { Autocomplete, type AutocompleteOptions } from './Autocomplete.js';
-export { Toggle } from './Toggle.js';
-export type { ToggleOptions } from './Toggle.js';
 export { Switch } from './Switch.js';
 export type { SwitchOptions } from './Switch.js';
-export { Checkbox } from './Checkbox.js';
-export type { CheckboxOptions } from './Checkbox.js';
+export { Checkbox } from '@termuijs/widgets';
+export type { CheckboxOptions } from '@termuijs/widgets';
 
 export { CheckboxGroup } from './CheckboxGroup.js';
 export type {
@@ -184,8 +173,8 @@ export type { BasicAuthCredentials, BasicAuthPromptOptions } from './BasicAuthPr
 export { TextArea } from './TextArea.js';
 export type { TextAreaOptions } from './TextArea.js';
 
-export { Stepper } from './Stepper.js';
-export type { StepperOptions } from './Stepper.js';
+export { Stepper } from '@termuijs/widgets';
+export type { StepperOptions, StepperStep, StepStatus, StepperOrientation } from '@termuijs/widgets';
 
 export { Announcer, announcer } from './Announcer.js';
 export type { AnnouncerOptions, Politeness } from './Announcer.js';
@@ -237,8 +226,8 @@ export type { DraggableProps, DroppableProps } from './components/DragAndDrop.js
 export { Popover } from './Popover.js';
 export type { PopoverOptions, PopoverPlacement } from './Popover.js';
 
-export { FormBuilder, useForm } from './components/FormBuilder.js';
-export type { FormBuilderProps } from './components/FormBuilder.js';
+export { FormBuilder, useForm, FormContext } from './components/FormBuilder.js';
+export type { FormBuilderProps, FormContextValue } from './components/FormBuilder.js';
 
 export { SearchInput } from './SearchInput.js';
 export type { SearchInputOptions } from './SearchInput.js';
@@ -246,24 +235,14 @@ export type { SearchInputOptions } from './SearchInput.js';
 // -- External Theme / Stylesheet Engine --
 export * from '@termuijs/tss';
 
-export type { VimMode } from './vim_modes.js';
-
 export { ChatThread } from './ChatThread.js';
 export type { ChatThreadOptions } from './ChatThread.js';
 export { TokenUsage } from './TokenUsage.js';
 export type { TokenUsageOptions } from './TokenUsage.js';
 
-export { ThemeEditor } from "./ThemeEditor.js";
-export type { ThemeConfig } from "./ThemeEditor.js";
-export { SearchPanel } from "./SearchPanel.js";
-export type { SearchPanelOptions } from "./SearchPanel.js";
+export { WelcomeScreen } from './WelcomeScreen.js';
+export type { WelcomeScreenOptions, KeymapHint } from './WelcomeScreen.js';
 
-export { Workspace } from "./Workspace.js";
-export type { WorkspaceOptions } from "./Workspace.js";
+export { SetupFlow } from './SetupFlow.js';
+export type { SetupFlowOptions, SetupStep } from './SetupFlow.js';
 
-export { createValidator } from "./FormValidator.js";
-export type {
-  ValidationRule,
-  ValidationSchema,
-  ValidationResult,
-} from "./FormValidator.js";

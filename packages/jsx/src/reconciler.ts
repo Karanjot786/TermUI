@@ -22,6 +22,7 @@ import {
 } from './hooks.js';
 import { ErrorBoundary } from './error-boundary.js';
 import { Suspense } from './Suspense.js';
+import { scheduleRender, currentFiber } from './hooks.js';
 // ── Component instance tracking ──
 
 interface ComponentInstance {
@@ -37,9 +38,12 @@ interface ComponentInstance {
 const _instanceMap = new Map<Widget, ComponentInstance>();
 /** Reverse map: Fiber → Widget for O(1) cleanup in destroyFiber */
 const _fiberToWidgetMap = new Map<Fiber, Widget>();
+/** Track thrown Promises per fiber so SuspenseBoundary can re-render on resolution */
+const _suspendedFibers = new Map<number, { promise: Promise<any>; fiber: Fiber }>();
 // Expose globally so render() and @termuijs/testing can dispatch to useInput handlers and destroyFiber
 (globalThis as any).__termuijs_instances = _instanceMap;
 (globalThis as any).__termuijs_fiberToWidget = _fiberToWidgetMap;
+(globalThis as any).__termuijs_suspendedFibers = _suspendedFibers;
 
 // ── Parent fiber tracking ──
 // Tracks the currently-rendering fiber so child components
@@ -352,6 +356,10 @@ function defaultErrorVNode(err: Error): VNode {
  * (_currentFiber, _parentFiber) is correctly set, so the fallback subtree
  * has proper parent references, context propagation, and error boundary
  * traversal.
+ *
+ * The thrown Promise is stored so that when it resolves, a re-render of
+ * this boundary is scheduled. On re-render the lazy component's module is
+ * available and the real content replaces the fallback.
  */
 function SuspenseBoundary(props: Record<string, any>): any {
     const children = Array.isArray(props.children) ? props.children : [props.children];
@@ -361,10 +369,23 @@ function SuspenseBoundary(props: Record<string, any>): any {
         children,
     } as any;
 
+    // Capture fiber before reconcile: renderComponent clears _currentFiber
+    // when a Promise is thrown (to prevent stale hook context for error
+    // boundaries), so currentFiber() in the catch block would fail.
+    const thisFiber = currentFiber();
+
     try {
         return reconcile(child);
     } catch (err) {
         if (err instanceof Promise) {
+            _suspendedFibers.set(thisFiber.id, { promise: err, fiber: thisFiber });
+            err.then(() => {
+                const entry = _suspendedFibers.get(thisFiber.id);
+                if (entry && entry.promise === err) {
+                    _suspendedFibers.delete(thisFiber.id);
+                    scheduleRender(thisFiber);
+                }
+            });
             return reconcile(props.fallback ?? null);
         }
         throw err;
