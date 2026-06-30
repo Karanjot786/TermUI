@@ -264,17 +264,17 @@ describe('Widget', () => {
             expect(c2.parent).toBeNull();
         });
 
-        it('destroy() calls the overridden unmount() method', () => {
-            let unmountCalled = false;
+        it('destroy() calls the overridden unmount() exactly once', () => {
+            const unmountFn = vi.fn();
             class LifecycleWidget extends TestWidget {
                 override unmount(): void {
-                    unmountCalled = true;
+                    unmountFn();
                     super.unmount();
                 }
             }
             const w = new LifecycleWidget();
             w.destroy();
-            expect(unmountCalled).toBe(true);
+            expect(unmountFn).toHaveBeenCalledTimes(1);
         });
     });
 
