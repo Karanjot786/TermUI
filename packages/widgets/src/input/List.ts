@@ -78,6 +78,7 @@ export class List extends Widget {
         }
 
         this.focusable = true;
+        this.events.on('key', this.handleKey.bind(this));
     }
 
     // ── Getters ───────────────────────────────────────
