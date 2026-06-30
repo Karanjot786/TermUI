@@ -655,6 +655,17 @@ describe('persistence', () => {
         }).toThrow(/Persist file path must be within/)
     })
 
+    it('rejects a sibling dir that shares the persist-dir prefix', () => {
+        // `${persistDir}-evil/...` passes a naive startsWith() check but is outside persistDir.
+        expect(() => {
+            createStore({ count: 0 }, {
+                persist: {
+                    file: '../termuijs-stores-evil/x.json',
+                }
+            })
+        }).toThrow(/Persist file path must be within/)
+    })
+
     it('throws error on path traversal in key option', () => {
         expect(() => {
             createStore({ count: 0 }, {

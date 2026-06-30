@@ -253,7 +253,10 @@ export function createStore<T extends object>(
                 ? persistOpt.file
                 : path.join(persistDir, persistOpt.file);
             const resolvedPath = path.resolve(persistFilePath);
-            if (!resolvedPath.startsWith(path.resolve(persistDir))) {
+            // Use path.relative for containment: startsWith() is bypassable by a
+            // sibling dir sharing the prefix (e.g. `${persistDir}-evil/x.json`).
+            const rel = path.relative(path.resolve(persistDir), resolvedPath);
+            if (rel.startsWith('..') || path.isAbsolute(rel)) {
                 throw new Error(`Persist file path must be within ${persistDir}`);
             }
             persistFilePath = resolvedPath;
