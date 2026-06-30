@@ -1,4 +1,5 @@
 # Security policy
+We take the security of TermUI seriously and appreciate community assistance in keeping it secure.
 
 ## Supported versions
 
