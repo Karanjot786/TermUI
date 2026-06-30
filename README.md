@@ -1,8 +1,7 @@
-<p align="center">
-  <h1 align="center">TermUI</h1>
-    
-  <p align="center">Build terminal applications in TypeScript.</p>
-</p>
+# TermUI
+
+A powerful TypeScript and JavaScript framework tailored for building rich terminal applications. Includes flexbox layout, state management, animations, and hot-reload.
+
 
 
 <p align="center">
