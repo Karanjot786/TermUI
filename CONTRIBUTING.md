@@ -1,4 +1,5 @@
 # Contributing to TermUI
+Thank you for your interest in contributing to TermUI; your help is vital to refining our terminal user interface components.
 
 Thanks for your contribution. Bug fixes, new widgets, improved docs, typo fixes. All of it helps.
 
