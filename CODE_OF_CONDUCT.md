@@ -2,7 +2,8 @@
 
 ## The short version
 
-Be decent to each other. We're building terminal UI stuff, not running a debate club. Disagreement about code is fine. Personal attacks aren't.
+Be decent to each other. We are collectively building a great terminal UI tool, not hosting a debate club. Constructive criticism regarding architectural decisions or code structure is welcome, but personal attacks are strictly unacceptable.
+
 
 ## The longer version
 
