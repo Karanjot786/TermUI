@@ -408,6 +408,12 @@ export class App {
                     this.screen.clear();
                     this._rootWidget.render(this.screen);
 
+                    // Apply any scheduled backdrop filters (e.g. from Modals)
+                    // This runs as a compositing pass after the entire widget tree has drawn,
+                    // ensuring that dimming is order-independent and correctly applies to
+                    // cells outside all active modals.
+                    this.screen.flushBackdropFilters();
+
                     // Merge adjacent borders into junction characters for a cleaner look
                     if (this._options.dockBorders) {
                         mergeBorders(this.screen);

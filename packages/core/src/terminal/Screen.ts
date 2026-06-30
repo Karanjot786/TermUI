@@ -511,25 +511,41 @@ export class Screen {
         return grid;
     }
 
-        /**
-     * Applies a backdrop filter (dark gray foreground, black background) 
-     * to all cells outside the specified exclude rectangle.
+    private _backdropFilters: Array<{ x: number; y: number; width: number; height: number; }> = [];
+
+    /**
+     * Schedules a backdrop filter to be applied during the compositing pass.
+     * The excluded rectangle will NOT be dimmed.
      */
     applyBackdropFilter(excludeRect: { x: number; y: number; width: number; height: number; }): void {
+        this._backdropFilters.push({ ...excludeRect });
+    }
+
+    /**
+     * Applies all scheduled backdrop filters in a render-order-independent way,
+     * dimming any cell that falls outside of ALL scheduled exclude rectangles.
+     * Called automatically by the App render loop.
+     */
+    flushBackdropFilters(): void {
+        if (this._backdropFilters.length === 0) return;
+
         for (let y = 0; y < this._rows; y++) {
             for (let x = 0; x < this._cols; x++) {
-                if (x >= excludeRect.x && x < excludeRect.x + excludeRect.width &&
-                    y >= excludeRect.y && y < excludeRect.y + excludeRect.height) {
-                    continue;
+                let exclude = false;
+                for (const rect of this._backdropFilters) {
+                    if (x >= rect.x && x < rect.x + rect.width &&
+                        y >= rect.y && y < rect.y + rect.height) {
+                        exclude = true;
+                        break;
+                    }
                 }
-                // Access back buffer directly to bypass Readonly<Cell> constraint
-                const cell = this.back[y]?.[x];
-                if (cell) {
-                    cell.fg = { type: 'named', name: 'brightBlack' }; // dark gray
-                    cell.bg = { type: 'named', name: 'black' };
+                if (!exclude) {
+                    this.setCell(x, y, { dim: true });
                 }
             }
         }
+        
+        this._backdropFilters = [];
     }
 
 }
