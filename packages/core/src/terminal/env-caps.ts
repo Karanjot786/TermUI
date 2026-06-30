@@ -1,5 +1,14 @@
+import { ColorDepth, detectColorDepth } from '../style/Color.js';
+
 export const caps = {
-  color:   !process.env.NO_COLOR && process.env.TERM !== 'dumb',
+  get colorDepth(): ColorDepth {
+    return detectColorDepth();
+  },
+  get color(): boolean {
+    if (process.env.NO_COLOR !== undefined) return false;
+    if (process.env.TERM === 'dumb') return false;
+    return this.colorDepth !== ColorDepth.None;
+  },
   unicode: !process.env.NO_UNICODE && process.env.TERM !== 'dumb',
   motion:  !process.env.NO_MOTION && !process.env.CI,
   ci:      !!process.env.CI,
