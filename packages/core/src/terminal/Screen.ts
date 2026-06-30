@@ -58,7 +58,7 @@ export function emptyCell(): Cell {
         inverse: false,
         width: 1,
         link: undefined,
-         debugWidgetId: undefined,
+        debugWidgetId: undefined,
     };
 }
 

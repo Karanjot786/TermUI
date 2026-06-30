@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────
 // DevTools Panel — widget tree inspector, perf metrics
 // ─────────────────────────────────────────────────────
-import { type Screen, caps } from '@termuijs/core';
+import { type Screen, type Cell, type Color, caps } from '@termuijs/core';
 
 
 export interface WidgetNode {
@@ -29,6 +29,9 @@ export class DevTools {
     private _maxEvents = 100;
     private _renderTimes: number[] = [];
     private _frameRows: string[] = [];
+    
+    public lastHoverWidgetId: string | null = null;
+    public lastHoverCells: { x: number; y: number; cell: Cell }[] = [];
 
     get visible(): boolean { return this._visible; }
     toggle(): void { this._visible = !this._visible; }
@@ -40,9 +43,11 @@ export class DevTools {
 
     /** Update widget tree snapshot */
     updateTree(root: WidgetNode): void { this._widgetTree = root; }
+    get widgetTree(): WidgetNode | null { return this._widgetTree; }
 
     /** Record a render cycle */
     recordRender(timeMs: number, widgetCount: number): void {
+        this.lastHoverCells = []; // Clear saved cells so they aren't restored over fresh screen content
         const now = Date.now();
         this._renderTimes.push(now);
         // Keep last 60 render timestamps for FPS calculation
@@ -195,15 +200,16 @@ export function getWidgetRect(root: WidgetNode | null, id: string): { x: number;
     return null;
 }
 
-let lastHoverWidgetId: string | null = null;
-let lastHoverCells: { x: number; y: number; cell: any }[] = [];
-
-export function renderDebugRect(screen: Screen, rect: { x: number; y: number; width: number; height: number; }): { x: number; y: number; cell: any }[] {
-    const color = { type: 'hex', hex: '#FF00FF' } as const;
-    const bg = { type: 'none' } as const;
-    const savedCells: { x: number; y: number; cell: any }[] = [];
+export function renderDebugRect(screen: Screen, rect: { x: number; y: number; width: number; height: number; }): { x: number; y: number; cell: Cell }[] {
+    const color: Color = { type: 'hex', hex: '#FF00FF' };
+    const bg: Color = { type: 'none' };
+    const savedCells: { x: number; y: number; cell: Cell }[] = [];
+    const savedMap = new Set<string>();
 
     const saveCell = (x: number, y: number) => {
+        const key = `${x},${y}`;
+        if (savedMap.has(key)) return;
+        savedMap.add(key);
         const cell = screen.getCell(x, y);
         if (cell) {
             savedCells.push({ x, y, cell: { ...cell } });
@@ -245,23 +251,23 @@ export function renderDebugRect(screen: Screen, rect: { x: number; y: number; wi
     return savedCells;
 }
 
-export function handleDevToolsHover(x: number, y: number, screen: Screen, widgetTree: WidgetNode | null): void {
+export function handleDevToolsHover(x: number, y: number, screen: Screen, devtools: DevTools): void {
     const cell = screen.getCell(x, y);
     const newId = (cell && cell.debugWidgetId) ? cell.debugWidgetId : null;
 
-    if (newId === lastHoverWidgetId) return;
+    if (newId === devtools.lastHoverWidgetId) return;
 
     // Restore old cells
-    for (const saved of lastHoverCells) {
+    for (const saved of devtools.lastHoverCells) {
         screen.setCell(saved.x, saved.y, saved.cell);
     }
-    lastHoverCells = [];
-    lastHoverWidgetId = newId;
+    devtools.lastHoverCells = [];
+    devtools.lastHoverWidgetId = newId;
 
-    if (newId) {
-        const rect = getWidgetRect(widgetTree, newId);
+    if (newId && devtools.widgetTree) {
+        const rect = getWidgetRect(devtools.widgetTree, newId);
         if (rect) {
-            lastHoverCells = renderDebugRect(screen, rect);
+            devtools.lastHoverCells = renderDebugRect(screen, rect);
         }
     }
 }
