@@ -32,6 +32,7 @@ export class NumberInput extends Widget {
     private _allowDecimal: boolean;
     private _onChange?: (value: number | null) => void;
     private _onSubmit?: (value: number | null) => void;
+    private _onComplete?: (value: number | null) => void;
     focusable = true;
     public signal?: AbortSignal;
 
@@ -136,7 +137,14 @@ export class NumberInput extends Widget {
         this._notify();
     }
 
-    submit(): void { this._onSubmit?.(this.numericValue); }
+    submit(): void { 
+        this._onSubmit?.(this.numericValue); 
+        this._onComplete?.(this.numericValue);
+    }
+
+    onComplete(cb: (value: number | null) => void): void {
+        this._onComplete = cb;
+    }
     clear(): void { this._raw = ''; this._cursorPos = 0; this._notify(); }
 
     /**

@@ -25,6 +25,7 @@ export class Form extends Widget {
     private _activeColor: Style['fg'];
     private _onSubmit?: (values: Record<string, string>) => void;
     private _isValidating = false;
+    private _onComplete?: (values: Record<string, string>) => void;
     focusable = true;
     public signal?: AbortSignal;
 
@@ -82,8 +83,15 @@ export class Form extends Widget {
         }
 
         this._isValidating = false;
-        if (!hasErr) this._onSubmit?.(this.values);
+        if (!hasErr) {
+            this._onSubmit?.(this.values);
+            this._onComplete?.(this.values);
+        }
         this.markDirty();
+    }
+
+    onComplete(cb: (values: Record<string, string>) => void): void {
+        this._onComplete = cb;
     }
 
     /** Minimal key router — printable chars -> insertChar, backspace -> deleteBack */

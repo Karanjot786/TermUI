@@ -18,6 +18,7 @@ export class Select extends Widget {
     private _activeColor: Style['fg'];
     private _onSelect?: (option: SelectOption, index: number) => void;
     private _closedHeight: number;
+    private _onComplete?: (option: SelectOption) => void;
     focusable = true;
     public signal?: AbortSignal;
 
@@ -61,7 +62,17 @@ export class Select extends Widget {
     }
     confirm(): void {
         const opt = this._options[this._selectedIndex];
-        if (opt && !opt.disabled) { this._onSelect?.(opt, this._selectedIndex); this._isOpen = false; this._restoreHeight(); this.markDirty(); }
+        if (opt && !opt.disabled) { 
+            this._onSelect?.(opt, this._selectedIndex); 
+            this._onComplete?.(opt);
+            this._isOpen = false; 
+            this._restoreHeight(); 
+            this.markDirty(); 
+        }
+    }
+
+    onComplete(cb: (option: SelectOption) => void): void {
+        this._onComplete = cb;
     }
 
     protected _renderSelf(screen: Screen): void {

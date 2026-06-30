@@ -112,4 +112,56 @@ describe('AbortSignal prompt integration', () => {
 
         await expect(prompt(sel)).rejects.toThrow(TermUIAbortError);
     });
+
+    it('resolves select prompt successfully without aborting', async () => {
+        const sel = select({
+            options: ['a', 'b', 'c'],
+        });
+        const promise = prompt(sel);
+        
+        sel.selectNext();
+        sel.confirm();
+        
+        await expect(promise).resolves.toBe('b');
+        expect(setRawModeSpy).toHaveBeenCalledWith(false);
+    });
+
+    it('resolves textInput prompt successfully without aborting', async () => {
+        const input = textInput();
+        const promise = prompt(input);
+        
+        input.value = 'hello world';
+        input.submit();
+        
+        await expect(promise).resolves.toBe('hello world');
+        expect(setRawModeSpy).toHaveBeenCalledWith(false);
+    });
+
+    it('resolves numberInput prompt successfully without aborting', async () => {
+        const input = numberInput();
+        const promise = prompt(input);
+        
+        input.rawValue = '42';
+        input.submit();
+        
+        await expect(promise).resolves.toBe(42);
+        expect(setRawModeSpy).toHaveBeenCalledWith(false);
+    });
+
+    it('resolves form prompt successfully without aborting', async () => {
+        const f = form([
+            { name: 'name', label: 'Name', type: 'text' },
+        ]);
+        const promise = prompt(f);
+        
+        f.insertChar('A');
+        f.insertChar('l');
+        f.insertChar('i');
+        f.insertChar('c');
+        f.insertChar('e');
+        await f.submit();
+        
+        await expect(promise).resolves.toEqual({ name: 'Alice' });
+        expect(setRawModeSpy).toHaveBeenCalledWith(false);
+    });
 });

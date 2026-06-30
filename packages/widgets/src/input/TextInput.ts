@@ -31,6 +31,7 @@ export class TextInput extends Widget {
     private _vimMode: VimMode = process.env.TERMUI_KEYBINDINGS === 'vim' ? 'normal' : 'insert';
     private _suggestions: string[] = [];
     private _suggestionIndex = 0;
+    private _onComplete?: (value: string) => void;
     public signal?: AbortSignal;
 
     constructor(
@@ -197,6 +198,11 @@ export class TextInput extends Widget {
 
     submit(): void {
         this._onSubmit?.(this._value);
+        this._onComplete?.(this._value);
+    }
+
+    onComplete(cb: (value: string) => void): void {
+        this._onComplete = cb;
     }
 
     clear(): void {

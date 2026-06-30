@@ -176,42 +176,30 @@ export async function promptWidget<T = any /* Allow resolving any prompt value t
         }
 
         if (widget instanceof Select) {
-            const originalOnSelect = (widget as any /* Bypass private access */)._onSelect;
-            (widget as any /* Bypass private access */)._onSelect = (option: any /* Callback signature uses any */, index: number) => {
-                originalOnSelect?.(option, index);
+            widget.onComplete((option) => {
                 cleanup();
-                resolve(option.value as T);
-            };
+                resolve(option.value as unknown as T);
+            });
         } else if (widget instanceof TextInput) {
-            const originalOnSubmit = (widget as any /* Bypass private access */)._onSubmit;
-            (widget as any /* Bypass private access */)._onSubmit = (value: string) => {
-                originalOnSubmit?.(value);
+            widget.onComplete((value) => {
                 cleanup();
                 resolve(value as unknown as T);
-            };
+            });
         } else if (widget instanceof NumberInput) {
-            const originalOnSubmit = (widget as any /* Bypass private access */)._onSubmit;
-            (widget as any /* Bypass private access */)._onSubmit = (value: number | null) => {
-                originalOnSubmit?.(value);
+            widget.onComplete((value) => {
                 cleanup();
                 resolve(value as unknown as T);
-            };
+            });
         } else if (widget instanceof Form) {
-            const originalOnSubmit = (widget as any /* Bypass private access */)._onSubmit;
-            (widget as any /* Bypass private access */)._onSubmit = (values: Record<string, string>) => {
-                originalOnSubmit?.(values);
+            widget.onComplete((values) => {
                 cleanup();
                 resolve(values as unknown as T);
-            };
-        } else {
-            const originalOnSubmit = (widget as any /* Bypass private access */)._onSubmit;
-            if (typeof originalOnSubmit === 'function') {
-                (widget as any /* Bypass private access */)._onSubmit = (value: any /* Custom widget onSubmit values */) => {
-                    originalOnSubmit?.(value);
-                    cleanup();
-                    resolve(value as T);
-                };
-            }
+            });
+        } else if ('onComplete' in widget && typeof (widget as any).onComplete === 'function') {
+            (widget as any).onComplete((value: any) => {
+                cleanup();
+                resolve(value as T);
+            });
         }
 
         app.mount().catch((err) => {
