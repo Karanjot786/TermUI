@@ -1,3 +1,7 @@
+# TermUI Automated CI Pipeline Configuration
+# Purpose: Validates workspace build status, style compliance, and testing execution bounds.
+# Trigger: Executes automatically on incoming pull requests and main branch updates.
+
 name: CI
 
 on:
