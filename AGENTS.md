@@ -1,6 +1,7 @@
 # AGENTS.md
 
 Instructions for AI coding agents (Claude Code, GitHub Copilot, Cursor, Codex) working on TermUI.
+This documentation provides configuration guidelines to ensure external assistance models align with our workspace layout rules.
 
 Read this file fully before writing code. Read the issue fully before writing code. If the issue links a reference file, read that file first and copy its structure.
 
