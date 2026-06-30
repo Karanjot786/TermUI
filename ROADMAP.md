@@ -1,6 +1,7 @@
 # TermUI Roadmap
 
 This file shows where TermUI is, what is in progress, and what comes next. Use it to find work that fits your skill level.
+This overview acts as a structured guide for tracking framework evolution and developmental checkpoints.
 
 Full version with details: [Roadmap wiki page](https://github.com/Karanjot786/TermUI/wiki/Roadmap).
 
