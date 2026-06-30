@@ -440,6 +440,14 @@ export class Screen {
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
         this._previousLines = [];
+        this._previousStyleLines = [];
+        this._clipStack = [];
+        this._translateYStack = [];
+        this._translateY = 0;
+        this._ansiQueue = [];
+        this._flushEpoch = -1;
+        this._swapping = false;
+        this._backdropFilters = [];
     }
 
     /**

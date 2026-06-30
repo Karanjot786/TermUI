@@ -70,6 +70,28 @@ describe('Screen', () => {
         expect(screen.front[0][0].char).toBe('\0');
     });
 
+    it('resize resets all ancillary state', () => {
+        const screen = new Screen(10, 5);
+
+        // Set up some state
+        screen.pushClip({ x: 0, y: 0, width: 5, height: 3 });
+        screen.pushTranslateY(2);
+        screen.writeAnsi('\x1b[31m');
+        screen.applyBackdropFilter({ x: 0, y: 0, width: 3, height: 3 });
+
+        // Resize
+        screen.resize(20, 10);
+
+        expect(screen.cols).toBe(20);
+        expect(screen.rows).toBe(10);
+        expect(screen.activeClip).toBeNull();
+        expect(screen.drainAnsiQueue()).toBe('');
+        expect(screen.getPreviousLine(0)).toBe('');
+        // Write after resize and verify it lands correctly (no stale clip/translate)
+        screen.setCell(15, 8, { char: 'Z' });
+        expect(screen.back[8][15].char).toBe('Z');
+    });
+
     it('writeString applies style attributes (bold, fg)', () => {
         const screen = new Screen(10, 5);
         screen.writeString(0, 0, 'Hi', { bold: true, fg: { type: 'named', name: 'red' } });
