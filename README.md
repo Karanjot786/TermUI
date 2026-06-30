@@ -478,6 +478,8 @@ examples/
 
 ## Development
 > **Note:** This project uses [Bun](https://bun.sh) as its package manager. Install Bun first: https://bun.sh/docs/installation
+> **Note:** If you encounter execution policy or permission errors during setup, open your terminal as an Administrator (Windows) or use `sudo` before running commands (Mac/Linux).
+
 
 ```bash
 bun install
