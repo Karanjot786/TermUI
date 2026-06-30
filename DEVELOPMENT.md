@@ -1,6 +1,7 @@
 # Development Guide
 
 This guide helps contributors set up the project locally, understand the monorepo structure, and run builds, tests, and examples.
+Following these steps ensures a standardized workspace configuration for all development tasks.
 
 ## Prerequisites
 
