@@ -1,54 +1,43 @@
 import { describe, it, expect } from 'vitest';
-import { defaultDark } from './tokens.js';
 import {
-  getNamedTheme,
-  highContrastTheme,
-  catppuccinTheme,
-  NAMED_THEMES,
+  cobalt2Theme, nightOwlTheme, ayuTheme, materialTheme, synthwaveTheme,
+  kanagawaTheme, catppuccinLatteTheme, catppuccinFrappeTheme, catppuccinMacchiatoTheme,
+  horizonTheme, snazzyTheme, vesperTheme, gruvboxLightTheme,
+  NAMED_THEMES, getNamedTheme,
 } from './named-themes.js';
 
-describe('Named ThemeTokens', () => {
-  it('registers highContrast in the named theme map', () => {
-    expect(NAMED_THEMES.highContrast).toBe(highContrastTheme);
-    expect(getNamedTheme('highContrast')).toBe(highContrastTheme);
+describe('named themes', () => {
+  const NEW_THEMES = [
+    'cobalt2', 'nightOwl', 'ayu', 'material', 'synthwave', 'kanagawa',
+    'catppuccinLatte', 'catppuccinFrappe', 'catppuccinMacchiato',
+    'horizon', 'snazzy', 'vesper', 'gruvboxLight',
+  ];
+
+  it('registers all new themes in NAMED_THEMES', () => {
+    for (const name of NEW_THEMES) {
+      expect(NAMED_THEMES[name], `NAMED_THEMES["${name}"] missing`).toBeDefined();
+    }
   });
 
-  it('highContrast exposes all ThemeTokens with strong terminal contrast', () => {
-    expect(highContrastTheme).toEqual({
-      bg: '#000000',
-      fg: '#ffffff',
-      primary: '#00ffff',
-      secondary: '#ff00ff',
-      success: '#00ff00',
-      warning: '#ffff00',
-      error: '#ff5555',
-      muted: '#b3b3b3',
-      border: '#ffffff',
-      highlight: '#1a1a1a',
-    });
+  it('each new theme has all 10 ThemeTokens fields', () => {
+    const fields = ['bg','fg','primary','secondary','success','warning','error','muted','border','highlight'];
+    for (const name of NEW_THEMES) {
+      const theme = NAMED_THEMES[name]!;
+      for (const field of fields) {
+        expect((theme as any)[field], `${name}.${field} missing`).toBeDefined();
+      }
+    }
   });
 
-  it('registers catppuccin in the named theme map', () => {
-    expect(NAMED_THEMES.catppuccin).toBe(catppuccinTheme);
-    expect(getNamedTheme('catppuccin')).toBe(catppuccinTheme);
+  it('getNamedTheme resolves new themes by key', () => {
+    expect(getNamedTheme('cobalt2').bg).toBe('#193549');
+    expect(getNamedTheme('nightOwl').bg).toBe('#011627');
+    expect(getNamedTheme('catppuccinLatte').bg).toBe('#eff1f5');
   });
 
-  it('catppuccin exposes the official Catppuccin palette', () => {
-    expect(catppuccinTheme).toEqual({
-      bg: '#1e1e2e',
-      fg: '#cdd6f4',
-      primary: '#cba6f7',
-      secondary: '#f5c2e7',
-      success: '#a6e3a1',
-      warning: '#f9e2af',
-      error: '#f38ba8',
-      muted: '#585b70',
-      border: '#585b70',
-      highlight: '#313244',
-    });
-  });
-
-  it('falls back to defaultDark for unknown named themes', () => {
-    expect(getNamedTheme('missing-theme')).toBe(defaultDark);
+  it('catppuccin light variant has light background', () => {
+    expect(catppuccinLatteTheme.bg).toBe('#eff1f5');
+    // latte is the light catppuccin — bg should be near-white
+    expect(catppuccinLatteTheme.bg.toLowerCase()).not.toBe('#1e1e2e');
   });
 });

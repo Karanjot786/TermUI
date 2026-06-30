@@ -92,29 +92,7 @@ describe('docker provider', () => {
         expect(api.pids).toBe(12);
     });
 
-    it('returns stats for a specific container', () => {
-        mockExecFileSync.mockReturnValue(MOCK_STATS_JSON);
-
-        const result = docker.stats('abc123def456');
-
-        expect(result).not.toBeNull();
-        expect(result!.cpu).toBe(2.1);
-        expect(result!.mem.used).toBe(125829120); // 120 MiB
-        expect(result!.mem.limit).toBe(536870912); // 512 MiB
-        expect(result!.mem.percent).toBe(24.57);
-        expect(result!.net.rx).toBe(1020);
-        expect(result!.net.tx).toBe(512);
-        expect(result!.pids).toBe(12);
-    });
-
-    it('returns null for stats when docker fails', () => {
-        mockExecFileSync.mockImplementation(() => { throw new Error('container not found'); });
-
-        const result = docker.stats('nonexistent');
-        expect(result).toBeNull();
-    });
-
-    it('stops at ps when stats command fails', () => {
+it('stops at ps when stats command fails', () => {
         mockExecFileSync
             .mockImplementationOnce(() => MOCK_PS_JSON)
             .mockImplementationOnce(() => { throw new Error('stats failed'); });

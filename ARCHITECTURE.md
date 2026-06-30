@@ -1,10 +1,12 @@
+
 # Architecture
 
 ## Overview
 
-TermUI is a TypeScript framework for building terminal applications.
+TermUI is a high-performance TypeScript framework designed for constructing rich terminal applications.
 
-It is a CLI library, not a web application. There is no DOM, no browser, and no React runtime. Applications render through a terminal cell grid and ANSI escape codes.
+It operates strictly as a CLI library rather than a web application. Because there is no DOM, browser environment, or React runtime, applications render efficiently through a terminal cell grid using ANSI escape codes.
+
 
 The repository is a Bun workspace monorepo containing 14 packages under `packages/`. Each package is published as `@termuijs/<name>`.
 

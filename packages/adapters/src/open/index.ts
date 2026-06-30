@@ -2,7 +2,6 @@ import { createRequire } from 'node:module'
 
 export interface UseOpenResult {
   open: (target: string) => Promise<void>
-  lastOpened: string | null
 }
 
 type OpenFunction = (target: string) => Promise<unknown>
@@ -37,16 +36,9 @@ function resolveOpen(): OpenFunction {
 export function useOpen(): UseOpenResult {
   const openFn = resolveOpen()
 
-  let lastOpened: string | null = null
-
   return {
     async open(target: string) {
       await openFn(target)
-      lastOpened = target
-    },
-
-    get lastOpened() {
-      return lastOpened
     },
   }
 }

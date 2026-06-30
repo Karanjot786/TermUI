@@ -71,5 +71,6 @@ export class Modal extends Widget {
             this._content.updateRect(cr);
             this._content.render(screen);
         }
+        screen.applyBackdropFilter({ x: mx, y: my, width: mw, height: mh });
     }
 }

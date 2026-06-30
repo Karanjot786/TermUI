@@ -1,158 +1,92 @@
-import {
-    type Screen,
-    type Style,
-    type KeyEvent,
-    styleToCellAttrs,
-    caps,
-} from '@termuijs/core';
+// Carousel — slide navigator with indicator dots and keyboard controls
+import { type Screen, type KeyEvent, styleToCellAttrs, caps, mergeStyles, defaultStyle } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface CarouselOptions {
-    loop?: boolean;
     showDots?: boolean;
-    showArrows?: boolean;
+    onChange?: (index: number) => void;
 }
 
 export class Carousel extends Widget {
-    private _items: string[];
-    private _index = 0;
-    private _opts: Required<CarouselOptions>;
+    private _slides: string[];
+    private _activeIndex = 0;
+    private _showDots: boolean;
+    private _onChange?: (index: number) => void;
+    focusable = true;
 
-    constructor(
-        items: string[],
-        style: Partial<Style> = {},
-        opts: CarouselOptions = {},
-    ) {
-        super(style);
-
-        this._items = items;
-        this._opts = {
-            loop: opts.loop ?? false,
-            showDots: opts.showDots ?? true,
-            showArrows: opts.showArrows ?? true,
-        };
-
-        this.focusable = true;
+    constructor(slides: string[], options: CarouselOptions = {}) {
+        super(mergeStyles(defaultStyle(), { flexGrow: 1 }));
+        this._slides = slides.length > 0 ? [...slides] : [''];
+        this._showDots = options.showDots ?? false;
+        this._onChange = options.onChange;
     }
 
-    getIndex(): number {
-        return this._index;
-    }
+    get activeIndex(): number { return this._activeIndex; }
+    get currentSlide(): string { return this._slides[this._activeIndex] ?? ''; }
+    get slides(): string[] { return [...this._slides]; }
+    get showDots(): boolean { return this._showDots; }
 
     setIndex(index: number): void {
-        if (this._items.length === 0) {
-            this._index = 0;
-        } else {
-            this._index = Math.max(
-                0,
-                Math.min(index, this._items.length - 1),
-            );
-        }
-
+        const normalized = this._normalizeIndex(index);
+        if (normalized === this._activeIndex) return;
+        this._activeIndex = normalized;
+        this._onChange?.(this._activeIndex);
         this.markDirty();
     }
 
     next(): void {
-        if (this._items.length === 0) return;
-
-        if (this._index >= this._items.length - 1) {
-            if (this._opts.loop) {
-                this._index = 0;
-            }
-        } else {
-            this._index++;
-        }
-
-        this.markDirty();
+        if (this._slides.length === 0) return;
+        this.setIndex(this._activeIndex + 1);
     }
 
     prev(): void {
-        if (this._items.length === 0) return;
-
-        if (this._index <= 0) {
-            if (this._opts.loop) {
-                this._index = this._items.length - 1;
-            }
-        } else {
-            this._index--;
-        }
-
-        this.markDirty();
-    }
-
-    setItems(items: string[]): void {
-        this._items = items;
-
-        if (this._index >= items.length) {
-            this._index = Math.max(0, items.length - 1);
-        }
-
-        this.markDirty();
+        if (this._slides.length === 0) return;
+        this.setIndex(this._activeIndex - 1);
     }
 
     handleKey(event: KeyEvent): void {
         switch (event.key) {
             case 'left':
-            case 'h':
                 this.prev();
                 break;
-
             case 'right':
-            case 'l':
                 this.next();
+                break;
+            case 'h':
+                if (!event.ctrl && !event.alt) this.prev();
+                break;
+            case 'l':
+                if (!event.ctrl && !event.alt) this.next();
                 break;
         }
     }
 
     protected _renderSelf(screen: Screen): void {
-        const rect = this._getContentRect();
-        const { x, y, width, height } = rect;
-
+        const { x, y, width, height } = this._rect;
         if (width <= 0 || height <= 0) return;
 
-        const attrs = styleToCellAttrs(this._style);
+        const attrs = styleToCellAttrs(this.style);
+        const slideLines = this.currentSlide.split('\n');
+        const indicatorHeight = this._showDots ? 1 : 0;
+        const contentHeight = Math.max(0, height - indicatorHeight);
 
-        const item = this._items[this._index] ?? '';
+        for (let row = 0; row < contentHeight; row++) {
+            const line = slideLines[row] ?? '';
+            screen.writeString(x, y + row, line.slice(0, width).padEnd(width), attrs);
+        }
 
-        const leftArrow = this._opts.showArrows
-            ? caps.unicode
-                ? '◄ '
-                : '< '
-            : '';
-
-        const rightArrow = this._opts.showArrows
-            ? caps.unicode
-                ? ' ►'
-                : ' >'
-            : '';
-
-        const header =
-            `${leftArrow}Item ${this._index + 1} of ${this._items.length}: ${item}${rightArrow}`;
-
-        screen.writeString(
-            x,
-            y,
-            header.slice(0, width),
-            attrs,
-        );
-
-        if (height >= 2 && this._opts.showDots) {
-            const activeDot = caps.unicode ? '●' : '*';
-            const inactiveDot = caps.unicode ? '○' : '.';
-
-            const dots = this._items
-                .map((_, i) =>
-                    i === this._index ? activeDot : inactiveDot,
-                )
+        if (this._showDots && height > 0) {
+            const activeDot = caps.unicode ? '●' : '(*)';
+            const inactiveDot = caps.unicode ? '○' : '( )';
+            const indicators = this._slides
+                .map((_, index) => index === this._activeIndex ? activeDot : inactiveDot)
                 .join(' ');
-
-            screen.writeString(
-                x,
-                y + 1,
-                dots.slice(0, width),
-                attrs,
-            );
+            screen.writeString(x, y + height - 1, indicators.slice(0, width).padEnd(width), attrs);
         }
     }
-}
 
+    private _normalizeIndex(index: number): number {
+        const count = Math.max(1, this._slides.length);
+        return ((index % count) + count) % count;
+    }
+}

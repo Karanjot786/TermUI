@@ -187,10 +187,35 @@ describe('LayerManager - Cell Writing', () => {
         // The emoji occupies column 0 (wide, width=2)
         expect(layer.cells[0][0].char).toBe('😀');
         expect(layer.cells[0][0].width).toBe(2);
-        // Column 1 is the placeholder for the wide char's second cell
-        expect(layer.cells[0][1].char).toBe(' ');
+        // Column 1 is the continuation cell for the wide char (width=0)
+        expect(layer.cells[0][1].char).toBe('');
+        expect(layer.cells[0][1].width).toBe(0);
         // 'A' must land at column 2, not column 1
         expect(layer.cells[0][2].char).toBe('A');
+    });
+
+    it('wide char continuation cell has width:0 and composites correctly', () => {
+        const lm = new LayerManager(20, 10);
+        const layer = lm.createLayer('base', 0);
+
+        // Write a wide CJK character
+        lm.writeString('base', 0, 0, '中A');
+
+        // The wide char occupies column 0 (width=2)
+        expect(layer.cells[0][0].char).toBe('中');
+        expect(layer.cells[0][0].width).toBe(2);
+        // Continuation cell must have width:0, not width:1
+        expect(layer.cells[0][1].width).toBe(0);
+        // 'A' must land at column 2
+        expect(layer.cells[0][2].char).toBe('A');
+
+        // Composite onto screen and verify no stray space
+        const screen = new Screen(20, 10);
+        lm.composite(screen);
+        expect(screen.back[0][0].char).toBe('中');
+        expect(screen.back[0][0].width).toBe(2);
+        expect(screen.back[0][1].width).toBe(0);
+        expect(screen.back[0][2].char).toBe('A');
     });
 });
 
