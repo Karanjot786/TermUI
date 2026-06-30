@@ -8,7 +8,7 @@ class SlidePos extends Pos {
     constructor(public offsetRatio: number) { super(); }
     dependencies() { return ['parentSize']; }
     evaluate(ctx: any) {
-        return Math.floor(ctx.parentWidth * this.offsetRatio);
+        return Math.max(0, Math.floor(ctx.parentWidth * this.offsetRatio));
     }
 }
 
@@ -24,13 +24,21 @@ export function RouterView({ router }: RouterViewProps) {
         progress: number;
     }>({
         previous: null,
-        current: router.current ? (router as any)._wrapScreen(router.current) : null,
+        current: router.current ? router._wrapScreen(router.current) : null,
         direction: 'push',
         progress: 1,
     });
 
     useEffect(() => {
+        router.autoUnmount = false;
+        let cancelTransition: (() => void) | null = null;
+
         const handleNavigate = (e: NavigateEvent) => {
+            if (cancelTransition) {
+                cancelTransition();
+                cancelTransition = null;
+            }
+
             const dir = e.direction ?? 'push';
             
             // Prepare for transition
@@ -42,13 +50,14 @@ export function RouterView({ router }: RouterViewProps) {
             }));
 
             // Animate using the motion transition runner
-            transition({
+            cancelTransition = transition({
                 durationMs: 350,
                 onFrame: (p) => {
                     setScreens(prev => ({ ...prev, progress: p }));
                 },
                 onComplete: () => {
                     setScreens(prev => ({ ...prev, previous: null, progress: 1 }));
+                    cancelTransition = null;
                 }
             });
         };
@@ -62,6 +71,8 @@ export function RouterView({ router }: RouterViewProps) {
         router.events.on('back', onBack);
         
         return () => {
+            router.autoUnmount = true;
+            if (cancelTransition) cancelTransition();
             router.events.off('navigate', onNav);
             router.events.off('back', onBack);
         };
