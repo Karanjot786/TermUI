@@ -198,11 +198,17 @@ export class Table extends Widget {
                 this._isDragging = true;
                 this._dragColIndex = colIndex;
             }
-        } else if (event.type === 'mouseup') {
+        } else if (event.type === 'mouseup' || event.type === 'dragend') {
             this._isDragging = false;
             this._dragColIndex = -1;
-        } else if (event.type === 'mousedrag' && this._isDragging) {
-            this._columnWidths[this._dragColIndex] = Math.max(1, this._columnWidths[this._dragColIndex] + event.dx);
+        } else if (event.type === 'drag' && this._isDragging) {
+            let colStartX = rect.x;
+            for (let i = 0; i < this._dragColIndex; i++) {
+                colStartX += (this._columnWidths[i] ?? 0) + sepWidth;
+            }
+            
+            const newWidth = Math.max(1, event.x - colStartX);
+            this._columnWidths[this._dragColIndex] = newWidth;
             
             // To prevent table width from changing uncontrollably, we can subtract dx from the next column 
             // if there's enough space, but a simpler free-resizing UX works better for terminal tables
