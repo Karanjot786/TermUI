@@ -31,3 +31,6 @@ export { mapRange, interpolate } from './interpolate.js';
 export type { InterpolateOptions } from './interpolate.js';
 export { Timeline } from './timeline.js';
 export type { TimelineOptions, TimelineTrack, CallbackMarker, SyncedTimeline } from './timeline.js';
+
+export { animateRect } from './layout-transition.js';
+export type { LayoutTransitionOptions } from './layout-transition.js';
