@@ -57,4 +57,4 @@ export { lighten, darken, alpha, evalColorFunction } from './color-functions.js'
 export { extractKeyframes } from './animations.js';
 export type { KeyframesDeclaration } from './animations.js';
 
-export { defineMixin, mixinRegistry } from './engine';
+export { defineMixin, mixinRegistry } from './engine.js';

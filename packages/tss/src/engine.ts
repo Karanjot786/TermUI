@@ -267,7 +267,7 @@ export function compileRules(source: string): ResolvedRule[] {
 const __origCompile = (typeof compile !== 'undefined') ? compile : (module.exports?.compile);
 
 // Our new compile
-function compileWithMixins(styles: any, mixins: any = {}): any {
+function compileWithMixins(styles: any, mixins: any = {}): any { // `any` used because style objects are dynamic and user-defined
   const withMixins = resolveMixins(styles, mixins);
   const flat = flattenStyles(withMixins);
   return __origCompile ? __origCompile(flat) : flat;
