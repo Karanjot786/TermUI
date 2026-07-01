@@ -183,4 +183,20 @@ describe('CommandHistory', () => {
         ch.import(JSON.stringify(['cmd1', 'cmd2']));
         expect(ch.previous()).toBe('cmd2');
     });
+
+    it('import() trims to maxSize when imported data exceeds limit', () => {
+        const ch = new CommandHistory({ maxSize: 3 });
+        const largeHistory = Array.from({ length: 10 }, (_, i) => `cmd${i}`);
+        ch.import(JSON.stringify(largeHistory));
+        expect(ch.getAll()).toHaveLength(3);
+        expect(ch.getAll()).toEqual(['cmd7', 'cmd8', 'cmd9']);
+    });
+
+    it('import() keeps all entries when under maxSize', () => {
+        const ch = new CommandHistory({ maxSize: 10 });
+        const smallHistory = ['cmd1', 'cmd2', 'cmd3'];
+        ch.import(JSON.stringify(smallHistory));
+        expect(ch.getAll()).toHaveLength(3);
+        expect(ch.getAll()).toEqual(smallHistory);
+    });
 });

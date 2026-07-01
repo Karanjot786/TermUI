@@ -100,15 +100,29 @@ export class Text extends Widget {
 
             // Apply horizontal scroll
             if (this._scrollX > 0) {
-                // Skip scrollX characters
+                // Skip scrollX visual columns
                 let skipped = 0;
                 let charIndex = 0;
+                let lineRebuilt = false;
                 for (const ch of line) {
-                    if (skipped >= this._scrollX) break;
-                    skipped++;
+                    const charWidth = stringWidth(ch);
+                    if (skipped + charWidth > this._scrollX) {
+                        // scrollX lands in the middle of this character
+                        // For wide characters, we need to handle the partial column
+                        if (charWidth === 2 && skipped < this._scrollX) {
+                            // We're at the second column of a wide character
+                            // Add a placeholder for the remaining column and skip the character
+                            line = ' ' + line.slice(charIndex + ch.length);
+                            lineRebuilt = true;
+                        }
+                        break;
+                    }
+                    skipped += charWidth;
                     charIndex += ch.length;
                 }
-                line = line.slice(charIndex);
+                if (!lineRebuilt) {
+                    line = line.slice(charIndex);
+                }
             }
 
             const lineWidth = stringWidth(line);

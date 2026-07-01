@@ -2,8 +2,7 @@
 // @termuijs/widgets — List widget (selectable)
 // ─────────────────────────────────────────────────────
 
-
-import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate, caps, type KeyEvent } from '@termuijs/core';
+import { type Screen, type Style, type MouseEvent, styleToCellAttrs, stringWidth, truncate, caps, type KeyEvent } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type ListState } from '../data/ListState.js';
 
@@ -42,6 +41,7 @@ export class List extends Widget {
     private _items: ListItem[];
     private _selectedIndex = 0;
     private _scrollOffset = 0;
+    private _mouseDownValid = false;
     private _onSelect?: (item: ListItem, index: number) => void;
     private _state?: ListState;
     private _onStateChange?: (state: ListState) => void;
@@ -78,7 +78,11 @@ export class List extends Widget {
         }
 
         this.focusable = true;
+<<<<<<< HEAD
         this.events.on('key', this.handleKey.bind(this));
+=======
+        this.events.on('mouse', (event) => this.handleMouse(event));
+>>>>>>> upstream/main
     }
 
     // ── Getters ───────────────────────────────────────
@@ -281,6 +285,46 @@ export class List extends Widget {
         }
         if (this._selectedIndex >= this._scrollOffset + visibleHeight) {
             this._scrollOffset = this._selectedIndex - visibleHeight + 1;
+        }
+    }
+
+    handleMouse(event: MouseEvent): void {
+        if (event.button !== 'left') return;
+        if (event.type !== 'mousedown' && event.type !== 'mouseup') return;
+
+        if (event.type === 'mousedown') {
+            const rect = this._getContentRect();
+            if (event.x < rect.x || event.x >= rect.x + rect.width) {
+                this._mouseDownValid = false;
+                return;
+            }
+            if (event.y < rect.y || event.y >= rect.y + rect.height) {
+                this._mouseDownValid = false;
+                return;
+            }
+
+            const clickedIndex = this._scrollOffset + (event.y - rect.y);
+            const item = this._items[clickedIndex];
+            if (!item || item.disabled) {
+                this._mouseDownValid = false;
+                return;
+            }
+
+            this._mouseDownValid = true;
+            if (this._selectedIndex !== clickedIndex) {
+                this._selectedIndex = clickedIndex;
+                this._clampScroll();
+                this.markDirty();
+                this._pushState();
+            }
+            return;
+        }
+
+        if (event.type === 'mouseup') {
+            if (this._mouseDownValid) {
+                this.confirm();
+            }
+            this._mouseDownValid = false;
         }
     }
 }

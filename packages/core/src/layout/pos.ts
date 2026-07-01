@@ -5,9 +5,6 @@
 import type { LayoutContext } from './LayoutContext.js';
 
 export abstract class Pos {
-    /** List of variables this Pos depends on, e.g. ['elementSize', 'parentSize'] */
-    abstract dependencies(): string[];
-    
     /** Computes the final numeric coordinate */
     abstract evaluate(ctx: LayoutContext): number;
 

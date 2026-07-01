@@ -145,7 +145,3 @@ export function useExeca(globalOpts?: Options): UseExecaResult {
   };
 }
 
-/**
- * Convenience alias for useExeca.
- */
-export const useShell = useExeca;

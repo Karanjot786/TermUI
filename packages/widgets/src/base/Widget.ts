@@ -113,6 +113,8 @@ export abstract class Widget {
      * Newly created widgets start dirty.
      */
     protected _dirty = true;
+    /** Idempotency guard — true once unmount() has completed */
+    private _unmounted = false;
     /** Render profiling statistics */
     private _renderStats: RenderStats = {
         renderCount: 0,
@@ -199,13 +201,12 @@ export abstract class Widget {
      * Fiber-level cleanup is handled by the reconciler's _pruneInstancesForWidget.
      */
     destroy(): void {
+        this.unmount();
         const children = [...this._children];
         this._children = [];
         for (const child of children) {
             child.destroy();
         }
-        this.events.emit('unmount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
-        this.events.removeAll();
         this.parent = null;
     }
 
@@ -549,6 +550,7 @@ export abstract class Widget {
 
     /** Lifecycle: called when the widget is mounted */
     mount(): void {
+        this._unmounted = false;
         this.events.emit('mount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         for (const child of this._children) {
             child.mount();
@@ -557,6 +559,8 @@ export abstract class Widget {
 
     /** Lifecycle: called when the widget is unmounted */
     unmount(): void {
+        if (this._unmounted) return;
+        this._unmounted = true;
         for (const child of this._children) {
             child.unmount();
         }

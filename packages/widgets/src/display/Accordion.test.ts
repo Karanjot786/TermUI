@@ -305,4 +305,88 @@ describe('Accordion', () => {
             expect(() => makeAccordion(SECTIONS, {}, 0, 0)).not.toThrow();
         });
     });
+
+    describe('10. Height clipping', () => {
+        it('does not throw when content exceeds available height', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+            const accordion = makeAccordion(SECTIONS, { multiple: true, openIndex: 0 }, 30, 3);
+            accordion.open(1);
+            accordion.open(2);
+
+            const screen = new Screen(30, 3);
+            accordion.updateRect({ x: 0, y: 0, width: 30, height: 3 });
+
+            expect(() => accordion.render(screen)).not.toThrow();
+            vi.restoreAllMocks();
+        });
+
+        it('content written beyond height boundary stays empty on screen', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+            const accordion = makeAccordion(SECTIONS, { multiple: true, openIndex: 0 }, 30, 2);
+            accordion.open(1);
+            accordion.open(2);
+
+            accordion.updateRect({ x: 0, y: 0, width: 30, height: 2 });
+            const screen = new Screen(30, 10);
+            accordion.render(screen);
+
+            // Rows 2–9 must be completely empty (widget must not have written past height)
+            const overflowRows = screen.back.slice(2).filter(
+                row => row.map((c: { char: string }) => c.char).join('').trim().length > 0
+            );
+            expect(overflowRows.length).toBe(0);
+            vi.restoreAllMocks();
+        });
+    });
+
+    describe('11. Width clipping', () => {
+        it('does not throw with a very small width', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+            const accordion = makeAccordion(
+                [{ title: 'A very long section title that exceeds narrow width', content: 'Body' }],
+                {},
+                5,
+                10,
+            );
+            const screen = new Screen(5, 10);
+
+            expect(() => accordion.render(screen)).not.toThrow();
+            vi.restoreAllMocks();
+        });
+
+        it('each rendered row has exactly width chars (title is truncated to fit)', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+            const accordion = makeAccordion(
+                [{ title: 'A very long section title', content: 'Body' }],
+                {},
+                8,
+                5,
+            );
+            const screen = new Screen(8, 5);
+            accordion.render(screen);
+
+            const row0 = screen.back[0]!.map((c: { char: string }) => c.char).join('');
+            expect(row0.length).toBe(8);
+            vi.restoreAllMocks();
+        });
+
+        it('renders stably with a width of 1', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+            const accordion = makeAccordion(
+                [{ title: 'T', content: 'B' }],
+                {},
+                1,
+                5,
+            );
+            const screen = new Screen(1, 5);
+
+            expect(() => accordion.render(screen)).not.toThrow();
+            vi.restoreAllMocks();
+        });
+    });
 });

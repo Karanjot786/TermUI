@@ -73,6 +73,17 @@ describe('computeLayout', () => {
         expect(root.children[1].computed.width).toBe(40);
     });
 
+    it('rejects negative percentage values', () => {
+        const root = makeNode('root', { flexDirection: 'row' }, [
+            makeNode('a', { width: '-50%' }),
+            makeNode('b', { width: '-25%' }),
+        ]);
+        computeLayout(root, 80, 24);
+
+        expect(root.children[0].computed.width).toBe(0);
+        expect(root.children[1].computed.width).toBe(0);
+    });
+
     it('respects padding', () => {
         const root = makeNode('root', { padding: 2 }, [
             makeNode('child', { flexGrow: 1 }),

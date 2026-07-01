@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "In-memory test renderer for TermUI components with query and input simulation",
   "type": "module",
   "main": "./dist/index.cjs",

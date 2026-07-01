@@ -44,6 +44,20 @@ const filter = useAppStore((s) => s.filter)  // only filter
 const all    = useCounter()                   // everything
 ```
 
+### Shallow Equality
+
+If your selector returns a new object or array (e.g. `(state) => ({ x: state.x, y: state.y })`), strict equality (`===`) will fail and your component will re-render on *every* store change. To prevent this, pass the `shallow` equality function as the second argument:
+
+```typescript
+import { shallow } from '@termuijs/store'
+
+// Component only re-renders when user.name or user.age actually change
+const user = useCounter(
+    (state) => ({ name: state.user.name, age: state.user.age }),
+    shallow
+)
+```
+
 ## batch()
 
 Group multiple `setState` calls into one reconciler pass. Use this in event handlers or timer callbacks where you update several fields at once.

@@ -116,4 +116,15 @@ describe("CLI args", () => {
             'Invalid template "invalid-template". Valid: empty, dashboard, interactive-tool, cli-wrapper, cli-tool, file-manager, ai-assistant, form-wizard'
         );
     });
+    it('parses --version', () => {
+        const res = parseArgs(['--version']);
+
+        expect(res.version).toBe(true);
+    });
+
+    it('parses -v', () => {
+        const res = parseArgs(['-v']);
+
+        expect(res.version).toBe(true);
+    });
 });
