@@ -262,3 +262,17 @@ export function compileRules(source: string): ResolvedRule[] {
     engine.load(source);
     return engine.rules;
 }
+// ---- WRAPPER FOR NESTING/MIXINS ----
+// Store original compile (if it exists)
+const __origCompile = (typeof compile !== 'undefined') ? compile : (module.exports?.compile);
+
+// Our new compile
+function compileWithMixins(styles: any, mixins: any = {}): any {
+  const withMixins = resolveMixins(styles, mixins);
+  const flat = flattenStyles(withMixins);
+  return __origCompile ? __origCompile(flat) : flat;
+}
+
+// Replace the exported compile
+export { compileWithMixins as compile };
+export { defineMixin, mixinRegistry };
