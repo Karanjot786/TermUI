@@ -78,11 +78,8 @@ export class List extends Widget {
         }
 
         this.focusable = true;
-<<<<<<< HEAD
         this.events.on('key', this.handleKey.bind(this));
-=======
         this.events.on('mouse', (event) => this.handleMouse(event));
->>>>>>> upstream/main
     }
 
     // ── Getters ───────────────────────────────────────
