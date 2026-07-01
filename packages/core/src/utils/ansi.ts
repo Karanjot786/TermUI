@@ -112,7 +112,8 @@ export const resetScrollRegion = `${CSI}r`;
 // ── Title ───────────────────────────────────────────
 
 export function setTitle(title: string): string {
-    return `${OSC}0;${title}\x07`;
+    const safeTitle = title.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `${OSC}0;${safeTitle}\x07`;
 }
 
 // ── Hyperlinks (OSC 8) ──────────────────────────────

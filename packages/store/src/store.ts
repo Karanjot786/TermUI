@@ -304,12 +304,24 @@ export function createStore<T extends object>(
     let persistFilePath = '';
     if (options?.persist) {
         const persistOpt = options.persist;
+        const persistDir = path.join(getAppConfigDir(), 'termuijs-stores');
         if (persistOpt.file) {
             persistFilePath = path.isAbsolute(persistOpt.file)
                 ? persistOpt.file
-                : path.join(getAppConfigDir(), persistOpt.file);
+                : path.join(persistDir, persistOpt.file);
+            const resolvedPath = path.resolve(persistFilePath);
+            // Use path.relative for containment: startsWith() is bypassable by a
+            // sibling dir sharing the prefix (e.g. `${persistDir}-evil/x.json`).
+            const rel = path.relative(path.resolve(persistDir), resolvedPath);
+            if (rel.startsWith('..') || path.isAbsolute(rel)) {
+                throw new Error(`Persist file path must be within ${persistDir}`);
+            }
+            persistFilePath = resolvedPath;
         } else if (persistOpt.key) {
-            persistFilePath = path.join(getAppConfigDir(), `${persistOpt.key}.json`);
+            if (!/^[a-zA-Z0-9._-]+$/.test(persistOpt.key)) {
+                throw new Error('Persist key must contain only alphanumeric characters, hyphens, underscores, and dots.');
+            }
+            persistFilePath = path.join(persistDir, `${persistOpt.key}.json`);
         }
     }
 
@@ -611,7 +623,7 @@ export function createStore<T extends object>(
 
 export interface UseStore<T> {
     (): T;
-    <U>(selector: Selector<T, U>): U;
+    <U>(selector: Selector<T, U>, equalityFn?: EqualityFn<U>): U;
     getState: GetState<T>;
     setState: SetState<T>;
     mutate(recipe: (draft: T) => void): void;

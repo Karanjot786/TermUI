@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createStore, batch } from './store.js'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import * as os from 'node:os'
 
 describe('createStore', () => {
     it('initializes state from creator function', () => {
@@ -419,6 +420,88 @@ describe('batch', () => {
         expect(useStore.getState()).toEqual({ count: 0, label: '' })
         expect(spy).not.toHaveBeenCalled()
     })
+
+    it('async batch rolls back state when the async callback rejects', async () => {
+        const useStore = createStore((set) => ({ x: 0, y: 0 }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        try {
+            await batch(async () => {
+                useStore.setState({ x: 1 })
+                await Promise.resolve() // yield — this triggered the premature flush bug
+                throw new Error('async batch failed')
+            })
+        } catch {}
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        // x must be rolled back — the batch threw after the await
+        expect(useStore.getState()).toEqual({ x: 0, y: 0 })
+        expect(spy).not.toHaveBeenCalled()
+    })
+
+    it('async batch commits state when the async callback resolves', async () => {
+        const useStore = createStore((set) => ({ x: 0, y: 0 }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        await batch(async () => {
+            useStore.setState({ x: 1 })
+            await Promise.resolve()
+            useStore.setState({ y: 2 })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState()).toEqual({ x: 1, y: 2 })
+        expect(spy).toHaveBeenCalledOnce()
+    })
+
+    it('nested async batch: outer reject rolls back all changes including inner', async () => {
+        const useStore = createStore((set) => ({ x: 0, y: 0 }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        try {
+            await batch(async () => {
+                await batch(async () => {
+                    useStore.setState({ x: 1 }) // inner change
+                })
+                useStore.setState({ y: 2 })     // outer change
+                throw new Error('outer failed')
+            })
+        } catch {}
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState()).toEqual({ x: 0, y: 0 })
+        expect(spy).not.toHaveBeenCalled()
+    })
+
+    it('stale async microtask does not commit when a new batch starts before it fires', async () => {
+        const useStore = createStore((set) => ({ x: 0 }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        // First async batch succeeds and schedules a microtask
+        const p = batch(async () => {
+            useStore.setState({ x: 1 })
+            await Promise.resolve()
+        })
+
+        // Second batch starts immediately (new epoch) before first microtask fires
+        batch(() => {
+            useStore.setState({ x: 2 })
+        })
+
+        await p
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        // Only one notification, final value wins
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState().x).toBe(2)
+    })
 })
 
     it('async batch does not overwrite concurrent non-batched setState calls', async () => {
@@ -565,7 +648,11 @@ describe('middleware', () => {
 })
 
 describe('persistence', () => {
-    const testDir = path.join(__dirname, 'temp-test-store-dir')
+    let appConfig = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    if (process.platform === 'win32') appConfig = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+    if (process.platform === 'darwin') appConfig = path.join(os.homedir(), 'Library', 'Application Support');
+    
+    const testDir = path.join(appConfig, 'termuijs-stores', 'temp-test-store-dir')
     const testFile = path.join(testDir, 'test-store.json')
 
     afterEach(() => {
@@ -650,6 +737,37 @@ describe('persistence', () => {
 
         vi.advanceTimersByTime(100)
         expect(fs.existsSync(testFile)).toBe(false)
+    })
+
+    it('throws error on path traversal in file option', () => {
+        expect(() => {
+            createStore({ count: 0 }, {
+                persist: {
+                    file: '../../etc/passwd',
+                }
+            })
+        }).toThrow(/Persist file path must be within/)
+    })
+
+    it('rejects a sibling dir that shares the persist-dir prefix', () => {
+        // `${persistDir}-evil/...` passes a naive startsWith() check but is outside persistDir.
+        expect(() => {
+            createStore({ count: 0 }, {
+                persist: {
+                    file: '../termuijs-stores-evil/x.json',
+                }
+            })
+        }).toThrow(/Persist file path must be within/)
+    })
+
+    it('throws error on path traversal in key option', () => {
+        expect(() => {
+            createStore({ count: 0 }, {
+                persist: {
+                    key: '../evil',
+                }
+            })
+        }).toThrow(/Persist key must contain only alphanumeric characters/)
     })
 })
 

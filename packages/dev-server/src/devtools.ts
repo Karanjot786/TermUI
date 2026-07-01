@@ -1,6 +1,8 @@
 // ─────────────────────────────────────────────────────
 // DevTools Panel — widget tree inspector, perf metrics
 // ─────────────────────────────────────────────────────
+import { type Screen, type Cell, type Color, caps } from '@termuijs/core';
+
 
 export interface WidgetNode {
     type: string;
@@ -27,6 +29,9 @@ export class DevTools {
     private _maxEvents = 100;
     private _renderTimes: number[] = [];
     private _frameRows: string[] = [];
+    
+    public lastHoverWidgetId: string | null = null;
+    public lastHoverCells: { x: number; y: number; cell: Cell }[] = [];
 
     get visible(): boolean { return this._visible; }
     toggle(): void { this._visible = !this._visible; }
@@ -38,9 +43,11 @@ export class DevTools {
 
     /** Update widget tree snapshot */
     updateTree(root: WidgetNode): void { this._widgetTree = root; }
+    get widgetTree(): WidgetNode | null { return this._widgetTree; }
 
     /** Record a render cycle */
     recordRender(timeMs: number, widgetCount: number): void {
+        this.lastHoverCells = []; // Clear saved cells so they aren't restored over fresh screen content
         const now = Date.now();
         this._renderTimes.push(now);
         // Keep last 60 render timestamps for FPS calculation
@@ -176,6 +183,88 @@ export class DevTools {
             }
             default:
                 return '';
+        }
+    }
+}
+
+export function getWidgetRect(root: WidgetNode | null, id: string): { x: number; y: number; width: number; height: number; } | null {
+    if (!root) return null;
+    if (root.id === id) return root.rect;
+    for (const child of root.children) {
+        const found = getWidgetRect(child, id);
+        if (found) return found;
+    }
+    return null;
+}
+
+export function renderDebugRect(screen: Screen, rect: { x: number; y: number; width: number; height: number; }): { x: number; y: number; cell: Cell }[] {
+    const color: Color = { type: 'hex', hex: '#FF00FF' };
+    const bg: Color = { type: 'none' };
+    const savedCells: { x: number; y: number; cell: Cell }[] = [];
+    const savedMap = new Set<string>();
+
+    const saveCell = (x: number, y: number) => {
+        const key = `${x},${y}`;
+        if (savedMap.has(key)) return;
+        savedMap.add(key);
+        const cell = screen.getCell(x, y);
+        if (cell) {
+            savedCells.push({ x, y, cell: { ...cell } });
+        }
+    };
+
+    const hBar = caps.unicode ? '─' : '-';
+    const vBar = caps.unicode ? '│' : '|';
+    const tl = caps.unicode ? '┌' : '+';
+    const tr = caps.unicode ? '┐' : '+';
+    const bl = caps.unicode ? '└' : '+';
+    const br = caps.unicode ? '┘' : '+';
+
+    // Draw top & bottom borders safely
+    for (let x = rect.x; x < rect.x + rect.width; x++) {
+        saveCell(x, rect.y);
+        screen.setCell(x, rect.y, { char: hBar, fg: color, bg });
+        saveCell(x, rect.y + rect.height - 1);
+        screen.setCell(x, rect.y + rect.height - 1, { char: hBar, fg: color, bg });
+    }
+    // Draw left & right borders safely
+    for (let y = rect.y; y < rect.y + rect.height; y++) {
+        saveCell(rect.x, y);
+        screen.setCell(rect.x, y, { char: vBar, fg: color, bg });
+        saveCell(rect.x + rect.width - 1, y);
+        screen.setCell(rect.x + rect.width - 1, y, { char: vBar, fg: color, bg });
+    }
+    
+    // Draw corners
+    saveCell(rect.x, rect.y);
+    screen.setCell(rect.x, rect.y, { char: tl, fg: color, bg });
+    saveCell(rect.x + rect.width - 1, rect.y);
+    screen.setCell(rect.x + rect.width - 1, rect.y, { char: tr, fg: color, bg });
+    saveCell(rect.x, rect.y + rect.height - 1);
+    screen.setCell(rect.x, rect.y + rect.height - 1, { char: bl, fg: color, bg });
+    saveCell(rect.x + rect.width - 1, rect.y + rect.height - 1);
+    screen.setCell(rect.x + rect.width - 1, rect.y + rect.height - 1, { char: br, fg: color, bg });
+
+    return savedCells;
+}
+
+export function handleDevToolsHover(x: number, y: number, screen: Screen, devtools: DevTools): void {
+    const cell = screen.getCell(x, y);
+    const newId = (cell && cell.debugWidgetId) ? cell.debugWidgetId : null;
+
+    if (newId === devtools.lastHoverWidgetId) return;
+
+    // Restore old cells
+    for (const saved of devtools.lastHoverCells) {
+        screen.setCell(saved.x, saved.y, saved.cell);
+    }
+    devtools.lastHoverCells = [];
+    devtools.lastHoverWidgetId = newId;
+
+    if (newId && devtools.widgetTree) {
+        const rect = getWidgetRect(devtools.widgetTree, newId);
+        if (rect) {
+            devtools.lastHoverCells = renderDebugRect(screen, rect);
         }
     }
 }

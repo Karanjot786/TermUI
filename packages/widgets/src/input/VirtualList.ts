@@ -366,6 +366,13 @@ export class VirtualList extends Widget {
             }
         }
 
+        // Evict cache entries outside the visible+overscan window
+        for (const key of this._renderCache.keys()) {
+            if (key < startIdx || key >= endIdx) {
+                this._renderCache.delete(key);
+            }
+        }
+
         // Scrollbar
         if (this._showScrollbar && this._totalItems > visibleItemCount) {
             const scrollbarX = x + width - 1;

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { DevTools } from './devtools.js';
+import { DevTools, renderDebugRect, handleDevToolsHover, type WidgetNode } from './devtools.js';
+import { Screen } from '@termuijs/core';
 
 describe('DevTools frame capture', () => {
     it('setFrame stores the frame rows', () => {
@@ -290,5 +291,45 @@ describe('DevTools filename stability', () => {
         for (const ts of timestamps) {
             expect(devtools.screenshotFilename(ts)).toBe(`termui-frame-${ts}.txt`);
         }
+    });
+});
+
+describe('DevTools Hover State', () => {
+    it('does not save duplicate corner cells during debug rect rendering', () => {
+        const screen = new Screen(20, 20);
+        const cells = renderDebugRect(screen, { x: 0, y: 0, width: 10, height: 10 });
+        // Perimeter of 10x10 is 4 * 10 - 4 = 36
+        expect(cells.length).toBe(36);
+        
+        const coords = new Set(cells.map(c => `${c.x},${c.y}`));
+        expect(coords.size).toBe(36);
+    });
+
+    it('clears hover state on recordRender to prevent restoring stale cells', () => {
+        const devtools = new DevTools();
+        devtools.lastHoverCells = [{ x: 1, y: 1, cell: { char: 'A' } as any }];
+        devtools.recordRender(10, 100);
+        expect(devtools.lastHoverCells.length).toBe(0);
+    });
+
+    it('saves and restores properly across hover events', () => {
+        const devtools = new DevTools();
+        const screen = new Screen(20, 20);
+        const widgetTree: WidgetNode = {
+            type: 'Box', id: 'box1', rect: { x: 1, y: 1, width: 2, height: 2 }, children: []
+        };
+        devtools.updateTree(widgetTree);
+        
+        screen.setCell(1, 1, { char: 'A', fg: { type: 'none' }, bg: { type: 'none' } });
+        screen.getCell(1, 1)!.debugWidgetId = 'box1';
+        
+        handleDevToolsHover(1, 1, screen, devtools);
+        expect(devtools.lastHoverWidgetId).toBe('box1');
+        expect(devtools.lastHoverCells.length).toBe(4); // 2x2 box has 4 corners
+        expect(screen.getCell(1, 1)!.char).toBe('┌'); // corner was drawn
+        
+        handleDevToolsHover(5, 5, screen, devtools);
+        expect(devtools.lastHoverWidgetId).toBeNull();
+        expect(screen.getCell(1, 1)!.char).toBe('A'); // old cell restored
     });
 });

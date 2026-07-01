@@ -20,3 +20,6 @@ export type {
 
 // Upstream Hooks
 export { useParams, useNavigate, useRouteMeta, useQueryParams } from './hooks.js';
+
+
+export * from './RouterView.js';
