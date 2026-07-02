@@ -96,6 +96,8 @@ describe("Tooltip", () => {
         expect(tooltip.getVisible()).toBe(false);
     });
     it("setVisible(true) starts fade-in (animOpacity resets to 0)", () => {
+        vi.spyOn(caps, "motion", "get").mockReturnValue(true);
+
         const tooltip = new Tooltip({
             text: "help",
             visible: false,
@@ -109,6 +111,8 @@ describe("Tooltip", () => {
         expect(tooltip.getVisible()).toBe(true);
     });
     it("setVisible(false) during fade-in cancels previous animation", () => {
+        vi.spyOn(caps, "motion", "get").mockReturnValue(true);
+
         const tooltip = new Tooltip({
             text: "help",
             visible: true,
@@ -122,6 +126,7 @@ describe("Tooltip", () => {
         expect(motion.fadeOut).toHaveBeenCalledTimes(1);
     });
     it("renders with dim attribute during fade-out", () => {
+        vi.spyOn(caps, "motion", "get").mockReturnValue(true);
         vi.spyOn(motion, "fadeOut").mockImplementation(
             (_duration, onFrame, _onComplete) => {
                 onFrame(0.3);
@@ -257,6 +262,8 @@ describe("Tooltip – mount/unmount", () => {
     });
 
     it("cancels animation on unmount", () => {
+        vi.spyOn(caps, "motion", "get").mockReturnValue(true);
+
         const cancel = vi.fn();
         const tooltip = new Tooltip({
             text: "help",
