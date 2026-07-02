@@ -1,33 +1,32 @@
-# 02 · Simple Button
+# 03 · Form Inputs
 
-A focusable, clickable button that increments a counter — your first
-interactive TermUI widget.
+Type your name into a text field and see it echoed back — your first
+interactive input example.
 
 ## What you'll learn
-- Creating a custom `Widget` subclass (`Button`) with its own `_renderSelf`
-- Handling focus state and highlighting the focused element
-- Responding to Enter/Space key presses to trigger a click
+- Using the `TextInput` widget from `@termuijs/widgets`
+- Forwarding keyboard events into a focused input with `handleKey`
+- Reacting to submission via the `onSubmit` callback
 
 ## Run it
-\`\`\`bash
-cd examples/02-simple-button
+```bash
+cd examples/03-form-inputs
 bun install
 bun run start
-\`\`\`
+```
 
 ## Expected output
-\`\`\`
-┌──────────────────────────────────────┐
-│                                        │
-│          Clicked: 0 times             │
-│                                        │
-│  ┌──────────────────────────────┐    │
-│  │          Click Me!            │    │
-│  └──────────────────────────────┘    │
-│                                        │
-│  Enter/Space = click · q = quit       │
-│                                        │
-└──────────────────────────────────────┘
-\`\`\`
+```
+┌────────────────────────────────────────┐
+│ What's your name?                       │
+│ ┌──────────────────────────────────┐   │
+│ │ sam_                              │   │
+│ └──────────────────────────────────┘   │
+│                                          │
+│ Hello, sam! Nice to meet you.           │
+│                                          │
+│ Type your name, press Enter · Esc = quit│
+└────────────────────────────────────────┘
+```
 
-Press `Enter` or `Space` to click. Press `q` or `Ctrl+C` to exit.
+Press `Esc` or `Ctrl+C` to exit.
