@@ -149,6 +149,8 @@ export class Drawer extends Widget {
                 } else {
                     this._focusNext();
                 }
+                event.preventDefault?.();
+                event.stopPropagation?.();
                 break;
         }
     }

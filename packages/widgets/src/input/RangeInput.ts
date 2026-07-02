@@ -15,6 +15,7 @@ export interface RangeInputOptions {
     step?: number;
     color?: Color;
     showValue?: boolean;
+    onChange?: (low: number, high: number) => void;
 }
 
 export class RangeInput extends Widget {
@@ -27,6 +28,7 @@ export class RangeInput extends Widget {
     private _activeHandle: 'low' | 'high';
     private _low: number;
     private _high: number;
+    private _onChange?: (low: number, high: number) => void;
 
     constructor(
         label: string,
@@ -44,6 +46,7 @@ export class RangeInput extends Widget {
         this._low = this._min;
         this._high = this._max;
         this._activeHandle = 'low';
+        this._onChange = opts.onChange;
 
         this.focusable = true;
     }
@@ -57,19 +60,29 @@ export class RangeInput extends Widget {
     }
 
     setLow(value: number): void {
-        this._low = Math.max(this._min, Math.min(value, this._high));
+        const clamped = Math.max(this._min, Math.min(value, this._high));
+        if (clamped === this._low) return;
+        this._low = clamped;
         this.markDirty();
+        this._onChange?.(this._low, this._high);
     }
 
     setHigh(value: number): void {
-        this._high = Math.min(this._max, Math.max(value, this._low));
+        const clamped = Math.min(this._max, Math.max(value, this._low));
+        if (clamped === this._high) return;
+        this._high = clamped;
         this.markDirty();
+        this._onChange?.(this._low, this._high);
     }
 
     setRange(low: number, high: number): void {
-        this._low = Math.max(this._min, Math.min(low, high));
-        this._high = Math.min(this._max, Math.max(low, high));
+        const newLow = Math.max(this._min, Math.min(low, high));
+        const newHigh = Math.min(this._max, Math.max(low, high));
+        if (newLow === this._low && newHigh === this._high) return;
+        this._low = newLow;
+        this._high = newHigh;
         this.markDirty();
+        this._onChange?.(this._low, this._high);
     }
 
     handleKey(event: KeyEvent): void {
@@ -77,6 +90,8 @@ export class RangeInput extends Widget {
             this._activeHandle =
                 this._activeHandle === 'low' ? 'high' : 'low';
             this.markDirty();
+            event.preventDefault();
+            event.stopPropagation();
             return;
         }
 

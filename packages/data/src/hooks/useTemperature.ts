@@ -1,17 +1,7 @@
 import { useState, useEffect } from '@termuijs/jsx';
-import { execFile } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import * as os from 'node:os';
-import type { ExecOptions } from 'node:child_process';
-
-const execFileAsync = (file: string, args: string[], opts?: ExecOptions): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        execFile(file, args, opts, (err, stdout) => {
-            if (err) reject(err);
-            else resolve(String(stdout));
-        });
-    });
-};
+import { execFileAsync } from './_exec.js';
 
 export interface TemperatureData {
     celsius: number;
@@ -44,7 +34,7 @@ export function useTemperature(intervalMs = 5000): UseTemperatureResult {
                 } else if (platform === 'darwin') {
                     throw new Error('Temperature reading is not supported on macOS');
                 } else if (platform === 'win32') {
-                    const stdout = await execFileAsync(
+                    const { stdout } = await execFileAsync(
                         'wmic',
                         ['/namespace:\\\\root\\wmi', 'PATH', 'MSAcpi_ThermalZoneTemperature', 'get', 'CurrentTemperature'],
                         { timeout: 2000 },

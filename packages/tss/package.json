@@ -5,8 +5,8 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.5",
-  "description": "Terminal Style Sheets for TermUI: variables, selectors, and eleven built-in themes",
+  "version": "0.1.7",
+  "description": "Terminal Style Sheets for TermUI: variables, selectors, and twelve built-in themes",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

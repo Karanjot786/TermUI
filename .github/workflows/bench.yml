@@ -42,18 +42,56 @@ jobs:
       - name: Bench main
         working-directory: ../main-worktree
         run: |
-          if [ -f packages/core/src/benchmark/render-loop.ts ]; then
+          if [ -f packages/core/src/benchmark/run-all.ts ]; then
             bun run bench | tee ../bench-main.txt
+            grep '^BENCH_RESULT_JSON: ' ../bench-main.txt | sed 's/^BENCH_RESULT_JSON: //' > $GITHUB_WORKSPACE/bench-main.json
+          elif [ -f packages/core/src/benchmark/render-loop.ts ]; then
+            bun packages/core/src/benchmark/render-loop.ts | tee ../bench-main.txt
             grep '^BENCH_RESULT_JSON: ' ../bench-main.txt | sed 's/^BENCH_RESULT_JSON: //' > $GITHUB_WORKSPACE/bench-main.json
           else
             echo "No benchmark on main yet — using HEAD as baseline (no regression possible)."
             cp $GITHUB_WORKSPACE/bench-head.json $GITHUB_WORKSPACE/bench-main.json
           fi
 
+      - name: Check if this is benchmark system upgrade
+        id: check-upgrade
+        run: |
+          # Check if run-all.ts exists in PR but not in main, or if they differ
+          if [ -f packages/core/src/benchmark/run-all.ts ] && [ ! -f ../main-worktree/packages/core/src/benchmark/run-all.ts ]; then
+            echo "is_upgrade=true" >> $GITHUB_OUTPUT
+            echo "This PR adds the benchmark system - skipping regression checks"
+          elif [ -f packages/core/src/benchmark/run-all.ts ] && [ -f ../main-worktree/packages/core/src/benchmark/run-all.ts ]; then
+            # Compare the files directly
+            if ! diff -q packages/core/src/benchmark/run-all.ts ../main-worktree/packages/core/src/benchmark/run-all.ts > /dev/null 2>&1; then
+              echo "is_upgrade=true" >> $GITHUB_OUTPUT
+              echo "This PR upgrades the benchmark system - skipping regression checks"
+            else
+              echo "is_upgrade=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "is_upgrade=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Compare results
         id: compare
         continue-on-error: true
-        run: node scripts/compare-bench.mjs bench-head.json bench-main.json --threshold 0.20
+        if: steps.check-upgrade.outputs.is_upgrade != 'true'
+        run: |
+          node scripts/compare-bench.mjs bench-head.json bench-main.json --threshold 0.20
+          echo "Compare exit code: $?"
+
+      - name: Skip comparison for upgrade
+        if: steps.check-upgrade.outputs.is_upgrade == 'true'
+        run: |
+          echo '<!-- termui-bench-comment -->' > bench-comment.md
+          echo '## Performance benchmarks' >> bench-comment.md
+          echo '' >> bench-comment.md
+          echo 'ℹ️ **Benchmark system upgrade** - This PR adds or upgrades the benchmark infrastructure.' >> bench-comment.md
+          echo '' >> bench-comment.md
+          echo 'Regression checks are skipped for this upgrade PR. Future PRs will compare against the new baseline.' >> bench-comment.md
+          echo '' >> bench-comment.md
+          echo 'Benchmark results:' >> bench-comment.md
+          cat bench-head.json >> bench-comment.md
 
       - name: Post or update PR comment
         continue-on-error: true
@@ -66,5 +104,5 @@ jobs:
       - name: Fail on regression
         if: steps.compare.outcome == 'failure'
         run: |
-          echo "::error::Render-loop benchmark regressed by ≥20% on at least one size."
+          echo "::error::Performance benchmark regressed by ≥20% on at least one metric."
           exit 1

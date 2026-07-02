@@ -2,7 +2,7 @@
 // @termuijs/widgets — Markdown widget
 // ─────────────────────────────────────────────────────
 
-import { Screen, Style, caps, wordWrap } from '@termuijs/core';
+import { Screen, Style, caps, wordWrap, stringWidth } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface MarkdownOptions {
@@ -24,6 +24,8 @@ export interface MarkdownOptions {
  * - Code fences (```lang)
  */
 
+const segmenter = new Intl.Segmenter();
+
 export class Markdown extends Widget {
     private _content: string;
 
@@ -34,53 +36,54 @@ export class Markdown extends Widget {
         text: string,
         attrs: Record<string, unknown> = {}
     ): void {
-        for (let i = 0; i < text.length && x + i < this._getContentRect().x + this._getContentRect().width; i++) {
-            screen.setCell(x + i, y, {
-                char: text[i],
-                ...attrs
-            });
-        }
+        screen.writeString(x, y, text, attrs);
     }
 
     private renderInline(screen: Screen, x: number, y: number, text: string): void {
-    let bold = false;
-    let italic = false;
-    let code = false;
-    let col = x;
-    let segment = '';
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+        let bold = false;
+        let italic = false;
+        let code = false;
+        let col = x;
+        let segmentStr = '';
 
-    const flush = () => {
-        if (segment.length === 0) return;
-        screen.writeString(col - segment.length, y, segment, {
-            bold,
-            italic,
-            inverse: code
-        });
-        segment = '';
-    };
+        const flush = () => {
+            if (segmentStr.length === 0) return;
+            screen.writeString(col - stringWidth(segmentStr), y, segmentStr, {
+                bold,
+                italic,
+                inverse: code
+            });
+            segmentStr = '';
+        };
 
-    for (let i = 0; i < text.length; i++) {
-        if (text.slice(i, i + 2) === '**') {
-            flush();
-            bold = !bold;
-            i++;
-            continue;
+        const segments = segmenter.segment(text);
+        const segmentsArray = Array.from(segments);
+
+        for (let i = 0; i < segmentsArray.length; i++) {
+            const seg = segmentsArray[i].segment;
+            
+            if (seg === '*' && i + 1 < segmentsArray.length && segmentsArray[i+1].segment === '*') {
+                flush();
+                bold = !bold;
+                i++;
+                continue;
+            }
+            if (seg === '_') {
+                flush();
+                italic = !italic;
+                continue;
+            }
+            if (seg === '`') {
+                flush();
+                code = !code;
+                continue;
+            }
+            segmentStr += seg;
+            col += stringWidth(seg);
         }
-        if (text[i] === '_') {
-            flush();
-            italic = !italic;
-            continue;
-        }
-        if (text[i] === '`') {
-            flush();
-            code = !code;
-            continue;
-        }
-        segment += text[i];
-        col++;
+        flush();
     }
-    flush();
-}
     private renderCodeBlock(
         screen: Screen,
         x: number,
@@ -181,6 +184,19 @@ export class Markdown extends Widget {
                 });
                 screenRow++;
             }
+
+            else if (line.startsWith('> ')) {
+    screen.writeString(
+        rect.x,
+        rect.y + screenRow,
+        `│ ${line.slice(2)}`,
+        {
+            italic: true
+        }
+    );
+
+    screenRow++;
+}
             else if (line.startsWith('- ')) {
                 const bullet = caps.unicode ? '•' : '*';
 

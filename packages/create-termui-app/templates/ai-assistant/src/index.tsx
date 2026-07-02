@@ -1,36 +1,31 @@
 import { App } from '@termuijs/core';
-import { Widget, Box, Text, ChatMessage, StreamingText, ScrollView, TextInput } from '@termuijs/widgets';
+import { Widget, Box, Text, StreamingText, TextInput } from '@termuijs/widgets';
 import type { Screen, KeyEvent } from '@termuijs/core';
-import { useAI, type AIMessage } from '@termuijs/adapters';
+import { ClaudeAdapter } from '@termuijs/adapters';
+import { ChatThread, TokenUsage } from '@termuijs/ui';
 
 // ──────────────────────────────────────────────────────────────────────────────
-// AI Assistant Template - Minimal Version
+// AI Assistant Template
 // ──────────────────────────────────────────────────────────────────────────────
 //
-// A simple starter template demonstrating:
-//   - ChatMessage widget for conversation display
-//   - StreamingText widget for streamed responses
-//   - useAI for Claude API integration
+// A starter template demonstrating:
+//   - ChatThread widget from @termuijs/ui to show conversation history
+//   - TokenUsage widget from @termuijs/ui to track input/output tokens
+//   - ClaudeAdapter from @termuijs/adapters for streaming Claude API integration
 //   - Dual-mode: mock (no API key) and real (with API key)
 
 const IS_MOCK = !process.env.ANTHROPIC_API_KEY;
 
-const MOCK_REPLY = 'Hello! This is a mock response. Set ANTHROPIC_API_KEY to use real Claude.';
-
-async function* mockStream(): AsyncGenerator<string> {
-  for (const ch of MOCK_REPLY) {
-    yield ch;
-    await new Promise(r => setTimeout(r, 20));
-  }
-}
-
 class AIAssistantApp extends Widget {
-  private chatContainer: Box;
+  private chatThread: ChatThread;
+  private tokenUsage: TokenUsage;
   private streamingTextWidget: StreamingText | null = null;
   private textInput: TextInput;
   private isStreaming = false;
   private isMockMode = IS_MOCK;
-  private aiAdapter: ReturnType<typeof useAI> | null = null;
+  private claudeAdapter: ClaudeAdapter;
+  private inputTokens = 0;
+  private outputTokens = 0;
 
   constructor() {
     super({
@@ -40,17 +35,9 @@ class AIAssistantApp extends Widget {
       gap: 1,
     });
 
-    if (!IS_MOCK) {
-      try {
-        this.aiAdapter = useAI('anthropic', {
-          apiKey: process.env.ANTHROPIC_API_KEY!,
-        });
-      } catch (e) {
-        console.error('Failed to initialize AI adapter:', e);
-        this.isMockMode = true;
-        this.aiAdapter = null;
-      }
-    }
+    this.claudeAdapter = new ClaudeAdapter({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
 
     // Header
     const headerBox = new Box({
@@ -62,7 +49,7 @@ class AIAssistantApp extends Widget {
       borderColor: { type: 'named' as const, name: 'brightBlack' as const },
     });
 
-    const titleText = new Text('AI Assistant', {
+    const titleText = new Text('{{name}}', {
       bold: true,
       fg: { type: 'named' as const, name: 'cyan' as const },
     });
@@ -74,34 +61,24 @@ class AIAssistantApp extends Widget {
     headerBox.addChild(titleText);
     headerBox.addChild(modeLabel);
 
-    // Messages scroll view
-    const messagesScroll = new ScrollView(
-      {
+    // ChatThread scroll view for conversation
+    this.chatThread = new ChatThread({
+      style: {
         flexGrow: 1,
         border: 'single',
         borderColor: { type: 'named' as const, name: 'brightBlack' as const },
-      },
-      { showScrollbar: true }
-    );
-
-    this.chatContainer = new Box({
-      flexDirection: 'column',
-      gap: 1,
+      }
     });
 
-    messagesScroll.addChild(this.chatContainer);
-
-    const initialMessage = new ChatMessage(
-      {
-        role: 'assistant',
-        content: this.isMockMode
-          ? 'Hi! Running in mock mode. Set ANTHROPIC_API_KEY to use real Claude.'
-          : 'Hi! I am Claude. How can I help you?',
-        timestamp: new Date(),
-      },
-      { height: 3 }
-    );
-    this.chatContainer.addChild(initialMessage);
+    // TokenUsage for stats display
+    this.tokenUsage = new TokenUsage({
+      inputTokens: 0,
+      outputTokens: 0,
+      style: {
+        fg: { type: 'named' as const, name: 'yellow' as const },
+        dim: true,
+      }
+    });
 
     // Input area
     const inputBox = new Box({
@@ -135,16 +112,25 @@ class AIAssistantApp extends Widget {
     });
 
     this.addChild(headerBox);
-    this.addChild(messagesScroll);
+    this.addChild(this.chatThread);
+    this.addChild(this.tokenUsage);
     this.addChild(inputBox);
     this.addChild(helpText);
+
+    this.chatThread.addMessage({
+      role: 'assistant',
+      content: this.isMockMode
+        ? 'Hi! Running in mock mode. Set ANTHROPIC_API_KEY to use real Claude.'
+        : 'Hi! I am Claude. How can I help you?',
+      timestamp: new Date(),
+    });
 
     this.textInput.isFocused = true;
   }
 
   private removeStreamingTextWidget(): void {
     if (!this.streamingTextWidget) return;
-    this.chatContainer.removeChild(this.streamingTextWidget);
+    this.chatThread.removeThreadWidget(this.streamingTextWidget);
     this.streamingTextWidget = null;
   }
 
@@ -154,11 +140,15 @@ class AIAssistantApp extends Widget {
     this.isStreaming = true;
     this.textInput.isFocused = false;
 
-    const userMessage = new ChatMessage(
-      { role: 'user', content: userText, timestamp: new Date() },
-      { height: 3 }
-    );
-    this.chatContainer.addChild(userMessage);
+    this.chatThread.addMessage({
+      role: 'user',
+      content: userText,
+      timestamp: new Date()
+    });
+
+    // Estimate input tokens (simple character count / 4 fallback)
+    this.inputTokens += Math.ceil(userText.length / 4);
+    this.tokenUsage.setUsage(this.inputTokens, this.outputTokens);
 
     try {
       let fullResponse = '';
@@ -168,40 +158,31 @@ class AIAssistantApp extends Widget {
         { border: 'single', height: 5 }
       );
       this.streamingTextWidget = streamingTextWidget;
-      this.chatContainer.addChild(streamingTextWidget);
+      this.chatThread.addThreadWidget(streamingTextWidget);
 
-      if (this.isMockMode || !this.aiAdapter) {
-        const stream = mockStream();
-        for await (const token of stream) {
-          fullResponse += token;
-          streamingTextWidget.setText(fullResponse);
-          streamingTextWidget.tick();
-          this.markDirty();
-        }
-      } else {
-        const aiMessages: AIMessage[] = [{ role: 'user', content: userText }];
-        for await (const token of this.aiAdapter.chat(aiMessages)) {
-          fullResponse += token;
-          streamingTextWidget.setText(fullResponse);
-          streamingTextWidget.tick();
-          this.markDirty();
-        }
-      }
+      await this.claudeAdapter.streamMessage(userText, (chunk) => {
+        fullResponse += chunk;
+        streamingTextWidget.setText(fullResponse);
+        this.outputTokens++;
+        this.tokenUsage.setUsage(this.inputTokens, this.outputTokens);
+        streamingTextWidget.tick();
+        this.markDirty();
+      });
 
       this.removeStreamingTextWidget();
-      const assistantMessage = new ChatMessage(
-        { role: 'assistant', content: fullResponse, timestamp: new Date() },
-        { height: 5 }
-      );
-      this.chatContainer.addChild(assistantMessage);
+      this.chatThread.addMessage({
+        role: 'assistant',
+        content: fullResponse,
+        timestamp: new Date()
+      });
     } catch (e) {
       this.removeStreamingTextWidget();
       const errorMsg = e instanceof Error ? e.message : String(e);
-      const errorMessage = new ChatMessage(
-        { role: 'assistant', content: `Error: ${errorMsg}`, timestamp: new Date() },
-        { height: 3 }
-      );
-      this.chatContainer.addChild(errorMessage);
+      this.chatThread.addMessage({
+        role: 'assistant',
+        content: `Error: ${errorMsg}`,
+        timestamp: new Date()
+      });
     } finally {
       this.removeStreamingTextWidget();
       this.isStreaming = false;
@@ -240,7 +221,7 @@ async function main() {
   const root = new AIAssistantApp();
   const app = new App(root, {
     fullscreen: true,
-    title: 'AI Assistant',
+    title: '{{name}}',
     fps: 30,
   });
   const exitCode = await app.mount();
@@ -251,4 +232,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

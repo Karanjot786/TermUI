@@ -2,9 +2,15 @@
 // @termuijs/core — Tests for InputParser
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Buffer } from 'node:buffer';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { InputParser } from './InputParser.js';
-import { createMockStdin, sendKey } from '../../../../tests/helpers/mock-stdin.js';
+import { createMockStdin, sendKey as originalSendKey } from '../../../../tests/helpers/mock-stdin.js';
+
+function sendKey(stdin: any, key: any) {
+    originalSendKey(stdin, key);
+    vi.advanceTimersByTime(10);
+}
 
 function createParser() {
     const stdin = createMockStdin();
@@ -16,6 +22,10 @@ function createParser() {
 }
 
 describe('InputParser', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
     afterEach(() => {
         vi.restoreAllMocks();
         vi.useRealTimers();
@@ -111,6 +121,22 @@ describe('InputParser', () => {
         expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'x', alt: true }));
     });
 
+    it('does not emit Alt+[ for incomplete CSI prefix', () => {
+        const { stdin, handler } = createParser();
+        sendKey(stdin, '\x1b[');
+        expect(handler).not.toHaveBeenCalled();
+    });
+
+    it('parses split Arrow Up escape sequence arriving in chunks', () => {
+        const { stdin, handler } = createParser();
+        sendKey(stdin, Buffer.from([0x1b]));
+        sendKey(stdin, '[');
+        sendKey(stdin, 'A');
+
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'up' }));
+    });
+
     it('resolves cursor position reports with correct row/col', async () => {
         const stdin = createMockStdin();
         const parser = new InputParser(stdin);
@@ -132,6 +158,18 @@ describe('InputParser', () => {
         vi.advanceTimersByTime(201);
 
         await expect(positionPromise).rejects.toThrow('Cursor position request timed out');
+    });
+
+    it('rejects pending cursor position requests immediately when stop() is called', async () => {
+        vi.useFakeTimers();
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+        parser.start();
+
+        const positionPromise = parser.requestCursorPosition(200);
+        parser.stop();
+
+        await expect(positionPromise).rejects.toThrow('InputParser stopped');
     });
 
     it('does not emit a key event for cursor position reports', async () => {
@@ -209,14 +247,25 @@ describe('InputParser', () => {
         expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'a' }));
     });
 
-    it('processes rapid multi-byte input correctly', () => {
+    it('parses split multibyte emoji sequences arriving in chunks', () => {
         const { stdin, handler } = createParser();
-        sendKey(stdin, 'abc');
-        expect(handler).toHaveBeenCalledTimes(3);
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'a' }));
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'b' }));
-        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'c' }));
+
+        // Wave emoji with medium skin tone: 👋🏽 (\u{1F44B}\u{1F3FD})
+        // Encoded in UTF-8 as: [0xf0, 0x9f, 0x91, 0x8b, 0xf0, 0x9f, 0x8f, 0xbd]
+        const chunk1 = Buffer.from([0xf0, 0x9f, 0x91, 0x8b]);
+        const chunk2 = Buffer.from([0xf0, 0x9f, 0x8f, 0xbd]);
+
+        originalSendKey(stdin, chunk1);
+        // Should not emit yet as it is incomplete
+        expect(handler).not.toHaveBeenCalled();
+
+        originalSendKey(stdin, chunk2);
+        // Now it is complete
+        vi.advanceTimersByTime(10);
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: '👋🏽' }));
     });
+
     it('emits paste event for bracketed paste', () => {
         const stdin = createMockStdin();
         const parser = new InputParser(stdin);
@@ -231,7 +280,7 @@ describe('InputParser', () => {
         expect(pasteHandler).toHaveBeenCalledWith('hello world');
     });
 
-    it('emits paste event when bracketed paste spans multiple chunks', () => {
+    it('handles multi-chunk paste spanning multiple data chunks', () => {
         const stdin = createMockStdin();
         const parser = new InputParser(stdin);
 
@@ -240,10 +289,119 @@ describe('InputParser', () => {
         parser.onPaste(pasteHandler);
         parser.start();
 
-        sendKey(stdin, '\x1b[200~hello ');
-        sendKey(stdin, 'world\x1b[201~');
+        // First chunk: paste-start marker + partial content
+        stdin.emit('data', Buffer.from('\x1b[200~hello ', 'utf8'));
+        expect(pasteHandler).not.toHaveBeenCalled();
 
-        expect(pasteHandler).toHaveBeenCalledTimes(1);
+        // Second chunk: rest of content + paste-end marker
+        stdin.emit('data', Buffer.from('world\x1b[201~', 'utf8'));
+
         expect(pasteHandler).toHaveBeenCalledWith('hello world');
+    });
+
+    it('handles paste with content split across three chunks', () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        stdin.emit('data', Buffer.from('\x1b[200~abc', 'utf8'));
+        stdin.emit('data', Buffer.from('def', 'utf8'));
+        stdin.emit('data', Buffer.from('ghi\x1b[201~', 'utf8'));
+
+        expect(pasteHandler).toHaveBeenCalledWith('abcdefghi');
+    });
+
+    it('emits paste event when both markers are in a single chunk', () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        stdin.emit('data', Buffer.from('before\x1b[200~content\x1b[201~after', 'utf8'));
+
+        expect(pasteHandler).toHaveBeenCalledWith('content');
+    });
+
+    it('recovers from partial paste via timeout', () => {
+        vi.useFakeTimers();
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        // Start paste but never end it
+        stdin.emit('data', Buffer.from('\x1b[200~incomplete', 'utf8'));
+        expect(pasteHandler).not.toHaveBeenCalled();
+
+        // Advance time past the paste timeout
+        vi.advanceTimersByTime(600);
+
+        // Handler should not have been called (paste was aborted)
+        expect(pasteHandler).not.toHaveBeenCalled();
+
+        vi.useRealTimers();
+    });
+
+    describe('FSM escape sequence handling', () => {
+        it('emits standalone Escape key after 200ms timeout', () => {
+            const { stdin, handler } = createParser();
+            // Lone ESC byte
+            originalSendKey(stdin, Buffer.from([0x1b]));
+            expect(handler).not.toHaveBeenCalled();
+            // Advance past the 200ms timeout
+            vi.advanceTimersByTime(250);
+            expect(handler).toHaveBeenCalledTimes(1);
+            expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'escape' }));
+        });
+
+        it('escapes arriving in delayed chunks are not split into phantom keys', () => {
+            const { stdin, handler } = createParser();
+            // ESC arrives alone
+            originalSendKey(stdin, Buffer.from([0x1b]));
+            // Before timeout, rest of sequence arrives
+            originalSendKey(stdin, Buffer.from('[A', 'utf8'));
+            // Process the combined buffer
+            vi.advanceTimersByTime(10);
+            expect(handler).toHaveBeenCalledTimes(1);
+            expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'up' }));
+        });
+
+        it('does not emit phantom keys for escape sequences arriving in chunks under render load', () => {
+            const { stdin, handler } = createParser();
+            // Simulate ESC arriving alone (as if it was the start of an escape sequence)
+            originalSendKey(stdin, Buffer.from([0x1b]));
+            // Advance time past 200ms timeout - should NOT emit yet if buffer was appended
+            // But in this test, no continuation arrives, so after timeout Escape fires
+            vi.advanceTimersByTime(250);
+            expect(handler).toHaveBeenCalledTimes(1);
+            expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'escape' }));
+        });
+
+        it('handles bracketed paste start without phantom Escape', () => {
+            const { stdin, parser, handler } = createParser();
+            const pasteHandler = vi.fn();
+            parser.onPaste(pasteHandler);
+
+            // ESC arrives alone first
+            originalSendKey(stdin, Buffer.from([0x1b]));
+            // Then the rest of bracketed paste start in a second chunk
+            originalSendKey(stdin, Buffer.from('[200~hello world\x1b[201~', 'utf8'));
+            vi.advanceTimersByTime(10);
+
+            // Should not emit Escape key
+            expect(handler).not.toHaveBeenCalledWith(expect.objectContaining({ key: 'escape' }));
+            // Should emit paste event
+            expect(pasteHandler).toHaveBeenCalledWith('hello world');
+        });
     });
 });

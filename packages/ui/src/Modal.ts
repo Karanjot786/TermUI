@@ -19,8 +19,8 @@ export class Modal extends Widget {
     private _visible = false;
     private _content: Widget | null = null;
 
-    constructor(options: ModalOptions = {}) {
-        super(mergeStyles(defaultStyle(), {}));
+    constructor(options: ModalOptions = {}, style?: Partial<Style>) {
+        super(mergeStyles(defaultStyle(), style ?? {}));
         this._title = options.title ?? '';
         this._modalWidth = options.width ?? 50;
         this._modalHeight = options.height ?? 15;
@@ -68,8 +68,9 @@ export class Modal extends Widget {
         // Content
         if (this._content) {
             const cr = { x: mx + 2, y: my + 1, width: mw - 4, height: mh - 2 };
-            (this._content as any)._rect = cr;
-            (this._content as any)._renderSelf(screen);
+            this._content.updateRect(cr);
+            this._content.render(screen);
         }
+        screen.applyBackdropFilter({ x: mx, y: my, width: mw, height: mh });
     }
 }

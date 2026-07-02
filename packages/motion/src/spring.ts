@@ -2,7 +2,7 @@
 // Spring Physics — smooth value transitions
 // ─────────────────────────────────────────────────────
 
-import { caps } from '@termuijs/core';
+import { prefersReducedMotion } from '@termuijs/core';
 import { subscribe } from './timer-pool.js';
 
 export interface SpringConfig {
@@ -84,7 +84,7 @@ export function animateSpring(
     onFrame: (value: number) => void,
     onComplete?: () => void,
 ): () => void {
-    if (!caps.motion) {
+    if (prefersReducedMotion()) {
         onFrame(to);
         onComplete?.();
         return () => {};

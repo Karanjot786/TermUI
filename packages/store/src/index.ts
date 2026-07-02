@@ -2,7 +2,10 @@
 // @termuijs/store — Public API
 // ─────────────────────────────────────────────────────
 
-export { createStore, batch, logger } from './store.js';
+export {
+    createStore,
+    batch,
+} from './store.js';
 export type {
     Store,
     UseStore,
@@ -16,9 +19,6 @@ export type {
     StoreOptions,
     PersistOptions,
 } from './store.js';
+export type { EqualityFn } from './shallow.js';
+export { shallow } from './shallow.js';
 
-export { slices } from './slices.js';
-export type { SliceDef } from './slices.js';
-
-export { createHistoryStore } from './history.js'
-export type { TemporalHistory, TemporalStoreActions } from './history.js'

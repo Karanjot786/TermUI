@@ -4,14 +4,21 @@
 // ─────────────────────────────────────────────────────
 
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Validate theme name to prevent command injection
  * Allows: lowercase letters, numbers, hyphens, underscores
  * @throws Error if invalid
  */
-function validateThemeName(name) {
   const VALID_THEME_RE = /^[a-z0-9_-]+$/;
+  const ALLOWED_THEMES = new Set([
+    'dark',
+    'light',
+    'solarized',
+    'dracula',
+  ]);
+export function validateThemeName(name) {
 
   if (!name || name.length === 0) {
     throw new Error('Theme name cannot be empty');
@@ -25,6 +32,9 @@ function validateThemeName(name) {
     throw new Error(
       'Invalid theme name. Only lowercase letters, numbers, hyphens and underscores are allowed.'
     );
+  }
+  if (!ALLOWED_THEMES.has(name)) {
+    throw new Error(`Unsupported theme: ${name}`);
   }
 }
 
@@ -56,13 +66,16 @@ function installTheme(themeName) {
   }
 }
 
-// Get theme name from command line arguments
-const themeName = process.argv[2];
+// Only run CLI behavior when executed directly (not when imported in tests)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const themeName = process.argv[2];
 
-if (!themeName) {
-  console.error('Usage: install-theme <theme-name>');
-  console.error('Example: install-theme dark');
-  process.exit(1);
+  if (!themeName) {
+    console.error('Usage: install-theme <theme-name>');
+    console.error('Example: install-theme dark');
+    process.exit(1);
+  }
+
+  installTheme(themeName);
 }
 
-installTheme(themeName);

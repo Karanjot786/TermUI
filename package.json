@@ -11,19 +11,23 @@
     "build": "turbo run build",
     "test": "bun vitest run",
     "test:watch": "bun vitest",
+    "coverage": "bun vitest run --coverage --coverage.reportOnFailure",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
-    "bench": "bun packages/core/src/benchmark/render-loop.ts",
+    "bench": "bun packages/core/src/benchmark/run-all.ts",
     "clean": "turbo run clean && rm -rf node_modules",
-    "format": "prettier --write \".\""
+    "format": "prettier --write \".\"",
+    "registry:build": "bun scripts/build-registry.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^25.2.3",
+    "@vitest/coverage-v8": "^4.1.8",
+    "source-map": "^0.7.6",
     "tsup": "^8.3.0",
     "turbo": "^2.9.12",
     "typescript": "^5.7.0",
-    "vitest": "^2.1.0"
+    "vitest": "^4.1.8"
   },
   "packageManager": "bun@1.3.14",
   "engines": {
@@ -41,3 +45,4 @@
     "dotenv": "^16.0.0"
   }
 }
+

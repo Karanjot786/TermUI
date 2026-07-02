@@ -71,6 +71,24 @@ describe('env-caps', () => {
         vi.unstubAllEnvs();
         vi.resetModules();
     });
+
+    it('caps.colorDepth returns TrueColor when COLORTERM=truecolor', async () => {
+        vi.stubEnv('COLORTERM', 'truecolor');
+        vi.resetModules();
+        const { caps } = await import('./env-caps.js');
+        const { ColorDepth } = await import('../style/Color.js');
+        expect(caps.colorDepth).toBe(ColorDepth.TrueColor);
+        expect(caps.color).toBe(true);
+    });
+
+    it('caps.colorDepth returns None and caps.color is false when NO_COLOR=1', async () => {
+        vi.stubEnv('NO_COLOR', '1');
+        vi.resetModules();
+        const { caps } = await import('./env-caps.js');
+        const { ColorDepth } = await import('../style/Color.js');
+        expect(caps.colorDepth).toBe(ColorDepth.None);
+        expect(caps.color).toBe(false);
+    });
 });
 
 describe('prefersReducedMotion', () => {

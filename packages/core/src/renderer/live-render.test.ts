@@ -9,9 +9,10 @@ interface FakeStdout {
     columns: number;
     rows: number;
     isTTY: boolean;
-    write(s: string): void;
+    write(s: string): boolean;
     on(): void;
     off(): void;
+    once(): void;
 }
 
 interface FakeStdin {
@@ -32,9 +33,11 @@ describe('LiveRender', () => {
         isTTY: true,
         write(s: string) {
             this.writes += s;
+            return true;
         },
         on() {},
         off() {},
+        once() {},
     };
 
     const fakeStdin: FakeStdin = {

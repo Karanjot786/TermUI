@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "Modal, Select, Tabs, Toast, Form, Tree, and CommandPalette for TermUI",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -29,14 +29,17 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
+    "@standard-schema/spec": "^1.1.0",
     "@termuijs/core": "workspace:*",
     "@termuijs/jsx": "workspace:*",
+    "@termuijs/tss": "workspace:*",
     "@termuijs/widgets": "workspace:*"
   },
   "devDependencies": {
     "@termuijs/testing": "workspace:*",
     "tsup": "^8.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+     "zod": "^4.4.3"
   },
   "keywords": [
     "terminal",

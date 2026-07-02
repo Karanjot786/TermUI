@@ -19,16 +19,18 @@ function createMockSubprocess() {
     };
 }
 
-vi.mock('node:fs', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('node:fs')>();
+const { mockExistsSync, mockWatch } = vi.hoisted(() => ({
+    mockExistsSync: vi.fn(() => true),
+    mockWatch: vi.fn(() => ({ on: vi.fn(), close: vi.fn() })),
+}));
 
+vi.mock('node:fs', async () => {
+    const actual = await import('node:fs');
     return {
         ...actual,
-        existsSync: vi.fn(() => true),
-        watch: vi.fn(() => ({
-            on: vi.fn(),
-            close: vi.fn()
-        }))
+        existsSync: mockExistsSync,
+        watch: mockWatch,
+    
     };
 });
 
@@ -97,7 +99,7 @@ describe('DevServer', () => {
 
         server['_handleChange']({
             filename: 'app.ts',
-            type: 'source'
+            type: 'tsx'
         });
 
         await vi.advanceTimersByTimeAsync(500);
@@ -116,7 +118,7 @@ describe('DevServer', () => {
 
         server['_handleChange']({
             filename: 'app.ts',
-            type: 'source'
+            type: 'tsx'
         });
 
         await vi.advanceTimersByTimeAsync(500);
@@ -138,18 +140,21 @@ describe('DevServer', () => {
 
         server['_handleChange']({
             filename: 'app.ts',
-            type: 'source'
+            type: 'tsx'
         });
 
         await vi.advanceTimersByTimeAsync(500);
 
         expect(server.banner).toBe('Reloaded');
 
-        await vi.advanceTimersByTimeAsync(1200);
+        // Banner was set at ~debounce time (200ms); with 1500ms bannerMs it
+        // expires at ~1700ms. Advance to ~1400ms total — still within the window.
+        await vi.advanceTimersByTimeAsync(900);
 
         expect(server.banner).toBe('Reloaded');
 
-        await vi.advanceTimersByTimeAsync(500);
+        // Advance past the 1500ms bannerMs expiry (to ~2000ms total).
+        await vi.advanceTimersByTimeAsync(600);
 
         expect(server.banner).toBe(null);
     });
@@ -165,7 +170,7 @@ describe('DevServer', () => {
 
         server['_handleChange']({
             filename: 'app.ts',
-            type: 'source'
+            type: 'tsx'
         });
 
         await vi.advanceTimersByTimeAsync(500);

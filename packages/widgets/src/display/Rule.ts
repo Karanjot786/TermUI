@@ -49,6 +49,9 @@ export class Rule extends Widget {
 
     /** Update the title text. Calls markDirty(). */
     setTitle(title: string): void {
+        if (title === this._title) {
+            return;
+        }
         this._title = title;
         this.markDirty();
     }

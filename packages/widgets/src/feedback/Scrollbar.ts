@@ -57,16 +57,25 @@ export class Scrollbar extends Widget {
     }
 
     setPosition(position: number): void {
+        if (position === this._position) {
+            return;
+        }
         this._position = position;
         this.markDirty();
     }
 
     setContentLength(length: number): void {
+        if (length === this._contentLength) {
+            return;
+        }
         this._contentLength = length;
         this.markDirty();
     }
 
     setViewportLength(length: number): void {
+        if (length === this._viewportLength) {
+            return;
+        }
         this._viewportLength = length;
         this.markDirty();
     }

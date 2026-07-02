@@ -40,7 +40,6 @@ export function useCountdown(
                     if (c <= 0) {
                         clearInterval(intervalRef.current!);
                         intervalRef.current = null;
-                        setIsRunning(false);
                         return 0;
                     }
                     return c - 1;
@@ -60,6 +59,16 @@ export function useCountdown(
             }
         };
     }, [isRunning, intervalMs]);
+
+    // Stop the countdown when count reaches zero.
+    // This is intentionally a separate effect so that setIsRunning(false)
+    // is never called synchronously inside a setCount functional updater,
+    // which would trigger scheduleRender re-entrantly.
+    useEffect(() => {
+        if (count === 0 && isRunning) {
+            setIsRunning(false);
+        }
+    }, [count, isRunning]);
 
     const start = (): void => {
         if (count > 0) {

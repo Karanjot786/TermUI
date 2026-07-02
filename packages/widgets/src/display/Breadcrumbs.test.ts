@@ -92,4 +92,54 @@ describe('Breadcrumbs', () => {
         const row = rowText(screen, 0);
         expect(row).toContain('A / B');
     });
+
+    it('does not mark dirty when setSegments receives identical segments', () => {
+        const bc = new Breadcrumbs(['Home', 'Docs', 'API']);
+
+        bc.clearDirty();
+
+        bc.setSegments(['Home', 'Docs', 'API']);
+
+        expect(bc.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setSegments receives different segments', () => {
+        const bc = new Breadcrumbs(['Home', 'Docs', 'API']);
+
+        bc.clearDirty();
+
+        bc.setSegments(['Home', 'Guides', 'API']);
+
+        expect(bc.isDirty).toBe(true);
+    });
+
+    it('does not overflow at width 1', () => {
+        const bc = new Breadcrumbs(['Home', 'Docs', 'API']);
+        const screen = new Screen(1, 1);
+
+        bc.updateRect({ x: 0, y: 0, width: 1, height: 1 });
+
+        expect(() => bc.render(screen)).not.toThrow();
+    });
+
+    it('does not overflow at width 2', () => {
+        const bc = new Breadcrumbs(['Home', 'Docs', 'API']);
+        const screen = new Screen(2, 1);
+
+        bc.updateRect({ x: 0, y: 0, width: 2, height: 1 });
+
+        expect(() => bc.render(screen)).not.toThrow();
+    });
+
+    it('renders part of final segment on extremely narrow widths', () => {
+        const bc = new Breadcrumbs(['Home', 'Documentation']);
+        const screen = new Screen(3, 1);
+
+        bc.updateRect({ x: 0, y: 0, width: 3, height: 1 });
+        bc.render(screen);
+
+        const row = rowText(screen, 0);
+
+        expect(row.length).toBeLessThanOrEqual(3);
+    });
 });

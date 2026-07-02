@@ -7,6 +7,7 @@ import type { BorderStyle } from './Border.js';
 import type { Pos } from '../layout/pos.js';
 import type { Dim } from '../layout/dim.js';
 import type { Constraint } from '../layout/constraint.js';
+import { adjustForContrast } from './contrast.js';
 
 /**
  * Edge values (padding, margin) — top, right, bottom, left.
@@ -66,6 +67,16 @@ export interface Style {
     flexWrap?: 'nowrap' | 'wrap';
     gap?: number;
 
+    // ── Grid Layout ─────────
+    display?: 'flex' | 'grid';
+    gridTemplateColumns?: string;
+    gridTemplateRows?: string;
+    gridColumnStart?: number | string;
+    gridColumnEnd?: number | string;
+    gridRowStart?: number | string;
+    gridRowEnd?: number | string;
+    gridGap?: number;
+
     // ── Overflow ────────────
     overflow?: 'visible' | 'hidden' | 'scroll';
 
@@ -109,7 +120,7 @@ export function mergeStyles(base: Style, override: Style): Style {
     for (const key of Object.keys(override) as Array<keyof Style>) {
         const val = override[key];
         if (val !== undefined) {
-            (result as any)[key] = val;
+            (result as any)[key] = val; // as any: keyof Style index write not supported without escape
         }
     }
 
@@ -141,6 +152,7 @@ export const LAYOUT_PROPS: ReadonlySet<keyof Style> = new Set<keyof Style>([
     'width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
     'padding', 'margin', 'border',
     'flexDirection', 'justifyContent', 'alignItems', 'flexGrow', 'flexShrink', 'flexWrap', 'gap',
+    'display', 'gridTemplateColumns', 'gridTemplateRows', 'gridColumnStart', 'gridColumnEnd', 'gridRowStart', 'gridRowEnd', 'gridGap',
     'overflow', 'visible',
 ]);
 
@@ -168,9 +180,17 @@ export function styleToCellAttrs(style: Style): {
     strikethrough: boolean;
     inverse: boolean;
 } {
+    let fg = style.fg ?? { type: 'none' };
+    let bg = style.bg ?? { type: 'none' };
+
+    const env = typeof process !== 'undefined' ? process.env : undefined;
+    if (env?.TERMUI_ACCESSIBILITY_STRICT === '1' && fg.type !== 'none' && bg.type !== 'none') {
+        fg = adjustForContrast(fg, bg);
+    }
+
     return {
-        fg: style.fg ?? { type: 'none' },
-        bg: style.bg ?? { type: 'none' },
+        fg,
+        bg,
         bold: style.bold ?? false,
         italic: style.italic ?? false,
         underline: style.underline ?? false,

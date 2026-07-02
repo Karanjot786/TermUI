@@ -36,6 +36,9 @@ export class Text extends Widget {
 
     /** Update the text content */
     setContent(content: string): void {
+        if (content === this._content) {
+            return;
+        }
         this._content = content;
         this.markDirty();
     }
@@ -45,15 +48,27 @@ export class Text extends Widget {
         return this._content;
     }
 
+    toString(): string {
+        return this._content;
+    }
+
     /** Set vertical scroll offset (lines to skip). */
     setScrollY(offset: number): void {
-        this._scrollY = Math.max(0, offset);
+        const normalized = Math.max(0, offset);
+        if (normalized === this._scrollY) {
+            return;
+        }
+        this._scrollY = normalized;
         this.markDirty();
     }
 
     /** Set horizontal scroll offset (columns to skip). */
     setScrollX(offset: number): void {
-        this._scrollX = Math.max(0, offset);
+        const normalized = Math.max(0, offset);
+        if (normalized === this._scrollX) {
+            return;
+        }
+        this._scrollX = normalized;
         this.markDirty();
     }
 
@@ -85,15 +100,29 @@ export class Text extends Widget {
 
             // Apply horizontal scroll
             if (this._scrollX > 0) {
-                // Skip scrollX characters
+                // Skip scrollX visual columns
                 let skipped = 0;
                 let charIndex = 0;
+                let lineRebuilt = false;
                 for (const ch of line) {
-                    if (skipped >= this._scrollX) break;
-                    skipped++;
+                    const charWidth = stringWidth(ch);
+                    if (skipped + charWidth > this._scrollX) {
+                        // scrollX lands in the middle of this character
+                        // For wide characters, we need to handle the partial column
+                        if (charWidth === 2 && skipped < this._scrollX) {
+                            // We're at the second column of a wide character
+                            // Add a placeholder for the remaining column and skip the character
+                            line = ' ' + line.slice(charIndex + ch.length);
+                            lineRebuilt = true;
+                        }
+                        break;
+                    }
+                    skipped += charWidth;
                     charIndex += ch.length;
                 }
-                line = line.slice(charIndex);
+                if (!lineRebuilt) {
+                    line = line.slice(charIndex);
+                }
             }
 
             const lineWidth = stringWidth(line);

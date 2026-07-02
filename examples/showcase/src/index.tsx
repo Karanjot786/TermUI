@@ -22,7 +22,6 @@
 import { App } from '@termuijs/core';
 import { Box, Text, Widget } from '@termuijs/widgets';
 import type { Screen, KeyEvent } from '@termuijs/core';
-import * as fs from 'node:fs';
 
 import { DashboardTab } from './tabs/dashboard.js';
 import { ComponentsTab } from './tabs/components.js';
@@ -43,7 +42,6 @@ class ShowcaseApp extends Widget {
     private _tabPanels: Widget[] = [];
     private _activeTab = 0;
     private _statusBar: Text;
-    private _debugBar: Text;
     private _dashboardTab: DashboardTab;
     private _componentsTab: ComponentsTab;
     private _themingTab: ThemingTab;
@@ -100,19 +98,12 @@ class ShowcaseApp extends Widget {
             { height: 1, fg: { type: 'named', name: 'brightBlack' } },
         );
 
-        // Debug bar
-        this._debugBar = new Text(
-            '  [DEBUG] Waiting for key input...',
-            { height: 1, fg: { type: 'named', name: 'yellow' }, bold: true },
-        );
-
         // Build tree
         this.addChild(titleBar);
         this.addChild(this._tabBar);
         this.addChild(separator);
         this.addChild(this._tabPanels[0]); // Show first tab
         this.addChild(this._statusBar);
-        this.addChild(this._debugBar);
 
         // Dedicated overlay layer — always rendered on top, unaffected by switchTab()
         this._overlayLayer = new Box({ flexDirection: 'column' });
@@ -133,19 +124,12 @@ class ShowcaseApp extends Widget {
     }
 
     handleKey(event: KeyEvent): boolean {
-        const dbg = (msg: string) => {
-            fs.appendFileSync('/tmp/termui-debug.log', msg + '\n');
-            this._debugBar.setContent(`  [DEBUG] ${msg}`);
-        };
-        dbg(`key="${event.key}" ctrl=${event.ctrl} tab=${this._activeTab}`);
-
         // Quit
         if (event.key === 'q' || (event.ctrl && event.key === 'c')) return false;
 
         // Tab switching: 1-5
         const num = parseInt(event.key);
         if (num >= 1 && num <= 5) {
-            dbg(`SWITCH to tab ${num - 1}`);
             this.switchTab(num - 1);
             return true;
         }
@@ -160,12 +144,9 @@ class ShowcaseApp extends Widget {
         // Forward arrow/space/enter/tab keys to active tab
         const interactiveKeys = ['up', 'down', 'left', 'right', 'enter', 'space', 'tab'];
         if (interactiveKeys.includes(event.key)) {
-            dbg(`INTERACTIVE key "${event.key}" on tab=${this._activeTab}`);
             // Components tab handles its own keyboard
             if (this._activeTab === 1) {
-                dbg(`-> FORWARD to ComponentsTab.handleKey("${event.key}")`);
                 this._componentsTab.handleKey(event.key);
-                dbg(`-> ComponentsTab state: ${this._componentsTab.getDebugState()}`);
                 return true;
             }
             // Space retriggers animations only on the animations tab
@@ -195,12 +176,10 @@ class ShowcaseApp extends Widget {
         // Remove overlay layer temporarily to preserve ordering
         this.removeChild(this._overlayLayer);
 
-        // Insert new panel before status bar and debug bar
+        // Insert new panel before status bar
         this.removeChild(this._statusBar);
-        this.removeChild(this._debugBar);
         this.addChild(this._tabPanels[index]);
         this.addChild(this._statusBar);
-        this.addChild(this._debugBar);
 
         // Re-add overlay layer as last child so it stays on top
         this.addChild(this._overlayLayer);

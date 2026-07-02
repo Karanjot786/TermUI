@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { VirtualList } from './VirtualList.js';
+import { Screen, computeLayout } from '@termuijs/core';
 
 function createList(totalItems = 100, options = {}) {
     return new VirtualList({
@@ -86,6 +87,78 @@ describe('VirtualList', () => {
             list.scrollTo(200);
             expect(list.selectedIndex).toBe(99);
         });
+
+        it('scrollToIndex jumps instantly to specified index with alignment', () => {
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem: (i) => `Item ${i}`,
+                springScroll: true,
+                style: { width: 40, height: 10 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            
+            // test start alignment
+            list.scrollToIndex(50, 'start');
+            expect(list.scrollOffset).toBe(50);
+            expect(list.selectedIndex).toBe(50);
+            
+            // test center alignment (content height is 8)
+            list.scrollToIndex(50, 'center');
+            // offset = 50 - floor(8/2) = 46
+            expect(list.scrollOffset).toBe(46);
+            expect(list.selectedIndex).toBe(50);
+            
+            // test end alignment
+            list.scrollToIndex(50, 'end');
+            // offset = 50 - 8 + 1 = 43
+            expect(list.scrollOffset).toBe(43);
+            expect(list.selectedIndex).toBe(50);
+            
+            // test out of bounds clamping (returns early)
+            const previousOffset = list.scrollOffset;
+            list.scrollToIndex(-10);
+            expect(list.scrollOffset).toBe(previousOffset);
+            
+            list.scrollToIndex(200);
+            expect(list.scrollOffset).toBe(previousOffset);
+        });
+    });
+
+    describe('pageUp/pageDown with viewport smaller than itemHeight', () => {
+        // Create a list with layout so _getContentRect() is computed.
+        function createListSmallViewport() {
+            const list = new VirtualList({
+                totalItems: 10,
+                renderItem: (i) => `Item ${i}`,
+                itemHeight: 5, // large item height
+                style: { width: 40, height: 6 }, // content height will be 4 (< itemHeight)
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 6);
+            list.syncLayout();
+            return list;
+        }
+
+        it('pageDown moves at least one when pageSize would be 0', () => {
+            const list = createListSmallViewport();
+            expect(list.selectedIndex).toBe(0);
+
+            list.pageDown();
+            // pageDown should advance by exactly 1 (pageSize === 1 in this setup)
+            expect(list.selectedIndex).toBe(1);
+        });
+
+        it('pageUp moves at least one when pageSize would be 0', () => {
+            const list = createListSmallViewport();
+            list.scrollTo(3);
+            expect(list.selectedIndex).toBe(3);
+
+            list.pageUp();
+            // pageUp should move up by exactly 1 (from 3 -> 2)
+            expect(list.selectedIndex).toBe(2);
+        });
     });
 
     describe('data management', () => {
@@ -138,4 +211,101 @@ describe('VirtualList', () => {
             expect(onSelect).not.toHaveBeenCalled();
         });
     });
+
+    describe('spring scrolling', () => {
+        // Helper: set up a VirtualList with a real computed layout so _getContentRect()
+        // returns correct values without touching private internals.
+        // With width=40, height=10 and the default 'single' border, the content
+        // area is 38×8 (border consumes 1 cell on each side).
+        function createListWithLayout(options: { springScroll: boolean }) {
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem: (i) => `Item ${i}`,
+                springScroll: options.springScroll,
+                style: { width: 40, height: 10 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            return list;
+        }
+
+        it('instantly snaps when springScroll is false', () => {
+            const list = createListWithLayout({ springScroll: false });
+
+            // Scroll to index 50; content height is 8, so target offset = 50 - 8 + 1 = 43
+            list.scrollTo(50);
+            expect(list.scrollOffset).toBe(43);
+        });
+
+        it('animates gradually when springScroll is true', () => {
+            let mockTime = 1000;
+            const nowSpy = vi.spyOn(performance, 'now').mockImplementation(() => mockTime);
+
+            const list = createListWithLayout({ springScroll: true });
+            const screen = new Screen(80, 25);
+
+            // Initially at 0
+            expect(list.scrollOffset).toBe(0);
+
+            // Scroll to 50 -> animation starts; offset must NOT jump immediately
+            list.scrollTo(50);
+            expect(list.scrollOffset).toBe(0);
+
+            // First render tick
+            list.render(screen);
+
+            // Advance 100 frames of 16 ms — spring should have begun moving
+            for (let i = 0; i < 100; i++) {
+                mockTime += 16;
+                list.render(screen);
+            }
+
+            // Offset must have started moving toward the target (43)
+            expect(list.scrollOffset).toBeGreaterThan(0);
+
+            // Drive the animation to completion.
+            // The spring (stiffness=0.15, damping=0.8, dt=16ms) converges in
+            // roughly 1600 frames — run 2000 to be safe.  We check only the
+            // public scrollOffset getter; no private fields are accessed.
+            for (let i = 0; i < 2000; i++) {
+                mockTime += 16;
+                list.render(screen);
+            }
+
+            expect(list.scrollOffset).toBe(43);
+            nowSpy.mockRestore();
+        });
+    });
+
+    describe('render cache eviction', () => {
+        it('evicts old entries outside visible range after scroll', () => {
+            const list = new VirtualList({
+                totalItems: 1000,
+                renderItem: (i) => `Item ${i}`,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            list.scrollTo(0);
+            list.render(screen);
+            const cache = (list as any)._renderCache as Map<number, any>;
+            const initialSize = cache.size;
+
+            // Scroll through large range - cache should stay bounded
+            for (let i = 1; i <= 50; i++) {
+                list.scrollTo(i * 10);
+                list.render(screen);
+            }
+
+            // Cache should not have grown unbounded with 1000 items
+            expect(cache.size).toBeLessThanOrEqual(initialSize + 20);
+            expect(cache.size).toBeLessThan(100);
+        });
+    });
+
 });

@@ -2,7 +2,7 @@
 // @termuijs/data — Disk usage via shell commands
 // ─────────────────────────────────────────────────────
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 export interface DiskPartition {
     filesystem: string;
@@ -19,7 +19,7 @@ const DISK_CACHE_MS = 5000; // refresh every 5s
 
 function parseDf(): DiskPartition[] {
     try {
-        const output = execSync('df -h 2>/dev/null', { encoding: 'utf-8', timeout: 3000 });
+        const output = execFileSync('df', ['-h'], { encoding: 'utf-8', timeout: 3000 });
         const lines = output.trim().split('\n');
         if (lines.length < 2) return [];
 

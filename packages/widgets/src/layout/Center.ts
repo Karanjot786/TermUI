@@ -56,6 +56,8 @@ export class Center extends Widget {
                 offsetY = content.y + Math.max(0, Math.floor((content.height - childRect.height) / 2));
             }
 
+            // Access protected _rect to temporarily modify for centering
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (child as any)._rect = {
                 x: offsetX,
                 y: offsetY,
@@ -63,6 +65,8 @@ export class Center extends Widget {
                 height: childRect.height,
             };
             child.render(screen);
+            // Restore original rect after rendering
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (child as any)._rect = origRect;
         }
 

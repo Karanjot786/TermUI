@@ -59,4 +59,69 @@ describe('QRCodePattern widget', () => {
 
         expect(out).toContain('#');
     });
+
+    it('renders textual fallback when showText is enabled', () => {
+        const qr = new QRCodePattern(
+            'hello world',
+            {},
+            { showText: true }
+        );
+    
+        const screen = new Screen(30, 25);
+    
+        qr.updateRect({
+            x: 0,
+            y: 0,
+            width: 30,
+            height: 25,
+        });
+    
+        qr.render(screen);
+    
+        const out = bufferToString(screen);
+    
+        expect(out).toContain('hello world');
+    });
+    
+        it('does not render textual fallback by default', () => {
+        const qr = new QRCodePattern('hello world');
+    
+        const screen = new Screen(30, 25);
+    
+        qr.updateRect({
+            x: 0,
+            y: 0,
+            width: 30,
+            height: 25,
+        });
+    
+        qr.render(screen);
+    
+        const out = bufferToString(screen);
+    
+        expect(out).not.toContain('hello world');
+    });
+
+});
+
+describe('Performance optimizations', () => {
+    it('does not mark dirty when setData receives the same value', () => {
+        const qr = new QRCodePattern('hello');
+
+        qr.clearDirty();
+
+        qr.setData('hello');
+
+        expect(qr.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setData receives a different value', () => {
+        const qr = new QRCodePattern('hello');
+
+        qr.clearDirty();
+
+        qr.setData('world');
+
+        expect(qr.isDirty).toBe(true);
+    });
 });

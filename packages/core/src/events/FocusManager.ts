@@ -34,6 +34,12 @@ export class FocusManager {
     private _trapStack: string[] = [];
 
     /**
+     * Parallel stack to _trapStack. Captures the focused widget ID
+     * before each trap() call so release() can restore it.
+     */
+    private _preTrapFocus: string[] = [];
+
+    /**
      * Map of container ID → child widget IDs that belong to it.
      * Used for trap membership lookup.
      */
@@ -50,6 +56,15 @@ export class FocusManager {
      */
     private _rects: Map<string, Rect> = new Map();
 
+    /** Monotonically increasing epoch for ordered event sequencing */
+    private _epoch = 0;
+
+    /** Queue of focus state changes accumulated before start() is called */
+    private _pendingQueue: Array<FocusEvent> = [];
+
+    /** True once start() has been called — enables event emission */
+    private _started = false;
+
     /** Currently focused widget ID, or null if none */
     get currentId(): string | null {
         if (this._currentIndex < 0 || this._currentIndex >= this._focusables.length) {
@@ -64,17 +79,49 @@ export class FocusManager {
     }
 
     /**
+     * Enable event emission and replay any queued focus events.
+     * Call this from App.mount() after _subscribeFocusEvents().
+     */
+    start(): void {
+        if (this._started) return;
+        this._started = true;
+        // Replay queued focus events
+        for (const evt of this._pendingQueue) {
+            this._events.emit(evt.type, evt);
+        }
+        this._pendingQueue = [];
+    }
+
+    /**
      * Register a focusable widget.
      * Widgets are ordered by tabIndex (ascending), then insertion order.
+     * Before start() is called, events are queued rather than emitted so
+     * they are not lost when App has not yet subscribed to them.
      */
     register(focusable: Focusable): void {
+        // Preserve currently focused id so that sorting the master list
+        // does not accidentally change which widget is focused.
+        const prevFocusedId = this.currentId;
+
         this._focusables.push(focusable);
         this._focusables.sort((a, b) => a.tabIndex - b.tabIndex);
+
+        // If there was a previously focused widget, relocate _currentIndex
+        // to point to the same widget after the sort.
+        if (prevFocusedId) {
+            const newIdx = this._focusables.findIndex(f => f.id === prevFocusedId);
+            if (newIdx >= 0) this._currentIndex = newIdx;
+        }
 
         // Auto-focus the first widget if nothing is focused
         if (this._currentIndex < 0 && focusable.focusable) {
             this._currentIndex = this._focusables.indexOf(focusable);
-            this._events.emit('focus', { targetId: focusable.id, type: 'focus' });
+            const event: FocusEvent = { targetId: focusable.id, type: 'focus', epoch: this._epoch++ };
+            if (this._started) {
+                this._events.emit('focus', event);
+            } else {
+                this._pendingQueue.push(event);
+            }
         }
     }
 
@@ -92,18 +139,23 @@ export class FocusManager {
         this._focusables.splice(idx, 1);
 
         if (wasFocused) {
-            this._events.emit('blur', { targetId: id, type: 'blur' });
-            // Try to focus the next widget
+            // The focused widget is being removed — emit blur for it, then
+            // move focus to the next available widget if one exists.
+            this._events.emit('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
             if (this._focusables.length > 0) {
                 this._currentIndex = Math.min(this._currentIndex, this._focusables.length - 1);
                 this._events.emit('focus', {
                     targetId: this._focusables[this._currentIndex].id,
                     type: 'focus',
+                    epoch: this._epoch++,
                 });
             } else {
                 this._currentIndex = -1;
             }
         } else if (idx < this._currentIndex) {
+            // A non-focused widget before the focused one was removed —
+            // just adjust the index. No blur/focus events because the
+            // focused widget hasn't changed.
             this._currentIndex--;
         }
     }
@@ -198,6 +250,7 @@ export class FocusManager {
      * nested modals create nested traps.
      */
     trap(containerId: string): void {
+        this._preTrapFocus.push(this.currentId ?? '');
         this._trapStack.push(containerId);
 
         // Focus the first focusable inside the trap
@@ -211,11 +264,37 @@ export class FocusManager {
         }
     }
 
+    // REPLACE WITH:
     /**
-     * Release the current focus trap. Restores previous trap or free navigation.
+     * Release a focus trap by container ID.
+     *
+     * - Must be called with the same containerId passed to trap().
+     * - Must be called in LIFO order — innermost trap released first.
+     * - Emits console.warn and is a no-op if stack is empty or ID mismatches.
+     * - Restores focus to the widget that was focused before trap() was called.
      */
-    release(): void {
+    release(containerId: string): void {
+        if (this._trapStack.length === 0) {
+            console.warn('FocusManager.release(): called with empty trap stack — ignoring.');
+            return;
+        }
+
+        const top = this._trapStack[this._trapStack.length - 1];
+        if (top !== containerId) {
+            console.warn(
+                `FocusManager.release(): expected "${top}" but got "${containerId}" — ignoring. ` +
+                `Ensure nested modals are released in LIFO order.`
+            );
+            return;
+        }
+
         this._trapStack.pop();
+
+        // Restore focus to what was focused before this trap was activated
+        const previousFocusId = this._preTrapFocus.pop();
+        if (previousFocusId) {
+            this.focusWidget(previousFocusId);
+        }
     }
 
     /** Whether a focus trap is currently active */
@@ -385,13 +464,25 @@ export class FocusManager {
 
     private _changeFocus(newIndex: number): void {
         const oldId = this.currentId;
+        const events: Array<{ type: 'focus' | 'blur'; data: FocusEvent }> = [];
+
         if (oldId) {
-            this._events.emit('blur', { targetId: oldId, type: 'blur' });
+            events.push({ type: 'blur', data: { targetId: oldId, type: 'blur', epoch: this._epoch++ } });
         }
         this._currentIndex = newIndex;
-        this._events.emit('focus', {
-            targetId: this._focusables[newIndex].id,
+        events.push({
             type: 'focus',
+            data: {
+                targetId: this._focusables[newIndex].id,
+                type: 'focus',
+                epoch: this._epoch++,
+            },
         });
+
+        // Flush events after state is fully updated so that any re-entrant calls
+        // (e.g., handlers that call unregister()) see the finalized _currentIndex.
+        for (const evt of events) {
+            this._events.emit(evt.type, evt.data);
+        }
     }
 }

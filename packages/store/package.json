@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "Global state management for TermUI with selectors and subscribe",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -29,7 +29,8 @@
     "dev": "tsup --watch"
   },
   "dependencies": {
-    "@termuijs/jsx": "workspace:*"
+    "@termuijs/jsx": "workspace:*",
+    "immer": "^11.0.0"
   },
   "devDependencies": {
     "tsup": "^8.0.0",
