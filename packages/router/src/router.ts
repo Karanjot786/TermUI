@@ -353,6 +353,19 @@ export class Router {
         const match = prevPath ? matchRoute(prevPath, this._routes) : null;
 
         if (!match) {
+            if (this._notFound && prevPath) {
+                const poppedPath = this._history.pop();
+                if (poppedPath) {
+                    this._forwardStack.push(poppedPath);
+                }
+                this._executeNavigation(prevPath, {
+                    modifyHistory: 'none',
+                    clearForwardStack: false,
+                    direction: 'back',
+                });
+                return;
+            }
+
             this.events.emit('back', null);
             return;
         }
@@ -394,6 +407,16 @@ export class Router {
 
         const match = matchRoute(nextPath, this._routes);
         if (!match) {
+            if (this._notFound) {
+                this._forwardStack.pop();
+                this._executeNavigation(nextPath, {
+                    modifyHistory: 'push',
+                    clearForwardStack: false,
+                    direction: 'forward',
+                });
+                return;
+            }
+
             this.events.emit('error', new Error(`No route found for forward path: ${nextPath}`));
             return;
         }
