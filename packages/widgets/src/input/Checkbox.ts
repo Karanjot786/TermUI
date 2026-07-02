@@ -11,7 +11,9 @@ import {
     stringWidth,
     truncate,
     caps,
+    prefersReducedMotion,
 } from '@termuijs/core';
+import { fadeIn, fadeOut } from '@termuijs/motion';
 import { Widget } from '../base/Widget.js';
 
 export interface CheckboxOptions {
@@ -47,6 +49,8 @@ export class Checkbox extends Widget {
     private _checkedChar?: string;
     private _uncheckedChar?: string;
     private _checkedColor: Color;
+    private _animProgress: number;
+    private _animCancel?: () => void;
 
     constructor(
         label: string,
@@ -62,6 +66,7 @@ export class Checkbox extends Widget {
         this._checkedChar = opts.checkedChar;
         this._uncheckedChar = opts.uncheckedChar;
         this._checkedColor = opts.checkedColor ?? { type: 'named', name: 'green' };
+        this._animProgress = this._checked ? 1 : 0;
     }
 
     // ── Public API ──────────────────────────────────────────────────────
@@ -69,9 +74,7 @@ export class Checkbox extends Widget {
     /** Toggle the checked state. No-op if disabled. */
     toggle(): void {
         if (this._disabled) return;
-        this._checked = !this._checked;
-        this._onChange?.(this._checked);
-        this.markDirty();
+        this.setChecked(!this._checked);
     }
 
     /** Set the checked state explicitly. No-op if already the same value. */
@@ -79,7 +82,33 @@ export class Checkbox extends Widget {
         if (this._checked === checked) return;
         this._checked = checked;
         this._onChange?.(this._checked);
+        this._animCancel?.();
         this.markDirty();
+
+        if (prefersReducedMotion()) {
+            this._animProgress = checked ? 1 : 0;
+            return;
+        }
+
+        if (checked) {
+            this._animProgress = 0;
+            this._animCancel = fadeIn(150, (p) => {
+                this._animProgress = p;
+                this.markDirty();
+            }, () => {
+                this._animProgress = 1;
+                this._animCancel = undefined;
+            });
+        } else {
+            this._animProgress = 1;
+            this._animCancel = fadeOut(150, (p) => {
+                this._animProgress = p;
+                this.markDirty();
+            }, () => {
+                this._animProgress = 0;
+                this._animCancel = undefined;
+            });
+        }
     }
 
     /** Returns the current checked state. */
@@ -111,6 +140,23 @@ export class Checkbox extends Widget {
         return this._disabled;
     }
 
+    // ── Lifecycle ───────────────────────────────────────────────────────
+
+    mount(): void {
+        super.mount();
+        if (this._checked && this._animProgress < 1) {
+            this._animProgress = 1;
+            this.markDirty();
+        }
+    }
+
+    /** Cancel any in-flight animation when the widget is unmounted. */
+    unmount(): void {
+        this._animCancel?.();
+        this._animCancel = undefined;
+        super.unmount();
+    }
+
     // ── Keyboard ────────────────────────────────────────────────────────
 
     /** Handle key events. Enter and Space toggle the checkbox. */
@@ -131,11 +177,13 @@ export class Checkbox extends Widget {
         const checkedChar = this._checkedChar ?? (caps.unicode ? '✓' : '+');
         const uncheckedChar = this._uncheckedChar ?? ' ';
 
+        const progress = this._animProgress;
+        const showMark = progress > 0;
+        const mark = showMark ? checkedChar : uncheckedChar;
+
         // Box: [✓] or [ ]
         const boxOpen = '[';
         const boxClose = ']';
-        const mark = this._checked ? checkedChar : uncheckedChar;
-
         const box = `${boxOpen}${mark}${boxClose}`;
         const boxWidth = stringWidth(box);
 
@@ -145,7 +193,7 @@ export class Checkbox extends Widget {
         const fullLine = box + gap + labelPart;
 
         // Colors
-        const markColor: Color = this._checked
+        const markColor: Color = showMark
             ? this._checkedColor
             : { type: 'named', name: 'white' };
 
@@ -171,7 +219,8 @@ export class Checkbox extends Widget {
         screen.setCell(x + 1, y, {
             char: mark,
             fg: markColor,
-            bold: this._checked,
+            dim: showMark && progress < 0.5,
+            bold: showMark && progress >= 0.5,
         });
 
         // Write ']'
