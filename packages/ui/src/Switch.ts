@@ -5,6 +5,7 @@ import {
     mergeStyles,
     defaultStyle,
     styleToCellAttrs,
+    stringWidth,
     caps,
     prefersReducedMotion,
 } from '@termuijs/core';
@@ -113,27 +114,34 @@ export class Switch extends Widget {
 
         const attrs = styleToCellAttrs(this.style);
         const knobPos = Math.round(this._animProgress * 2);
+        const transitioning = this._animProgress > 0 && this._animProgress < 1;
 
-        let track: string;
+        let trackChars: string[];
+        let knobChar: string;
         if (caps.unicode) {
-            const chars = ['─', '─', '─'];
-            chars[knobPos] = '●';
-            track = chars.join('');
+            trackChars = ['─', '─', '─'];
+            knobChar = '●';
         } else {
-            const chars = ['-', '-', '-'];
-            chars[knobPos] = 'O';
-            track = chars.join('');
+            trackChars = ['-', '-', '-'];
+            knobChar = 'O';
         }
 
-        const text = this._label
-            ? `${this._label} ${track}`
-            : track;
+        let cursorX = x;
 
-        screen.writeString(
-            x,
-            y,
-            text.slice(0, width),
-            attrs
-        );
+        if (this._label) {
+            screen.writeString(cursorX, y, `${this._label} `, attrs);
+            cursorX += stringWidth(`${this._label} `);
+        }
+
+        for (let i = 0; i < 3; i++) {
+            const isKnob = i === knobPos;
+            const isOn = this._value;
+            screen.setCell(cursorX + i, y, {
+                char: isKnob ? knobChar : trackChars[i],
+                fg: attrs.fg,
+                dim: transitioning || (!isKnob && !isOn),
+                bold: isKnob,
+            });
+        }
     }
 }
