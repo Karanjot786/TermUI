@@ -229,5 +229,21 @@ describe('InputParser', () => {
         sendKey(stdin, '\x1b[200~hello world\x1b[201~');
 
         expect(pasteHandler).toHaveBeenCalledWith('hello world');
-    }); 
+    });
+
+    it('emits paste event when bracketed paste spans multiple chunks', () => {
+        const stdin = createMockStdin();
+        const parser = new InputParser(stdin);
+
+        const pasteHandler = vi.fn();
+
+        parser.onPaste(pasteHandler);
+        parser.start();
+
+        sendKey(stdin, '\x1b[200~hello ');
+        sendKey(stdin, 'world\x1b[201~');
+
+        expect(pasteHandler).toHaveBeenCalledTimes(1);
+        expect(pasteHandler).toHaveBeenCalledWith('hello world');
+    });
 });

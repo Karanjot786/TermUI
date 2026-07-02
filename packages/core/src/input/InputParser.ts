@@ -108,12 +108,22 @@ export class InputParser {
         const PASTE_START = '\x1b[200~';
         const PASTE_END = '\x1b[201~';
 
-        if (str.includes(PASTE_START) && str.includes(PASTE_END)) {
-            const pastedText = str
-                .replace(PASTE_START, '')
-                .replace(PASTE_END, '');
+        if (this._isPasting) {
+            this._pasteBuffer += str;
+            this._finishPasteIfComplete(PASTE_END);
+            return;
+        }
 
-            this._events.emit('paste', pastedText);
+        const pasteStartIndex = str.indexOf(PASTE_START);
+        if (pasteStartIndex !== -1) {
+            const beforePaste = str.slice(0, pasteStartIndex);
+            if (beforePaste.length > 0) {
+                this._processInput(Buffer.from(beforePaste, 'utf8'));
+            }
+
+            this._isPasting = true;
+            this._pasteBuffer = str.slice(pasteStartIndex + PASTE_START.length);
+            this._finishPasteIfComplete(PASTE_END);
             return;
         }
         // If we're collecting an escape sequence
@@ -193,6 +203,25 @@ export class InputParser {
                     shift: ch !== ch.toLowerCase() && ch === ch.toUpperCase(),
                 }));
             }
+        }
+    }
+
+    private _finishPasteIfComplete(pasteEnd: string): void {
+        const pasteEndIndex = this._pasteBuffer.indexOf(pasteEnd);
+        if (pasteEndIndex === -1) {
+            return;
+        }
+
+        const pastedText = this._pasteBuffer.slice(0, pasteEndIndex);
+        const remainder = this._pasteBuffer.slice(pasteEndIndex + pasteEnd.length);
+
+        this._isPasting = false;
+        this._pasteBuffer = '';
+
+        this._events.emit('paste', pastedText);
+
+        if (remainder.length > 0) {
+            this._processInput(Buffer.from(remainder, 'utf8'));
         }
     }
 
