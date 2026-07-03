@@ -66,6 +66,12 @@ describe('Slider', () => {
         expect(slider.getValue()).toBe(100);
     });
 
+    it('rejects zero, negative, and non-finite slider steps', () => {
+        expect(() => new Slider({}, { min: 0, max: 10, step: 0 })).toThrow('positive finite');
+        expect(() => new Slider({}, { min: 0, max: 10, step: -1 })).toThrow('positive finite');
+        expect(() => new Slider({}, { min: 0, max: 10, step: Infinity })).toThrow('positive finite');
+    });
+
     it('fires onChange callback', () => {
         const onChange = vi.fn();
 
@@ -119,6 +125,12 @@ describe('Slider', () => {
 
         expect(range.getLow()).toBe(20);
         expect(range.getHigh()).toBe(80);
+    });
+
+    it('rejects zero, negative, and non-finite range steps', () => {
+        expect(() => new RangeInput({}, { min: 0, max: 10, step: 0 })).toThrow('positive finite');
+        expect(() => new RangeInput({}, { min: 0, max: 10, step: -1 })).toThrow('positive finite');
+        expect(() => new RangeInput({}, { min: 0, max: 10, step: Number.NaN })).toThrow('positive finite');
     });
 
     it('renders two handles', () => {

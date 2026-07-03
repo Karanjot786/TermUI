@@ -26,6 +26,14 @@ export interface RangeInputOptions {
     onChange?: (low: number, high: number) => void;
 }
 
+function resolveStep(step: number | undefined): number {
+    const value = step ?? 1;
+    if (!Number.isFinite(value) || value <= 0) {
+        throw new Error('step must be a positive finite number');
+    }
+    return value;
+}
+
 export class Slider extends Widget {
     private _value: number;
     private _min: number;
@@ -49,7 +57,7 @@ export class Slider extends Widget {
 
         this._min = opts.min;
         this._max = opts.max;
-        this._step = opts.step ?? 1;
+        this._step = resolveStep(opts.step);
         this._value = this._clamp(opts.value ?? opts.min);
         this.onChange = opts.onChange;
     }
@@ -147,7 +155,7 @@ export class RangeInput extends Widget {
 
         this._min = opts.min;
         this._max = opts.max;
-        this._step = opts.step ?? 1;
+        this._step = resolveStep(opts.step);
 
         this.onChange = opts.onChange;
 
