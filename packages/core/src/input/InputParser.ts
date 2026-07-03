@@ -100,11 +100,11 @@ export class InputParser {
         this._escapeBuffer = Buffer.alloc(0);
     }
 
-    /**
+        /**
      * Process a chunk of raw input bytes.
      */
     private _processInput(data: Buffer): void {
-        const str = data.toString('utf8');
+        const str = data.toString('utf8');           // ← Moved to top
         const PASTE_START = '\x1b[200~';
         const PASTE_END = '\x1b[201~';
 
@@ -126,6 +126,7 @@ export class InputParser {
             this._finishPasteIfComplete(PASTE_END);
             return;
         }
+
         // If we're collecting an escape sequence
         if (this._escapeBuffer.length > 0) {
             this._escapeBuffer = Buffer.concat([this._escapeBuffer, data]);
