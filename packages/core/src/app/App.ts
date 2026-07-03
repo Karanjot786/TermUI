@@ -429,16 +429,16 @@ export class App {
 
                     // Clear dirty flags on the widget tree
                     this._rootWidget.clearDirty?.();
-                    // Force the dirty flag to false to prevent infinite
-                    // re-schedule when clearDirty doesn't properly reset
-                    // the property (e.g., getter without setter).
-                    // Use defineProperty to bypass getter-only accessors
-                    // that would throw in strict mode on direct assignment.
-                    Object.defineProperty(this._rootWidget, 'isDirty', {
-                        value: false,
-                        writable: true,
-                        configurable: true,
-                    });
+                    // Force the dirty flag to false as a safeguard against
+                    // custom widgets whose clearDirty() doesn't properly
+                    // reset the property (e.g., getter without setter).
+                    // Use try/catch to handle getter-only accessors that
+                    // would throw in strict mode on direct assignment.
+                    try {
+                        this._rootWidget.isDirty = false;
+                    } catch {
+                        // getter-only accessor without setter — skip
+                    }
                 }
 
                 // Composite overlay layers on top of the base rendering.
