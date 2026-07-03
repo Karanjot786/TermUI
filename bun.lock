@@ -19,6 +19,45 @@
         "vitest": "^4.1.8",
       },
     },
+    "examples/01-hello-world": {
+      "name": "@termuijs/example-hello-world",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
+    "examples/02-simple-button": {
+      "name": "@termuijs/example-simple-button",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
+    "examples/03-form-inputs": {
+      "name": "@termuijs/example-form-inputs",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/jsx": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/ai-assistant": {
       "name": "@termuijs/example-ai-assistant",
       "version": "0.1.0",
@@ -599,6 +638,7 @@
         "@standard-schema/spec": "^1.1.0",
         "@termuijs/core": "workspace:*",
         "@termuijs/jsx": "workspace:*",
+        "@termuijs/motion": "workspace:*",
         "@termuijs/tss": "workspace:*",
         "@termuijs/widgets": "workspace:*",
       },
@@ -815,9 +855,13 @@
 
     "@termuijs/example-flashcard-app": ["@termuijs/example-flashcard-app@workspace:examples/flashcard-app"],
 
+    "@termuijs/example-form-inputs": ["@termuijs/example-form-inputs@workspace:examples/03-form-inputs"],
+
     "@termuijs/example-forms": ["@termuijs/example-forms@workspace:examples/forms-and-validation"],
 
     "@termuijs/example-git-client": ["@termuijs/example-git-client@workspace:examples/git-client"],
+
+    "@termuijs/example-hello-world": ["@termuijs/example-hello-world@workspace:examples/01-hello-world"],
 
     "@termuijs/example-jsx-dashboard": ["@termuijs/example-jsx-dashboard@workspace:examples/jsx-dashboard"],
 
@@ -842,6 +886,8 @@
     "@termuijs/example-rss-reader": ["@termuijs/example-rss-reader@workspace:examples/rss-reader"],
 
     "@termuijs/example-showcase": ["@termuijs/example-showcase@workspace:examples/showcase"],
+
+    "@termuijs/example-simple-button": ["@termuijs/example-simple-button@workspace:examples/02-simple-button"],
 
     "@termuijs/example-snake-game": ["@termuijs/example-snake-game@workspace:examples/snake-game"],
 
