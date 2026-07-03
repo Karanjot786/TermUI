@@ -313,19 +313,36 @@ describe('LayerManager - Resize', () => {
         expect(layer.cells[0].length).toBe(20);
     });
 
-    it('clears dirty regions on resize', () => {
+    it('marks entire layer as dirty on resize so it is recomposited', () => {
         const lm = new LayerManager(10, 10);
 
         const layer = lm.createLayer('base', 0);
 
-        lm.setCell('base', 1, 1, {
-            char: 'A',
-        });
-
-        expect(layer.dirtyRegion).not.toBeNull();
-
         lm.resize(20, 15);
 
-        expect(layer.dirtyRegion).toBeNull();
+        expect(layer.dirtyRegion).toEqual({
+            x: 0,
+            y: 0,
+            width: 20,
+            height: 15,
+        });
+    });
+
+    it('composites layer content after resize', () => {
+        const lm = new LayerManager(10, 10);
+        const layer = lm.createLayer('overlay', 100);
+        lm.setCell('overlay', 1, 1, { char: 'X' });
+
+        // Resize should set dirtyRegion to full area
+        lm.resize(20, 15);
+
+        // Write to the new size
+        lm.setCell('overlay', 10, 5, { char: 'Y' });
+
+        const screen = new Screen(20, 15);
+        lm.composite(screen);
+
+        // Content written after resize should appear
+        expect(screen.back[5][10].char).toBe('Y');
     });
 });

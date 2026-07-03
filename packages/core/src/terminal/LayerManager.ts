@@ -257,7 +257,7 @@ export class LayerManager {
 
         for (const layer of this._layers.values()) {
             layer.cells = this._createGrid();
-            layer.dirtyRegion = null;
+            layer.dirtyRegion = { x: 0, y: 0, width: cols, height: rows };
         }
 
         this._allocateHitGrids();

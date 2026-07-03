@@ -69,6 +69,7 @@ Requires `@termuijs/core` as a peer dependency.
 
 | Widget | What it does |
 |--------|-------------|
+| `Button` | Pressable button with variants, disabled/loading states, and keyboard activation |
 | `TextInput` | Single-line text input with cursor, placeholder, and change callback |
 | `List` | Scrollable list with keyboard selection. Good for small datasets |
 | `VirtualList` | Scroll-virtualized list. Renders only visible rows; 1M items costs the same as 10 |
@@ -107,6 +108,102 @@ list.selectFirst()
 list.selectLast()
 list.scrollTo(500)
 ```
+## Button
+
+A pressable button with a label, four visual variants, and built-in disabled/loading states. Handles `enter` and `space` key activation when focused, provided your app forwards keyboard events to it via `handleKey()`.
+
+### Purpose
+
+`Button` renders a bordered, centered-label button that responds to keyboard activation. It's the standard way to trigger an action (submit, confirm, cancel, retry) in a TermUI app. It manages its own focus-aware border color, supports a busy/loading spinner state, and falls back to ASCII box-drawing characters when `NO_UNICODE=1`.
+
+### Props
+
+**Constructor:** `new Button(label: string, style?: Partial<Style>, opts?: ButtonOptions)`
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `variant` | `'default' \| 'primary' \| 'danger' \| 'ghost'` | `'default'` | Controls background/foreground color scheme |
+| `disabled` | `boolean` | `false` | When `true`, ignores `enter`/`space` key activation |
+| `onPress` | `() => void` | `undefined` | Called when the button is activated via keyboard |
+| `color` | `Color` | variant default | Overrides the variant's background color |
+| `loading` | `boolean` | `false` | Shows an animated spinner and suppresses activation while `true` |
+| `loadingText` | `string` | falls back to `label` | Text shown next to the spinner while `loading` is `true` |
+
+### Methods
+
+- `setLabel(label: string): void` — update the displayed label (no-op + no re-render if unchanged)
+- `setDisabled(disabled: boolean): void` — toggle disabled state (no-op + no re-render if unchanged)
+- `setLoading(loading: boolean): void` — toggle loading state; starts/stops the spinner timer
+- `setLoadingText(loadingText: string | undefined): void` — update the text shown while loading
+- `handleKey(event: KeyEvent): void` — call this from your app's key handler to route `enter`/`space` to the button
+
+### Examples
+
+**1. Basic button with a click handler**
+```typescript
+import { Button } from '@termuijs/widgets'
+
+const button = new Button('Click Me!', {}, {
+    onPress: () => console.log('Button pressed!'),
+})
+```
+
+**2. Variants**
+```typescript
+const submitBtn = new Button('Submit', {}, { variant: 'primary', onPress: submit })
+const deleteBtn = new Button('Delete', {}, { variant: 'danger', onPress: remove })
+const cancelBtn = new Button('Cancel', {}, { variant: 'ghost', onPress: cancel })
+```
+
+**3. Disabled button**
+```typescript
+const saveBtn = new Button('Save', {}, {
+    disabled: !formIsValid,
+    onPress: save,
+})
+
+// Toggle later, e.g. once validation passes
+saveBtn.setDisabled(false)
+```
+
+**4. Loading state during an async action**
+```typescript
+const submitBtn = new Button('Submit', {}, {
+    variant: 'primary',
+    onPress: async () => {
+        submitBtn.setLoading(true)
+        submitBtn.setLoadingText('Submitting...')
+        try {
+            await submitForm()
+        } finally {
+            submitBtn.setLoading(false)
+        }
+    },
+})
+```
+
+### Common patterns
+
+- **Routing keys to the button:** `Button` doesn't listen for input on its own — forward key events from your app's key handler:
+```typescript
+  app.events.on('key', (event) => {
+      if (button.isFocused) button.handleKey(event)
+  })
+```
+- **Focus indication:** the button's border automatically turns cyan when `isFocused` is `true`. Set `button.isFocused = true` when it should be the active element.
+- **Disable during async work:** prefer `loading` over `disabled` for actions that take time — it gives the user visual feedback (spinner) instead of a button that silently does nothing.
+- **Only `'enter'` and `'space'` (lowercase) trigger `onPress`.** Uppercase `'Enter'` or a raw `' '` character will not activate the button — this matches how `KeyEvent.key` is normalized elsewhere in TermUI.
+
+### Troubleshooting
+
+| Problem | Likely cause | Fix |
+|---------|--------------|-----|
+| Button doesn't respond to Enter/Space | Key events aren't being forwarded to `button.handleKey()` | Call `button.handleKey(event)` from your app's `'key'` event handler |
+| Button looks unfocused even though it's the active element | `isFocused` was never set | Set `button.isFocused = true` manually — `Button` doesn't manage focus state itself |
+| `onPress` fires even while `loading` is `true` | You're calling `onPress` directly instead of routing through `handleKey` | Only `handleKey` respects the `loading`/`disabled` guard; don't call `onPress` directly |
+| Label or disabled state doesn't visually update | You're mutating internal state directly | Always use `setLabel()` / `setDisabled()` / `setLoading()` — these call `markDirty()` for you |
+| Spinner doesn't animate | `NO_MOTION=1` is set, or `prefersReducedMotion()` returns true | This is expected behavior — motion is intentionally disabled; the spinner shows a static first frame instead |
+| Box-drawing characters render as `?` or garbled | Terminal doesn't support Unicode | Set `NO_UNICODE=1` to force the ASCII fallback (`+`, `-`, `\|`) |
 
 ## AI widgets
 
