@@ -278,7 +278,7 @@ export class Renderer {
                 // flush the span
                 const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
                 output += moveTo(adjustedStart, row);
-                for (let sc = spanStart; sc < c; sc++) {
+                for (let sc = adjustedStart; sc < c; sc++) {
                     const cell = back[row][sc];
                     if (cell.width === 0) continue;
                     output += this._renderCell(cell);
@@ -291,7 +291,7 @@ export class Renderer {
         if (spanStart !== -1) {
             const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
             output += moveTo(adjustedStart, row);
-            for (let sc = spanStart; sc < cols; sc++) {
+            for (let sc = adjustedStart; sc < cols; sc++) {
                 const cell = back[row][sc];
                 if (cell.width === 0) continue;
                 output += this._renderCell(cell);
