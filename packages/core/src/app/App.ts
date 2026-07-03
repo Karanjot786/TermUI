@@ -429,6 +429,10 @@ export class App {
 
                     // Clear dirty flags on the widget tree
                     this._rootWidget.clearDirty?.();
+                    // Force the dirty flag to false to prevent infinite
+                    // re-schedule when clearDirty doesn't properly reset
+                    // the property (e.g., getter without setter).
+                    this._rootWidget.isDirty = false;
                 }
 
                 // Composite overlay layers on top of the base rendering.
