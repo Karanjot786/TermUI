@@ -37,6 +37,65 @@ describe("Timer Pool", () => {
   });
 });
 
+describe("Timer Pool — VirtualClock integration", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    unsubscribeAll();
+    vi.restoreAllMocks();
+  });
+
+  it("restores real-timer callbacks after clock is detached", () => {
+    const cb = vi.fn();
+
+    // Register a real-timer subscriber
+    subscribe(50, cb);
+    expect(cb).not.toHaveBeenCalled();
+
+    // Create a minimal VirtualClock
+    const clock = { now: () => 0, advance: (_ms: number) => {}, tick: () => {}, _setInterval: vi.fn(() => () => {}) };
+    const restore = subscribe(clock);
+
+    // The real timer callback should have been saved, not lost
+    expect(cb).not.toHaveBeenCalled();
+
+    // Detach the clock — real-timer callbacks should be restored
+    restore();
+
+    // Advance fake timers — the original callback should fire
+    vi.advanceTimersByTime(50);
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+
+  it("migrates clock-registered callbacks to real timers on restore", () => {
+    const periodics: Array<{ delayMs: number; cb: () => void; unsub: () => void }> = [];
+    const clock = {
+      now: () => 0,
+      advance: (_ms: number) => {},
+      tick: () => {},
+      _setInterval: (delayMs: number, cb: () => void) => {
+        const unsub = () => { entry.cancelled = true; };
+        const entry: any = { delayMs, cb, unsub, cancelled: false };
+        periodics.push(entry);
+        return () => { entry.cancelled = true; };
+      },
+    };
+    const restore = subscribe(clock);
+
+    const cb = vi.fn();
+    subscribe(100, cb);
+
+    // Restore the clock — the subscriber should be migrated to real timers
+    restore();
+    periodics.length = 0;
+
+    vi.advanceTimersByTime(100);
+    expect(cb).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("Motion Presets and Easings", () => {
   it("spring presets return the expected config", () => {
     expect(SPRING_PRESETS).toBeDefined();

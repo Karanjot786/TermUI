@@ -3,11 +3,13 @@
 // ─────────────────────────────────────────────────────
 
 import { Buffer } from 'node:buffer';
+import { StringDecoder } from 'node:string_decoder';
 import type { KeyEvent, MouseEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS } from './KeyMap.js';
 import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
+import { splitGraphemes } from './grapheme.js';
 
 export interface CursorPosition {
     row: number;
@@ -28,11 +30,15 @@ interface InputEvents {
 export class InputParser {
     private _events = new EventEmitter<InputEvents>();
     private _stdin: NodeJS.ReadStream;
+    private _decoder = new StringDecoder('utf8');
+    private _graphemeBuffer = '';
+    private _graphemeTimeout: ReturnType<typeof setTimeout> | null = null;
     private _handler: ((data: Buffer) => void) | null = null;
     private _escapeTimeout: ReturnType<typeof setTimeout> | null = null;
     private _escapeBuffer: Buffer = Buffer.alloc(0);
     private _isPasting = false;
     private _pasteBuffer = '';
+    private _pasteTimeout: ReturnType<typeof setTimeout> | null = null;
     private _cursorRequests: Array<{
         resolve: (position: CursorPosition) => void;
         reject: (error: Error) => void;
@@ -97,14 +103,29 @@ export class InputParser {
             clearTimeout(this._escapeTimeout);
             this._escapeTimeout = null;
         }
+        if (this._graphemeTimeout) {
+            clearTimeout(this._graphemeTimeout);
+            this._graphemeTimeout = null;
+        }
+        if (this._pasteTimeout) {
+            clearTimeout(this._pasteTimeout);
+            this._pasteTimeout = null;
+        }
         this._escapeBuffer = Buffer.alloc(0);
+        this._graphemeBuffer = '';
+        this._decoder.end();
+        for (const req of this._cursorRequests) {
+            clearTimeout(req.timeout);
+            req.reject(new Error('InputParser stopped'));
+        }
+        this._cursorRequests = [];
     }
 
-        /**
+    /**
      * Process a chunk of raw input bytes.
      */
     private _processInput(data: Buffer): void {
-        const str = data.toString('utf8');           // ← Moved to top
+        const str = data.toString('utf8');
         const PASTE_START = '\x1b[200~';
         const PASTE_END = '\x1b[201~';
 
@@ -134,41 +155,66 @@ export class InputParser {
                 clearTimeout(this._escapeTimeout);
                 this._escapeTimeout = null;
             }
-            this._tryParseEscape(data);
+            this._tryParseEscape();
             return;
         }
 
         // Check if this starts an escape sequence
         if (str.startsWith('\x1b') && str.length === 1) {
-            // Lone ESC — wait a bit to see if more bytes follow
             this._escapeBuffer = data;
             this._escapeTimeout = setTimeout(() => {
-                // Timeout — it was a standalone Escape key
+                const remained = this._escapeBuffer;
+                this._escapeBuffer = Buffer.alloc(0);
+                this._escapeTimeout = null;
                 this._events.emit('key', createKeyEvent({
                     key: 'escape',
-                    raw: this._escapeBuffer,
+                    raw: remained,
                     ctrl: false,
                     alt: false,
                     shift: false,
                 }));
-                this._escapeBuffer = Buffer.alloc(0);
-                this._escapeTimeout = null;
-            }, 50); // 50ms debounce for escape sequences
+            }, 200);
             return;
         }
 
         if (str.startsWith('\x1b')) {
             this._escapeBuffer = data;
-            this._tryParseEscape(data);
+            this._tryParseEscape();
             return;
         }
 
-        // Process each code point for non-escape input
-        for (const ch of str) {
+        // Decode input and append to grapheme buffer
+        const decoded = this._decoder.write(data);
+        this._graphemeBuffer += decoded;
+
+        if (this._graphemeTimeout) {
+            clearTimeout(this._graphemeTimeout);
+            this._graphemeTimeout = null;
+        }
+
+        this._graphemeTimeout = setTimeout(() => {
+            this._processGraphemeBuffer();
+            this._graphemeTimeout = null;
+        }, 10);
+    }
+
+    private _processGraphemeBuffer(): void {
+        if (!this._graphemeBuffer) return;
+
+        const graphemes = splitGraphemes(this._graphemeBuffer);
+        if (graphemes.length === 0) return;
+
+        let processCount = graphemes.length;
+        const lastGrapheme = graphemes[graphemes.length - 1];
+        if (this._isPossiblyIncompleteGrapheme(lastGrapheme)) {
+            processCount = graphemes.length - 1;
+        }
+
+        for (let i = 0; i < processCount; i++) {
+            const ch = graphemes[i];
             const code = ch.codePointAt(0)!;
             const raw = Buffer.from(ch, 'utf8');
 
-            // Ctrl+key (0x01-0x1A, excluding tab/enter/backspace)
             if (code >= 0x01 && code <= 0x1A) {
                 const keyName = CTRL_KEYS[code];
                 const isCtrl = code !== 0x09 && code !== 0x0D && code !== 0x0A;
@@ -182,7 +228,6 @@ export class InputParser {
                 continue;
             }
 
-            // Special keys
             if (code in SPECIAL_KEYS) {
                 this._events.emit('key', createKeyEvent({
                     key: SPECIAL_KEYS[code],
@@ -194,7 +239,6 @@ export class InputParser {
                 continue;
             }
 
-            // Regular printable character
             if (code >= 0x20) {
                 this._events.emit('key', createKeyEvent({
                     key: ch,
@@ -204,6 +248,47 @@ export class InputParser {
                     shift: ch !== ch.toLowerCase() && ch === ch.toUpperCase(),
                 }));
             }
+        }
+
+        this._graphemeBuffer = graphemes.slice(processCount).join('');
+    }
+
+    private _isPossiblyIncompleteGrapheme(ch: string): boolean {
+        if (!ch) return false;
+        if (ch.endsWith('\u200D')) return true;
+        const lastCharCode = ch.charCodeAt(ch.length - 1);
+        if (lastCharCode >= 0xD800 && lastCharCode <= 0xDBFF) return true;
+        
+        const codePoints = Array.from(ch);
+        const lastCpVal = codePoints[codePoints.length - 1].codePointAt(0)!;
+        if (lastCpVal >= 0x1F1E6 && lastCpVal <= 0x1F1FF) {
+            let riCount = 0;
+            for (let i = codePoints.length - 1; i >= 0; i--) {
+                const cp = codePoints[i].codePointAt(0)!;
+                if (cp >= 0x1F1E6 && cp <= 0x1F1FF) {
+                    riCount++;
+                } else {
+                    break;
+                }
+            }
+            if (riCount % 2 !== 0) return true;
+        }
+        return false;
+    }
+
+    private _startPasteTimeout(): void {
+        this._clearPasteTimeout();
+        this._pasteTimeout = setTimeout(() => {
+            this._isPasting = false;
+            this._pasteBuffer = '';
+            this._pasteTimeout = null;
+        }, 500);
+    }
+
+    private _clearPasteTimeout(): void {
+        if (this._pasteTimeout) {
+            clearTimeout(this._pasteTimeout);
+            this._pasteTimeout = null;
         }
     }
 
@@ -229,10 +314,22 @@ export class InputParser {
     /**
      * Try to parse buffered escape sequence.
      */
-    private _tryParseEscape(rawData: Buffer): void {
+    private _tryParseEscape(): void {
         const seq = this._escapeBuffer.toString('utf8');
 
-        // Check for mouse event first
+        const PASTE_START = '\x1b[200~';
+        const pasteStartIdx = seq.indexOf(PASTE_START);
+        if (pasteStartIdx !== -1) {
+            this._escapeBuffer = Buffer.alloc(0);
+            if (pasteStartIdx > 0) {
+                const before = seq.substring(0, pasteStartIdx);
+                this._processInput(Buffer.from(before, 'utf8'));
+            }
+            const after = seq.substring(pasteStartIdx);
+            this._processInput(Buffer.from(after, 'utf8'));
+            return;
+        }
+
         if (isMouseSequence(seq)) {
             const mouseEvt = parseMouseEvent(seq);
             if (mouseEvt) {
@@ -240,21 +337,9 @@ export class InputParser {
                 this._escapeBuffer = Buffer.alloc(0);
                 return;
             }
-            // Might be incomplete mouse sequence — wait for more data
-            if (seq.length < 20) { // safety cap
-                if (this._escapeTimeout) {
-                    clearTimeout(this._escapeTimeout);
-                    this._escapeTimeout = null;
-                }
-                this._escapeTimeout = setTimeout(() => {
-                    this._escapeBuffer = Buffer.alloc(0);
-                    this._escapeTimeout = null;
-                }, 100);
-                return;
-            }
+            if (seq.length < 20) return;
         }
 
-        // Cursor position report
         const cursorMatch = seq.match(/^\x1b\[(\d+);(\d+)R$/);
         if (cursorMatch) {
             const row = parseInt(cursorMatch[1], 10);
@@ -270,7 +355,6 @@ export class InputParser {
             return;
         }
 
-        // Focus tracking sequences
         if (seq === '\x1b[I') {
             this._events.emit('focuschange', true);
             this._escapeBuffer = Buffer.alloc(0);
@@ -283,7 +367,6 @@ export class InputParser {
             return;
         }
 
-        // Check known escape sequences
         if (seq in ESCAPE_SEQUENCES) {
             const keyName = ESCAPE_SEQUENCES[seq];
             const isShift = keyName.startsWith('shift+');
@@ -293,7 +376,7 @@ export class InputParser {
 
             this._events.emit('key', createKeyEvent({
                 key: cleanKey,
-                raw: rawData,
+                raw: this._escapeBuffer,
                 ctrl: isCtrl,
                 alt: isAlt,
                 shift: isShift,
@@ -302,12 +385,11 @@ export class InputParser {
             return;
         }
 
-        // Alt+key: ESC followed by a regular character
-        if (seq.length === 2 && seq[0] === '\x1b') {
+        if (seq.length === 2 && seq[0] === '\x1b' && seq[1] !== '[' && seq[1] !== 'O') {
             const ch = seq[1];
             this._events.emit('key', createKeyEvent({
                 key: ch,
-                raw: rawData,
+                raw: this._escapeBuffer,
                 ctrl: false,
                 alt: true,
                 shift: ch !== ch.toLowerCase() && ch === ch.toUpperCase(),
@@ -316,21 +398,9 @@ export class InputParser {
             return;
         }
 
-        // If the sequence is getting too long, give up
         if (seq.length > 20) {
             this._escapeBuffer = Buffer.alloc(0);
             return;
         }
-
-        // Wait for more bytes (might be an incomplete sequence)
-        if (this._escapeTimeout) {
-            clearTimeout(this._escapeTimeout);
-            this._escapeTimeout = null;
-        }
-        this._escapeTimeout = setTimeout(() => {
-            // Timeout — emit as unknown escape and clear
-            this._escapeBuffer = Buffer.alloc(0);
-            this._escapeTimeout = null;
-        }, 100);
     }
 }

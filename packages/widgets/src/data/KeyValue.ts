@@ -128,9 +128,9 @@ export class KeyValue extends Widget {
 
     handleKey(key: string): void {
         const lowerKey = key.toLowerCase();
-        if (lowerKey === 'arrowup' || lowerKey === 'up' || lowerKey === 'k') {
+        if (lowerKey === 'up' || lowerKey === 'k') {
             this.moveUp();
-        } else if (lowerKey === 'arrowdown' || lowerKey === 'down' || lowerKey === 'j') {
+        } else if (lowerKey === 'down' || lowerKey === 'j') {
             this.moveDown();
         } else if (lowerKey === 'enter' || lowerKey === ' ' || lowerKey === 'space') {
             this.toggleSelected();

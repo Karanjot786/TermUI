@@ -174,3 +174,26 @@ describe('Timer – destroy()', () => {
         expect((timer as any)._intervalId).toBeUndefined();
     });
 });
+
+// ── 5. reset() optimization ───────────────────────────────────────────────
+describe('Timer – reset() optimization', () => {
+    it('marks dirty when reset changes state', () => {
+        const timer = new Timer({ duration: 5000 });
+
+        (timer as any)._remaining = 3000;
+
+        timer.clearDirty();
+        timer.reset();
+
+        expect(timer.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when already reset', () => {
+        const timer = new Timer({ duration: 5000 });
+
+        timer.clearDirty();
+        timer.reset();
+
+        expect(timer.isDirty).toBe(false);
+    });
+});

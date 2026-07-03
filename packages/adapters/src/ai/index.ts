@@ -14,6 +14,7 @@ export interface AIMessage {
 export interface AIAdapter {
   generate(prompt: string): Promise<string>
   chat(messages: AIMessage[]): AsyncIterable<string>
+  embed?(text: string): Promise<number[]>
 }
 
 function isModuleNotFound(error: unknown, moduleName: string): boolean {
@@ -28,6 +29,7 @@ function isModuleNotFound(error: unknown, moduleName: string): boolean {
 function loadOpenAI() {
   try {
     const req = createRequire(import.meta.url)
+    // Cast needed: createRequire/require returns an opaque module whose shape varies by export style (CJS vs ESM), so we treat it as any to access exported members safely.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mod = req('openai') as any
     return 'default' in mod ? mod.default : mod
@@ -44,6 +46,7 @@ function loadOpenAI() {
 function loadAnthropic() {
   try {
     const req = createRequire(import.meta.url)
+    // Cast needed: dynamic runtime require is used for `@anthropic-ai/sdk` to avoid side-effects; we treat mod as any to bypass conditional typing until typings resolve.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mod = req('@anthropic-ai/sdk') as any
     return 'default' in mod ? mod.default : mod
@@ -58,7 +61,7 @@ function loadAnthropic() {
 }
 
 export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
-  return {
+  const adapter: AIAdapter = {
     async generate(prompt: string): Promise<string> {
       if (provider === 'openai') {
         const OpenAI = loadOpenAI()
@@ -73,7 +76,7 @@ export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
       const Anthropic = loadAnthropic()
       const client = new Anthropic({ apiKey: options.apiKey })
       const response = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-haiku-4-5',
         max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }],
       })
@@ -100,7 +103,7 @@ export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
       const Anthropic = loadAnthropic()
       const client = new Anthropic({ apiKey: options.apiKey })
       const stream = await client.messages.stream({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-haiku-4-5',
         max_tokens: 1024,
         messages,
       })
@@ -114,4 +117,23 @@ export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
       }
     },
   }
+
+  if (provider === 'openai') {
+    adapter.embed = async (text: string): Promise<number[]> => {
+      const OpenAI = loadOpenAI()
+      const client = new OpenAI({ apiKey: options.apiKey })
+      const response = await client.embeddings.create({
+        model: 'text-embedding-3-small',
+        input: text,
+      })
+      const embedding = response.data[0]?.embedding
+      if (!embedding) {
+        throw new Error('OpenAI client failed to return an embedding')
+      }
+      return embedding
+    }
+  }
+
+  return adapter
 }
+

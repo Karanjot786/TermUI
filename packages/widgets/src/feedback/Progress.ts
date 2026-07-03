@@ -7,11 +7,9 @@ import type { ProgressColumnDefinition } from './ProgressColumn.js';
 import {
     BarColumn,
     TextColumn,
-    TimeColumn,
-    SpeedColumn,
     PercentageColumn,
 } from './ProgressColumn.js';
-import type { Screen } from '@termuijs/core';
+import type { Screen, Style } from '@termuijs/core';
 export interface ProgressTask {
     label?: string;
     value?: number;
@@ -28,9 +26,6 @@ export interface ProgressProps {
 export class Progress extends Widget {
     private _tasks: ProgressTask[];
     private _columns: ProgressColumnDefinition[];
-    
-    private _lastRefreshTimes = new Map<number, number>();
-    private _columnCache = new Map<string, string>();
 
   private _resolveColumns(
     children?: unknown,
@@ -62,10 +57,6 @@ export class Progress extends Widget {
                 columns.push(TextColumn(props));
             } else if (vnode.type === PercentageColumn) {
                 columns.push(PercentageColumn(props));
-            } else if (vnode.type === TimeColumn) {
-                columns.push(TimeColumn(props));
-            }else if (vnode.type === SpeedColumn) {
-                 columns.push(SpeedColumn(props));
             }
         }
     }
@@ -75,9 +66,9 @@ export class Progress extends Widget {
 
     constructor(
         props: ProgressProps = {},
-        style: Record<string, unknown> = {},
+        style: Partial<Style> = {},
     ) {
-        super(style as any);
+        super(style);
 
         this._tasks = props.tasks ?? [];
         
@@ -108,6 +99,9 @@ this._columns =
     }
 
     public setTasks(tasks: ProgressTask[]): void {
+        if (tasks === this._tasks) {
+            return;
+        }
     this._tasks = tasks;
     this.markDirty();
 }
@@ -123,40 +117,12 @@ this._columns =
 
         const parts: string[] = [];
 
-        for (const [columnIndex, column] of this._columns.entries()) {
+        for (const [, column] of this._columns.entries()) {
 
             if (column.render) {
         parts.push(column.render(task));
         continue;
     }
-
-       const refreshRate = column.maxRefresh;
-
-if (
-    refreshRate &&
-    (column.kind === 'time' || column.kind === 'speed')
-) {
-    const now = Date.now();
-
-    const last =
-        this._lastRefreshTimes.get(columnIndex) ?? 0;
-
-    const intervalMs = 1000 / refreshRate;
-    if (now - last < intervalMs) { 
-         const cached = this._columnCache.get(
-        `${index}-${columnIndex}`,
-    );
-    if (cached) {
-        parts.push(cached);
-    }
-        continue;
-    }
-
-    this._lastRefreshTimes.set(
-        columnIndex,
-        now,
-    );
-}
 
             switch (column.kind) {
                 case 'text': {
@@ -197,25 +163,6 @@ if (
                     );
                     break;
                 }
-
-                case 'time': {
-                    const value = '--:--';
-                   this._columnCache.set(
-                 `${index}-${columnIndex}`,
-                 value,
-                  );
-                 parts.push(value);
-                 break;
-                }
-                 case 'speed': {
-                  const value = '--/s';
-                  this._columnCache.set(
-                 `${index}-${columnIndex}`,
-                 value,
-                    );
-                 parts.push(value);
-                 break;
-}
             }
         }
 

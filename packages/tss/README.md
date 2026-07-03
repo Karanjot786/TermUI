@@ -12,13 +12,13 @@ Requires `@termuijs/core` and `@termuijs/widgets`.
 
 ## Built-in themes
 
-Eleven themes ship ready to use: Default, Cyberpunk, Nord, Dracula, Gruvbox, Catppuccin, Solarized, Solarized Light, Tokyo Night, High Contrast, and Everforest.
+Twelve themes ship ready to use: Default, Cyberpunk, Nord, Dracula, Gruvbox, Catppuccin, Solarized, Solarized Light, Tokyo Night, High Contrast, Everforest, and Rosé Pine.
 
 ```typescript
 import { getBuiltinThemeNames, getBuiltinTheme, TSSEngine } from '@termuijs/tss'
 
 getBuiltinThemeNames()
-// ['default', 'cyberpunk', 'nord', 'dracula', 'gruvbox', 'catppuccin', 'solarized', 'solarizedLight', 'tokyo-night', 'highContrast', 'everforest']
+// ['default', 'cyberpunk', 'nord', 'dracula', 'gruvbox', 'catppuccin', 'solarized', 'solarizedLight', 'tokyo-night', 'highContrast', 'everforest', 'rose-pine']
 
 const engine = new TSSEngine()
 engine.load(getBuiltinTheme('nord'))
@@ -61,12 +61,12 @@ import { useTheme } from '@termuijs/tss'
 function ThemeSwitcher() {
     const { theme, setTheme, availableThemes } = useTheme()
 
-    useKeymap({
-        't': () => {
+    useKeymap([
+        { key: 't', action: () => {
             const idx = availableThemes.indexOf(theme)
             setTheme(availableThemes[(idx + 1) % availableThemes.length])
-        },
-    })
+        }},
+    ])
 
     return <Text>Theme: {theme}</Text>
 }
@@ -102,7 +102,7 @@ const primaryColor = nordTheme['--primary']
 const bgColor = draculaTheme['--bg']
 ```
 
-Available token exports: `draculaTheme`, `nordTheme`, `gruvboxTheme`, `catppuccinTheme`, `monokaiTheme`, `solarizedTheme`, `solarizedLightTheme`, `tokyoNightTheme`, `oneDarkTheme`, `highContrastTheme`, `everforestTheme`.
+Available token exports: `draculaTheme`, `nordTheme`, `gruvboxTheme`, `catppuccinTheme`, `monokaiTheme`, `solarizedTheme`, `solarizedLightTheme`, `tokyoNightTheme`, `oneDarkTheme`, `highContrastTheme`, `everforestTheme`, `rosePineTheme`.
 
 ## tokensToTSS
 

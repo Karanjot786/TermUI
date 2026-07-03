@@ -67,7 +67,41 @@ describe('TSS Importer', () => {
     it('leaves source unchanged if no imports exist', () => {
         const source = `Box { width: 100; }`;
         const result = resolveImports(source, '/mock/main.tss');
-        
+
         expect(result).toBe(source);
+    });
+
+    describe('path traversal protection', () => {
+        it('blocks ../ traversal above base directory', () => {
+            const result = resolveImports(`@import "../../../etc/passwd";`, '/mock/themes/main.tss');
+            expect(result).toContain('Path traversal blocked');
+            expect(vi.mocked(readFileSync)).not.toHaveBeenCalled();
+        });
+
+        it('blocks sibling directory with shared prefix — the startsWith vulnerability', () => {
+            // /mock/themes-evil/exploit.tss starts with /mock/themes (wrong check passes it)
+            // path.relative() correctly produces "../themes-evil/exploit.tss" which starts with ".."
+            const result = resolveImports(`@import "../themes-evil/exploit.tss";`, '/mock/themes/main.tss');
+            expect(result).toContain('Path traversal blocked');
+            expect(vi.mocked(readFileSync)).not.toHaveBeenCalled();
+        });
+
+        it('allows imports inside the base directory', () => {
+            vi.mocked(readFileSync).mockReturnValue('Button { fg: green; }');
+            const result = resolveImports(`@import "components/button.tss";`, '/mock/themes/main.tss');
+            expect(result).toContain('Button { fg: green; }');
+        });
+
+        it('blocks unsupported file extensions', () => {
+            const result = resolveImports(`@import "../../secret.sh";`, '/mock/themes/main.tss');
+            expect(result).toContain('Path traversal blocked');
+            expect(vi.mocked(readFileSync)).not.toHaveBeenCalled();
+        });
+
+        it('blocks .env files via extension check', () => {
+            const result = resolveImports(`@import "local.env";`, '/mock/themes/main.tss');
+            expect(result).toContain('Unsupported import extension');
+            expect(vi.mocked(readFileSync)).not.toHaveBeenCalled();
+        });
     });
 });

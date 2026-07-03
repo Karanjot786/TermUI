@@ -10,6 +10,7 @@
 import { Widget, Box, Text, CommandPalette } from '@termuijs/widgets';
 import type { Command } from '@termuijs/widgets';
 import { Select, MultiSelect, Tree, Divider } from '@termuijs/ui';
+import { caps } from '@termuijs/core';
 import type { Screen } from '@termuijs/core';
 
 // ── Helper: themed option labels ──
@@ -116,7 +117,7 @@ export class ComponentsTab extends Widget {
         this._selectItems = SELECT_OPTIONS.map((opt, i) => {
             const isSelected = i === 0;
             return new Text(
-                `  ${isSelected ? '● ' : '  '}${opt.label}`,
+                `  ${isSelected ? (caps.unicode ? '● ' : '* ') : '  '}${opt.label}`,
                 {
                     height: 1,
                     fg: isSelected
@@ -254,7 +255,7 @@ export class ComponentsTab extends Widget {
                     this._select.selectNext();
                     this._updateSelectVisuals();
                 } else if (key === 'enter' || key === 'space') {
-                    this._selectIndicator.setContent(`  → Selected: ${SELECT_OPTIONS[this._selectIndex].label} ✓`);
+                    this._selectIndicator.setContent(`  → Selected: ${SELECT_OPTIONS[this._selectIndex].label}${caps.unicode ? ' ✓' : ' *'}`);
                 }
                 break;
             case 'multiselect':
@@ -272,7 +273,7 @@ export class ComponentsTab extends Widget {
                     this._updateMultiVisuals();
                 } else if (key === 'enter') {
                     const selected = MULTISELECT_OPTIONS.filter((_, i) => this._multiChecked[i]).map(o => o.label);
-                    this._multiIndicator.setContent(`  → Submitted: ${selected.length > 0 ? selected.join(', ') : '(none)'} ✓`);
+                    this._multiIndicator.setContent(`  → Submitted: ${selected.length > 0 ? selected.join(', ') : '(none)'}${caps.unicode ? ' ✓' : ' *'}`);
                 }
                 break;
             case 'tree':

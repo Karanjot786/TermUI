@@ -5,9 +5,6 @@
 import type { LayoutContext } from './LayoutContext.js';
 
 export abstract class Dim {
-    /** List of variables this Dim depends on, e.g. ['contentWidth'] */
-    abstract dependencies(): string[];
-    
     /** Computes the final numeric size */
     abstract evaluate(ctx: LayoutContext): number;
 

@@ -21,6 +21,19 @@ export const showCursor = `${CSI}?25h`;
 export const saveCursorPosition = `${CSI}s`;
 export const restoreCursorPosition = `${CSI}u`;
 
+export type CursorShape = 'block' | 'bar' | 'underline';
+
+/** DECSCUSR: CSI Ps SP q. blink toggles steady vs blinking. */
+export function cursorShape(shape: CursorShape, blink = true): string {
+    const codes: Record<CursorShape, number> = {
+        block: 1,
+        underline: 3,
+        bar: 5,
+    };
+    const code = codes[shape] + (blink ? 0 : 1);
+    return `${CSI}${code} q`;
+}
+
 export function moveTo(col: number, row: number): string {
     return `${CSI}${row + 1};${col + 1}H`;
 }
@@ -82,7 +95,7 @@ export const inverse = `${CSI}7m`;
 export const strikethrough = `${CSI}9m`;
 
 export const resetBold = `${CSI}22m`;
-export const resetDim = `${CSI}22m`;
+export const resetDim = resetBold;
 export const resetItalic = `${CSI}23m`;
 export const resetUnderline = `${CSI}24m`;
 export const resetBlink = `${CSI}25m`;
@@ -99,7 +112,8 @@ export const resetScrollRegion = `${CSI}r`;
 // ── Title ───────────────────────────────────────────
 
 export function setTitle(title: string): string {
-    return `${OSC}0;${title}\x07`;
+    const safeTitle = title.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+    return `${OSC}0;${safeTitle}\x07`;
 }
 
 // ── Hyperlinks (OSC 8) ──────────────────────────────
@@ -126,6 +140,33 @@ export function notify(text: string): string {
     return `${OSC}9;${safeText}${bell}`;
 }
 
+// ── Security: ANSI/control stripping ────────────────
+
+/**
+ * Strip ANSI escape sequences and dangerous C0/C1 control characters from a
+ * string, while keeping printable Unicode intact.
+ *
+ * Removes:
+ *  - All ESC-introduced sequences (CSI, OSC, DCS, PM, APC, SS2/SS3, etc.)
+ *  - Bare C0 controls (0x00-0x1F) except TAB (0x09) and LF (0x0A)
+ *  - C1 controls / DEL (0x7F-0x9F)
+ *
+ * Safe for use on user-supplied or file-read strings before they are rendered
+ * to the terminal.
+ */
+export function stripAnsiControl(str: string): string {
+    // Remove all ESC-introduced sequences (CSI, OSC, DCS, SS2/SS3, etc.)
+    // eslint-disable-next-line no-control-regex
+    let out = str.replace(
+        /\x1b(?:[@-Z\\-_]|\[[0-9;<=>?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[PX^_][^\x1b]*\x1b\\|.)/g,
+        ''
+    );
+    // Remove remaining bare C0 controls (keep TAB=0x09, LF=0x0A) and C1/DEL
+    // eslint-disable-next-line no-control-regex
+    out = out.replace(/[\x00-\x08\x0B-\x1F\x7F-\x9F]/g, '');
+    return out;
+}
+
 // ── Clipboard ───────────────────────────────────────
 
 /**
@@ -140,17 +181,18 @@ export function writeClipboard(text: string, stdout: NodeJS.WriteStream = proces
 }
 export function readClipboard(
     stdin: NodeJS.ReadStream = process.stdin,
-    stdout: NodeJS.WriteStream = process.stdout
+    stdout: NodeJS.WriteStream = process.stdout,
+    timeoutMs = 1000,
 ): Promise<string> {
     return new Promise((resolve, reject) => {
+        let settled = false;
         const handler = (data: Buffer) => {
             const str = data.toString('utf8');
-
             const match = str.match(/\x1b\]52;c;([^\x07]+)\x07/);
 
             if (!match) return;
-
-            stdin.off('data', handler);
+            
+            cleanup();
 
             try {
                 resolve(
@@ -161,8 +203,21 @@ export function readClipboard(
             }
         };
 
+        const timer = setTimeout(() => {
+            cleanup();
+            reject(new Error('Clipboard read timed out'));
+        }, timeoutMs);
+
+        const cleanup = () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            stdin.off('data', handler);
+        };
+
         stdin.on('data', handler);
 
         stdout.write(`${OSC}52;c;?\x07`);
     });
 }
+

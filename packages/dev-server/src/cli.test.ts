@@ -2,14 +2,14 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { DevServer } from './server.js';
 import { runCli } from './cli.js';
 
-vi.mock('./server.js', () => {
-    return {
-        DevServer: vi.fn().mockImplementation(() => ({
+vi.mock('./server.js', () => ({
+    DevServer: vi.fn().mockImplementation(function() {
+        return {
             start: vi.fn(),
             stop: vi.fn()
-        }))
-    };
-});
+        };
+    })
+}));
 
 describe('CLI', () => {
     beforeEach(() => {

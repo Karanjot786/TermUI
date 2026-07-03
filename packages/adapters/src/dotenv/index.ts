@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import type {} from 'dotenv'
 
@@ -15,12 +16,13 @@ interface DotenvModule {
 
 let _dotenv: DotenvModule | undefined
 
+const _require = createRequire(import.meta.url)
+
 // Lazily loads dotenv. Uses a cached reference after first load.
 function resolveDotenv(): DotenvModule {
   if (_dotenv) return _dotenv
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    _dotenv = require('dotenv') as DotenvModule
+    _dotenv = _require('dotenv') as DotenvModule // require via createRequire; dotenv has no named ESM exports
     return _dotenv
   } catch {
     throw new Error(

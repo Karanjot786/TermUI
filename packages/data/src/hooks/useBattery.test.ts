@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as os from "node:os";
 import * as cp from "node:child_process";
+import * as fs from "node:fs";
 
 // We'll capture state updates here
 let stateValues: any[] = [];
@@ -34,7 +35,11 @@ vi.mock("node:os", () => ({
 }));
 
 vi.mock("node:child_process", () => ({
-    exec: vi.fn()
+    execFile: vi.fn()
+}));
+
+vi.mock("node:fs", () => ({
+    readFileSync: vi.fn()
 }));
 
 const { useBattery } = await import("./useBattery.js");
@@ -50,15 +55,15 @@ describe("useBattery", () => {
         vi.useFakeTimers();
         (os.platform as any).mockReturnValue("linux");
 
-        (cp.exec as any).mockImplementation((cmd: string, opts: any, cb: any) => {
+        (fs.readFileSync as any).mockImplementation((path: string) => {
+            if (path.includes("capacity")) return "85\n";
+            if (path.includes("status")) return "Charging\n";
+            throw new Error("ENOENT: no such file or directory");
+        });
+
+        (cp.execFile as any).mockImplementation((file: string, args: string[], opts: any, cb: any) => {
             const callback = typeof opts === 'function' ? opts : cb;
-            if (cmd.includes("capacity")) {
-                callback(null, "85\n", "");
-            } else if (cmd.includes("status")) {
-                callback(null, "Charging\n", "");
-            } else {
-                callback(new Error("Unknown command"), "", "");
-            }
+            callback(new Error("Unknown command"), "", "");
         });
     });
 
@@ -93,9 +98,11 @@ describe("useBattery", () => {
     });
 
     it("sets error when the battery provider fails", async () => {
-        (cp as any).exec = vi.fn((cmd: string, opts: any, cb: any) => {
+        (os.platform as any).mockReturnValue("darwin");
+
+        (cp.execFile as any).mockImplementation((file: string, args: string[], opts: any, cb: any) => {
             const callback = typeof opts === 'function' ? opts : cb;
-            callback(new Error("Command failed"), "", "");
+            callback(new Error("Command failed: pmset"), "", "");
         });
 
         useBattery(1000);
@@ -107,7 +114,7 @@ describe("useBattery", () => {
         await flushPromises();
 
         expect(stateValues[1]).toBeInstanceOf(Error);
-        expect(stateValues[1].message).toContain("Command failed");
+        expect(stateValues[1].message).toContain("Command failed: pmset");
         expect(stateValues[2]).toBe(false);
     });
 

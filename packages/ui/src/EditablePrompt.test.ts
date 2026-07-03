@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-// @ts-expect-error — pre-existing monorepo DTS issue
 import { Screen, type KeyEvent, caps } from '@termuijs/core';
 import { EditablePrompt } from './EditablePrompt.js';
 

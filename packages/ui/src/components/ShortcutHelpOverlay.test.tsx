@@ -1,33 +1,49 @@
-import { describe, expect, it } from 'vitest';
-import ShortcutHelpOverlayDefault, {
-    ShortcutHelpOverlay,
-    type Shortcut,
-    type ShortcutHelpOverlayProps,
-} from './ShortcutHelpOverlay.js';
+/** @jsxImportSource @termuijs/jsx */
+import { describe, it, expect } from 'vitest';
+import { render } from '@termuijs/testing';
+import { ShortcutHelpOverlay } from './ShortcutHelpOverlay.js';
 
 describe('ShortcutHelpOverlay', () => {
-    it('exports a named function component', () => {
-        expect(typeof ShortcutHelpOverlay).toBe('function');
+    it('should not be visible by default', () => {
+        const screen = render(<ShortcutHelpOverlay />);
+        expect(screen.getOutput()).not.toContain('Keyboard Shortcuts');
     });
 
-    it('default export matches named export', () => {
-        expect(ShortcutHelpOverlayDefault).toBe(ShortcutHelpOverlay);
+    it('should open when "?" key is pressed and close on escape', () => {
+        const screen = render(<ShortcutHelpOverlay />);
+        expect(screen.getOutput()).not.toContain('Keyboard Shortcuts');
+
+        // Press ? to open
+        screen.pressKey('?');
+        expect(screen.getOutput()).toContain('Keyboard Shortcuts');
+
+        // Press escape to close
+        screen.pressKey('escape');
+        expect(screen.getOutput()).not.toContain('Keyboard Shortcuts');
     });
 
-    it('Shortcut shape has key and label strings', () => {
-        const shortcut: Shortcut = { key: 'Ctrl+C', label: 'Exit' };
-        expect(shortcut.key).toBe('Ctrl+C');
-        expect(shortcut.label).toBe('Exit');
+    it('should close when "q" key is pressed', () => {
+        const screen = render(<ShortcutHelpOverlay />);
+        screen.pressKey('?');
+        expect(screen.getOutput()).toContain('Keyboard Shortcuts');
+
+        // Press q to close
+        screen.pressKey('q');
+        expect(screen.getOutput()).not.toContain('Keyboard Shortcuts');
     });
 
-    it('ShortcutHelpOverlayProps accepts shortcuts array', () => {
-        const shortcuts: Shortcut[] = [
-            { key: '?', label: 'Help' },
-            { key: 'q', label: 'Quit' },
+    it('should render custom shortcuts list when visible', () => {
+        const custom = [
+            { key: 'Ctrl+F', label: 'Search Files' },
+            { key: 'Ctrl+P', label: 'Print Document' }
         ];
-        const props: ShortcutHelpOverlayProps = { shortcuts };
-        expect(props.shortcuts).toHaveLength(2);
-        expect(props.shortcuts?.[0]?.key).toBe('?');
-        expect(props.shortcuts?.[1]?.label).toBe('Quit');
+        const screen = render(<ShortcutHelpOverlay shortcuts={custom} />);
+        screen.pressKey('?');
+        
+        const output = screen.getOutput();
+        expect(output).toContain('[Ctrl+F]');
+        expect(output).toContain('Search Files');
+        expect(output).toContain('[Ctrl+P]');
+        expect(output).toContain('Print Document');
     });
 });

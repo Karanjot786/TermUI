@@ -194,6 +194,27 @@ describe('Router', () => {
         expect(r.currentPath).toBe('/login');
     });
 
+    it('back() with beforeEnter redirect does not corrupt history', () => {
+        const r = new Router();
+        r.addRoute('/login', () => 'Login');
+        r.addRoute('/dashboard', () => 'Dashboard', undefined, {
+            beforeEnter: () => '/login',
+        });
+        r.addRoute('/settings', () => 'Settings');
+
+        r.push('/login');
+        r.push('/dashboard');
+        r.push('/settings');
+
+        expect(r.currentPath).toBe('/settings');
+        expect(r.historyLength).toBe(3);
+
+        r.back();
+
+        expect(r.currentPath).toBe('/login');
+        expect(r.historyLength).toBe(2);
+    });
+
     it('afterEnter executes after navigation', () => {
         const r = new Router();
         const spy = vi.fn();
@@ -202,5 +223,43 @@ describe('Router', () => {
         r.push('/home');
         
         expect(spy).toHaveBeenCalled();
+    });
+
+    it('initialPath sets current match once a matching route is registered', () => {
+        const r = new Router({ initialPath: '/dashboard' });
+        r.addRoute('/dashboard', () => 'DashboardScreen');
+
+        expect(r.current).not.toBeNull();
+        expect(r.currentPath).toBe('/dashboard');
+        expect(r.current?.route.path).toBe('/dashboard');
+    });
+
+    it('initialPath emits navigate when a matching route is registered', () => {
+        const navFn = vi.fn();
+        const r = new Router({ initialPath: '/home' });
+        r.events.on('navigate', navFn);
+        r.addRoute('/home', () => 'Home');
+
+        expect(navFn).toHaveBeenCalledOnce();
+        expect(navFn.mock.calls[0][0].match.route.path).toBe('/home');
+    });
+
+    it('initialPath resolves route params when a matching route is registered', () => {
+        const r = new Router({ initialPath: '/user/42' });
+        r.addRoute('/user/[id]', () => 'UserScreen');
+
+        expect(r.current).not.toBeNull();
+        expect(r.params.id).toBe('42');
+    });
+
+    it('initialPath with no matching route never sets current or emits navigate', () => {
+        const navFn = vi.fn();
+        const r = new Router({ initialPath: '/never' });
+        r.events.on('navigate', navFn);
+        r.addRoute('/dashboard', () => 'Dashboard');
+        r.addRoute('/settings', () => 'Settings');
+
+        expect(r.current).toBeNull();
+        expect(navFn).not.toHaveBeenCalled();
     });
 });

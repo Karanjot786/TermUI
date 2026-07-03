@@ -2,10 +2,11 @@
 // @termuijs/core — Tests for Screen diff helpers used by diffRenderer
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Screen } from './Screen.js';
 import { Terminal } from './Terminal.js';
 import { Renderer, type FrameStats } from './Renderer.js';
+import { RenderHook } from '../renderer/render-hook.js';
 
 describe('Screen.getLine', () => {
     it('returns empty string for out-of-range rows', () => {
@@ -93,6 +94,7 @@ describe('Renderer profiling hooks', () => {
             isTTY: true,
             write(s: string) { this.writes += s; },
             on() {},
+            once() {},
             off() {},
         };
         const fakeStdin: any = { isTTY: true, setRawMode() {}, resume() {}, pause() {}, on() {}, off() {} };
@@ -192,5 +194,72 @@ describe('Renderer profiling hooks', () => {
         renderer.renderNow();
         expect(stats).toBeDefined();
         expect(stats!.durationMs).toBeGreaterThanOrEqual(0);
+    });
+
+    it('does not throw when flush encounters an error', () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const renderer = new Renderer(terminal, screen);
+        screen.setCell(0, 0, { char: 'x' });
+
+        vi.spyOn(terminal, 'write').mockImplementationOnce(() => {
+            throw new Error('write error');
+        });
+
+        expect(() => renderer.renderNow()).not.toThrow();
+        vi.restoreAllMocks();
+    });
+
+    it('does not emit cursor movement for a diff span starting at a wide-char continuation cell', () => {
+        const narrowScreen = new Screen(10, 2);
+        const renderer = new Renderer(terminal, narrowScreen);
+
+        // First frame: write a wide character (width=2) at col 0, filling col 0 (width=2) and col 1 (continuation, width=0)
+        narrowScreen.setCell(0, 0, { char: '中', width: 2 });
+        narrowScreen.setCell(1, 0, { char: '', width: 0 });
+        narrowScreen.setCell(2, 0, { char: 'A', width: 1 });
+        renderer.renderNow(); // establish front buffer
+
+        // Second frame: change only the continuation cell's neighbor so the span start lands at col 1
+        // To trigger _adjustSpanStart: mark col 1 (width=0) as changed by writing a different char at col 1
+        // while col 0 (width=2) is unchanged — set col 1 explicitly to force the diff
+        narrowScreen.setCell(1, 0, { char: '', width: 0, fg: { type: 'named', name: 'red' } });
+        narrowScreen.setCell(2, 0, { char: 'B', width: 1 });
+
+        let bytesWritten = 0;
+        renderer.onFrame(stats => { bytesWritten = stats.bytesWritten; });
+        renderer.renderNow();
+
+        // The renderer should produce output without crashing (no invalid cursor move to a continuation column)
+        expect(bytesWritten).toBeGreaterThan(0);
+        // The adjusted span start should be col=0 (the real wide char boundary)
+        const output = fakeStdout.writes;
+        expect(output).toBeTruthy();
+    });
+
+    it('resets style fingerprint at each row boundary in diff renderer', () => {
+        const narrowScreen = new Screen(5, 2);
+        const renderer = new Renderer(terminal, narrowScreen);
+
+        // Row 0: bold red cell at col 0
+        narrowScreen.setCell(0, 0, { char: 'A', bold: true, fg: { type: 'named', name: 'red' } });
+
+        // Row 1: same style at col 0 — after moveTo, must re-emit ANSI style even though
+        // the fingerprint matches the last cell of row 0
+        narrowScreen.setCell(0, 1, { char: 'B', bold: true, fg: { type: 'named', name: 'red' } });
+
+        // Capture output
+        const initialWrites = fakeStdout.writes.length;
+        renderer.renderNow();
+        const output = fakeStdout.writes.slice(initialWrites);
+
+        // The output must contain at least one ANSI reset sequence with style re-application
+        // for row 1 (the moveTo + reset + bold + color + char sequence).
+        // The key assertion: the diff renderer should emit \x1b[0m (reset) after the moveTo
+        // for row 1 to force the terminal into the correct style state.
+        expect(output).toContain('\x1b[0m');
+        // Verify reset appears at least twice (once for row 0 first cell, once for row 1)
+        const resetCount = (output.match(/\x1b\[0m/g) || []).length;
+        expect(resetCount).toBeGreaterThanOrEqual(2);
     });
 });

@@ -242,58 +242,139 @@ MIT
 
 ## Overview
 
+`@termuijs/router` provides screen-based routing for terminal applications. Routes are registered with a `Router` instance and matched against URL-like paths. The router manages navigation history, route parameters, nested routes, query parameters, guards, redirects, and screen rendering.
+
+The routing model is screen-oriented: navigating to a path resolves a matching route, extracts any parameters, and renders the associated screen component.
+
+---
+
 ## Routes
 
-Routes are defined using the `Route` type and managed through the `Router` class.
+Routes are defined using the `Route` type and registered on a `Router` instance. Router behavior can be customized with `RouterOptions`.
 
 ```ts
-import { Router, type Route, type RouterOptions } from '@termuijs/router'
+import {
+    Router,
+    type Route,
+    type RouterOptions,
+} from '@termuijs/router'
 
-const routes: Route[] = [
-    {
-        path: '/',
-        component: HomeScreen,
-    },
-    {
-        path: '/settings',
-        component: SettingsScreen,
-    },
-]
+function HomeScreen() {
+    return null
+}
 
-const options: RouterOptions = {}
+function SettingsScreen() {
+    return null
+}
 
-const router = new Router(routes, options)
+const options: RouterOptions = {
+    initialPath: '/',
+    maxHistory: 50,
+}
+
+const router = new Router(options)
+
+router.addRoute('/', HomeScreen)
+router.addRoute('/settings', SettingsScreen)
+
+
+router.push('/settings')
 ```
 
-The router instance handles navigation and active route state.
+`RouterOptions` supports:
+
+* `initialPath` – initial route to navigate to
+* `maxHistory` – maximum history entries to retain
+* `notFound` – fallback renderer when no route matches
+
+---
 
 ## Nested Routes
 
-Nested routes can be composed using child route definitions. The `matchRoute` utility helps resolve matching nested paths.
+Routes can contain child routes using the `children` property. The `matchRoute` utility resolves nested route structures and returns a `RouteMatch`.
 
 ```ts
-import { matchRoute, type Route } from '@termuijs/router'
+import {
+    matchRoute,
+    type Route,
+} from '@termuijs/router'
 
 const routes: Route[] = [
     {
         path: '/users',
+        component: () => null,
         children: [
             {
-                path: '/users/profile',
-                component: ProfileScreen,
+                path: 'profile',
+                component: () => null,
             },
         ],
     },
 ]
 
 const match = matchRoute('/users/profile', routes)
+
+if (match) {
+    console.log(match.route.path)
+    console.log(match.chain)
+}
 ```
 
-Nested matching allows parent and child screens to be organized in a predictable structure.
+The returned `RouteMatch.chain` contains the matched route hierarchy from parent to child.
+
+---
 
 ## Params
 
-Route parameters can be accessed using the `useParams` hook.
+Dynamic route segments use bracket syntax and are compiled using `compilePattern`.
+
+```ts
+import {
+    compilePattern,
+    matchRoute,
+    type Route,
+    type RouteMatch,
+    type RouteParams,
+} from '@termuijs/router'
+
+const { pattern, paramNames } = compilePattern('/users/[id]')
+
+console.log(pattern)
+console.log(paramNames)
+
+const routes: Route[] = [
+    {
+        path: '/users/[id]',
+        component: () => null,
+    },
+]
+
+const match: RouteMatch | null = matchRoute('/users/42', routes)
+
+if (match) {
+    const params: RouteParams = match.params
+
+    console.log(params.id)
+}
+```
+
+`RouteMatch` contains:
+
+* `route` – the matched route definition
+* `chain` – parent-to-child route chain
+* `params` – extracted route parameters
+* `meta` – route metadata
+* `query` – parsed query parameters
+
+---
+
+## Hooks
+
+The router exposes hooks for accessing route state and performing navigation inside components.
+
+### useParams
+
+`useParams()` returns the current route parameters.
 
 ```ts
 import { useParams } from '@termuijs/router'
@@ -301,16 +382,15 @@ import { useParams } from '@termuijs/router'
 function UserScreen() {
     const params = useParams()
 
-    return params.id
+    console.log(params.id)
+
+    return null
 }
 ```
 
-Parameters are automatically extracted from dynamic route segments.
+### useNavigate
 
-
-## Navigation
-
-Use the `useNavigate` hook to navigate between routes programmatically.
+`useNavigate()` returns a navigation function.
 
 ```ts
 import { useNavigate } from '@termuijs/router'
@@ -322,40 +402,30 @@ function HomeScreen() {
         navigate('/settings')
     }
 
+    function openProfile() {
+        navigate('/users/42', {
+            query: {
+                tab: 'activity',
+            },
+        })
+    }
+
+    function replaceRoute() {
+        navigate('/login', {
+            replace: true,
+        })
+    }
+
     return null
 }
 ```
 
-The navigate function pushes a new route onto the navigation stack.
-
-## Route Validation
-
-Routes can be validated before navigation using the validation utilities.
+The navigation function signature is:
 
 ```ts
-import { compilePattern } from '@termuijs/router'
-
-const pattern = compilePattern('/users/[id]')
-
-console.log(pattern.regex)
+(path: string, options?: {
+    replace?: boolean
+    query?: QueryParams
+}) => void
 ```
-
-Compiled patterns help the router efficiently match dynamic routes.
-
-## Utilities
-
-The router package also exports helper utilities for route matching and scanning.
-
-```ts
-import {
-    matchRoute,
-    scanRoutes,
-} from '@termuijs/router'
-
-const match = matchRoute('/users/42', routes)
-
-const scanned = await scanRoutes('./screens')
-```
-
-These utilities simplify automatic route discovery and dynamic route matching.
 
