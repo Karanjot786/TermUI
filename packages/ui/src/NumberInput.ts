@@ -60,6 +60,7 @@ export class NumberInput extends Widget {
     set rawValue(v: string) {
         this._raw = v;
         this._cursorPos = Math.min(this._cursorPos, this._raw.length);
+        this._notify();
     }
 
     private _clamp(n: number): number {
