@@ -13,7 +13,7 @@ class FormInputsApp extends Widget {
     constructor() {
         super({
             flexDirection: "column",
-            width: 44,
+            width: 50,
             height: 12,
             border: "single",
             borderColor: { type: "named", name: "cyan" },
@@ -41,7 +41,7 @@ class FormInputsApp extends Widget {
             fg: { type: "named", name: "green" },
         });
 
-        const hint = new Text("Type your name, press Enter · q = quit", {
+        const hint = new Text("Type your name, press Enter · Esc = quit", {
             height: 1,
             fg: { type: "named", name: "brightBlack" },
         });
@@ -61,7 +61,7 @@ class FormInputsApp extends Widget {
     }
 
     handleKey(event: KeyEvent): boolean {
-        if (event.key === "q" || (event.ctrl && event.key === "c")) {
+        if (event.key === "escape" || (event.ctrl && event.key === "c")) {
             return false;
         }
         this.input.handleKey(event);
