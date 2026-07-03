@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@termuijs/testing';
 import { createElement, useRef } from '@termuijs/jsx';
 import { NumberInput } from './NumberInput.js';
@@ -66,5 +66,20 @@ describe('NumberInput', () => {
         expect(screen.lastFrame().join('\n')).toContain('0');
 
         screen.unmount();
+    });
+
+    it('clamps typed values exposed through numericValue and submit', () => {
+        const onChange = vi.fn();
+        const onSubmit = vi.fn();
+        const input = new NumberInput({}, { min: 0, max: 10, onChange, onSubmit });
+
+        input.insertChar('9');
+        input.insertChar('9');
+        input.submit();
+
+        expect(input.rawValue).toBe('99');
+        expect(input.numericValue).toBe(10);
+        expect(onChange).toHaveBeenLastCalledWith(10);
+        expect(onSubmit).toHaveBeenCalledWith(10);
     });
 });
