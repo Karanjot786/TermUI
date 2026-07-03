@@ -11,6 +11,8 @@ import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import { splitGraphemes } from './grapheme.js';
 
+const ESCAPE_TIMEOUT_MS = 500;
+
 export interface CursorPosition {
     row: number;
     col: number;
@@ -203,6 +205,9 @@ export class InputParser {
         if (str.startsWith('\x1b')) {
             this._escapeBuffer = data;
             this._tryParseEscape();
+            if (this._escapeBuffer.length > 0) {
+                this._startEscapeTimeout();
+            }
             return;
         }
 
@@ -331,7 +336,7 @@ export class InputParser {
                 alt: false,
                 shift: false,
             }));
-        }, 500);
+        }, ESCAPE_TIMEOUT_MS);
     }
 
     /**
