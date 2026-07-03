@@ -128,6 +128,13 @@ export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { SplitPane } from './layout/SplitPane.js';
 export type { SplitPaneOptions } from './layout/SplitPane.js';
+export { Workspace } from './layout/Workspace.js';
+
+export type {
+    WorkspaceLayout,
+    WorkspaceOptions,
+    WorkspaceStorage,
+} from './layout/Workspace.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
