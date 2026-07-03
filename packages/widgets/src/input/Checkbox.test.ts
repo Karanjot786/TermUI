@@ -261,4 +261,32 @@ describe('Checkbox', () => {
             expect(checkbox.focusable).toBe(true);
         });
     });
+
+    // ── 9. State consistency under mixed operations ───────────────────────
+    describe('9. State consistency', () => {
+        it('isChecked() always reflects actual state after mixed operations', () => {
+            const { checkbox } = renderCheckbox('Test', { checked: false });
+
+            // Start: false
+            expect(checkbox.isChecked()).toBe(false);
+
+            checkbox.toggle(); // → true
+            expect(checkbox.isChecked()).toBe(true);
+
+            checkbox.setChecked(true); // no-op
+            expect(checkbox.isChecked()).toBe(true);
+
+            checkbox.handleKey(makeKeyEvent('space')); // → false
+            expect(checkbox.isChecked()).toBe(false);
+
+            checkbox.setChecked(false); // no-op
+            expect(checkbox.isChecked()).toBe(false);
+
+            checkbox.toggle(); // → true
+            expect(checkbox.isChecked()).toBe(true);
+
+            checkbox.handleKey(makeKeyEvent('space')); // → false
+            expect(checkbox.isChecked()).toBe(false);
+        });
+    });
 });

@@ -30,6 +30,7 @@ export class TextInput extends Widget {
 
     private _onChange?: (value: string) => void;
     private _onSubmit?: (value: string) => void;
+<<<<<<< HEAD
 
     // Auto-complete
     private _suggestions: string[] = [];
@@ -40,6 +41,11 @@ export class TextInput extends Widget {
         process.env.TERMUI_KEYBINDINGS === 'vim'
             ? 'normal'
             : 'insert';
+=======
+    private _vimMode: VimMode = process.env.TERMUI_KEYBINDINGS === 'vim' ? 'normal' : 'insert';
+    private _suggestions: string[] = [];
+    private _suggestionIndex = 0;
+>>>>>>> upstream/main
 
     constructor(
         style: Partial<Style> = {},
@@ -64,6 +70,7 @@ export class TextInput extends Widget {
 
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
+        this._suggestions = options.suggestions ?? [];
 
         // Auto-complete data
         this._suggestions = options.suggestions ?? [];
@@ -109,8 +116,22 @@ export class TextInput extends Widget {
         this.markDirty();
     }
 
+<<<<<<< HEAD
 
     // ── Text Editing ──────────────────────────────────
+=======
+    getSuggestions(input: string): string[] {
+        return this._suggestions.filter(s => s.toLowerCase().includes(input.toLowerCase()));
+    }
+
+    acceptSuggestion(): void {
+        const suggestions = this.getSuggestions(this._value);
+        if (suggestions.length === 0) return;
+        this.value = suggestions[this._suggestionIndex % suggestions.length];
+        this._cursorPos = splitGraphemes(this._value).length;
+        this.markDirty();
+    }
+>>>>>>> upstream/main
 
     insertChar(char: string): void {
         const graphemes = splitGraphemes(this._value);
@@ -123,6 +144,7 @@ export class TextInput extends Widget {
 
         this._value = graphemes.join('');
         this._cursorPos++;
+<<<<<<< HEAD
 
         this._onChange?.(this._value);
 
@@ -145,6 +167,9 @@ export class TextInput extends Widget {
         this._value = graphemes.join('');
         this._cursorPos--;
 
+=======
+        this._suggestionIndex = 0;
+>>>>>>> upstream/main
         this._onChange?.(this._value);
         this.markDirty();
     }
@@ -165,6 +190,7 @@ export class TextInput extends Widget {
         this.markDirty();
     }
 
+<<<<<<< HEAD
 
     // ── Auto Complete ─────────────────────────────────
 
@@ -195,6 +221,33 @@ export class TextInput extends Widget {
 
         // ── Cursor Movement ───────────────────────────────
 
+=======
+    deleteWordBack(): void {
+        if (this._cursorPos === 0) return;
+
+        const graphemes = splitGraphemes(this._value);
+        let i = this._cursorPos - 1;
+
+        // Skip trailing spaces
+        while (i >= 0 && graphemes[i] === ' ') {
+            i--;
+        }
+
+        // Find the start of the word
+        while (i >= 0 && graphemes[i] !== ' ') {
+            i--;
+        }
+
+        const deleteStart = i + 1;
+
+        graphemes.splice(deleteStart, this._cursorPos - deleteStart);
+        this._value = graphemes.join('');
+        this._cursorPos = deleteStart;
+        this._onChange?.(this._value);
+        this.markDirty();
+    }
+
+>>>>>>> upstream/main
     moveCursorLeft(): void {
         const next = Math.max(0, this._cursorPos - 1);
 
@@ -256,9 +309,20 @@ export class TextInput extends Widget {
     clear(): void {
         this._value = '';
         this._cursorPos = 0;
+<<<<<<< HEAD
 
         this._suggestionIndex = 0;
 
+=======
+        this._suggestionIndex = 0;
+        this._onChange?.('');
+        this.markDirty();
+    }
+
+    clearLine(): void {
+        this._value = '';
+        this._cursorPos = 0;
+>>>>>>> upstream/main
         this._onChange?.('');
 
         this.markDirty();
@@ -328,14 +392,34 @@ export class TextInput extends Widget {
             }
         }
 
+<<<<<<< HEAD
         // Normal input handling
+=======
+        if (event.ctrl) {
+            if (event.key === 'u') {
+                this.clearLine();
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            } else if (event.key === 'w') {
+                this.deleteWordBack();
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+        }
+
+>>>>>>> upstream/main
         switch (event.key) {
             case 'tab':
                 this.acceptSuggestion();
                 event.preventDefault();
                 event.stopPropagation();
                 break;
+<<<<<<< HEAD
 
+=======
+>>>>>>> upstream/main
             case 'backspace':
                 this.deleteBack();
                 event.preventDefault();
@@ -441,6 +525,7 @@ display = graphemes
             if (this.isFocused) {
     const cursorIndex = this._cursorPos - scrollX;
 
+<<<<<<< HEAD
     if (cursorIndex >= 0 && cursorIndex < width) {
         const charIndex = Math.min(
             this._cursorPos,
@@ -452,6 +537,26 @@ display = graphemes
             ...attrs,
             underline: true,
         });
+=======
+        if (modeIndicator) {
+            screen.writeString(x + width - modeIndicator.length, y, modeIndicator, { ...attrs, dim: true });
+        } else if (this.isFocused) {
+            const length = this._value.length;
+            const max = this._maxLength === Infinity ? null : this._maxLength;
+            const counterText = max ? `${length}/${max}` : `${length}`;
+            const counterWidth = stringWidth(counterText);
+            const counterX = x + width - counterWidth;
+            if (counterX >= x) {
+                screen.writeString(counterX, y, counterText, { ...attrs, dim: true });
+            }
+        }
+
+        // Inline suggestions (only visible when height > 1, e.g. opts.style.height > 3)
+        const suggestions = this.getSuggestions(this._value).slice(0, height - 1);
+        for (let i = 0; i < suggestions.length; i++) {
+            screen.writeString(x, y + i + 1, truncate(suggestions[i], width), { ...attrs, dim: true });
+        }
+>>>>>>> upstream/main
     }
 }
 

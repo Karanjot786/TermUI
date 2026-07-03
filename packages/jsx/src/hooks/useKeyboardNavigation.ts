@@ -73,7 +73,7 @@ export function useKeyboardNavigation({
 }: KeyboardNavigationOptions): KeyboardNavigationResult {
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    useInput((key) => {
+    useInput((key, event) => {
         if (itemCount === 0) return;
 
         const move = (delta: number) => {
@@ -87,7 +87,13 @@ export function useKeyboardNavigation({
             });
         };
 
-        switch (normalizeNavigationKey(key)) {
+        // Build a modifier-aware token when the KeyEvent is available so
+        // navigation modes like `emacs` (ctrl+n / ctrl+p) work as expected.
+        const token = event
+            ? `${event.ctrl ? 'ctrl+' : ''}${event.alt ? 'alt+' : ''}${event.shift ? 'shift+' : ''}${String(event.key).toLowerCase()}`
+            : String(key);
+
+        switch (normalizeNavigationKey(token)) {
             case 'up':
                 move(-1);
                 break;

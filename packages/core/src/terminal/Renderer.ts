@@ -102,6 +102,7 @@ export class Renderer {
      */
     fullRender(): void {
         this._screen.invalidate();
+        this._terminal.writeSync('\x1b[2J\x1b[H');
         this._flush();
     }
 
@@ -136,8 +137,8 @@ export class Renderer {
             let output = beginSyncUpdate;
 
             if (this._diffRenderer) {
-                this._lastStyleFingerprint = null;
                 for (let r = 0; r < rows; r++) {
+                    this._lastStyleFingerprint = null;
                     output += this._renderDiffLine(r, front, back, cols);
                 }
 

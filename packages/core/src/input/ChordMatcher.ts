@@ -11,6 +11,7 @@ export interface Chord {
 
 export interface ChordMatcherOptions {
   timeoutMs?: number;
+  maxBufferSize?: number;
 }
 
 function getKeyEventToken(event: KeyEvent): string {
@@ -27,10 +28,12 @@ export class ChordMatcher {
   private _nextId = 0;
   private _buffer: string[] = [];
   private _timeoutMs: number;
+  private _maxBufferSize: number;
   private _timer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(opts?: ChordMatcherOptions) {
     this._timeoutMs = opts?.timeoutMs ?? 800;
+    this._maxBufferSize = opts?.maxBufferSize ?? 10;
   }
 
   bind(keys: string[], handler: () => void): () => void {
@@ -49,6 +52,12 @@ export class ChordMatcher {
 
     const token = getKeyEventToken(event);
     let candidate = [...this._buffer, token];
+
+    if (candidate.length > this._maxBufferSize) {
+      this._buffer = [];
+      candidate = [token];
+    }
+
     let matchingBindings = this._getMatchingBindings(candidate);
 
     if (matchingBindings.length === 0) {

@@ -70,6 +70,28 @@ describe('Screen', () => {
         expect(screen.front[0][0].char).toBe('\0');
     });
 
+    it('resize resets all ancillary state', () => {
+        const screen = new Screen(10, 5);
+
+        // Set up some state
+        screen.pushClip({ x: 0, y: 0, width: 5, height: 3 });
+        screen.pushTranslateY(2);
+        screen.writeAnsi('\x1b[31m');
+        screen.applyBackdropFilter({ x: 0, y: 0, width: 3, height: 3 });
+
+        // Resize
+        screen.resize(20, 10);
+
+        expect(screen.cols).toBe(20);
+        expect(screen.rows).toBe(10);
+        expect(screen.activeClip).toBeNull();
+        expect(screen.drainAnsiQueue()).toBe('');
+        expect(screen.getPreviousLine(0)).toBe('');
+        // Write after resize and verify it lands correctly (no stale clip/translate)
+        screen.setCell(15, 8, { char: 'Z' });
+        expect(screen.back[8][15].char).toBe('Z');
+    });
+
     it('writeString applies style attributes (bold, fg)', () => {
         const screen = new Screen(10, 5);
         screen.writeString(0, 0, 'Hi', { bold: true, fg: { type: 'named', name: 'red' } });
@@ -130,6 +152,75 @@ describe('Screen', () => {
         expect(screen.rows).toBe(10);
         // Old data is reset
         expect(screen.back[0][0].char).toBe(' ');
+    });
+
+    it('pushClip with active translateY adjusts clip region correctly', () => {
+        const screen = new Screen(20, 10);
+        // Push a translate first (simulating a parent ScrollView)
+        screen.pushTranslateY(-3);
+        // Clip region should be adjusted by the current translate
+        screen.pushClip({ x: 0, y: 5, width: 10, height: 4 });
+
+        // setCell applies translate: row 8 + (-3) = 5. With adjusted clip at y=2 (5-3),
+        // 5 >= 2 and 5 < 6 should pass → visible
+        screen.setCell(1, 8, { char: 'A' });
+        expect(screen.back[5][1].char).toBe('A');
+
+        // setCell translates row 9 + (-3) = 6. Clip is at y=2, h=4 → y range [2, 6)
+        // 6 is NOT < 6 → clipped
+        screen.setCell(1, 9, { char: 'B' });
+        expect(screen.back[6][1].char).not.toBe('B');
+
+        screen.popClip();
+        screen.popTranslateY();
+    });
+
+    it('nested clips with active translate work correctly', () => {
+        const screen = new Screen(30, 20);
+        // Outer translate (simulating parent ScrollView with scrollOffset=2)
+        screen.pushTranslateY(-2);
+        screen.pushClip({ x: 0, y: 5, width: 20, height: 10 });
+
+        // Inner translate (simulating child ScrollView with scrollOffset=1)
+        screen.pushTranslateY(-1);
+        screen.pushClip({ x: 0, y: 8, width: 10, height: 5 });
+
+        // Total translate: -3. inner clip absolute y=8 → adjusted y = 8-3 = 5 in setCell space.
+        // Inner clip visual range: y ∈ [5, 10), row ∈ [8, 13) absolute.
+        // Content row 8 absolute → visual row 8-3=5 → inside clip (5 >= 5 && 5 < 10) ✓
+        screen.setCell(1, 8, { char: 'X' });
+        expect(screen.back[5][1].char).toBe('X');
+
+        // Content row 13 absolute → visual row 13-3=10 → outside clip (10 >= 10) → clipped
+        screen.setCell(1, 13, { char: 'Y' });
+        expect(screen.back[10][1].char).not.toBe('Y');
+
+        screen.popClip();
+        screen.popTranslateY();
+        screen.popClip();
+        screen.popTranslateY();
+    });
+
+    it('setCell is clipped by translate-adjusted region when parents have translate', () => {
+        const screen = new Screen(30, 20);
+        // Simulate: outer container at absolute y=10 with scrollOffset=5
+        screen.pushTranslateY(-5);
+        // Child clip region at absolute y=14, height=4
+        screen.pushClip({ x: 0, y: 14, width: 10, height: 4 });
+
+        // After translate: clip adjusted to y = 14 + (-5) = 9, height=4 → visual range [9, 13)
+        // Content that would render at absolute row 15 (first row inside child viewport)
+        // visual row = 15 + (-5) = 10 → inside clip (10 >= 9 && 10 < 13) ✓
+        screen.setCell(0, 15, { char: 'A' });
+        expect(screen.back[10][0].char).toBe('A');
+
+        // Content at absolute row 19 (outside child viewport)
+        // visual row = 19 + (-5) = 14 → outside clip (14 >= 13) → clipped
+        screen.setCell(0, 19, { char: 'B' });
+        expect(screen.back[14][0].char).not.toBe('B');
+
+        screen.popClip();
+        screen.popTranslateY();
     });
 });
 
@@ -220,6 +311,58 @@ describe('Screen and Cell Hyperlink Support', () => {
             screen.writeString(0, 0, 'Hello, World!');
             const text = screen.back[0].slice(0, 13).map(c => c.char).join('');
             expect(text).toBe('Hello, World!');
+        });
+    });
+
+    describe('Backdrop Filters (Compositing)', () => {
+        it('cells outside the modal rect are dimmed', () => {
+            const screen = new Screen(10, 10);
+            
+            // Draw some base content
+            screen.writeString(0, 0, 'Base text ');
+            screen.writeString(0, 9, 'Bottom txt');
+            
+            // Draw a modal in the center (x:2, y:2, w:4, h:4)
+            screen.writeString(2, 2, 'Modl');
+            screen.writeString(2, 3, 'Text');
+            
+            // Schedule backdrop filter
+            screen.applyBackdropFilter({ x: 2, y: 2, width: 4, height: 4 });
+            
+            // Apply them (normally called by App during compositing pass)
+            screen.flushBackdropFilters();
+            
+            // Cell inside the modal rect should NOT be dimmed
+            expect(screen.back[2][2].dim).toBe(false);
+            expect(screen.back[3][3].dim).toBe(false);
+            
+            // Cells outside the modal rect SHOULD be dimmed
+            expect(screen.back[0][0].dim).toBe(true);
+            expect(screen.back[9][9].dim).toBe(true);
+            expect(screen.back[2][1].dim).toBe(true); // just left of modal
+            expect(screen.back[2][6].dim).toBe(true); // just right of modal
+        });
+
+        it('multiple overlapping backdrop filters dim everything outside all rects', () => {
+            const screen = new Screen(10, 10);
+            
+            // Modal 1: top-left
+            screen.applyBackdropFilter({ x: 0, y: 0, width: 3, height: 3 });
+            // Modal 2: bottom-right
+            screen.applyBackdropFilter({ x: 7, y: 7, width: 3, height: 3 });
+            
+            screen.flushBackdropFilters();
+            
+            // Modal 1 area is NOT dimmed
+            expect(screen.back[1][1].dim).toBe(false);
+            
+            // Modal 2 area is NOT dimmed
+            expect(screen.back[8][8].dim).toBe(false);
+            
+            // Everything else IS dimmed
+            expect(screen.back[5][5].dim).toBe(true); // center
+            expect(screen.back[0][8].dim).toBe(true); // top right
+            expect(screen.back[8][0].dim).toBe(true); // bottom left
         });
     });
 });

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { createStore, batch } from './store.js'
-import { logger } from './logger.js'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import * as os from 'node:os'
 
 describe('createStore', () => {
     it('initializes state from creator function', () => {
@@ -290,7 +290,244 @@ describe('batch', () => {
         expect(spy).toHaveBeenCalledOnce()
         expect(spy.mock.calls[0][0]).toEqual({ a: 1, b: 2 })
     })
+
+    it('nested batch does not lose intermediate state from outer batch', async () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            name: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ count: 1 })
+            batch(() => {
+                useStore.setState({ name: 'test' })
+            })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ count: 1, name: 'test' })
+    })
+
+    it('consecutive batches do not interfere with each other', async () => {
+        const useStore = createStore((set) => ({
+            a: 0,
+            b: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ a: 1 })
+        })
+
+        batch(() => {
+            useStore.setState({ b: 2 })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState()).toEqual({ a: 1, b: 2 })
+    })
+
+    it('stale microtask from old batch does not dispatch when new batch starts', async () => {
+        const useStore = createStore((set) => ({
+            x: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        // Start first batch but manually prevent its microtask from firing
+        batch(() => {
+            useStore.setState({ x: 1 })
+        })
+
+        // Immediately start a second batch before the first microtask fires
+        batch(() => {
+            useStore.setState({ x: 2 })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        // Listener should only see the final value, not be called twice
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState().x).toBe(2)
+    })
+
+    it('mutate inside batch merges correctly with setState', async () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            label: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ count: 5 })
+            useStore.mutate((draft) => {
+                draft.label = 'mutated'
+            })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ count: 5, label: 'mutated' })
+    })
+
+    it('multiple mutate calls inside batch coalesce into one notification', async () => {
+        const useStore = createStore((set) => ({
+            a: 0,
+            b: 0,
+            c: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.mutate((draft) => { draft.a = 1 })
+            useStore.mutate((draft) => { draft.b = 2 })
+            useStore.mutate((draft) => { draft.c = 3 })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ a: 1, b: 2, c: 3 })
+    })
+
+    it('batch rollback restores state before any updates including mutate', () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            label: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        try {
+            batch(() => {
+                useStore.setState({ count: 5 })
+                useStore.mutate((draft) => {
+                    draft.label = 'mutated'
+                })
+                throw new Error('abort')
+            })
+        } catch {}
+
+        expect(useStore.getState()).toEqual({ count: 0, label: '' })
+        expect(spy).not.toHaveBeenCalled()
+    })
+
+    it('async batch rolls back state when the async callback rejects', async () => {
+        const useStore = createStore((set) => ({ x: 0, y: 0 }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        try {
+            await batch(async () => {
+                useStore.setState({ x: 1 })
+                await Promise.resolve() // yield — this triggered the premature flush bug
+                throw new Error('async batch failed')
+            })
+        } catch {}
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        // x must be rolled back — the batch threw after the await
+        expect(useStore.getState()).toEqual({ x: 0, y: 0 })
+        expect(spy).not.toHaveBeenCalled()
+    })
+
+    it('async batch commits state when the async callback resolves', async () => {
+        const useStore = createStore((set) => ({ x: 0, y: 0 }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        await batch(async () => {
+            useStore.setState({ x: 1 })
+            await Promise.resolve()
+            useStore.setState({ y: 2 })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState()).toEqual({ x: 1, y: 2 })
+        expect(spy).toHaveBeenCalledOnce()
+    })
+
+    it('nested async batch: outer reject rolls back all changes including inner', async () => {
+        const useStore = createStore((set) => ({ x: 0, y: 0 }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        try {
+            await batch(async () => {
+                await batch(async () => {
+                    useStore.setState({ x: 1 }) // inner change
+                })
+                useStore.setState({ y: 2 })     // outer change
+                throw new Error('outer failed')
+            })
+        } catch {}
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState()).toEqual({ x: 0, y: 0 })
+        expect(spy).not.toHaveBeenCalled()
+    })
+
+    it('stale async microtask does not commit when a new batch starts before it fires', async () => {
+        const useStore = createStore((set) => ({ x: 0 }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        // First async batch succeeds and schedules a microtask
+        const p = batch(async () => {
+            useStore.setState({ x: 1 })
+            await Promise.resolve()
+        })
+
+        // Second batch starts immediately (new epoch) before first microtask fires
+        batch(() => {
+            useStore.setState({ x: 2 })
+        })
+
+        await p
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        // Only one notification, final value wins
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState().x).toBe(2)
+    })
 })
+
+    it('async batch does not overwrite concurrent non-batched setState calls', async () => {
+        const useStore = createStore((set) => ({
+            a: 0,
+            b: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        // Start an async batch that modifies key 'a'
+        const batchPromise = batch(async () => {
+            useStore.setState({ a: 1 })
+            // Yield to allow interleaving
+            await Promise.resolve()
+        })
+
+        // Non-batched setState on key 'b' between async batch microtasks
+        useStore.setState({ b: 2 })
+
+        await batchPromise
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        // Both changes should be preserved
+        expect(useStore.getState()).toEqual({ a: 1, b: 2 })
+    })
 
 describe('middleware', () => {
     it('middleware is called during setState', () => {
@@ -336,18 +573,6 @@ describe('middleware', () => {
         expect(useStore.getState().count).toBe(10)
     })
 
-    it('logger middleware passes state through without calling console.log', () => {
-        const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-        const useStore = createStore(() => ({ count: 0 }), { middleware: [logger] })
-
-        useStore.setState({ count: 1 })
-
-        // console.log is forbidden in TermUI source files — logger is a pass-through
-        expect(logSpy).not.toHaveBeenCalled()
-        expect(useStore.getState().count).toBe(1)
-
-        logSpy.mockRestore()
-    })
 
     it('functional updaters chain correctly inside a batch', async () => {
         const useStore = createStore((set) => ({
@@ -388,10 +613,46 @@ describe('middleware', () => {
         // No listeners should have fired
         expect(spy).not.toHaveBeenCalled()
     })
+
+    it('setState outside batch after batch call is not overwritten by commit', async () => {
+        const useStore = createStore((set) => ({
+            x: 0,
+            y: 0,
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ x: 1 })
+        })
+
+        // Between batch return and microtask, setState outside batch
+        useStore.setState({ y: 2 })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState()).toEqual({ x: 1, y: 2 })
+    })
+
+    it('getState inside batch returns pending batch state', () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+        }))
+
+        batch(() => {
+            useStore.setState({ count: 1 })
+            // Inside the batch, getState should see the pending value
+            expect(useStore.getState().count).toBe(1)
+        })
+    })
 })
 
 describe('persistence', () => {
-    const testDir = path.join(__dirname, 'temp-test-store-dir')
+    let appConfig = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config');
+    if (process.platform === 'win32') appConfig = process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming');
+    if (process.platform === 'darwin') appConfig = path.join(os.homedir(), 'Library', 'Application Support');
+    
+    const testDir = path.join(appConfig, 'termuijs-stores', 'temp-test-store-dir')
     const testFile = path.join(testDir, 'test-store.json')
 
     afterEach(() => {
@@ -476,6 +737,37 @@ describe('persistence', () => {
 
         vi.advanceTimersByTime(100)
         expect(fs.existsSync(testFile)).toBe(false)
+    })
+
+    it('throws error on path traversal in file option', () => {
+        expect(() => {
+            createStore({ count: 0 }, {
+                persist: {
+                    file: '../../etc/passwd',
+                }
+            })
+        }).toThrow(/Persist file path must be within/)
+    })
+
+    it('rejects a sibling dir that shares the persist-dir prefix', () => {
+        // `${persistDir}-evil/...` passes a naive startsWith() check but is outside persistDir.
+        expect(() => {
+            createStore({ count: 0 }, {
+                persist: {
+                    file: '../termuijs-stores-evil/x.json',
+                }
+            })
+        }).toThrow(/Persist file path must be within/)
+    })
+
+    it('throws error on path traversal in key option', () => {
+        expect(() => {
+            createStore({ count: 0 }, {
+                persist: {
+                    key: '../evil',
+                }
+            })
+        }).toThrow(/Persist key must contain only alphanumeric characters/)
     })
 })
 

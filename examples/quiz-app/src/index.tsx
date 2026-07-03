@@ -14,6 +14,7 @@ interface Question {
     question: string;
     choices: string[];
     correctIndex: number;
+    explanation?: string;
 }
 
 // ── Quiz Data ─────────────────────────────────────────
@@ -28,21 +29,25 @@ const QUESTIONS: Question[] = [
             'Home Tool Markup Language',
         ],
         correctIndex: 0,
+        explanation: 'HTML (Hyper Text Markup Language) is the standard markup language for documents designed to be displayed in a web browser.',
     },
     {
         question: 'Which keyword declares a constant in JavaScript?',
         choices: ['var', 'let', 'const', 'def'],
         correctIndex: 2,
+        explanation: 'The const keyword declares a block-scoped local variable that cannot be reassigned or redeclared.',
     },
     {
         question: 'What is the time complexity of binary search?',
         choices: ['O(n)', 'O(n^2)', 'O(log n)', 'O(1)'],
         correctIndex: 2,
+        explanation: 'Binary search works by repeatedly dividing in half the portion of the list that could contain the item, resulting in O(log n) time complexity.',
     },
     {
         question: 'Which data structure uses LIFO order?',
         choices: ['Queue', 'Stack', 'Heap', 'Tree'],
         correctIndex: 1,
+        explanation: 'A stack is a linear data structure that follows the Last In, First Out (LIFO) principle, where the last element added is the first one removed.',
     },
     {
         question: 'What does CSS stand for?',
@@ -53,6 +58,7 @@ const QUESTIONS: Question[] = [
             'Colorful Style Syntax',
         ],
         correctIndex: 2,
+        explanation: 'CSS (Cascading Style Sheets) is a stylesheet language used to describe the presentation of a document written in HTML or XML.',
     },
 ];
 
@@ -135,20 +141,33 @@ class SelectableList extends Widget {
 //   header(1) + divider(1) + gap(1) + question(1) + gap(1)
 //   + choices(4) + gap(1) + feedback(1) + gap(1) + footer(1) = 13 content rows
 // Total = 2 + 2 + 13 = 17
-const WIDGET_WIDTH  = 72;
-const WIDGET_HEIGHT = 19;
+// ── Progress Bar Helper ────────────────────────────────
+function getProgressBar(percent: number, width = 15): string {
+    const filledChar = caps.unicode ? '█' : '#';
+    const emptyChar = caps.unicode ? '░' : '-';
+    const filledCount = Math.min(width, Math.max(0, Math.round((percent / 100) * width)));
+    const emptyCount = width - filledCount;
+    return `[${filledChar.repeat(filledCount)}${emptyChar.repeat(emptyCount)}] ${percent}%`;
+}
 
-class QuizApp extends Widget {
+const WIDGET_WIDTH  = 72;
+const WIDGET_HEIGHT = 22;
+
+export class QuizApp extends Widget {
     private currentIndex = 0;
     private score = 0;
+    private streak = 0;
     private answered = false;
     private lastCorrect = false;
     private done = false;
+    private userChoiceIndex = -1;
 
     private _header: Text;
+    private _progressBar: Text;
     private _questionText: Text;
     private _choiceList: SelectableList;
-    private _feedback: Text;
+    private _feedbackStatus: Text;
+    private _feedbackDetails: Text;
     private _footer: Text;
 
     constructor() {
@@ -164,6 +183,12 @@ class QuizApp extends Widget {
         this._header = new Text(
             this.headerText(),
             { bold: true, height: 1, fg: { type: 'named', name: 'cyan' } },
+            { align: 'center' }
+        );
+
+        this._progressBar = new Text(
+            this.progressBarText(),
+            { height: 1, fg: { type: 'named', name: 'cyan' } },
             { align: 'center' }
         );
 
@@ -190,9 +215,15 @@ class QuizApp extends Widget {
 
         const gap3 = new Box({ height: 1 });
 
-        this._feedback = new Text(
+        this._feedbackStatus = new Text(
             '',
             { bold: true, height: 1, fg: { type: 'named', name: 'green' } },
+            { align: 'left' }
+        );
+
+        this._feedbackDetails = new Text(
+            '',
+            { height: 6, fg: { type: 'named', name: 'white' } },
             { align: 'left' }
         );
 
@@ -205,13 +236,15 @@ class QuizApp extends Widget {
         );
 
         this.addChild(this._header);
+        this.addChild(this._progressBar);
         this.addChild(divider);
         this.addChild(gap1);
         this.addChild(this._questionText);
         this.addChild(gap2);
         this.addChild(this._choiceList);
         this.addChild(gap3);
-        this.addChild(this._feedback);
+        this.addChild(this._feedbackStatus);
+        this.addChild(this._feedbackDetails);
         this.addChild(gap4);
         this.addChild(this._footer);
     }
@@ -222,7 +255,17 @@ class QuizApp extends Widget {
 
     private headerText(): string {
         if (this.done) return ' Quiz Complete! ';
-        return ` Question ${this.currentIndex + 1} / ${QUESTIONS.length} `;
+        const fireEmoji = caps.unicode ? '🔥 ' : '';
+        const streakText = `${fireEmoji}Streak: ${this.streak}`;
+        return ` Question ${this.currentIndex + 1}/${QUESTIONS.length}   ${streakText} `;
+    }
+
+    private progressBarText(): string {
+        if (this.done) return '';
+        const total = QUESTIONS.length;
+        const current = this.currentIndex + 1;
+        const pct = Math.round((current / total) * 100);
+        return getProgressBar(pct);
     }
 
     private footerHint(): string {
@@ -235,20 +278,37 @@ class QuizApp extends Widget {
         if (this.answered || this.done) return;
 
         this.answered = true;
+        this.userChoiceIndex = choiceIndex;
         this.lastCorrect = choiceIndex === this.currentQuestion().correctIndex;
-        if (this.lastCorrect) this.score++;
-
-        const correctLabel = String.fromCharCode(65 + this.currentQuestion().correctIndex);
-        const correctText  = this.currentQuestion().choices[this.currentQuestion().correctIndex];
-
         if (this.lastCorrect) {
-            this._feedback.setStyle({ fg: { type: 'named', name: 'green' }, bold: true, height: 1 });
-            this._feedback.setContent('  Correct!');
+            this.score++;
+            this.streak++;
         } else {
-            this._feedback.setStyle({ fg: { type: 'named', name: 'red' }, bold: true, height: 1 });
-            this._feedback.setContent(`  Wrong — correct: ${correctLabel}) ${correctText}`);
+            this.streak = 0;
         }
 
+        const q = this.currentQuestion();
+        const correctLabel = String.fromCharCode(65 + q.correctIndex);
+        const correctText  = q.choices[q.correctIndex];
+        const userLabel = String.fromCharCode(65 + choiceIndex);
+        const userText = q.choices[choiceIndex];
+
+        const statusEmoji = this.lastCorrect ? (caps.unicode ? '✔️ Correct' : 'Correct') : (caps.unicode ? '❌ Incorrect' : 'Incorrect');
+        if (this.lastCorrect) {
+            this._feedbackStatus.setStyle({ fg: { type: 'named', name: 'green' }, bold: true, height: 1 });
+            this._feedbackStatus.setContent(`  ${statusEmoji}`);
+        } else {
+            this._feedbackStatus.setStyle({ fg: { type: 'named', name: 'red' }, bold: true, height: 1 });
+            this._feedbackStatus.setContent(`  ${statusEmoji}`);
+        }
+
+        let details = `  Your Answer: ${userLabel}) ${userText}\n  Correct Answer: ${correctLabel}) ${correctText}`;
+        if (q.explanation) {
+            details += `\n\n  Explanation:\n  ${q.explanation}`;
+        }
+        this._feedbackDetails.setContent(details);
+
+        this._header.setContent(this.headerText());
         this._footer.setContent(this.footerHint());
         this.markDirty();
     }
@@ -258,7 +318,9 @@ class QuizApp extends Widget {
 
         this.currentIndex++;
         this.answered = false;
-        this._feedback.setContent('');
+        this.userChoiceIndex = -1;
+        this._feedbackStatus.setContent('');
+        this._feedbackDetails.setContent('');
 
         if (this.currentIndex >= QUESTIONS.length) {
             this.showSummary();
@@ -267,6 +329,7 @@ class QuizApp extends Widget {
 
         const q = this.currentQuestion();
         this._header.setContent(this.headerText());
+        this._progressBar.setContent(this.progressBarText());
         this._questionText.setContent(q.question);
         this._choiceList.setItems(q.choices);
         this._footer.setContent(this.footerHint());
@@ -279,9 +342,11 @@ class QuizApp extends Widget {
         const grade = pct >= 80 ? 'Excellent!' : pct >= 60 ? 'Good job!' : 'Keep practicing!';
 
         this._header.setContent(this.headerText());
+        this._progressBar.setContent(this.progressBarText());
         this._questionText.setContent(`Score: ${this.score} / ${QUESTIONS.length}  (${pct}%)   ${grade}`);
         this._choiceList.setItems([]);
-        this._feedback.setContent('');
+        this._feedbackStatus.setContent('');
+        this._feedbackDetails.setContent('');
         this._footer.setContent(this.footerHint());
         this.markDirty();
     }
@@ -289,14 +354,18 @@ class QuizApp extends Widget {
     private restart(): void {
         this.currentIndex = 0;
         this.score        = 0;
+        this.streak       = 0;
         this.answered     = false;
         this.done         = false;
+        this.userChoiceIndex = -1;
 
         const q = this.currentQuestion();
         this._header.setContent(this.headerText());
+        this._progressBar.setContent(this.progressBarText());
         this._questionText.setContent(q.question);
         this._choiceList.setItems(q.choices);
-        this._feedback.setContent('');
+        this._feedbackStatus.setContent('');
+        this._feedbackDetails.setContent('');
         this._footer.setContent(this.footerHint());
         this.markDirty();
     }

@@ -1,4 +1,5 @@
 import { parseColor, colorToRgb } from '@termuijs/core';
+import { rgbToHex } from '../color-functions.js';
 
 export interface NormalColorPair {
     fg: string;
@@ -29,14 +30,6 @@ function toHex(color: string): string {
     return rgbToHex(r, g, b);
 }
 
-function rgbToHex(r: number, g: number, b: number): string {
-    return `#${toHexByte(r)}${toHexByte(g)}${toHexByte(b)}`;
-}
-
-function toHexByte(value: number): string {
-    const clamped = Math.min(255, Math.max(0, Math.round(value)));
-    return clamped.toString(16).padStart(2, '0');
-}
 
 function brighten(color: string, amount = 0.15): string {
     const [r, g, b] = colorToRgb(parseColor(color));

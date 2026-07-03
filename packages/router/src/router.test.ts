@@ -194,6 +194,27 @@ describe('Router', () => {
         expect(r.currentPath).toBe('/login');
     });
 
+    it('back() with beforeEnter redirect does not corrupt history', () => {
+        const r = new Router();
+        r.addRoute('/login', () => 'Login');
+        r.addRoute('/dashboard', () => 'Dashboard', undefined, {
+            beforeEnter: () => '/login',
+        });
+        r.addRoute('/settings', () => 'Settings');
+
+        r.push('/login');
+        r.push('/dashboard');
+        r.push('/settings');
+
+        expect(r.currentPath).toBe('/settings');
+        expect(r.historyLength).toBe(3);
+
+        r.back();
+
+        expect(r.currentPath).toBe('/login');
+        expect(r.historyLength).toBe(2);
+    });
+
     it('afterEnter executes after navigation', () => {
         const r = new Router();
         const spy = vi.fn();

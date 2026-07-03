@@ -78,6 +78,7 @@ export class VirtualList extends Widget {
     private _spring: ScrollSpringState = { position: 0, velocity: 0 };
     private _lastUpdateTime = 0;
     private _isAnimating = false;
+    private _animationTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
     constructor(options: VirtualListOptions) {
         super({ border: 'single', ...options.style });
@@ -164,7 +165,7 @@ export class VirtualList extends Widget {
     pageUp(): void {
         this._runScrollAction(() => {
             const rect = this._getContentRect();
-            const pageSize = Math.floor(rect.height / this._itemHeight);
+            const pageSize = Math.max(1, Math.floor(rect.height / this._itemHeight));
             this._selectedIndex = Math.max(0, this._selectedIndex - pageSize);
             this._clampScroll();
             this.markDirty();
@@ -175,7 +176,7 @@ export class VirtualList extends Widget {
     pageDown(): void {
         this._runScrollAction(() => {
             const rect = this._getContentRect();
-            const pageSize = Math.floor(rect.height / this._itemHeight);
+            const pageSize = Math.max(1, Math.floor(rect.height / this._itemHeight));
             this._selectedIndex = Math.min(this._totalItems - 1, this._selectedIndex + pageSize);
             this._clampScroll();
             this.markDirty();
@@ -187,6 +188,43 @@ export class VirtualList extends Widget {
         this._runScrollAction(() => {
             this._selectedIndex = Math.max(0, Math.min(index, this._totalItems - 1));
             this._clampScroll();
+            this.markDirty();
+        });
+    }
+
+    /** Scroll directly to an index with the specified alignment */
+    scrollToIndex(index: number, alignment: 'start' | 'center' | 'end' = 'start'): void {
+        this._runScrollAction(() => {
+            if (index < 0 || index >= this._totalItems) return;
+            
+            const rect = this._getContentRect();
+            const visibleItems = Math.floor(rect.height / this._itemHeight);
+            
+            if (visibleItems <= 0) return;
+
+            let targetOffset = index;
+            if (alignment === 'center') {
+                targetOffset -= Math.floor(visibleItems / 2);
+            } else if (alignment === 'end') {
+                targetOffset -= visibleItems - 1;
+            }
+
+            // Clamp offset
+            const maxOffset = Math.max(0, this._totalItems - visibleItems);
+            this._targetScrollOffset = Math.max(0, Math.min(targetOffset, maxOffset));
+
+            // Adjust instantly
+            this._scrollOffset = this._targetScrollOffset;
+            this._spring.position = this._targetScrollOffset;
+            this._spring.velocity = 0;
+            
+            // Keep selected index within the new viewport bounds
+            if (this._selectedIndex < this._targetScrollOffset) {
+                this._selectedIndex = this._targetScrollOffset;
+            } else if (this._selectedIndex >= this._targetScrollOffset + visibleItems) {
+                this._selectedIndex = Math.min(this._totalItems - 1, this._targetScrollOffset + visibleItems - 1);
+            }
+
             this.markDirty();
         });
     }
@@ -209,6 +247,14 @@ export class VirtualList extends Widget {
             return;
         }
         super.markDirty();
+    }
+
+    override destroy(): void {
+        if (this._animationTimeoutId !== null) {
+            clearTimeout(this._animationTimeoutId);
+            this._animationTimeoutId = null;
+        }
+        super.destroy();
     }
 
     // ── Rendering ──
@@ -240,11 +286,18 @@ export class VirtualList extends Widget {
                 this._scrollOffset = this._targetScrollOffset;
                 this._isAnimating = false;
                 this._lastUpdateTime = 0;
+                if (this._animationTimeoutId !== null) {
+                    clearTimeout(this._animationTimeoutId);
+                    this._animationTimeoutId = null;
+                }
             } else {
                 // Request next frame update
-                setTimeout(() => {
-                    this.markDirty();
-                }, 16);
+                if (this._animationTimeoutId === null) {
+                    this._animationTimeoutId = setTimeout(() => {
+                        this._animationTimeoutId = null;
+                        this.markDirty();
+                    }, 16);
+                }
             }
         }
 
@@ -310,6 +363,13 @@ export class VirtualList extends Widget {
                 for (let c = 0; c < remaining; c++) {
                     screen.setCell(x + stringWidth(cached.line) + c, rowY, { char: ' ', ...cached.cellStyle });
                 }
+            }
+        }
+
+        // Evict cache entries outside the visible+overscan window
+        for (const key of this._renderCache.keys()) {
+            if (key < startIdx || key >= endIdx) {
+                this._renderCache.delete(key);
             }
         }
 

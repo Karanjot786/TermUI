@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createFiber, setCurrentFiber, clearCurrentFiber, setRequestRender } from '../hooks.js';
 import { useBell } from './useBell.js';
-import * as core from '@termuijs/core';
 
 describe('useBell', () => {
     let fiber = createFiber();
@@ -17,13 +16,13 @@ describe('useBell', () => {
     });
 
     it('returns a function that calls bell()', () => {
-        const spy = vi.spyOn(core, 'bell').mockImplementation(() => {});
-        
+        const spy = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
         const triggerBell = useBell();
         triggerBell();
-        
-        expect(spy).toHaveBeenCalled();
-        
+
+        expect(spy).toHaveBeenCalledWith('\x07');
+
         spy.mockRestore();
     });
 });

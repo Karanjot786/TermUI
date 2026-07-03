@@ -38,6 +38,7 @@ export class InputParser {
     private _escapeBuffer: Buffer = Buffer.alloc(0);
     private _isPasting = false;
     private _pasteBuffer = '';
+    private _pasteTimeout: ReturnType<typeof setTimeout> | null = null;
     private _cursorRequests: Array<{
         resolve: (position: CursorPosition) => void;
         reject: (error: Error) => void;
@@ -106,6 +107,10 @@ export class InputParser {
             clearTimeout(this._graphemeTimeout);
             this._graphemeTimeout = null;
         }
+        if (this._pasteTimeout) {
+            clearTimeout(this._pasteTimeout);
+            this._pasteTimeout = null;
+        }
         this._escapeBuffer = Buffer.alloc(0);
         this._graphemeBuffer = '';
         this._decoder.end();
@@ -120,6 +125,31 @@ export class InputParser {
      * Process a chunk of raw input bytes.
      */
     private _processInput(data: Buffer): void {
+        const PASTE_START = '\x1b[200~';
+        const PASTE_END = '\x1b[201~';
+
+        if (this._isPasting) {
+            const str = this._decoder.write(data);
+            const endIdx = str.indexOf(PASTE_END);
+            if (endIdx !== -1) {
+                this._pasteBuffer += str.substring(0, endIdx);
+                const pastedText = this._pasteBuffer;
+                this._isPasting = false;
+                this._pasteBuffer = '';
+                this._clearPasteTimeout();
+                this._events.emit('paste', pastedText);
+                
+                const remaining = str.substring(endIdx + PASTE_END.length);
+                if (remaining.length > 0) {
+                    this._processInput(Buffer.from(remaining, 'utf8'));
+                }
+            } else {
+                this._pasteBuffer += str;
+                this._startPasteTimeout();
+            }
+            return;
+        }
+
         // If we are currently collecting an escape sequence, continue collecting it
         if (this._escapeBuffer.length > 0) {
             this._escapeBuffer = Buffer.concat([this._escapeBuffer, data]);
@@ -132,34 +162,48 @@ export class InputParser {
         }
 
         const str = data.toString('utf8');
-        const PASTE_START = '\x1b[200~';
-        const PASTE_END = '\x1b[201~';
+        
+        const startIdx = str.indexOf(PASTE_START);
+        if (startIdx !== -1) {
+            if (startIdx > 0) {
+                const before = str.substring(0, startIdx);
+                this._processInput(Buffer.from(before, 'utf8'));
+            }
 
-        if (str.includes(PASTE_START) && str.includes(PASTE_END)) {
-            const pastedText = str
-                .replace(PASTE_START, '')
-                .replace(PASTE_END, '');
-
-            this._events.emit('paste', pastedText);
+            const afterStart = str.substring(startIdx + PASTE_START.length);
+            const endIdx = afterStart.indexOf(PASTE_END);
+            
+            if (endIdx !== -1) {
+                this._events.emit('paste', afterStart.substring(0, endIdx));
+                const remaining = afterStart.substring(endIdx + PASTE_END.length);
+                if (remaining.length > 0) {
+                    this._processInput(Buffer.from(remaining, 'utf8'));
+                }
+            } else {
+                this._isPasting = true;
+                this._pasteBuffer = afterStart;
+                this._startPasteTimeout();
+            }
             return;
         }
 
         // Check if this starts an escape sequence
         if (str.startsWith('\x1b') && str.length === 1) {
-            // Lone ESC — wait a bit to see if more bytes follow
+            // Lone ESC — wait for more bytes (FSM via _escapeBuffer handles continuation)
             this._escapeBuffer = data;
             this._escapeTimeout = setTimeout(() => {
                 // Timeout — it was a standalone Escape key
+                const remained = this._escapeBuffer;
+                this._escapeBuffer = Buffer.alloc(0);
+                this._escapeTimeout = null;
                 this._events.emit('key', createKeyEvent({
                     key: 'escape',
-                    raw: this._escapeBuffer,
+                    raw: remained,
                     ctrl: false,
                     alt: false,
                     shift: false,
                 }));
-                this._escapeBuffer = Buffer.alloc(0);
-                this._escapeTimeout = null;
-            }, 50); // 50ms debounce for escape sequences
+            }, 200); // 200ms debounce (increased from 50ms to avoid race with render)
             return;
         }
 
@@ -275,10 +319,44 @@ export class InputParser {
     }
 
     /**
+     * Start or restart the paste inactivity timeout.
+     * If no additional paste data arrives within the timeout,
+     * the paste state is aborted to prevent stale state.
+     */
+    private _startPasteTimeout(): void {
+        this._clearPasteTimeout();
+        this._pasteTimeout = setTimeout(() => {
+            this._isPasting = false;
+            this._pasteBuffer = '';
+            this._pasteTimeout = null;
+        }, 500);
+    }
+
+    private _clearPasteTimeout(): void {
+        if (this._pasteTimeout) {
+            clearTimeout(this._pasteTimeout);
+            this._pasteTimeout = null;
+        }
+    }
+
+    /**
      * Try to parse buffered escape sequence.
      */
     private _tryParseEscape(): void {
         const seq = this._escapeBuffer.toString('utf8');
+
+        const PASTE_START = '\x1b[200~';
+        const pasteStartIdx = seq.indexOf(PASTE_START);
+        if (pasteStartIdx !== -1) {
+            this._escapeBuffer = Buffer.alloc(0);
+            if (pasteStartIdx > 0) {
+                const before = seq.substring(0, pasteStartIdx);
+                this._processInput(Buffer.from(before, 'utf8'));
+            }
+            const after = seq.substring(pasteStartIdx);
+            this._processInput(Buffer.from(after, 'utf8'));
+            return;
+        }
 
         // Check for mouse event first
         if (isMouseSequence(seq)) {
@@ -288,16 +366,8 @@ export class InputParser {
                 this._escapeBuffer = Buffer.alloc(0);
                 return;
             }
-            // Might be incomplete mouse sequence — wait for more data
+            // Might be incomplete mouse sequence — wait for more data (no timeout, FSM handles via _escapeBuffer)
             if (seq.length < 20) { // safety cap
-                if (this._escapeTimeout) {
-                    clearTimeout(this._escapeTimeout);
-                    this._escapeTimeout = null;
-                }
-                this._escapeTimeout = setTimeout(() => {
-                    this._escapeBuffer = Buffer.alloc(0);
-                    this._escapeTimeout = null;
-                }, 100);
                 return;
             }
         }
@@ -375,15 +445,7 @@ export class InputParser {
             return;
         }
 
-        // Wait for more bytes (might be an incomplete sequence)
-        if (this._escapeTimeout) {
-            clearTimeout(this._escapeTimeout);
-            this._escapeTimeout = null;
-        }
-        this._escapeTimeout = setTimeout(() => {
-            // Timeout — emit as unknown escape and clear
-            this._escapeBuffer = Buffer.alloc(0);
-            this._escapeTimeout = null;
-        }, 100);
+        // Wait for more bytes (might be an incomplete sequence; FSM handles via _escapeBuffer)
+        return;
     }
 }

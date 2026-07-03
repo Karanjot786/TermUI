@@ -98,6 +98,25 @@ export class Menu extends Widget {
             case 'down':
                 this._selectNext();
                 return true;
+            case 'home': {
+                const first = this._items.findIndex(i => !i.disabled);
+                if (first >= 0 && first !== this._selectedIndex) {
+                    this._selectedIndex = first;
+                    this.markDirty();
+                }
+                return true;
+            }
+            case 'end': {
+                let last = -1;
+                for (let i = this._items.length - 1; i >= 0; i--) {
+                    if (!this._items[i].disabled) { last = i; break; }
+                }
+                if (last >= 0 && last !== this._selectedIndex) {
+                    this._selectedIndex = last;
+                    this.markDirty();
+                }
+                return true;
+            }
             case 'enter':
             case 'space':
                 this._confirm();

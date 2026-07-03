@@ -19,19 +19,6 @@ export interface DockerContainer {
     pids: number;
 }
 
-export interface DockerContainerStats {
-    cpu: number;
-    mem: {
-        used: number;
-        limit: number;
-        percent: number;
-    };
-    net: {
-        rx: number;
-        tx: number;
-    };
-    pids: number;
-}
 
 function parseBytes(value: string): number {
     const trimmed = value.trim();
@@ -176,31 +163,4 @@ export const docker = {
         return enrichWithStats(containers);
     },
 
-    /**
-     * Get detailed live stats for a specific container by ID or name.
-     */
-    stats(id: string): DockerContainerStats | null {
-        try {
-            const output = execFileSync('docker', [
-                'stats', '--no-stream', '--no-trunc',
-                '--format', '{{json .}}', id,
-            ], { encoding: 'utf-8', timeout: 5000 });
-
-            const line = output.trim().split('\n').filter(Boolean)[0];
-            if (!line) return null;
-
-            const stat: DockerStatsRow = JSON.parse(line);
-            const cpu = stat.CPUPerc ? parsePerc(stat.CPUPerc) : 0;
-            const memPerc = parsePerc(stat.MemPerc);
-            const memParts = stat.MemUsage.split('/').map(s => s.trim());
-            const memUsed = parseBytes(memParts[0] ?? '0B');
-            const memLimit = parseBytes(memParts[1] ?? '0B');
-            const net = parseNetIO(stat.NetIO);
-            const pids = parseInt(stat.PIDs, 10) || 0;
-
-            return { cpu, mem: { used: memUsed, limit: memLimit, percent: memPerc }, net, pids };
-        } catch {
-            return null;
-        }
-    },
 };

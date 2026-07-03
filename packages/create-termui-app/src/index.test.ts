@@ -96,4 +96,15 @@ describe('CLI integration', () => {
     expect(existsSync(join(tempDir, 'non-interactive-app', 'package.json'))).toBe(true);
     expect(addSpy).not.toHaveBeenCalled();
   });
+  it('prints version and exits before scaffolding', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const generateSpy = vi.spyOn(templates, 'generateProject');
+
+    const indexModule = await import('./index');
+
+    await indexModule.runCli(['--version']);
+
+    expect(logSpy).toHaveBeenCalledWith(expect.any(String));
+    expect(generateSpy).not.toHaveBeenCalled();
+  });
 });
