@@ -110,7 +110,7 @@ list.scrollTo(500)
 ```
 ## Button
 
-A pressable button with a label, four visual variants, and built-in disabled/loading states. Handles `enter` and `space` key activation automatically when focused.
+A pressable button with a label, four visual variants, and built-in disabled/loading states. Handles `enter` and `space` key activation when focused, provided your app forwards keyboard events to it via `handleKey()`.
 
 ### Purpose
 
@@ -173,8 +173,11 @@ const submitBtn = new Button('Submit', {}, {
     onPress: async () => {
         submitBtn.setLoading(true)
         submitBtn.setLoadingText('Submitting...')
-        await submitForm()
-        submitBtn.setLoading(false)
+        try {
+            await submitForm()
+        } finally {
+            submitBtn.setLoading(false)
+        }
     },
 })
 ```
@@ -200,7 +203,7 @@ const submitBtn = new Button('Submit', {}, {
 | `onPress` fires even while `loading` is `true` | You're calling `onPress` directly instead of routing through `handleKey` | Only `handleKey` respects the `loading`/`disabled` guard; don't call `onPress` directly |
 | Label or disabled state doesn't visually update | You're mutating internal state directly | Always use `setLabel()` / `setDisabled()` / `setLoading()` — these call `markDirty()` for you |
 | Spinner doesn't animate | `NO_MOTION=1` is set, or `prefersReducedMotion()` returns true | This is expected behavior — motion is intentionally disabled; the spinner shows a static first frame instead |
-| Box-drawing characters render as `?` or garbled | Terminal doesn't support Unicode | Set `NO_UNICODE=1` to force the ASCII fallback (`+`, `-`, `|`) |
+| Box-drawing characters render as `?` or garbled | Terminal doesn't support Unicode | Set `NO_UNICODE=1` to force the ASCII fallback (`+`, `-`, `\|`) |
 
 ## AI widgets
 
