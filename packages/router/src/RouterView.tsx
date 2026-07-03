@@ -32,8 +32,10 @@ export function RouterView({ router }: RouterViewProps) {
     useEffect(() => {
         router.autoUnmount = false;
         let cancelTransition: (() => void) | null = null;
+        let alive = true;
 
         const handleNavigate = (e: NavigateEvent) => {
+            if (!alive) return;
             if (cancelTransition) {
                 cancelTransition();
                 cancelTransition = null;
@@ -53,9 +55,11 @@ export function RouterView({ router }: RouterViewProps) {
             cancelTransition = transition({
                 durationMs: 350,
                 onFrame: (p) => {
+                    if (!alive) return;
                     setScreens(prev => ({ ...prev, progress: p }));
                 },
                 onComplete: () => {
+                    if (!alive) return;
                     setScreens(prev => ({ ...prev, previous: null, progress: 1 }));
                     cancelTransition = null;
                 }
@@ -71,8 +75,12 @@ export function RouterView({ router }: RouterViewProps) {
         router.events.on('back', onBack);
         
         return () => {
+            alive = false;
             router.autoUnmount = true;
-            if (cancelTransition) cancelTransition();
+            if (cancelTransition) {
+                cancelTransition();
+                cancelTransition = null;
+            }
             router.events.off('navigate', onNav);
             router.events.off('back', onBack);
         };
