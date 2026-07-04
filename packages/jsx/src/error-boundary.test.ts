@@ -2,7 +2,7 @@
 // @termuijs/jsx — Tests for ErrorBoundary
 // ─────────────────────────────────────────────────────
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ErrorBoundary, hasWidgetRenderError } from './error-boundary.js';
 import { Fragment } from './vnode.js';
 import { Widget } from '@termuijs/widgets';
@@ -73,5 +73,38 @@ describe('hasWidgetRenderError utility', () => {
         const root = new MockWidget(null, [child1, child2]);
 
         expect(hasWidgetRenderError(root)).toBe(err);
+    });
+});
+
+describe('ErrorBoundary async error handling', () => {
+    it('marks ErrorBoundary component correctly', () => {
+        const fallback = (err: Error) => ({ type: 'text', props: {}, children: [err.message] } as any);
+        const result = ErrorBoundary({ fallback, children: [] });
+
+        expect(result).toBeNull();
+    });
+
+    it('captures fallback callback when ErrorBoundary is created', () => {
+        const fallbackFn = vi.fn((err: Error) => ({ type: 'text', props: {}, children: [err.message] } as any));
+        const onErrorFn = vi.fn();
+
+        const child = { type: 'component', props: {}, children: [] } as any;
+        const result = ErrorBoundary({
+            fallback: fallbackFn,
+            onError: onErrorFn,
+            children: child
+        });
+
+        expect(result).toBe(child);
+    });
+
+    it('handles multiple children with ErrorBoundary', () => {
+        const child1 = { type: 'text', props: {}, children: ['Child 1'] } as any;
+        const child2 = { type: 'text', props: {}, children: ['Child 2'] } as any;
+
+        const result = ErrorBoundary({ children: [child1, child2] });
+
+        expect(result?.type).toBe(Fragment);
+        expect(result?.children).toEqual([child1, child2]);
     });
 });

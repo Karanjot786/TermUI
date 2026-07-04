@@ -590,9 +590,15 @@ export function runEffects(fiber: Fiber): void {
         if (!record.ran) {
             // Run cleanup from previous effect
             record.cleanup?.();
-            const cleanup = record.effect();
-            if (typeof cleanup === 'function') {
-                record.cleanup = cleanup;
+            try {
+                const cleanup = record.effect();
+                if (typeof cleanup === 'function') {
+                    record.cleanup = cleanup;
+                }
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error(String(err));
+                record.ran = true;
+                throw error;
             }
             record.ran = true;
         }
@@ -604,9 +610,15 @@ export function runLayoutEffects(fiber: Fiber): void {
         if (!record.ran) {
             // Run cleanup from previous effect
             record.cleanup?.();
-            const cleanup = record.effect();
-            if (typeof cleanup === 'function') {
-                record.cleanup = cleanup;
+            try {
+                const cleanup = record.effect();
+                if (typeof cleanup === 'function') {
+                    record.cleanup = cleanup;
+                }
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error(String(err));
+                record.ran = true;
+                throw error;
             }
             record.ran = true;
         }

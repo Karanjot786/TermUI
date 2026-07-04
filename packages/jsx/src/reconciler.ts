@@ -495,8 +495,25 @@ function renderComponent(
         _parentFiber = prevParent;
 
         cleanupStaleChildFibers(fiber);
-        runLayoutEffects(fiber);
-        runEffects(fiber);
+        try {
+            runLayoutEffects(fiber);
+            runEffects(fiber);
+        } catch (err) {
+            if (err instanceof Promise) {
+                throw err;
+            }
+
+            const error = err instanceof Error ? err : new Error(String(err));
+            const boundary = findErrorBoundary(fiber);
+            if (boundary?.errorFallback) {
+                destroyFiber(fiber);
+                _parentFiber = boundary;
+                const fallbackVNode = boundary.errorFallback(error);
+                return reconcile(fallbackVNode);
+            }
+            destroyFiber(fiber);
+            return reconcile(defaultErrorVNode(error));
+        }
 
         _instanceMap.set(vnode, {
             fiber,
@@ -522,8 +539,25 @@ function renderComponent(
     cleanupStaleChildFibers(fiber);
 
     // Run effects after render
-    runLayoutEffects(fiber);
-    runEffects(fiber);
+    try {
+        runLayoutEffects(fiber);
+        runEffects(fiber);
+    } catch (err) {
+        if (err instanceof Promise) {
+            throw err;
+        }
+
+        const error = err instanceof Error ? err : new Error(String(err));
+        const boundary = findErrorBoundary(fiber);
+        if (boundary?.errorFallback) {
+            destroyFiber(fiber);
+            _parentFiber = boundary;
+            const fallbackVNode = boundary.errorFallback(error);
+            return reconcile(fallbackVNode);
+        }
+        destroyFiber(fiber);
+        return reconcile(defaultErrorVNode(error));
+    }
 
     // Store instance for cleanup and re-renders
     _instanceMap.set(widget, {
@@ -620,8 +654,25 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
         _parentFiber = prevParent;
 
         cleanupStaleChildFibers(fiber);
-        runLayoutEffects(fiber);
-        runEffects(fiber);
+        try {
+            runLayoutEffects(fiber);
+            runEffects(fiber);
+        } catch (err) {
+            if (err instanceof Promise) {
+                throw err;
+            }
+
+            const error = err instanceof Error ? err : new Error(String(err));
+            const boundary = findErrorBoundary(fiber);
+            if (boundary?.errorFallback) {
+                destroyFiber(fiber);
+                _parentFiber = boundary;
+                const fallbackVNode = boundary.errorFallback(error);
+                return reconcile(fallbackVNode);
+            }
+            destroyFiber(fiber);
+            return reconcile(defaultErrorVNode(error));
+        }
         fiber.isDirty = false;
 
         // Invalidate old widget's layout cache before replacing
@@ -639,8 +690,25 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     // memo() optimization: if component returned same VNode reference, skip widget rebuild
     if (vnode === instance.lastVNode) {
         _parentFiber = prevParent;
-        runLayoutEffects(fiber);
-        runEffects(fiber);
+        try {
+            runLayoutEffects(fiber);
+            runEffects(fiber);
+        } catch (err) {
+            if (err instanceof Promise) {
+                throw err;
+            }
+
+            const error = err instanceof Error ? err : new Error(String(err));
+            const boundary = findErrorBoundary(fiber);
+            if (boundary?.errorFallback) {
+                destroyFiber(fiber);
+                _parentFiber = boundary;
+                const fallbackVNode = boundary.errorFallback(error);
+                return reconcile(fallbackVNode);
+            }
+            destroyFiber(fiber);
+            return reconcile(defaultErrorVNode(error));
+        }
         fiber.isDirty = false;
         return instance.widget;
     }
@@ -655,8 +723,25 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     // Destroy child fibers not visited during this render
     cleanupStaleChildFibers(fiber);
 
-    runLayoutEffects(fiber);
-    runEffects(fiber);
+    try {
+        runLayoutEffects(fiber);
+        runEffects(fiber);
+    } catch (err) {
+        if (err instanceof Promise) {
+            throw err;
+        }
+
+        const error = err instanceof Error ? err : new Error(String(err));
+        const boundary = findErrorBoundary(fiber);
+        if (boundary?.errorFallback) {
+            destroyFiber(fiber);
+            _parentFiber = boundary;
+            const fallbackVNode = boundary.errorFallback(error);
+            return reconcile(fallbackVNode);
+        }
+        destroyFiber(fiber);
+        return reconcile(defaultErrorVNode(error));
+    }
     fiber.isDirty = false;
 
     // Invalidate old widget's layout cache before replacing

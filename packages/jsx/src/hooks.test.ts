@@ -6,8 +6,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { timerPoolUnsubscribeAll } from '@termuijs/motion';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
-    useState, useEffect, useRef, useId, useCallback, useKeymap,
-    useAsync, useInterval, useInsertBefore, setRequestRender, setInsertBefore, runEffects, destroyFiber,
+    useState, useEffect, useLayoutEffect, useRef, useId, useCallback, useKeymap,
+    useAsync, useInterval, useInsertBefore, setRequestRender, setInsertBefore, runEffects, runLayoutEffects, destroyFiber,
     type Fiber, type AsyncState,
 } from './hooks.js';
 
@@ -351,5 +351,125 @@ describe('useKeymap — cross-call duplicate detection (dev-mode)', () => {
 
         // Still no warning — same keys across renders is fine, only within a single render matters
         expect(console.warn).not.toHaveBeenCalled();
+    });
+});
+
+describe('Effect error handling', () => {
+    it('runEffects throws synchronous errors from effect', () => {
+        const fiber = createFiber();
+        setCurrentFiber(fiber);
+
+        const err = new Error('Effect failed');
+        useEffect(() => {
+            throw err;
+        });
+
+        clearCurrentFiber();
+
+        expect(() => runEffects(fiber)).toThrow(err);
+    });
+
+    it('runLayoutEffects throws synchronous errors from effect', () => {
+        const fiber = createFiber();
+        setCurrentFiber(fiber);
+
+        const err = new Error('Layout effect failed');
+        useLayoutEffect(() => {
+            throw err;
+        });
+
+        clearCurrentFiber();
+
+        expect(() => runLayoutEffects(fiber)).toThrow(err);
+    });
+
+    it('runEffects converts non-Error throws to Error', () => {
+        const fiber = createFiber();
+        setCurrentFiber(fiber);
+
+        useEffect(() => {
+            throw 'string error';
+        });
+
+        clearCurrentFiber();
+
+        expect(() => runEffects(fiber)).toThrow(/string error/);
+    });
+
+    it('runEffects still sets ran flag before throwing', () => {
+        const fiber = createFiber();
+        setCurrentFiber(fiber);
+
+        useEffect(() => {
+            throw new Error('Effect error');
+        });
+
+        clearCurrentFiber();
+
+        const record = fiber.effects[0];
+        expect(record.ran).toBe(false);
+
+        try {
+            runEffects(fiber);
+        } catch {
+            // Expected to throw
+        }
+
+        expect(record.ran).toBe(true);
+    });
+
+    it('runLayoutEffects still sets ran flag before throwing', () => {
+        const fiber = createFiber();
+        setCurrentFiber(fiber);
+
+        useLayoutEffect(() => {
+            throw new Error('Layout effect error');
+        });
+
+        clearCurrentFiber();
+
+        const record = fiber.layoutEffects[0];
+        expect(record.ran).toBe(false);
+
+        try {
+            runLayoutEffects(fiber);
+        } catch {
+            // Expected to throw
+        }
+
+        expect(record.ran).toBe(true);
+    });
+
+    it('runEffects runs cleanup before effect', () => {
+        const fiber = createFiber();
+        const order: string[] = [];
+
+        setCurrentFiber(fiber);
+        useEffect(() => {
+            order.push('effect');
+            return () => {
+                order.push('cleanup');
+            };
+        });
+        clearCurrentFiber();
+
+        runEffects(fiber);
+        expect(order).toEqual(['effect']);
+
+        // Mark as not ran to run again (simulating re-render)
+        fiber.effects[0].ran = false;
+
+        expect(() => {
+            setCurrentFiber(fiber);
+            useEffect(() => {
+                order.push('effect2');
+                throw new Error('Failed');
+            });
+            clearCurrentFiber();
+
+            runEffects(fiber);
+        }).toThrow();
+
+        expect(order).toEqual(['effect', 'cleanup', 'effect2']);
     });
 });
