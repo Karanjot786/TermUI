@@ -5,12 +5,17 @@ import { TypingIndicator } from './TypingIndicator.js';
 describe('TypingIndicator', () => {
     let screen: Screen;
 
+    let originalMotion: boolean;
+
     beforeEach(() => {
         screen = new Screen(20, 5);
         vi.useFakeTimers();
+        originalMotion = caps.motion;
+        Object.defineProperty(caps, 'motion', { value: true, configurable: true });
     });
 
     afterEach(() => {
+        Object.defineProperty(caps, 'motion', { value: originalMotion, configurable: true });
         vi.useRealTimers();
         vi.restoreAllMocks();
     });
@@ -62,26 +67,22 @@ describe('TypingIndicator', () => {
     });
 
     it('respects caps.motion (reduced motion)', () => {
-        const originalMotion = caps.motion;
         Object.defineProperty(caps, 'motion', { value: false, configurable: true });
-        try {
-            const indicator = new TypingIndicator({}, { fallbackText: 'Typing...' });
-            indicator.updateRect({ x: 0, y: 0, width: 15, height: 1 });
-            
-            indicator.start();
-            indicator.render(screen);
+        
+        const indicator = new TypingIndicator({}, { fallbackText: 'Typing...' });
+        indicator.updateRect({ x: 0, y: 0, width: 15, height: 1 });
+        
+        indicator.start();
+        indicator.render(screen);
 
-            let row = screen.back[0].map(c => c.char).join('').trim();
-            expect(row).toBe('Typing...');
+        let row = screen.back[0].map(c => c.char).join('').trim();
+        expect(row).toBe('Typing...');
 
-            // Advancing time should not change anything when motion is disabled
-            vi.advanceTimersByTime(500);
-            indicator.render(screen);
-            row = screen.back[0].map(c => c.char).join('').trim();
-            expect(row).toBe('Typing...');
-        } finally {
-            Object.defineProperty(caps, 'motion', { value: originalMotion, configurable: true });
-        }
+        // Advancing time should not change anything when motion is disabled
+        vi.advanceTimersByTime(500);
+        indicator.render(screen);
+        row = screen.back[0].map(c => c.char).join('').trim();
+        expect(row).toBe('Typing...');
     });
 
     it('clears interval on unmount', () => {
