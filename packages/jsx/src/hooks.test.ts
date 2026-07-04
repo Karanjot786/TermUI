@@ -8,7 +8,7 @@ import {
     createFiber, setCurrentFiber, clearCurrentFiber,
     useState, useEffect, useLayoutEffect, useRef, useId, useCallback, useKeymap,
     useAsync, useInterval, useInsertBefore, setRequestRender, setInsertBefore, runEffects, runLayoutEffects, destroyFiber,
-    type Fiber, type AsyncState,
+    collectInputHandlers, type Fiber, type AsyncState,
 } from './hooks.js';
 
 describe('useInterval — shared timer pool', () => {
@@ -351,6 +351,128 @@ describe('useKeymap — cross-call duplicate detection (dev-mode)', () => {
 
         // Still no warning — same keys across renders is fine, only within a single render matters
         expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('does not accumulate handlers across multiple renders of the same component', () => {
+        const action = vi.fn();
+        const testEvent = { key: 'q', ctrl: false, alt: false, shift: false } as KeyEvent;
+
+        // First render
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action }]);
+        clearCurrentFiber();
+
+        // Collect and dispatch
+        let handlers = collectInputHandlers(fiber);
+        handlers.forEach(h => h(testEvent));
+        expect(action).toHaveBeenCalledTimes(1);
+        action.mockClear();
+
+        // Second render — fiber should be reset
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action }]);
+        clearCurrentFiber();
+
+        // Should still only fire once, not twice
+        handlers = collectInputHandlers(fiber);
+        handlers.forEach(h => h(testEvent));
+        expect(action).toHaveBeenCalledTimes(1);
+        action.mockClear();
+
+        // Third render
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action }]);
+        clearCurrentFiber();
+
+        // Key should only fire once, not N times (third render should still be 1, not 3)
+        handlers = collectInputHandlers(fiber);
+        handlers.forEach(h => h(testEvent));
+        expect(action).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles multiple useKeymap calls in same render without duplication', () => {
+        const action1 = vi.fn();
+        const action2 = vi.fn();
+        const testEvent = { key: 'q', ctrl: false, alt: false, shift: false } as KeyEvent;
+
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action: action1 }]);
+        useKeymap([{ key: 'q', action: action2 }]);
+        clearCurrentFiber();
+
+        // Both actions should be in the handler chain, but only the last one should execute
+        // (because the first one returns early)
+        const handlers = collectInputHandlers(fiber);
+        handlers.forEach(h => h(testEvent));
+
+        // Only action2 should fire because it was registered last and returns early
+        expect(action1).toHaveBeenCalledTimes(0);
+        expect(action2).toHaveBeenCalledTimes(1);
+    });
+
+    it('only keeps last handler when useKeymap is called multiple times across renders', () => {
+        const action = vi.fn();
+        const testEvent = { key: 'q', ctrl: false, alt: false, shift: false } as KeyEvent;
+
+        // Render 1: Register first handler
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action: () => { action(); action(); } }]); // Call action twice to see if we're doubling
+        clearCurrentFiber();
+
+        let handlers = collectInputHandlers(fiber);
+        handlers.forEach(h => h(testEvent));
+        expect(action).toHaveBeenCalledTimes(2); // Should be 2 because the action is called twice
+        action.mockClear();
+
+        // Render 2: Register second handler - fiber.onInput should be reset by setCurrentFiber
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action: () => { action(); action(); } }]);
+        clearCurrentFiber();
+
+        // If handlers accumulated, we'd see 4 calls (2 old + 2 new). If working correctly, just 2 (new)
+        handlers = collectInputHandlers(fiber);
+        handlers.forEach(h => h(testEvent));
+        expect(action).toHaveBeenCalledTimes(2); // Should be 2, not 4
+    });
+
+    it('does not accumulate handlers when useKeymap bindings change across renders', () => {
+        const action1 = vi.fn();
+        const action2 = vi.fn();
+        const testEvent = { key: 'q', ctrl: false, alt: false, shift: false } as KeyEvent;
+
+        // Render 1
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action: action1 }]);
+        clearCurrentFiber();
+
+        let handlers = collectInputHandlers(fiber);
+        handlers.forEach(h => h(testEvent));
+        expect(action1).toHaveBeenCalledTimes(1);
+        expect(action2).toHaveBeenCalledTimes(0);
+        action1.mockClear();
+        action2.mockClear();
+
+        // Render 2 with different binding
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action: action2 }]);
+        clearCurrentFiber();
+
+        handlers = collectInputHandlers(fiber);
+        handlers.forEach(h => h(testEvent));
+        expect(action1).toHaveBeenCalledTimes(0); // action1 should not be called
+        expect(action2).toHaveBeenCalledTimes(1);
+        action1.mockClear();
+        action2.mockClear();
+
+        // Render 3 back to first action
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action: action1 }]);
+        clearCurrentFiber();
+
+        handlers = collectInputHandlers(fiber);
+        handlers.forEach(h => h(testEvent));
+        expect(action1).toHaveBeenCalledTimes(1); // Should be 1, not accumulated
+        expect(action2).toHaveBeenCalledTimes(0);
     });
 });
 
