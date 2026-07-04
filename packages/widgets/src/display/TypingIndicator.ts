@@ -67,6 +67,7 @@ export class TypingIndicator extends Widget {
 
     destroy(): void {
         this.stop();
+        super.destroy();
     }
 
     unmount(): void {
@@ -95,18 +96,15 @@ export class TypingIndicator extends Widget {
         if (!caps.motion) {
             // Render fallback if reduced motion is preferred
             const display = this._running ? this._fallbackText : '';
-            if (display) {
-                const len = Math.min(stringWidth(display), width);
-                screen.writeString(x, y, display.slice(0, len), attrs);
-            }
+            const padded = display.padEnd(width, ' ');
+            const len = Math.min(stringWidth(padded), width);
+            screen.writeString(x, y, padded.slice(0, len), attrs);
             return;
         }
 
-        if (this._running) {
-            const frame = FRAMES[this._frameIndex];
-            const padded = frame.padEnd(3, ' ');
-            const len = Math.min(stringWidth(padded), width);
-            screen.writeString(x, y, padded.slice(0, len), attrs);
-        }
+        const frame = this._running ? FRAMES[this._frameIndex] : '';
+        const padded = frame.padEnd(3, ' ');
+        const len = Math.min(stringWidth(padded), width);
+        screen.writeString(x, y, padded.slice(0, len), attrs);
     }
 }
