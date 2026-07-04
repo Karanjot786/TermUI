@@ -2,19 +2,19 @@
 // @termuijs/core — Application lifecycle manager
 // ─────────────────────────────────────────────────────
 
-import { Terminal, type TerminalOptions } from '../terminal/Terminal.js';
-import { Screen } from '../terminal/Screen.js';
-import { Renderer } from '../terminal/Renderer.js';
-import { LayerManager } from '../terminal/LayerManager.js';
-import { InputParser } from '../input/InputParser.js';
-import { FocusManager } from '../events/FocusManager.js';
-import { EventEmitter } from '../events/EventEmitter.js';
-import { computeLayout, type LayoutNode } from '../layout/LayoutEngine.js';
-import type { EventMap, FocusEvent, MouseEvent } from '../events/types.js';
-import { createKeyEvent } from '../events/types.js';
-import { renderFallback, shouldUseFallback } from './Fallback.js';
-import { mergeBorders } from '../renderer/border-merge.js';
-import { renderInlineToTerminal } from '../inline-viewport.js';
+import { Terminal, type TerminalOptions } from "../terminal/Terminal.js";
+import { Screen } from "../terminal/Screen.js";
+import { Renderer } from "../terminal/Renderer.js";
+import { LayerManager } from "../terminal/LayerManager.js";
+import { InputParser } from "../input/InputParser.js";
+import { FocusManager } from "../events/FocusManager.js";
+import { EventEmitter } from "../events/EventEmitter.js";
+import { computeLayout, type LayoutNode } from "../layout/LayoutEngine.js";
+import type { EventMap, FocusEvent, MouseEvent } from "../events/types.js";
+import { createKeyEvent } from "../events/types.js";
+import { renderFallback, shouldUseFallback } from "./Fallback.js";
+import { mergeBorders } from "../renderer/border-merge.js";
+import { renderInlineToTerminal } from "../inline-viewport.js";
 
 export interface AppOptions extends TerminalOptions {
     /** Frames per second for the render loop */
@@ -24,7 +24,7 @@ export interface AppOptions extends TerminalOptions {
     /** Merge adjacent borders into junction characters */
     dockBorders?: boolean;
     /** Screen mode: 'alternate' = alt screen (default), 'main' = render to main screen, 'inline' = render N rows at cursor */
-    screenMode?: 'alternate' | 'main' | 'inline';
+    screenMode?: "alternate" | "main" | "inline";
     /** Number of rows to render in inline mode (only used when screenMode='inline') */
     inlineRows?: number;
     /** Enable mouse support. Default: false */
@@ -108,14 +108,19 @@ export class App {
             dockBorders: false,
             diffRenderer: true,
             // Default screenMode: if fullscreen explicitly disabled, treat as 'main', otherwise 'alternate'
-            screenMode: options.fullscreen === false ? 'main' : 'alternate',
+            screenMode: options.fullscreen === false ? "main" : "alternate",
             inlineRows: 0,
             ...options,
         };
 
         this.terminal = new Terminal(options);
         this.screen = new Screen(this.terminal.cols, this.terminal.rows);
-        this.renderer = new Renderer(this.terminal, this.screen, this._options.fps, this._options.diffRenderer);
+        this.renderer = new Renderer(
+            this.terminal,
+            this.screen,
+            this._options.fps,
+            this._options.diffRenderer,
+        );
         this.input = new InputParser(this.terminal.stdin);
         this.focus = new FocusManager();
         this.events = new EventEmitter();
@@ -129,7 +134,10 @@ export class App {
         if (this._mounted) return 0;
 
         // Check if we should use fallback mode
-        if (this._options.forceFallback || (!this._options.skipFallback && shouldUseFallback())) {
+        if (
+            this._options.forceFallback ||
+            (!this._options.skipFallback && shouldUseFallback())
+        ) {
             this._renderFallback();
             return 0;
         }
@@ -156,7 +164,7 @@ export class App {
         // Set up terminal
         this.terminal.enterRawMode();
         // Enter alternate screen only when requested via screenMode === 'alternate'
-        if (this._options.screenMode === 'alternate') {
+        if (this._options.screenMode === "alternate") {
             this.terminal.enterAltScreen();
         }
         this.terminal.hideCursor();
@@ -166,7 +174,10 @@ export class App {
         }
 
         if (this._options.title) {
-            const safeTitle = this._options.title.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+            const safeTitle = this._options.title.replace(
+                /[\u0000-\u001F\u007F-\u009F\u001B]/g,
+                "",
+            );
             this.terminal.write(`\x1b]0;${safeTitle}\x07`);
         }
 
@@ -175,7 +186,7 @@ export class App {
             this.screen.resize(cols, rows);
             this.screen.invalidate();
             this.layers.resize(cols, rows);
-            this.events.emit('resize', { cols, rows });
+            this.events.emit("resize", { cols, rows });
             (this._rootWidget as any).markDirty?.(); // as any: RootWidget.markDirty may be absent in some configs
             this.requestRender();
         });
@@ -195,14 +206,14 @@ export class App {
             if (focusedId) {
                 const chain = this._buildBubbleChain(focusedId);
                 for (const widget of chain) {
-                    widget.events.emit('key', event);
+                    widget.events.emit("key", event);
                     if (event._propagationStopped) break;
                 }
             }
 
             // Phase 2: Default actions (Tab for focus cycling)
             if (!event._defaultPrevented) {
-                if (event.key === 'tab' && !event.ctrl && !event.alt) {
+                if (event.key === "tab" && !event.ctrl && !event.alt) {
                     if (event.shift) {
                         this.focus.focusPrev();
                     } else {
@@ -213,22 +224,22 @@ export class App {
 
             // Phase 3: App-level broadcast (always fires unless stopped)
             if (!event._propagationStopped) {
-                this.events.emit('key', event);
+                this.events.emit("key", event);
             }
         });
 
         // Forward mouse events
         this._unsubMouse = this.input.onMouse((event) => {
-            this.events.emit('mouse', event);
+            this.events.emit("mouse", event);
 
-            if (event.type === 'mousedown' || event.type === 'mouseup') {
+            if (event.type === "mousedown" || event.type === "mouseup") {
                 const hitWidget = this._findWidgetAt(event.x, event.y);
                 if (hitWidget) {
-                    hitWidget.events.emit('mouse', event);
+                    hitWidget.events.emit("mouse", event);
                 }
             }
 
-            if (event.type === 'mousemove') {
+            if (event.type === "mousemove") {
                 const hitWidget = this._findWidgetAt(event.x, event.y);
                 const hitId = hitWidget?.id ?? null;
 
@@ -237,11 +248,17 @@ export class App {
                         ? this._widgetById.get(this._hoveredWidgetId)
                         : null;
                     if (prevWidget) {
-                        prevWidget.events.emit('mouseleave', { ...event, type: 'mouseleave' });
+                        prevWidget.events.emit("mouseleave", {
+                            ...event,
+                            type: "mouseleave",
+                        });
                     }
 
                     if (hitWidget) {
-                        hitWidget.events.emit('mouseenter', { ...event, type: 'mouseenter' });
+                        hitWidget.events.emit("mouseenter", {
+                            ...event,
+                            type: "mouseenter",
+                        });
                     }
 
                     this._hoveredWidgetId = hitId;
@@ -251,16 +268,20 @@ export class App {
 
         // Forward paste events
         this._unsubPaste = this.input.onPaste((text) => {
-            this.events.emit('paste', text);
+            this.events.emit("paste", text);
         });
 
         // Handle signals to ensure hook cleanup on forced exit
-        const onSigInt = (): void => { this.exit(130); };
-        const onSigTerm = (): void => { this.exit(143); };
-        process.on('SIGINT', onSigInt);
-        process.on('SIGTERM', onSigTerm);
-        this._unsubSigInt = () => process.off('SIGINT', onSigInt);
-        this._unsubSigTerm = () => process.off('SIGTERM', onSigTerm);
+        const onSigInt = (): void => {
+            this.exit(130);
+        };
+        const onSigTerm = (): void => {
+            this.exit(143);
+        };
+        process.on("SIGINT", onSigInt);
+        process.on("SIGTERM", onSigTerm);
+        this._unsubSigInt = () => process.off("SIGINT", onSigInt);
+        this._unsubSigTerm = () => process.off("SIGTERM", onSigTerm);
 
         // Register terminal cleanup to stop render hook on process exit
         this.terminal.onCleanup(() => {
@@ -271,22 +292,27 @@ export class App {
         const onUncaughtException = (err: Error) => {
             this.renderer.hook.stop();
             this.renderer.hook.writeRaw(this.renderer.hook.flush());
-            this.renderer.hook.writeRaw(`Uncaught exception: ${err.message}\n${err.stack}\n`);
+            this.renderer.hook.writeRaw(
+                `Uncaught exception: ${err.message}\n${err.stack}\n`,
+            );
             this.terminal.restore();
-            process.exit(1);
+            this.unmount(1);
         };
-        process.on('uncaughtException', onUncaughtException);
-        this._unsubUncaughtException = () => process.off('uncaughtException', onUncaughtException);
+        process.on("uncaughtException", onUncaughtException);
+        this._unsubUncaughtException = () =>
+            process.off("uncaughtException", onUncaughtException);
 
-        const onUnhandledRejection = (reason: any) => { // any: Node unhandledRejection passes unknown reason
+        const onUnhandledRejection = (reason: any) => {
+            // any: Node unhandledRejection passes unknown reason
             this.renderer.hook.stop();
             this.renderer.hook.writeRaw(this.renderer.hook.flush());
             this.renderer.hook.writeRaw(`Unhandled rejection: ${reason}\n`);
             this.terminal.restore();
-            process.exit(1);
+            this.unmount(1);
         };
-        process.on('unhandledRejection', onUnhandledRejection);
-        this._unsubUnhandledRejection = () => process.off('unhandledRejection', onUnhandledRejection);
+        process.on("unhandledRejection", onUnhandledRejection);
+        this._unsubUnhandledRejection = () =>
+            process.off("unhandledRejection", onUnhandledRejection);
 
         // Start render loop — tick drives requestRender() so dirty widgets
         // (motion, timers) get redrawn without a separate setInterval.
@@ -294,7 +320,7 @@ export class App {
 
         // Mount root widget
         this._rootWidget.mount?.();
-        this.events.emit('mount', undefined as any); // as any: EventEmitter generic requires a value; payload is intentionally void
+        this.events.emit("mount", undefined as any); // as any: EventEmitter generic requires a value; payload is intentionally void
 
         // Initial render — invalidate front buffer to force full redraw
         this.screen.invalidate();
@@ -315,7 +341,7 @@ export class App {
         this._hoveredWidgetId = null;
 
         this._rootWidget.unmount?.();
-        this.events.emit('unmount', undefined as any); // as any: EventEmitter generic requires a value; payload is intentionally void
+        this.events.emit("unmount", undefined as any); // as any: EventEmitter generic requires a value; payload is intentionally void
 
         this._unsubSigInt?.();
         this._unsubSigInt = null;
@@ -336,7 +362,6 @@ export class App {
         this._unsubUncaughtException = null;
         this._unsubUnhandledRejection?.();
         this._unsubUnhandledRejection = null;
-
 
         // Stop the stdout interceptor to restore native console.log behavior
         this.renderer.hook.stop();
@@ -396,7 +421,10 @@ export class App {
                 // layers have reported any changes. Done inside the deferred
                 // callback so the dirty check and the _isRenderPending guard
                 // are never racy with concurrent requestRender() calls.
-                if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
+                if (
+                    this._rootWidget.isDirty === false &&
+                    !this.layers.hasDirtyLayers()
+                ) {
                     this._isRenderPending = false;
                     return;
                 }
@@ -404,7 +432,11 @@ export class App {
                 if (this._rootWidget.isDirty !== false) {
                     // Compute layout
                     const layoutRoot = this._rootWidget.getLayoutNode();
-                    computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
+                    computeLayout(
+                        layoutRoot,
+                        this.terminal.cols,
+                        this.terminal.rows,
+                    );
 
                     // Sync computed rects from layout tree back to widgets
                     this._rootWidget.syncLayout?.();
@@ -437,11 +469,15 @@ export class App {
 
                 // Inline rendering bypasses the differential renderer and writes
                 // the bottom N rows directly into the main buffer so scrollback is preserved.
-                if (this._options.screenMode === 'inline') {
+                if (this._options.screenMode === "inline") {
                     for (const item of this._insertBefore) {
-                        this.terminal.write(item.text + '\n');
+                        this.terminal.write(item.text + "\n");
                     }
-                    renderInlineToTerminal(this.terminal, this.screen as any, this._options.inlineRows ?? 0);
+                    renderInlineToTerminal(
+                        this.terminal,
+                        this.screen as any,
+                        this._options.inlineRows ?? 0,
+                    );
                 } else {
                     this.renderer.requestFrame();
                 }
@@ -492,7 +528,7 @@ export class App {
         const id = Symbol();
         this._insertBefore.push({ id, text: line });
         return () => {
-            const idx = this._insertBefore.findIndex(x => x.id === id);
+            const idx = this._insertBefore.findIndex((x) => x.id === id);
             if (idx >= 0) this._insertBefore.splice(idx, 1);
         };
     }
@@ -510,14 +546,18 @@ export class App {
         this._rootWidget.render(this.screen);
 
         const output = renderFallback(this.screen);
-        this.terminal.write(output + '\n');
+        this.terminal.write(output + "\n");
     }
 
     /**
      * Build the bubble chain for keyboard events.
      */
-    private _buildBubbleChain(widgetId: string): Array<{ events: { emit: (event: string, data: any) => void } }> {
-        const chain: Array<{ events: { emit: (event: string, data: any) => void } }> = [];
+    private _buildBubbleChain(
+        widgetId: string,
+    ): Array<{ events: { emit: (event: string, data: any) => void } }> {
+        const chain: Array<{
+            events: { emit: (event: string, data: any) => void };
+        }> = [];
         const widget = this._widgetById.get(widgetId);
         if (!widget) return chain;
 
@@ -534,14 +574,16 @@ export class App {
     /**
      * Rebuild the widget ID cache by walking the entire widget tree.
      */
-    private _buildWidgetMap(root: any): void { // any: Widget tree shape not statically known at traversal
+    private _buildWidgetMap(root: any): void {
+        // any: Widget tree shape not statically known at traversal
         this._widgetById.clear();
         this._walkWidget(root);
         // Pending focus events are safe to apply once widget IDs are registered.
         this._applyPendingFocusState();
     }
 
-    private _walkWidget(widget: any): void { // any: Widget tree shape not statically known at traversal
+    private _walkWidget(widget: any): void {
+        // any: Widget tree shape not statically known at traversal
         if (!widget) return;
         if (widget.id) {
             this._widgetById.set(widget.id, widget);
@@ -555,7 +597,7 @@ export class App {
     }
 
     private _handleFocusEvent(event: FocusEvent): void {
-        const focused = event.type === 'focus';
+        const focused = event.type === "focus";
         const changed = this._setWidgetFocused(event.targetId, focused);
         if (changed === null) {
             // The first focus event can arrive before requestRender() builds
@@ -584,10 +626,14 @@ export class App {
 
     private _subscribeFocusEvents(): void {
         if (!this._unsubFocus) {
-            this._unsubFocus = this.focus.on('focus', event => this._handleFocusEvent(event));
+            this._unsubFocus = this.focus.on("focus", (event) =>
+                this._handleFocusEvent(event),
+            );
         }
         if (!this._unsubBlur) {
-            this._unsubBlur = this.focus.on('blur', event => this._handleFocusEvent(event));
+            this._unsubBlur = this.focus.on("blur", (event) =>
+                this._handleFocusEvent(event),
+            );
         }
     }
 
@@ -602,14 +648,21 @@ export class App {
         }
     }
 
-    private _findWidgetAt(x: number, y: number): any { // any: widget shape varies; narrowed at retrieval
+    private _findWidgetAt(x: number, y: number): any {
+        // any: widget shape varies; narrowed at retrieval
         // 1. Use LayerManager hitTest for overlay layers (respects z-order)
         const layerHitId = this.layers.hitTest(x, y);
         if (layerHitId) {
             const layerWidget = this._widgetById.get(layerHitId);
             if (layerWidget) {
                 const r = layerWidget.rect;
-                if (r && x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
+                if (
+                    r &&
+                    x >= r.x &&
+                    x < r.x + r.width &&
+                    y >= r.y &&
+                    y < r.y + r.height
+                ) {
                     return layerWidget;
                 }
             }
@@ -621,7 +674,12 @@ export class App {
             const r = widget.rect;
             if (!r) continue;
             if (widget.style?.visible === false) continue;
-            if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
+            if (
+                x >= r.x &&
+                x < r.x + r.width &&
+                y >= r.y &&
+                y < r.y + r.height
+            ) {
                 matches.push({ widget, zIndex: widget.style?.zIndex ?? 0 });
             }
         }
@@ -630,14 +688,14 @@ export class App {
         // 3. Sort by z-index descending (topmost wins)
         matches.sort((a, b) => b.zIndex - a.zIndex);
         const topZ = matches[0].zIndex;
-        const topMatches = matches.filter(m => m.zIndex === topZ);
+        const topMatches = matches.filter((m) => m.zIndex === topZ);
 
         // 4. Among same z-index, prefer deepest child widget (most specific)
         if (topMatches.length > 1) {
             for (const m of topMatches) {
                 let p = m.widget.parent;
                 while (p) {
-                    if (topMatches.some(x => x.widget === p)) {
+                    if (topMatches.some((x) => x.widget === p)) {
                         return m.widget;
                     }
                     p = p.parent;
@@ -649,19 +707,13 @@ export class App {
     }
 
     private _isFocusAwareWidget(widget: unknown): widget is FocusAwareWidget {
-        return typeof widget === 'object'
-            && widget !== null
-            && 'id' in widget
-            && typeof widget.id === 'string'
-            && 'isFocused' in widget
-            && typeof widget.isFocused === 'boolean';
+        return (
+            typeof widget === "object" &&
+            widget !== null &&
+            "id" in widget &&
+            typeof widget.id === "string" &&
+            "isFocused" in widget &&
+            typeof widget.isFocused === "boolean"
+        );
     }
 }
-
-
-
-
-
-
-
-
