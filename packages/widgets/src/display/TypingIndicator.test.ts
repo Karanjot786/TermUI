@@ -25,7 +25,7 @@ describe('TypingIndicator', () => {
     });
 
     it('animates frames when started', () => {
-        const indicator = new TypingIndicator({ speedMs: 100 });
+        const indicator = new TypingIndicator({}, { speedMs: 100 });
         indicator.updateRect({ x: 0, y: 0, width: 10, height: 1 });
         
         indicator.start();
@@ -66,7 +66,7 @@ describe('TypingIndicator', () => {
         // Mock caps.motion to be false
         vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
 
-        const indicator = new TypingIndicator({ fallbackText: 'Typing...' });
+        const indicator = new TypingIndicator({}, { fallbackText: 'Typing...' });
         indicator.updateRect({ x: 0, y: 0, width: 15, height: 1 });
         
         indicator.start();
