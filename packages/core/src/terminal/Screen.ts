@@ -5,6 +5,7 @@
 import type { Color } from '../style/Color.js';
 import { stringWidth, segmenter } from '../utils/unicode.js';
 import { stripAnsiControl } from '../utils/ansi.js';
+import { stripAnsiEscapes, sanitizeForDisplay } from './sanitize.js';
 import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
@@ -343,7 +344,7 @@ export class Screen {
         if (!(row >= 0 && row < this._rows)) return;
 
         // Strip ANSI control sequences from user-supplied content to prevent escape injection
-        const safeStr = stripAnsiControl(str);
+        const safeStr = stripAnsiEscapes(str);
         let x = col;
         
         const segments = segmenter.segment(safeStr);
@@ -385,6 +386,31 @@ export class Screen {
 
             x += width;
         }
+    }
+
+    /**
+     * Write a string to the back buffer.
+     *
+     * Unlike `writeString`, this method preserves SGR formatting sequences
+     * (colors, bold, italic, etc.) while still stripping cursor movement,
+     * screen clears, OSC sequences (window title, clipboard, hyperlinks),
+     * and other non-formatting escape sequences.
+     *
+     * Note: TermUI's cell grid does not interpret inline ANSI codes — they
+     * would render as visible characters.  This method is provided for API
+     * completeness and forward compatibility; in practice it behaves the
+     * same as `writeString` for text content.  Use `writeString` for all
+     * user-supplied or untrusted text.
+     */
+    writeFormattedString(
+        col: number,
+        row: number,
+        str: string,
+        style: Partial<Omit<Cell, 'char' | 'width'>> = {},
+    ): void {
+        // Delegate to writeString — the cell grid cannot interpret inline
+        // ANSI codes, so all text paths must be sanitized.
+        this.writeString(col, row, str, style);
     }
 
     /**

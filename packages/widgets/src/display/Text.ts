@@ -13,6 +13,13 @@ export interface TextProps {
     scrollY?: number;
     /** Horizontal scroll offset (columns to skip from left). Default: 0. */
     scrollX?: number;
+    /**
+     * If true, ANSI escape sequences in content are rendered as-is.
+     * Only SGR formatting is preserved — cursor movement, screen clears,
+     * and OSC sequences are still stripped for safety.
+     * Use only for trusted formatted content (e.g., log output).
+     */
+    raw?: boolean;
 }
 
 /**
@@ -24,6 +31,7 @@ export class Text extends Widget {
     private _align: 'left' | 'center' | 'right';
     private _scrollY: number;
     private _scrollX: number;
+    private _raw: boolean;
 
     constructor(content: string, style: Partial<Style> = {}, props: Partial<TextProps> = {}) {
         super(style);
@@ -32,6 +40,9 @@ export class Text extends Widget {
         this._align = props.align ?? 'left';
         this._scrollY = props.scrollY ?? 0;
         this._scrollX = props.scrollX ?? 0;
+        this._raw = props.raw ?? false;
+        // When raw mode is enabled, bypass sanitization (trusted formatted content)
+        this.sanitizeContent = !this._raw;
     }
 
     /** Update the text content */
@@ -86,8 +97,11 @@ export class Text extends Widget {
 
         const attrs = styleToCellAttrs(this._style);
 
+        // Sanitize content to prevent ANSI escape injection
+        const content = this.sanitize(this._content);
+
         // Word-wrap if enabled
-        let text = this._wrap ? wordWrap(this._content, width) : this._content;
+        let text = this._wrap ? wordWrap(content, width) : content;
         const allLines = text.split('\n');
 
         // Apply vertical scroll

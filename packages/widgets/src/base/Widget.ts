@@ -18,6 +18,7 @@ import {
     styleToCellAttrs,
     containsPoint,
     caps,
+    stripAnsiEscapes,
     type A11yProps,
     emitA11y,
 } from '@termuijs/core';
@@ -129,6 +130,13 @@ export abstract class Widget {
     public layoutTransition: Partial<SpringConfig> | SpringPresetName | boolean = false;
     private _layoutCancel: (() => void) | null = null;
     private _targetRect: Rect | null = null;
+
+    /**
+     * Whether to automatically strip ANSI escape sequences from text content
+     * before rendering.  Defaults to `true` for security — set to `false` only
+     * when the widget displays trusted, internally-generated formatted text.
+     */
+    protected sanitizeContent = true;
 
     constructor(style: Partial<Style> = {}) {
         this.id = `widget_${++_widgetIdCounter}`;
@@ -445,6 +453,18 @@ export abstract class Widget {
 
     /** Get the last render error, if any */
     get renderError(): Error | null { return this._renderError; }
+
+    /**
+     * Sanitize text content by stripping ANSI escape sequences.
+     * Subclasses can override to customize behavior or bypass sanitization
+     * for trusted content.
+     */
+    protected sanitize(text: string): string {
+        if (this.sanitizeContent) {
+            return stripAnsiEscapes(text);
+        }
+        return text;
+    }
 
     /**
      * Render the border around this widget, including focus ring if focused.
