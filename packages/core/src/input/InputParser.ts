@@ -135,21 +135,20 @@ export class InputParser {
 
     // If we are currently collecting a paste, append and look for the end marker.
     if (this._isPasting) {
-      const endIdx = str.indexOf(PASTE_END);
+      this._pasteBuffer += str;
+      const endIdx = this._pasteBuffer.indexOf(PASTE_END);
       if (endIdx !== -1) {
-        this._pasteBuffer += str.substring(0, endIdx);
-        const pastedText = this._pasteBuffer;
+        const pastedText = this._pasteBuffer.substring(0, endIdx);
         this._isPasting = false;
         this._pasteBuffer = '';
         this._clearPasteTimeout();
         this._events.emit('paste', pastedText);
 
-        const remaining = str.substring(endIdx + PASTE_END.length);
+        const remaining = this._pasteBuffer.substring(endIdx + PASTE_END.length);
         if (remaining.length > 0) {
           this._processInput(Buffer.from(remaining, 'utf8'));
         }
       } else {
-        this._pasteBuffer += str;
         this._startPasteTimeout();
       }
       return;
@@ -163,8 +162,6 @@ export class InputParser {
         this._escapeTimeout = null;
       }
       this._tryParseEscape();
-      // If the sequence is still incomplete, restart the timeout so fragmented TCP chunks
-      // won't trigger a false standalone ESC.
       if (this._escapeBuffer.length > 0) {
         this._startEscapeTimeout();
       }
@@ -174,7 +171,6 @@ export class InputParser {
     // Detect bracketed paste start/end in this chunk.
     const startIdx = str.indexOf(PASTE_START);
     if (startIdx !== -1) {
-      // Process any normal input before the paste start.
       if (startIdx > 0) {
         const before = str.substring(0, startIdx);
         this._processInput(Buffer.from(before, 'utf8'));
@@ -184,14 +180,12 @@ export class InputParser {
       const endIdx = afterStart.indexOf(PASTE_END);
 
       if (endIdx !== -1) {
-        // Both markers in one chunk: emit paste and process trailing input.
         this._events.emit('paste', afterStart.substring(0, endIdx));
         const remaining = afterStart.substring(endIdx + PASTE_END.length);
         if (remaining.length > 0) {
           this._processInput(Buffer.from(remaining, 'utf8'));
         }
       } else {
-        // Paste spans multiple chunks: start collecting.
         this._isPasting = true;
         this._pasteBuffer = afterStart;
         this._startPasteTimeout();
@@ -201,7 +195,6 @@ export class InputParser {
 
     // Check if this starts an escape sequence.
     if (str.startsWith('\x1b') && str.length === 1) {
-      // Lone ESC — wait for more bytes.
       this._escapeBuffer = data;
       this._startEscapeTimeout();
       return;
@@ -225,7 +218,6 @@ export class InputParser {
       this._graphemeTimeout = null;
     }
 
-    // Process after a short 10ms delay to merge split chunks (like modifiers or ZWJ sequences).
     this._graphemeTimeout = setTimeout(() => {
       this._processGraphemeBuffer();
       this._graphemeTimeout = null;
@@ -239,7 +231,6 @@ export class InputParser {
     if (graphemes.length === 0) return;
 
     let processCount = graphemes.length;
-    // Check if the last grapheme is potentially incomplete.
     const lastGrapheme = graphemes[graphemes.length - 1];
     if (this._isPossiblyIncompleteGrapheme(lastGrapheme)) {
       processCount = graphemes.length - 1;
@@ -250,7 +241,6 @@ export class InputParser {
       const code = ch.codePointAt(0)!;
       const raw = Buffer.from(ch, 'utf8');
 
-      // Ctrl+key (0x01-0x1A, excluding tab/enter/backspace).
       if (code >= 0x01 && code <= 0x1A) {
         const keyName = CTRL_KEYS[code];
         const isCtrl = code !== 0x09 && code !== 0x0D && code !== 0x0A;
@@ -264,7 +254,6 @@ export class InputParser {
         continue;
       }
 
-      // Special keys.
       if (code in SPECIAL_KEYS) {
         this._events.emit('key', createKeyEvent({
           key: SPECIAL_KEYS[code],
@@ -276,7 +265,6 @@ export class InputParser {
         continue;
       }
 
-      // Regular printable character.
       if (code >= 0x20) {
         this._events.emit('key', createKeyEvent({
           key: ch,
@@ -288,20 +276,15 @@ export class InputParser {
       }
     }
 
-    // Update the remaining buffer.
     this._graphemeBuffer = graphemes.slice(processCount).join('');
   }
 
   private _isPossiblyIncompleteGrapheme(ch: string): boolean {
     if (!ch) return false;
-    // ZWJ sequence continuation check.
     if (ch.endsWith('\u200D')) return true;
-    // Surrogate pair incomplete check (last char is high surrogate).
     const lastCharCode = ch.charCodeAt(ch.length - 1);
     if (lastCharCode >= 0xD800 && lastCharCode <= 0xDBFF) return true;
-
-    // Regional Indicator Symbols (flags: U+1F1E6 to U+1F1FF).
-    // Check if there's an odd number of regional indicator symbols in this grapheme.
+    
     const codePoints = Array.from(ch);
     const lastCpVal = codePoints[codePoints.length - 1].codePointAt(0)!;
     if (lastCpVal >= 0x1F1E6 && lastCpVal <= 0x1F1FF) {
@@ -321,15 +304,8 @@ export class InputParser {
     return false;
   }
 
-  /**
-   * Start or restart the escape sequence timeout.
-   * Fires when no additional bytes arrive within the window,
-   * treating the buffered bytes as a standalone Escape key.
-   */
   private _startEscapeTimeout(): void {
-    if (this._escapeTimeout) {
-      clearTimeout(this._escapeTimeout);
-    }
+    if (this._escapeTimeout) clearTimeout(this._escapeTimeout);
     this._escapeTimeout = setTimeout(() => {
       const remained = this._escapeBuffer;
       this._escapeBuffer = Buffer.alloc(0);
@@ -344,11 +320,6 @@ export class InputParser {
     }, ESCAPE_TIMEOUT_MS);
   }
 
-  /**
-   * Start or restart the paste inactivity timeout.
-   * If no additional paste data arrives within the timeout,
-   * the paste state is aborted to prevent stale state.
-   */
   private _startPasteTimeout(): void {
     this._clearPasteTimeout();
     this._pasteTimeout = setTimeout(() => {
@@ -365,9 +336,6 @@ export class InputParser {
     }
   }
 
-  /**
-   * Try to parse buffered escape sequence.
-   */
   private _tryParseEscape(): void {
     const seq = this._escapeBuffer.toString('utf8');
 
@@ -384,7 +352,6 @@ export class InputParser {
       return;
     }
 
-    // Check for mouse event first.
     if (isMouseSequence(seq)) {
       const mouseEvt = parseMouseEvent(seq);
       if (mouseEvt) {
@@ -392,13 +359,9 @@ export class InputParser {
         this._escapeBuffer = Buffer.alloc(0);
         return;
       }
-      // Might be incomplete mouse sequence — wait for more data (no timeout, FSM handles via _escapeBuffer).
-      if (seq.length < 20) { // safety cap
-        return;
-      }
+      if (seq.length < 20) return;
     }
 
-    // Cursor position report.
     const cursorMatch = seq.match(/^\x1b\[(\d+);(\d+)R$/);
     if (cursorMatch) {
       const row = parseInt(cursorMatch[1], 10);
@@ -414,7 +377,6 @@ export class InputParser {
       return;
     }
 
-    // Focus tracking sequences.
     if (seq === '\x1b[I') {
       this._events.emit('focuschange', true);
       this._escapeBuffer = Buffer.alloc(0);
@@ -427,7 +389,6 @@ export class InputParser {
       return;
     }
 
-    // Check known escape sequences.
     if (seq in ESCAPE_SEQUENCES) {
       const keyName = ESCAPE_SEQUENCES[seq];
       const isShift = keyName.startsWith('shift+');
@@ -446,7 +407,6 @@ export class InputParser {
       return;
     }
 
-    // Alt+key: ESC followed by a regular character.
     if (
       seq.length === 2 &&
       seq[0] === '\x1b' &&
@@ -465,13 +425,9 @@ export class InputParser {
       return;
     }
 
-    // If the sequence is getting too long, give up.
     if (seq.length > 20) {
       this._escapeBuffer = Buffer.alloc(0);
       return;
     }
-
-    // Wait for more bytes (might be an incomplete sequence; FSM handles via _escapeBuffer).
-    return;
   }
 }
