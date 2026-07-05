@@ -206,11 +206,30 @@ export class Terminal {
      */
     write(data: string): void {
         if (!data) return;
-        
+
+        if (this._restoring) {
+            this.stdout.write(data);
+            return;
+        }
+
         this._writeQueue.push(data);
         if (this._isWriting) return;
 
         this._processWriteQueue();
+    }
+
+    private _flushWriteQueue(): void {
+        if (this._isWriting) return;
+
+        this._isWriting = true;
+        try {
+            while (this._writeQueue.length > 0) {
+                const chunk = this._writeQueue.shift()!;
+                this.stdout.write(chunk);
+            }
+        } finally {
+            this._isWriting = false;
+        }
     }
 
     /**
@@ -223,11 +242,7 @@ export class Terminal {
      */
     writeSync(data: string): void {
         if (!data) return;
-        while (this._writeQueue.length > 0) {
-            const chunk = this._writeQueue.shift()!;
-            this.stdout.write(chunk);
-        }
-        this._isWriting = false;
+        this._flushWriteQueue();
         this.stdout.write(data);
     }
 
@@ -304,9 +319,8 @@ export class Terminal {
             this._resizeTimer = null;
         }
 
-        // Clear hanging buffer data states
-        this._writeQueue = [];
-        this._isWriting = false;
+        // Flush any queued writes so shutdown does not drop buffered output.
+        this._flushWriteQueue();
 
         // Remove process-level handlers to prevent leaks
         if (this._exitHandler) process.off('exit', this._exitHandler);

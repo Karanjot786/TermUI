@@ -13,7 +13,8 @@ function createFakeStdout() {
         columns: 80,
         rows: 24,
         on: vi.fn(),
-        off: vi.fn()
+        off: vi.fn(),
+        once: vi.fn()
     } as unknown as NodeJS.WriteStream;
 }
 
@@ -331,6 +332,32 @@ describe('Terminal', () => {
             // All writes should have been processed
             expect((terminal as any)._writeQueue.length).toBe(0);
             expect((terminal as any)._isWriting).toBe(false);
+        });
+
+        it('flushes pending queued writes before restore completes', () => {
+            const stdout = createFakeStdout();
+            const writes: string[] = [];
+            stdout.write.mockImplementation((data: string) => {
+                writes.push(data);
+                return true;
+            });
+            const terminal = new Terminal({ stdout });
+
+            terminal.write('first');
+            terminal.write('second');
+
+            const originalDisableMouse = terminal.disableMouse;
+            terminal.disableMouse = () => {
+                terminal.write('during-restore');
+                originalDisableMouse.call(terminal);
+            };
+
+            terminal.restore();
+
+            expect(writes).toContain('first');
+            expect(writes).toContain('second');
+            expect(writes).toContain('during-restore');
+            expect(writes.indexOf('first')).toBeLessThan(writes.indexOf('during-restore'));
         });
     });
 });
