@@ -89,6 +89,8 @@ export class App {
     private _widgetById = new Map<string, any>(); // any: Widget shape varies; narrowed at retrieval
     private _hoveredWidgetId: string | null = null;
     private _pendingFocusState = new Map<string, boolean>();
+    private _pendingFocusRetries = new Map<string, number>();
+    private static readonly PENDING_FOCUS_MAX_RETRIES = 5;
 
     private _consecutiveRenderFailures = 0;
     private static readonly MAX_RENDER_FAILURES = 5;
@@ -598,6 +600,15 @@ export class App {
             const stateChanged = this._setWidgetFocused(id, focused);
             if (stateChanged !== null) {
                 this._pendingFocusState.delete(id);
+                this._pendingFocusRetries.delete(id);
+            } else {
+                const retries = this._pendingFocusRetries.get(id) ?? 0;
+                if (retries >= App.PENDING_FOCUS_MAX_RETRIES) {
+                    this._pendingFocusState.delete(id);
+                    this._pendingFocusRetries.delete(id);
+                } else {
+                    this._pendingFocusRetries.set(id, retries + 1);
+                }
             }
         }
     }
