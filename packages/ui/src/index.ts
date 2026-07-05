@@ -246,3 +246,5 @@ export type { WelcomeScreenOptions, KeymapHint } from './WelcomeScreen.js';
 export { SetupFlow } from './SetupFlow.js';
 export type { SetupFlowOptions, SetupStep } from './SetupFlow.js';
 
+export { AgentChat } from './AgentChat.js';
+export type { AgentChatOptions, AgentQueryFn } from './AgentChat.js';

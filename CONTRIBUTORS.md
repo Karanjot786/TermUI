@@ -170,3 +170,4 @@ We want to thank all the amazing contributors who have helped make TermUI what i
 | <img src="https://avatars.githubusercontent.com/u/193204489?v=4" width="40" height="40" style="border-radius: 50%;" alt="ezManish" /> | [@ezManish](https://github.com/ezManish) | 1 |
 | <img src="https://avatars.githubusercontent.com/u/175976252?v=4" width="40" height="40" style="border-radius: 50%;" alt="MeghPatel-007" /> | [@MeghPatel-007](https://github.com/MeghPatel-007) | 1 |
 | <img src="https://avatars.githubusercontent.com/u/73940656?v=4" width="40" height="40" style="border-radius: 50%;" alt="nkapoor175" /> | [@nkapoor175](https://github.com/nkapoor175) | 1 |
+| <img src="https://avatars.githubusercontent.com/u/202941550?v=4" width="40" height="40" style="border-radius: 50%;" alt="Neelr1912" /> | [@Neelr1912](https://github.com/Neelr1912) | 1 |
