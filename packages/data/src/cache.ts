@@ -50,12 +50,12 @@ export function setCache<T = any>(key: string, data: T, staleTime: number): void
         timestamp: Date.now(),
         staleTime,
     });
-    // Evict the least recently used entry (first in insertion order)
-    if (cacheStore.size > maxSize) {
+    // Evict least-recently-used entries (first in insertion order) until within limit.
+    // while, not if: converges when setCacheMaxSize() shrinks the limit below current size.
+    while (cacheStore.size > maxSize) {
         const oldestKey = cacheStore.keys().next().value;
-        if (oldestKey !== undefined) {
-            cacheStore.delete(oldestKey);
-        }
+        if (oldestKey === undefined) break;
+        cacheStore.delete(oldestKey);
     }
 }
 

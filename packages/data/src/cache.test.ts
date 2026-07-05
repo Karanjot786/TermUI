@@ -138,6 +138,22 @@ describe('Response Cache Provider', () => {
             expect(getCache('c')).toBeDefined();
             expect(getCache('d')).toBeDefined();
         });
+
+        it('converges to the new limit when maxSize is shrunk below current size', () => {
+            setCacheMaxSize(5);
+            setCache('a', 1, 5000);
+            setCache('b', 2, 5000);
+            setCache('c', 3, 5000);
+            setCache('d', 4, 5000);
+            setCache('e', 5, 5000); // 5 entries, at limit
+            setCacheMaxSize(2);
+            setCache('f', 6, 5000); // one set must drain down to the new limit of 2
+            expect(getCache('e')).toBeDefined();
+            expect(getCache('f')).toBeDefined();
+            for (const k of ['a', 'b', 'c', 'd']) {
+                expect(getCache(k)).toBeUndefined();
+            }
+        });
     });
 
     describe('fetchShared', () => {
