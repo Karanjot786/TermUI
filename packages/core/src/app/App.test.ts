@@ -2,7 +2,6 @@
 // @termuijs/core — Tests for App lifecycle
 // ─────────────────────────────────────────────────────
 
-import { EventEmitter } from 'events';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { App, type AppOptions, type RootWidget } from './App.js';
 import type { Screen } from '../terminal/Screen.js';
@@ -191,37 +190,17 @@ describe('App', () => {
         });
 
         it('removes the resize subscription on unmount', async () => {
-            const fakeStdout = Object.assign(new EventEmitter(), {
-                columns: 80,
-                rows: 24,
-                isTTY: true,
-                write() { return true; },
-            });
-            const fakeStdin = {
-                isTTY: true,
-                isRaw: false,
-                setRawMode() {},
-                resume() {},
-                pause() {},
-                on() {},
-                off() {},
-            };
-
-            const app = new App(createMockRootWidget(), {
-                forceFallback: false,
-                skipFallback: true,
-                screenMode: 'main',
-                stdout: fakeStdout as unknown as NodeJS.WriteStream,
-                stdin: fakeStdin as unknown as NodeJS.ReadStream,
-            });
+            const cleanup = vi.fn();
+            const app = new App(createMockRootWidget(), createInteractiveTestOptions());
+            const onResizeSpy = vi.spyOn(app.terminal, 'onResize').mockImplementation(() => cleanup);
             const mountPromise = app.mount();
 
-            expect(fakeStdout.listenerCount('resize')).toBe(1);
+            expect(onResizeSpy).toHaveBeenCalledTimes(1);
 
             app.unmount();
             await mountPromise;
 
-            expect(fakeStdout.listenerCount('resize')).toBe(0);
+            expect(cleanup).toHaveBeenCalledTimes(1);
         });
     });
 
