@@ -87,9 +87,10 @@ export class Stopwatch extends Widget {
      * Release all resources held by this widget.
      * Call this when the widget is no longer needed to avoid timer leaks.
      */
-    destroy(): void {
+    override destroy(): void {
         this.stop();
         this._clearInterval();
+        super.destroy();
     }
 
     // ── Lifecycle ───────────────────────────────────────────────────────

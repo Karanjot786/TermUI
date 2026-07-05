@@ -41,11 +41,11 @@ describe('disk provider', () => {
             size: '932Gi',
             used: '12Gi',
             available: '634Gi',
-            percent: 5,
+            percent: 2,
             mountpoint: '/',
         });
 
-        expect(disk.percent).toBe(5);
+        expect(disk.percent).toBe(2);
         expect(disk.main).toEqual(parts[0]);
     });
 

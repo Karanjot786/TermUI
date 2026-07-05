@@ -151,13 +151,12 @@ export class RangeInput extends Widget {
 
         this.onChange = opts.onChange;
 
-this._low = this._min;
-this._high = this._max;
-
-this.setRange(
-    opts.low ?? this._min,
-    opts.high ?? this._max,
-);
+        const [low, high] = this._normalizeRange(
+            opts.low ?? this._min,
+            opts.high ?? this._max,
+        );
+        this._low = low;
+        this._high = high;
     }
 
     handleKey(event: KeyEvent): void {
@@ -192,40 +191,39 @@ this.setRange(
         return this._high;
     }
 
-    setRange(low: number, high: number): void {
-    const nextLow = Math.max(
-        this._min,
-        Math.min(this._max, low),
-    );
+    private _normalizeRange(low: number, high: number): [number, number] {
+        const nextLow = Math.max(
+            this._min,
+            Math.min(this._max, low),
+        );
 
-    const nextHigh = Math.max(
-        this._min,
-        Math.min(this._max, high),
-    );
+        const nextHigh = Math.max(
+            this._min,
+            Math.min(this._max, high),
+        );
 
-    const normalizedLow = Math.min(
-        nextLow,
-        nextHigh,
-    );
-
-    const normalizedHigh = Math.max(
-        nextLow,
-        nextHigh,
-    );
-
-    if (
-        normalizedLow === this._low &&
-        normalizedHigh === this._high
-    ) {
-        return;
+        return [
+            Math.min(nextLow, nextHigh),
+            Math.max(nextLow, nextHigh),
+        ];
     }
 
-    this._low = normalizedLow;
-    this._high = normalizedHigh;
+    setRange(low: number, high: number): void {
+        const [normalizedLow, normalizedHigh] = this._normalizeRange(low, high);
 
-    this.onChange?.(this._low, this._high);
-    this.markDirty();
-}
+        if (
+            normalizedLow === this._low &&
+            normalizedHigh === this._high
+        ) {
+            return;
+        }
+
+        this._low = normalizedLow;
+        this._high = normalizedHigh;
+
+        this.onChange?.(this._low, this._high);
+        this.markDirty();
+    }
 
     protected _renderSelf(screen: Screen): void {
         const { x, y, width } = this._rect;

@@ -79,4 +79,19 @@ describe('NumberInput', () => {
         expect(onChange).toHaveBeenCalledWith(42);
         expect(markDirty).toHaveBeenCalled();
     });
+
+    it('clamps typed values exposed through numericValue and submit', () => {
+        const onChange = vi.fn();
+        const onSubmit = vi.fn();
+        const input = new NumberInput({}, { min: 0, max: 10, onChange, onSubmit });
+
+        input.insertChar('9');
+        input.insertChar('9');
+        input.submit();
+
+        expect(input.rawValue).toBe('99');
+        expect(input.numericValue).toBe(10);
+        expect(onChange).toHaveBeenLastCalledWith(10);
+        expect(onSubmit).toHaveBeenCalledWith(10);
+    });
 });

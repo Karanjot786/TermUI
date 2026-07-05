@@ -11,6 +11,8 @@ import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import { splitGraphemes } from './grapheme.js';
 
+const ESCAPE_TIMEOUT_MS = 500;
+
 export interface CursorPosition {
     row: number;
     col: number;
@@ -113,6 +115,8 @@ export class InputParser {
         }
         this._escapeBuffer = Buffer.alloc(0);
         this._graphemeBuffer = '';
+        this._isPasting = false;
+        this._pasteBuffer = '';
         this._decoder.end();
         for (const req of this._cursorRequests) {
             clearTimeout(req.timeout);
@@ -158,6 +162,11 @@ export class InputParser {
                 this._escapeTimeout = null;
             }
             this._tryParseEscape();
+            // If the sequence is still incomplete, restart the timeout
+            // so fragmented TCP chunks won't trigger a false standalone ESC.
+            if (this._escapeBuffer.length > 0) {
+                this._startEscapeTimeout();
+            }
             return;
         }
 
@@ -189,27 +198,18 @@ export class InputParser {
 
         // Check if this starts an escape sequence
         if (str.startsWith('\x1b') && str.length === 1) {
-            // Lone ESC — wait for more bytes (FSM via _escapeBuffer handles continuation)
+            // Lone ESC — wait for more bytes
             this._escapeBuffer = data;
-            this._escapeTimeout = setTimeout(() => {
-                // Timeout — it was a standalone Escape key
-                const remained = this._escapeBuffer;
-                this._escapeBuffer = Buffer.alloc(0);
-                this._escapeTimeout = null;
-                this._events.emit('key', createKeyEvent({
-                    key: 'escape',
-                    raw: remained,
-                    ctrl: false,
-                    alt: false,
-                    shift: false,
-                }));
-            }, 200); // 200ms debounce (increased from 50ms to avoid race with render)
+            this._startEscapeTimeout();
             return;
         }
 
         if (str.startsWith('\x1b')) {
             this._escapeBuffer = data;
             this._tryParseEscape();
+            if (this._escapeBuffer.length > 0) {
+                this._startEscapeTimeout();
+            }
             return;
         }
 
@@ -316,6 +316,29 @@ export class InputParser {
             }
         }
         return false;
+    }
+
+    /**
+     * Start or restart the escape sequence timeout.
+     * Fires when no additional bytes arrive within the window,
+     * treating the buffered bytes as a standalone Escape key.
+     */
+    private _startEscapeTimeout(): void {
+        if (this._escapeTimeout) {
+            clearTimeout(this._escapeTimeout);
+        }
+        this._escapeTimeout = setTimeout(() => {
+            const remained = this._escapeBuffer;
+            this._escapeBuffer = Buffer.alloc(0);
+            this._escapeTimeout = null;
+            this._events.emit('key', createKeyEvent({
+                key: 'escape',
+                raw: remained,
+                ctrl: false,
+                alt: false,
+                shift: false,
+            }));
+        }, ESCAPE_TIMEOUT_MS);
     }
 
     /**
