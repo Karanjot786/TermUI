@@ -10,33 +10,53 @@ import { Screen } from '@termuijs/core';
 vi.mock('node:child_process', () => {
     return {
         spawn: vi.fn().mockImplementation(() => {
-            let stdoutCb: any;
-            let stderrCb: any;
-            let closeCb: any;
-            
+            const listeners = {
+                stdoutData: new Set<(...args: unknown[]) => void>(),
+                stderrData: new Set<(...args: unknown[]) => void>(),
+                close: new Set<(...args: unknown[]) => void>(),
+            };
+
             return {
                 stdout: {
-                    on: (event: string, cb: any) => { if (event === 'data') stdoutCb = cb; }
+                    on: (event: string, cb: (...args: unknown[]) => void) => {
+                        if (event === 'data') listeners.stdoutData.add(cb);
+                    },
+                    removeListener: (event: string, cb: (...args: unknown[]) => void) => {
+                        if (event === 'data') listeners.stdoutData.delete(cb);
+                    },
+                    listenerCount: (event: string) => event === 'data' ? listeners.stdoutData.size : 0,
                 },
                 stderr: {
-                    on: (event: string, cb: any) => { if (event === 'data') stderrCb = cb; }
+                    on: (event: string, cb: (...args: unknown[]) => void) => {
+                        if (event === 'data') listeners.stderrData.add(cb);
+                    },
+                    removeListener: (event: string, cb: (...args: unknown[]) => void) => {
+                        if (event === 'data') listeners.stderrData.delete(cb);
+                    },
+                    listenerCount: (event: string) => event === 'data' ? listeners.stderrData.size : 0,
                 },
                 stdin: {
                     writable: true,
                     write: vi.fn()
                 },
-                on: (event: string, cb: any) => { if (event === 'close') closeCb = cb; },
+                on: (event: string, cb: (...args: unknown[]) => void) => {
+                    if (event === 'close') listeners.close.add(cb);
+                },
+                removeListener: (event: string, cb: (...args: unknown[]) => void) => {
+                    if (event === 'close') listeners.close.delete(cb);
+                },
+                listenerCount: (event: string) => event === 'close' ? listeners.close.size : 0,
                 kill: vi.fn(),
                 
                 // Helper to simulate output in tests
                 _emitStdout: (data: string) => {
-                    if (stdoutCb) stdoutCb(Buffer.from(data));
+                    for (const cb of listeners.stdoutData) cb(Buffer.from(data));
                 },
                 _emitStderr: (data: string) => {
-                    if (stderrCb) stderrCb(Buffer.from(data));
+                    for (const cb of listeners.stderrData) cb(Buffer.from(data));
                 },
                 _emitClose: () => {
-                    if (closeCb) closeCb();
+                    for (const cb of listeners.close) cb();
                 }
             };
         })
@@ -170,6 +190,30 @@ describe('Pty', () => {
         pty.destroy();
         expect(mockProcess.kill).toHaveBeenCalled();
         expect((pty as any)._process).toBeNull();
+    });
+
+    it('ignores late process output after destroy', () => {
+        const pty = new Pty();
+        const screen = new Screen(20, 5);
+        pty.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+        pty.render(screen);
+
+        const mockProcess = (pty as any)._process;
+        pty.destroy();
+
+        mockProcess._emitStdout('late output');
+        mockProcess._emitStderr('late stderr');
+        mockProcess._emitClose();
+
+        pty.render(screen);
+
+        const output = screen.back
+            .map(row => row.map(c => c.char).join(''))
+            .join('\n');
+
+        expect(output).not.toContain('late output');
+        expect(output).not.toContain('late stderr');
+        expect(output).not.toContain('[Process Exited]');
     });
 
     it('trims buffer to the last 1000 lines', () => {
