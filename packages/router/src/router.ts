@@ -177,7 +177,8 @@ export class Router {
         }
     }
 
-    _wrapScreen(match: RouteMatch): VNode {
+    /** Wrap a route match into a VNode with layout chain and providers */
+    wrapScreen(match: RouteMatch): VNode {
         let screen = createElement(match.route.component, match.params);
 
         for (let i = match.chain.length - 2; i >= 0; i--) {
@@ -267,7 +268,7 @@ export class Router {
                 const notFoundMatch = this._createNotFoundMatch(resolvedPath);
                 this._currentMatch = notFoundMatch;
                 if (this.autoUnmount) unmountAll();
-                const screen = this._wrapScreen(notFoundMatch);
+                const screen = this.wrapScreen(notFoundMatch);
                 const emitEvent = direction === 'back' ? 'back' : 'navigate';
                 this.events.emit(emitEvent, { match: notFoundMatch, screen, direction });
                 return;
@@ -310,7 +311,7 @@ export class Router {
 
         this._currentMatch = match;
         if (this.autoUnmount) unmountAll();
-        const screen = this._wrapScreen(match);
+        const screen = this.wrapScreen(match);
 
         const emitEvent = direction === 'back' ? 'back' : 'navigate';
         this.events.emit(emitEvent, { match, screen, direction });
@@ -353,6 +354,19 @@ export class Router {
         const match = prevPath ? matchRoute(prevPath, this._routes) : null;
 
         if (!match) {
+            if (this._notFound && prevPath) {
+                const poppedPath = this._history.pop();
+                if (poppedPath) {
+                    this._forwardStack.push(poppedPath);
+                }
+                this._executeNavigation(prevPath, {
+                    modifyHistory: 'none',
+                    clearForwardStack: false,
+                    direction: 'back',
+                });
+                return;
+            }
+
             this.events.emit('back', null);
             return;
         }
@@ -379,7 +393,7 @@ export class Router {
 
         this._currentMatch = match;
         if (this.autoUnmount) unmountAll();
-        const screen = this._wrapScreen(match);
+        const screen = this.wrapScreen(match);
 
         this.events.emit('back', { match, screen, direction: 'back' });
 
@@ -394,6 +408,16 @@ export class Router {
 
         const match = matchRoute(nextPath, this._routes);
         if (!match) {
+            if (this._notFound) {
+                this._forwardStack.pop();
+                this._executeNavigation(nextPath, {
+                    modifyHistory: 'push',
+                    clearForwardStack: false,
+                    direction: 'forward',
+                });
+                return;
+            }
+
             this.events.emit('error', new Error(`No route found for forward path: ${nextPath}`));
             return;
         }
@@ -414,7 +438,7 @@ export class Router {
         this._history.push(nextPath);
         this._currentMatch = match;
         if (this.autoUnmount) unmountAll();
-        const screen = this._wrapScreen(match);
+        const screen = this.wrapScreen(match);
         this.events.emit('navigate', { match, screen, direction: 'forward' });
 
         match.route.afterEnter?.(nextPath);

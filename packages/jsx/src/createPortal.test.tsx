@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { Box, Text } from '@termuijs/widgets';
+import { instanceMap } from './globals.js';
 import { createPortal } from './createPortal.js';
 import { useState, setRequestRender } from './hooks.js';
 import { createElement as h } from './createElement.js';
@@ -48,8 +49,7 @@ describe('createPortal', () => {
         }
 
         const rootWidget = reconcile(h(App, {}));
-        const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
-        const rootInstance = instances?.get(rootWidget);
+        const rootInstance = instanceMap.get(rootWidget);
 
         // Mock requestRender so state updates trigger a re-render in our manual test
         setRequestRender(() => {
