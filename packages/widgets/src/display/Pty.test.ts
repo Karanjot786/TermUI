@@ -6,6 +6,35 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Pty } from './Pty.js';
 import { Screen } from '@termuijs/core';
 
+type MockPtyProcess = {
+    _emitStdout: (data: string) => void;
+    _emitStderr: (data: string) => void;
+    _emitClose: () => void;
+    stdin: { writable: boolean; write: ReturnType<typeof vi.fn> };
+    stdout: {
+        on: (event: string, cb: (...args: unknown[]) => void) => void;
+        removeListener: (event: string, cb: (...args: unknown[]) => void) => void;
+        listenerCount: (event: string) => number;
+    };
+    stderr: {
+        on: (event: string, cb: (...args: unknown[]) => void) => void;
+        removeListener: (event: string, cb: (...args: unknown[]) => void) => void;
+        listenerCount: (event: string) => number;
+    };
+    on: (event: string, cb: (...args: unknown[]) => void) => void;
+    removeListener: (event: string, cb: (...args: unknown[]) => void) => void;
+    listenerCount: (event: string) => number;
+    kill: ReturnType<typeof vi.fn>;
+};
+
+function getMockProcess(pty: Pty): MockPtyProcess {
+    const process = (pty as unknown as { _process: MockPtyProcess | null })._process;
+    if (!process) {
+        throw new Error('Expected Pty to have a spawned process');
+    }
+    return process;
+}
+
 // Mock child_process to avoid actually spawning shells during tests
 vi.mock('node:child_process', () => {
     return {
@@ -88,7 +117,7 @@ describe('Pty', () => {
         pty.updateRect({ x: 0, y: 0, width: 20, height: 5 });
         
         // Grab the mocked process to simulate output
-        const mockProcess = (pty as any)._process;
+        const mockProcess = getMockProcess(pty);
         mockProcess._emitStdout('Hello terminal\nSecond line');
         
         pty.render(screen);
@@ -108,7 +137,7 @@ describe('Pty', () => {
     
         pty.updateRect({ x: 0, y: 0, width: 20, height: 5 });
     
-        const mockProcess = (pty as any)._process;
+        const mockProcess = getMockProcess(pty);
     
         mockProcess._emitStderr('Error occurred');
     
@@ -125,7 +154,7 @@ describe('Pty', () => {
     
         pty.updateRect({ x: 0, y: 0, width: 30, height: 5 });
     
-        const mockProcess = (pty as any)._process;
+        const mockProcess = getMockProcess(pty);
     
         mockProcess._emitClose();
     
@@ -143,7 +172,7 @@ describe('Pty', () => {
         const screen = new Screen(20, 5);
         pty.updateRect({ x: 0, y: 0, width: 20, height: 5 });
         
-        const mockProcess = (pty as any)._process;
+        const mockProcess = getMockProcess(pty);
         // Output with red text ANSI
         mockProcess._emitStdout('\x1b[31mColored text\x1b[0m');
         
@@ -155,7 +184,7 @@ describe('Pty', () => {
 
     it('pipes keys to stdin', () => {
         const pty = new Pty();
-        const mockProcess = (pty as any)._process;
+        const mockProcess = getMockProcess(pty);
         
         pty.handleKey({ key: 'a', raw: Buffer.from('a'), ctrl: false, alt: false, shift: false } as any);
         expect(mockProcess.stdin.write).toHaveBeenCalledWith(Buffer.from('a'));
@@ -167,7 +196,7 @@ describe('Pty', () => {
     it('returns false when stdin is not writable', () => {
         const pty = new Pty();
     
-        const mockProcess = (pty as any)._process;
+        const mockProcess = getMockProcess(pty);
     
         mockProcess.stdin.writable = false;
     
@@ -185,11 +214,11 @@ describe('Pty', () => {
 
     it('cleans up process on destroy', () => {
         const pty = new Pty();
-        const mockProcess = (pty as any)._process;
+        const mockProcess = getMockProcess(pty);
         
         pty.destroy();
         expect(mockProcess.kill).toHaveBeenCalled();
-        expect((pty as any)._process).toBeNull();
+        expect((pty as unknown as { _process: MockPtyProcess | null })._process).toBeNull();
     });
 
     it('ignores late process output after destroy', () => {
@@ -198,7 +227,7 @@ describe('Pty', () => {
         pty.updateRect({ x: 0, y: 0, width: 20, height: 5 });
         pty.render(screen);
 
-        const mockProcess = (pty as any)._process;
+        const mockProcess = getMockProcess(pty);
         pty.destroy();
 
         mockProcess._emitStdout('late output');
@@ -219,7 +248,7 @@ describe('Pty', () => {
     it('trims buffer to the last 1000 lines', () => {
         const pty = new Pty();
     
-        const mockProcess = (pty as any)._process;
+        const mockProcess = getMockProcess(pty);
     
         const output =
             Array.from({ length: 1100 }, (_, i) => `line-${i}`).join('\n');
