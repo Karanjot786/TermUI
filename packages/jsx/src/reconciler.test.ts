@@ -4,6 +4,7 @@ import { Screen } from '@termuijs/core';
 import type { VNode } from './vnode.js';
 import { reconcile, reRenderComponent, unmountAll, _pruneInstancesForWidget } from './reconciler.js';
 import { destroyFiber } from './hooks.js';
+import { instanceMap } from './globals.js';
 
 // ── Helper: make a functional component VNode ──
 
@@ -36,7 +37,7 @@ function ReturnsTextVNode(): VNode {
 }
 
 function getInstanceMap(): Map<any, any> {
-    return (globalThis as any).__termuijs_instances;
+    return instanceMap;
 }
 
 describe('_instanceMap leak prevention', () => {

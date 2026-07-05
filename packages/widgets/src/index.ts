@@ -25,6 +25,8 @@ export { ChatMessage } from './display/ChatMessage.js';
 export type { ChatMessageOptions, MessageRole } from './display/ChatMessage.js';
 export { ChatThread } from './display/ChatThread.js';
 export type { ThreadMessage } from './display/ChatThread.js';
+export { TypingIndicator } from './display/TypingIndicator.js';
+export type { TypingIndicatorOptions } from './display/TypingIndicator.js';
 export { ToolCall, ToolApproval } from './display/ToolCall.js';
 export type { ToolCallOptions, ToolApprovalOptions, ToolCallStatus } from './display/ToolCall.js';
 export { Canvas } from './display/Canvas.js';

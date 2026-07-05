@@ -27,6 +27,8 @@ interface RegistrySchema {
     components: RegistryComponent[];
 }
 
+type PackageManager = "npm" | "yarn" | "pnpm" | "bun";
+
 export async function runAddCommand(options: AddCommandOptions): Promise<void> {
     const componentName = options.component.trim();
     if (!componentName) {
@@ -213,9 +215,22 @@ async function installPackages(entry: RegistryComponent): Promise<void> {
         return;
     }
 
-    execFileSync("bun", ["add", ...deps], {
+    const pm = detectPackageManager(process.cwd());
+    execFileSync(pm, installArgs(pm, deps), {
         stdio: "inherit",
     });
+}
+
+function detectPackageManager(cwd: string): PackageManager {
+    if (existsSync(join(cwd, "bun.lock"))) return "bun";
+    if (existsSync(join(cwd, "pnpm-lock.yaml"))) return "pnpm";
+    if (existsSync(join(cwd, "yarn.lock"))) return "yarn";
+    return "npm";
+}
+
+function installArgs(pm: PackageManager, deps: string[]): string[] {
+    if (pm === "npm") return ["install", ...deps];
+    return ["add", ...deps];
 }
 
 function pascalCase(value: string): string {

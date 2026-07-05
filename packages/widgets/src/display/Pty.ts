@@ -102,10 +102,11 @@ export class Pty extends Widget {
     /**
      * Terminate the spawned process
      */
-    public destroy(): void {
+    override destroy(): void {
         if (this._process) {
             this._process.kill();
             this._process = null;
         }
+        super.destroy();
     }
 }
