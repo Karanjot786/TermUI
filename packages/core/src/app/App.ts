@@ -80,6 +80,7 @@ export class App {
     private _unsubKey: (() => void) | null = null;
     private _unsubMouse: (() => void) | null = null;
     private _unsubPaste: (() => void) | null = null;
+    private _unsubResize: (() => void) | null = null;
     private _unsubFocus: (() => void) | null = null;
     private _unsubBlur: (() => void) | null = null;
     private _unsubSigInt: (() => void) | null = null;
@@ -171,7 +172,7 @@ export class App {
         }
 
         // Handle resize
-        this.terminal.onResize((cols, rows) => {
+        this._unsubResize = this.terminal.onResize((cols, rows) => {
             this.screen.resize(cols, rows);
             this.screen.invalidate();
             this.layers.resize(cols, rows);
@@ -332,6 +333,8 @@ export class App {
         this._unsubBlur = null;
         this._unsubPaste?.();
         this._unsubPaste = null;
+        this._unsubResize?.();
+        this._unsubResize = null;
         this._unsubUncaughtException?.();
         this._unsubUncaughtException = null;
         this._unsubUnhandledRejection?.();
