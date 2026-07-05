@@ -28,7 +28,7 @@ export class DatePicker extends Widget {
     }
 
     get value(): Date {
-        return this._selectedDate;
+        return new Date(this._selectedDate);
     }
 
     set value(date: Date) {

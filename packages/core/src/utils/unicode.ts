@@ -148,7 +148,10 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
     if (strW <= maxWidth) return str;
     const ellipsisW = stringWidth(ellipsis);
     const targetW = maxWidth - ellipsisW;
-    if (targetW <= 0) return ellipsis.slice(0, maxWidth);
+    const hasAnsi = str.includes('\x1b');
+    const resetSeq = hasAnsi ? '\x1b[0m' : '';
+
+    if (targetW <= 0) return ellipsis.slice(0, maxWidth) + resetSeq;
     let width = 0;
     let result = '';
     let inEscape = false;
@@ -175,7 +178,7 @@ export function truncate(str: string, maxWidth: number, ellipsis = '…'): strin
         width += charW;
         result += segment;
     }
-    return result + ellipsis;
+    return result + ellipsis + resetSeq;
 }
 
 /**
@@ -187,8 +190,8 @@ export function stripAnsi(str: string): string {
 }
 
 /**
- * Word‑wrap text to a given width, respecting existing newlines.
- * Does not handle ANSI codes within words (wraps at the character level).
+ * Word-wrap text to a given width, respecting existing newlines.
+ * Safely handles ANSI escape sequences without breaking formatting.
  */
 export function wordWrap(str: string, width: number): string {
     if (width <= 0) return str;
@@ -215,7 +218,21 @@ export function wordWrap(str: string, width: number): string {
                     currentWidth = 0;
                 }
                 const wordSegments = segmenter.segment(word);
+                let inEscape = false;
                 for (const { segment } of wordSegments) {
+                    const cp = segment.codePointAt(0)!;
+                    if (cp === 0x1B) {
+                        inEscape = true;
+                        currentLine += segment;
+                        continue;
+                    }
+                    if (inEscape) {
+                        currentLine += segment;
+                        if ((cp >= 0x40 && cp <= 0x7E) && cp !== 0x5B) {
+                            inEscape = false;
+                        }
+                        continue;
+                    }
                     const charW = segmentWidth(segment);
                     if (currentWidth + charW > width) {
                         if (currentLine) result.push(currentLine);

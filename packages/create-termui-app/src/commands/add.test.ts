@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { mkdirSync, rmSync, existsSync, readFileSync } from "node:fs";
+import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 
 vi.mock("node:child_process", () => ({
     execFileSync: vi.fn(),
@@ -133,14 +133,46 @@ describe("runAddCommand", () => {
             'export const Badge = () => "badge";',
         );
         expect(execSpy).toHaveBeenCalledWith(
-            "bun",
-            ["add", "@termuijs/core", "@termuijs/widgets"],
+            "npm",
+            ["install", "@termuijs/core", "@termuijs/widgets"],
             {
                 stdio: "inherit",
             },
         );
         expect(logSpy).toHaveBeenCalledWith(
             expect.stringContaining("added successfully"),
+        );
+    });
+
+    it("uses bun when bun.lock is present", async () => {
+        setupFetchMock();
+        writeFileSync(join(tempDir, "bun.lock"), "");
+        const execSpy = vi.spyOn(childProcess, "execFileSync");
+
+        await runAddCommand({ component: "Badge" });
+
+        expect(execSpy).toHaveBeenCalledWith(
+            "bun",
+            ["add", "@termuijs/core", "@termuijs/widgets"],
+            {
+                stdio: "inherit",
+            },
+        );
+    });
+
+    it("uses pnpm when pnpm-lock.yaml is present", async () => {
+        setupFetchMock();
+        writeFileSync(join(tempDir, "pnpm-lock.yaml"), "");
+        const execSpy = vi.spyOn(childProcess, "execFileSync");
+
+        await runAddCommand({ component: "Badge" });
+
+        expect(execSpy).toHaveBeenCalledWith(
+            "pnpm",
+            ["add", "@termuijs/core", "@termuijs/widgets"],
+            {
+                stdio: "inherit",
+            },
         );
     });
 

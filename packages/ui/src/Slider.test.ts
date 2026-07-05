@@ -133,6 +133,25 @@ describe('Slider', () => {
         expect(() => new RangeInput({}, { min: 0, max: 10, step: Number.NaN })).toThrow('positive finite');
     });
 
+    it('does not fire onChange while initializing custom range values', () => {
+        const onChange = vi.fn();
+
+        const range = new RangeInput({}, {
+            min: 0,
+            max: 100,
+            low: 20,
+            high: 80,
+            onChange,
+        });
+
+        expect(range.getLow()).toBe(20);
+        expect(range.getHigh()).toBe(80);
+        expect(onChange).not.toHaveBeenCalled();
+
+        range.setRange(25, 75);
+        expect(onChange).toHaveBeenCalledWith(25, 75);
+    });
+
     it('renders two handles', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
 

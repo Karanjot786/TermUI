@@ -7,6 +7,7 @@ export interface SelectOptions {
     placeholder?: string;
     activeColor?: Style['fg'];
     onSelect?: (option: SelectOption, index: number) => void;
+    signal?: AbortSignal;
 }
 
 export class Select extends Widget {
@@ -17,7 +18,9 @@ export class Select extends Widget {
     private _activeColor: Style['fg'];
     private _onSelect?: (option: SelectOption, index: number) => void;
     private _closedHeight: number;
+    private _onComplete?: (option: SelectOption) => void;
     focusable = true;
+    public signal?: AbortSignal;
 
     constructor(options: SelectOption[], config: SelectOptions = {}, style?: Partial<Style>) {
         super(mergeStyles(mergeStyles(defaultStyle(), { height: 1 }), style ?? {}));
@@ -26,6 +29,7 @@ export class Select extends Widget {
         this._placeholder = config.placeholder ?? 'Select...';
         this._activeColor = config.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSelect = config.onSelect;
+        this.signal = config.signal;
     }
 
     get selectedOption(): SelectOption | undefined { return this._options[this._selectedIndex]; }
@@ -58,7 +62,17 @@ export class Select extends Widget {
     }
     confirm(): void {
         const opt = this._options[this._selectedIndex];
-        if (opt && !opt.disabled) { this._onSelect?.(opt, this._selectedIndex); this._isOpen = false; this._restoreHeight(); this.markDirty(); }
+        if (opt && !opt.disabled) { 
+            this._onSelect?.(opt, this._selectedIndex); 
+            this._onComplete?.(opt);
+            this._isOpen = false; 
+            this._restoreHeight(); 
+            this.markDirty(); 
+        }
+    }
+
+    onComplete(cb: (option: SelectOption) => void): void {
+        this._onComplete = cb;
     }
 
     protected _renderSelf(screen: Screen): void {
