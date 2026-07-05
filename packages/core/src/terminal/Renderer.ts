@@ -267,11 +267,10 @@ export class Renderer {
         let spanStart = -1;
 
         for (let c = 0; c < cols; c++) {
-            // Skip continuation cells (right half of wide chars) - they are not
-            // independently renderable and their primary cell handles the output.
-            if (back[row][c].width === 0) continue;
-            
             const changed = !cellsEqual(front[row][c], back[row][c]);
+            // Skip continuation cells (right half of wide chars) if they haven't changed.
+            // If they have changed, we must process them so we can adjust the span start back to the primary cell.
+            if (back[row][c].width === 0 && !changed) continue;
             if (changed && spanStart === -1) {
                 spanStart = c; // start a new changed span
             } else if (!changed && spanStart !== -1) {
