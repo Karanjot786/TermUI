@@ -372,10 +372,10 @@ export class InputParser {
             this._escapeBuffer = Buffer.alloc(0);
             if (pasteStartIdx > 0) {
                 const before = seq.substring(0, pasteStartIdx);
-                this._processInput(Buffer.from(before, 'utf8'));
+                queueMicrotask(() => this._processInput(Buffer.from(before, 'utf8')));
             }
             const after = seq.substring(pasteStartIdx);
-            this._processInput(Buffer.from(after, 'utf8'));
+            queueMicrotask(() => this._processInput(Buffer.from(after, 'utf8')));
             return;
         }
 
