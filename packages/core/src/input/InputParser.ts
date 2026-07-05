@@ -139,12 +139,13 @@ export class InputParser {
       const endIdx = this._pasteBuffer.indexOf(PASTE_END);
       if (endIdx !== -1) {
         const pastedText = this._pasteBuffer.substring(0, endIdx);
+        const remaining = this._pasteBuffer.substring(endIdx + PASTE_END.length); // ← Fix: capture before clearing
+
         this._isPasting = false;
         this._pasteBuffer = '';
         this._clearPasteTimeout();
         this._events.emit('paste', pastedText);
 
-        const remaining = this._pasteBuffer.substring(endIdx + PASTE_END.length);
         if (remaining.length > 0) {
           this._processInput(Buffer.from(remaining, 'utf8'));
         }
