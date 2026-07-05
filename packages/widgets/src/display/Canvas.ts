@@ -15,6 +15,7 @@ export class Canvas extends Widget {
     private _canvasWidth: number = 0;
     private _canvasHeight: number = 0;
     private _color: Color | undefined;
+    private _commands: Array<() => void> = [];
 
     constructor(style: Partial<Style> = {}) {
         super(style);
@@ -32,6 +33,10 @@ export class Canvas extends Widget {
      * Clears the entire canvas.
      */
     public clear(): void {
+        if (this._canvasWidth === 0) {
+            this._commands = [];
+            return;
+        }
         if (this._pixels.length > 0) {
             this._pixels.fill(0);
             this.markDirty();
@@ -42,6 +47,10 @@ export class Canvas extends Widget {
      * Sets a single sub-cell pixel.
      */
     public setPixel(x: number, y: number, value: boolean = true): void {
+        if (this._canvasWidth === 0) {
+            this._commands.push(() => this.setPixel(x, y, value));
+            return;
+        }
         x = Math.floor(x);
         y = Math.floor(y);
         if (x < 0 || x >= this._canvasWidth || y < 0 || y >= this._canvasHeight) return;
@@ -60,6 +69,10 @@ export class Canvas extends Widget {
      * Fills a rectangle with the current drawing state.
      */
     public fillRect(x: number, y: number, w: number, h: number): void {
+        if (this._canvasWidth === 0) {
+            this._commands.push(() => this.fillRect(x, y, w, h));
+            return;
+        }
         x = Math.floor(x);
         y = Math.floor(y);
         w = Math.floor(w);
@@ -84,6 +97,10 @@ export class Canvas extends Widget {
      * Draws an unfilled circle.
      */
     public drawCircle(cx: number, cy: number, r: number): void {
+        if (this._canvasWidth === 0) {
+            this._commands.push(() => this.drawCircle(cx, cy, r));
+            return;
+        }
         cx = Math.floor(cx);
         cy = Math.floor(cy);
         r = Math.floor(r);
@@ -121,6 +138,10 @@ export class Canvas extends Widget {
      * Draws a line from (x0, y0) to (x1, y1).
      */
     public lineTo(x0: number, y0: number, x1: number, y1: number): void {
+        if (this._canvasWidth === 0) {
+            this._commands.push(() => this.lineTo(x0, y0, x1, y1));
+            return;
+        }
         x0 = Math.floor(x0);
         y0 = Math.floor(y0);
         x1 = Math.floor(x1);
@@ -162,6 +183,7 @@ export class Canvas extends Widget {
         const pxHeight = innerHeight * 4;
 
         if (this._canvasWidth !== pxWidth || this._canvasHeight !== pxHeight) {
+            const isInitialAllocation = this._canvasWidth === 0;
             const newPixels = new Uint8Array(pxWidth * pxHeight);
             
             // Optionally preserve old pixels if resizing
@@ -174,6 +196,14 @@ export class Canvas extends Widget {
             this._pixels = newPixels;
             this._canvasWidth = pxWidth;
             this._canvasHeight = pxHeight;
+
+            if (isInitialAllocation) {
+                const commandsToReplay = this._commands;
+                this._commands = [];
+                for (const cmd of commandsToReplay) {
+                    cmd();
+                }
+            }
         }
 
         const { bg, fg } = styleToCellAttrs(this._style);
