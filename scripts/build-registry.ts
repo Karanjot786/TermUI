@@ -373,6 +373,7 @@ function scanDirectory(dir: string, entries: { path: string; content: string }[]
       const normalizedFull = full.replace(/\\/g, '/');
       const normalizedRoot = ROOT.replace(/\\/g, '/');
       entries.push({ path: normalizedFull.replace(normalizedRoot + '/', ''), content: readFileSync(full, 'utf-8') });
+      entries.push({ path: full.replace(ROOT, '').replace(/\\/g, '/').replace(/^\//, ''), content: readFileSync(full, 'utf-8') });
     }
   }
 }

@@ -11,6 +11,7 @@ import { caps } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import type { Widget } from '@termuijs/widgets';
 import type { FC } from './vnode.js';
+import { suspendedFibers, fiberToWidgetMap, instanceMap } from './globals.js';
 
 // ── Fiber — per-component-instance state ──
 
@@ -652,22 +653,13 @@ export function destroyFiber(fiber: Fiber): void {
         fiber.portalChildren = undefined;
     }
     // Clean up suspended promises (SuspenseBoundary tracking)
-    const _suspendedFibers: Map<number, any> | undefined = (globalThis as any).__termuijs_suspendedFibers;
-    if (_suspendedFibers instanceof Map) {
-        _suspendedFibers.delete(fiber.id);
-    }
+    suspendedFibers.delete(fiber.id);
 
-    // Clean up global _instanceMap via reverse fiber→widget mapping (O(1))
-    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
-    if (_fiberToWidget instanceof Map) {
-        const widget = _fiberToWidget.get(fiber);
-        if (widget) {
-            const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
-            if (termuiInstances instanceof Map) {
-                termuiInstances.delete(widget);
-            }
-            _fiberToWidget.delete(fiber);
-        }
+    // Clean up global instanceMap via reverse fiber→widget mapping (O(1))
+    const widget = fiberToWidgetMap.get(fiber);
+    if (widget) {
+        instanceMap.delete(widget);
+        fiberToWidgetMap.delete(fiber);
     }
     fiber.hooks = [];
     fiber.effects = [];
@@ -702,15 +694,9 @@ export function resetHooksGlobals(): void {
     }
     
     // Clear global instance map
-    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
-    if (termuiInstances instanceof Map) {
-        termuiInstances.clear();
-    }
+    instanceMap.clear();
     // Clear reverse fiber→widget map
-    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
-    if (_fiberToWidget instanceof Map) {
-        _fiberToWidget.clear();
-    }
+    fiberToWidgetMap.clear();
 }
 
 /**

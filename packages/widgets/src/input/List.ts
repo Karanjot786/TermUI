@@ -2,7 +2,7 @@
 // @termuijs/widgets — List widget (selectable)
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type MouseEvent, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
+import { type Screen, type Style, type MouseEvent, styleToCellAttrs, stringWidth, truncate, caps, type KeyEvent } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type ListState } from '../data/ListState.js';
 
@@ -47,6 +47,9 @@ export class List extends Widget {
     private _onStateChange?: (state: ListState) => void;
     private _emptyMessage?: string;
     private _reorderable = false;
+    private _searchBuffer = '';
+    private _searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
 
     constructor(
         itemsOrProps: ListItem[] | ListProps,
@@ -75,6 +78,7 @@ export class List extends Widget {
         }
 
         this.focusable = true;
+        this.events.on('key', this.handleKey.bind(this));
         this.events.on('mouse', (event) => this.handleMouse(event));
     }
 
@@ -152,9 +156,65 @@ export class List extends Widget {
         }
     }
 
+        handleKey(event: KeyEvent): void {
+        const key = (event.key || '').toLowerCase();
+        
+        switch (key) {
+            case 'arrowup':
+            case 'up':
+                this.selectPrev();
+                return;
+            case 'arrowdown':
+            case 'down':
+                this.selectNext();
+                return;
+            case 'home':
+                if (this._items.length > 0) {
+                    this._selectedIndex = 0;
+                    this._clampScroll();
+                    this.markDirty();
+                    this._pushState();
+                }
+                return;
+            case 'end':
+                if (this._items.length > 0) {
+                    this._selectedIndex = this._items.length - 1;
+                    this._clampScroll();
+                    this.markDirty();
+                    this._pushState();
+                }
+                return;
+            case 'enter':
+                this.confirm();
+                return;
+        }
+
+        // Type-to-select logic
+        if (event.key && event.key.length === 1 && /[a-zA-Z0-9]/.test(event.key)) {
+            this._searchBuffer += event.key.toLowerCase();
+            const matchIndex = this._items.findIndex(item => 
+                item.label.toLowerCase().startsWith(this._searchBuffer)
+            );
+            
+            if (matchIndex !== -1) {
+                this._selectedIndex = matchIndex;
+                this._clampScroll();
+                this.markDirty();
+                this._pushState();
+            }
+            
+            if (this._searchTimeout) clearTimeout(this._searchTimeout);
+            this._searchTimeout = setTimeout(() => {
+                this._searchBuffer = '';
+            }, 500);
+        }
+    }
+
+
+
     // ── Rendering ─────────────────────────────────────
 
-       protected _renderSelf(screen: Screen): void {
+    protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
         if (width <= 0 || height <= 0) return;
