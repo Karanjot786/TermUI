@@ -3,8 +3,8 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createKeyEvent } from '@termuijs/core';
-import { createFiber, setCurrentFiber, clearCurrentFiber, setRequestRender } from '../hooks.js';
+import { caps, createKeyEvent } from '@termuijs/core';
+import { createFiber, setCurrentFiber, clearCurrentFiber, setRequestRender, runEffects } from '../hooks.js';
 import { useKeyboardNavigation } from './useKeyboardNavigation.js';
 
 function mockKeyEvent(key: string, shift = false) {
@@ -34,8 +34,10 @@ describe('useKeyboardNavigation', () => {
         setCurrentFiber(fiber);
         const res = useKeyboardNavigation(opts);
         clearCurrentFiber();
+        runEffects(fiber);
         return res;
     };
+
 
     it('initializes with selectedIndex 0', () => {
         const result = renderHook({ itemCount: 5 });
@@ -152,5 +154,39 @@ describe('useKeyboardNavigation', () => {
         fiber.onInput?.(mockKeyEvent('end'));
         result = renderHook({ itemCount: 0 });
         expect(result.selectedIndex).toBe(0);
+    });
+
+    it('supports emacs ctrl+p / ctrl+n navigation when keybindingMode=emacs', () => {
+        const spy = vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('emacs');
+        try {
+            let result = renderHook({ itemCount: 3, loop: true });
+
+            // Ctrl+P should behave like 'up' (wraps from 0 -> 2)
+            fiber.onInput?.(createKeyEvent({ key: 'p', raw: Buffer.alloc(0), ctrl: true, alt: false, shift: false }));
+            result = renderHook({ itemCount: 3, loop: true });
+            expect(result.selectedIndex).toBe(2);
+
+            // Ctrl+N should behave like 'down' (2 -> 0)
+            fiber.onInput?.(createKeyEvent({ key: 'n', raw: Buffer.alloc(0), ctrl: true, alt: false, shift: false }));
+            result = renderHook({ itemCount: 3, loop: true });
+            expect(result.selectedIndex).toBe(0);
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
+    it('clamps selectedIndex when itemCount shrinks', () => {
+        let result = renderHook({ itemCount: 5 });
+
+        // Select index 4
+        fiber.onInput?.(mockKeyEvent('end'));
+        result = renderHook({ itemCount: 5 });
+        expect(result.selectedIndex).toBe(4);
+
+        // Shrink itemCount to 2
+        result = renderHook({ itemCount: 2 });
+        // Trigger effects so the sync useEffect runs
+        result = renderHook({ itemCount: 2 });
+        expect(result.selectedIndex).toBe(1);
     });
 });

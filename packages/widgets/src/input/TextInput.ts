@@ -50,6 +50,11 @@ export interface TextInputProps {
      * Callback fired when the user presses Enter/Return to submit.
      */
     onSubmit?: (value: string) => void;
+    
+    /**
+     * Optional AbortSignal to cancel the input prompt programmatically.
+     */
+    signal?: AbortSignal;
 }
 
 /**
@@ -67,6 +72,8 @@ export class TextInput extends Widget {
     private _vimMode: VimMode = process.env.TERMUI_KEYBINDINGS === 'vim' ? 'normal' : 'insert';
     private _suggestions: string[] = [];
     private _suggestionIndex = 0;
+    private _onComplete?: (value: string) => void;
+    public signal?: AbortSignal;
 
     constructor(
         style: Partial<Style> = {},
@@ -80,6 +87,7 @@ export class TextInput extends Widget {
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
         this._suggestions = options.suggestions ?? [];
+        this.signal = options.signal;
 
         this.focusable = true;
 
@@ -223,6 +231,11 @@ export class TextInput extends Widget {
 
     submit(): void {
         this._onSubmit?.(this._value);
+        this._onComplete?.(this._value);
+    }
+
+    onComplete(cb: (value: string) => void): void {
+        this._onComplete = cb;
     }
 
     clear(): void {

@@ -2,8 +2,12 @@
 // @termuijs/widgets — Tests for CommandPalette widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { Screen, caps } from '@termuijs/core';
 import { CommandPalette, type Command } from './CommandPalette.js';
+
+const COLS = 80;
+const ROWS = 24;
 
 function makeCommands(): Command[] {
     return [
@@ -21,7 +25,22 @@ function makePalette(overrides: Partial<ConstructorParameters<typeof CommandPale
     return { palette, onClose, commands };
 }
 
+function renderPalette(palette: CommandPalette, w = COLS, h = ROWS): Screen {
+    const screen = new Screen(w, h);
+    palette.updateRect({ x: 0, y: 0, width: w, height: h });
+    palette.render(screen);
+    return screen;
+}
+
+function allText(screen: Screen): string {
+    return screen.back.map(row => row.map(c => c.char).join('')).join('\n');
+}
+
 describe('CommandPalette', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     describe('construction', () => {
         it('is focusable', () => {
             const { palette } = makePalette();
@@ -393,6 +412,89 @@ it('selects the highest scoring command when multiple matches exist', () => {
     expect(cmds[0].action).not.toHaveBeenCalled();
     expect(cmds[2].action).not.toHaveBeenCalled();
 });
+    });
+
+    // ── Rendering: placeholder (folded from ui) ──────────────────────────
+
+    describe('placeholder rendering', () => {
+        it('shows placeholder text when query is empty', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const palette = new CommandPalette({ commands: makeCommands(), placeholder: 'Type a command...' });
+            palette.open();
+            const screen = renderPalette(palette);
+            expect(allText(screen)).toContain('Type a command...');
+        });
+
+        it('custom placeholder is rendered', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const palette = new CommandPalette({ commands: makeCommands(), placeholder: 'Find action' });
+            palette.open();
+            const screen = renderPalette(palette);
+            expect(allText(screen)).toContain('Find action');
+        });
+    });
+
+    // ── Rendering: query text (folded from ui) ───────────────────────────
+
+    describe('query rendering', () => {
+        it('shows the typed query text', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const palette = new CommandPalette({ commands: makeCommands() });
+            palette.open();
+            'set'.split('').forEach(ch => palette.handleKey(ch));
+            const screen = renderPalette(palette);
+            expect(allText(screen)).toContain('set');
+        });
+
+        it('placeholder does not appear once query is entered', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const placeholder = 'Type to search...';
+            const palette = new CommandPalette({ commands: makeCommands(), placeholder });
+            palette.open();
+            palette.handleKey('o');
+            const screen = renderPalette(palette);
+            expect(allText(screen)).not.toContain(placeholder);
+        });
+    });
+
+    // ── Rendering: small width/height guards (folded from ui) ────────────
+
+    describe('small width rendering', () => {
+        it('does not throw on a narrow screen', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const palette = new CommandPalette({ commands: makeCommands() });
+            palette.open();
+            expect(() => renderPalette(palette, 10, 24)).not.toThrow();
+        });
+
+        it('does not write out-of-bounds on narrow screen', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const palette = new CommandPalette({ commands: makeCommands() });
+            palette.open();
+            const w = 8;
+            const screen = new Screen(w, 20);
+            palette.updateRect({ x: 0, y: 0, width: w, height: 20 });
+            expect(() => palette.render(screen)).not.toThrow();
+            for (const row of screen.back) {
+                expect(row.length).toBeLessThanOrEqual(w);
+            }
+        });
+    });
+
+    describe('small height rendering', () => {
+        it('does not throw on a very short screen', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const palette = new CommandPalette({ commands: makeCommands() });
+            palette.open();
+            expect(() => renderPalette(palette, 80, 4)).not.toThrow();
+        });
+
+        it('renders stably on a 1-row screen', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const palette = new CommandPalette({ commands: makeCommands() });
+            palette.open();
+            expect(() => renderPalette(palette, 80, 1)).not.toThrow();
+        });
     });
 });
 

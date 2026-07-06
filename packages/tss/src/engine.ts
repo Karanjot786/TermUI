@@ -9,48 +9,6 @@ import { evalCalc } from './calc.js';
 import { matchesPseudo } from './pseudo.js';
 import { extractKeyframes, type KeyframesDeclaration } from './animations.js';
 
-export function compile(source: string): string {
-    const tokens = tokenize(source);
-    const ast = parse(tokens);
-    let output: string[] = [];
-
-    function serializeSelector(sel: TSSSelector): string {
-        let s = sel.widget === '*' ? '' : sel.widget;
-        if (sel.className) s += '.' + sel.className;
-        if (sel.pseudo) s += ':' + sel.pseudo;
-        return s || '*';
-    }
-
-    function processRule(rule: TSSRule, parentSelStr: string) {
-        const selStr = serializeSelector(rule.selector);
-        const fullSelStr = parentSelStr ? `${parentSelStr} ${selStr}` : selStr;
-
-        if (rule.properties.length > 0) {
-            let block = `${fullSelStr} {`;
-            for (const prop of rule.properties) {
-                let valStr = '';
-                if (prop.value.kind === 'var') valStr = `var(${prop.value.name})`;
-                else valStr = String(prop.value.value);
-                block += ` ${prop.name}: ${valStr};`;
-            }
-            block += ` }`;
-            output.push(block);
-        }
-
-        if (rule.nested) {
-            for (const child of rule.nested) {
-                processRule(child, fullSelStr);
-            }
-        }
-    }
-
-    for (const rule of ast.rules) {
-        processRule(rule, '');
-    }
-
-    return output.join('\n');
-}
-
 export interface ThemeVariables {
     [key: string]: string;
 }

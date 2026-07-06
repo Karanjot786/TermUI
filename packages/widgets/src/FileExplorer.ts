@@ -2,16 +2,23 @@
 // @termuijs/widgets — Interactive File Explorer Widget
 // ─────────────────────────────────────────────────────
 
+import { readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
 export interface FileItem {
     name: string;
     path: string;
     isDirectory: boolean;
+    size?: number;
+    date?: number;
 }
 
 export interface FileExplorerOptions {
     root?: string;
     multiSelect?: boolean;
     onSelect?: (path: string) => void;
+    sortBy?: 'name' | 'size' | 'date';
+    sortOrder?: 'asc' | 'desc';
 }
 
 export class FileExplorer {
@@ -21,10 +28,56 @@ export class FileExplorer {
     private _selectedFiles: Set<string> = new Set();
     private _filter = "";
     private _onSelect?: (path: string) => void;
+    private _sortBy: 'name' | 'size' | 'date';
+    private _sortOrder: 'asc' | 'desc';
 
     constructor(options: FileExplorerOptions = {}) {
         this._root = options.root ?? "./";
         this._onSelect = options.onSelect;
+        this._sortBy = options.sortBy ?? 'name';
+        this._sortOrder = options.sortOrder ?? 'asc';
+    }
+
+    /**
+     * Read directory and load files into the explorer based on OS file metadata.
+     */
+    reload(): void {
+        let files: string[] = [];
+        try {
+            files = readdirSync(this._root);
+        } catch {
+            files = [];
+        }
+
+        const mappedFiles: FileItem[] = files.map(file => {
+            const filePath = join(this._root, file);
+            let size = 0;
+            let date = 0;
+            let isDirectory = false;
+            try {
+                const stats = statSync(filePath);
+                size = stats.size;
+                date = stats.mtimeMs;
+                isDirectory = stats.isDirectory();
+            } catch {
+                // Ignore stat errors for broken symlinks/permissions
+            }
+            return { name: file, path: filePath, isDirectory, size, date };
+        });
+
+        mappedFiles.sort((a, b) => {
+            let diff = 0;
+            if (this._sortBy === 'size') {
+                diff = (a.size || 0) - (b.size || 0);
+            } else if (this._sortBy === 'date') {
+                diff = (a.date || 0) - (b.date || 0);
+            } else {
+                diff = a.name.localeCompare(b.name);
+            }
+            return this._sortOrder === 'desc' ? -diff : diff;
+        });
+
+        this.setFiles(mappedFiles);
     }
 
     /**

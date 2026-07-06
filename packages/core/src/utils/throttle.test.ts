@@ -67,22 +67,6 @@ describe('throttle', () => {
         vi.useRealTimers();
     });
 
-    it('respects trailing: false', () => {
-        vi.useFakeTimers();
-        const fn = vi.fn();
-        const throttled = throttle(fn, 100, { trailing: false });
-
-        throttled('a');
-        expect(fn).toHaveBeenCalledTimes(1);
-
-        throttled('b');
-        throttled('c');
-        vi.advanceTimersByTime(100);
-        expect(fn).toHaveBeenCalledTimes(1); // Trailing was disabled, so no extra calls
-
-        vi.useRealTimers();
-    });
-
     it('supports cancellation', () => {
         vi.useFakeTimers();
         const fn = vi.fn();

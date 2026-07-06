@@ -3,10 +3,10 @@
 // ─────────────────────────────────────────────────────
 // Run with: bun examples/menubar-demo.ts
 
-import { App } from '../packages/core/src/index.js';
-import { Box, Text, Widget } from '../packages/widgets/src/index.js';
-import { MenuBar } from '../packages/ui/src/index.js';
-import type { Screen, KeyEvent } from '../packages/core/src/index.js';
+import { App } from '@termuijs/core';
+import { Box, Text, Widget } from '@termuijs/widgets';
+import { MenuBar } from '@termuijs/ui';
+import type { Screen, KeyEvent } from '@termuijs/core';
 
 class MenuBarDemoApp extends Widget {
     private _menuBar: MenuBar;

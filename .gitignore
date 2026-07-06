@@ -134,3 +134,8 @@ docs/superpowers/
 bun-completions/
 *_logs/
 .stylelintcache
+
+# Registry (auto-generated)
+/registry.json
+/public/r/
+.gstack/
