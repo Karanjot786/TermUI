@@ -627,12 +627,16 @@ export class App {
         }
         if (matches.length === 0) return null;
 
-        // 3. Sort by z-index descending (topmost wins)
+        // 3. Reverse the array so that later siblings (which are rendered on top) 
+        // win ties when stable-sorted by z-index.
+        matches.reverse();
+        
+        // 4. Sort by z-index descending (topmost wins)
         matches.sort((a, b) => b.zIndex - a.zIndex);
         const topZ = matches[0].zIndex;
         const topMatches = matches.filter(m => m.zIndex === topZ);
 
-        // 4. Among same z-index, prefer deepest child widget (most specific)
+        // 5. Among same z-index, prefer deepest child widget (most specific)
         if (topMatches.length > 1) {
             for (const m of topMatches) {
                 let p = m.widget.parent;
