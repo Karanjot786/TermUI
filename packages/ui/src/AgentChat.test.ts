@@ -4,10 +4,12 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { AgentChat } from './AgentChat.js';
-import { Screen, computeLayout } from '@termuijs/core';
+import { Screen, computeLayout, type KeyEvent } from '@termuijs/core';
 
 afterEach(() => {
     vi.restoreAllMocks();
+    // vi.stubEnv leaks env overrides across tests; unstub after each run.
+    vi.unstubAllEnvs();
 });
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -93,13 +95,15 @@ describe('AgentChat', () => {
 
     it('handleKey returns false on Ctrl+C (quit signal)', () => {
         const chat = new AgentChat({ onQuery: emptyQuery });
-        const result = chat.handleKey({ key: 'c', ctrl: true, alt: false } as any);
+        // Cast required: test helper builds a minimal KeyEvent without shift/meta.
+        const result = chat.handleKey({ key: 'c', ctrl: true, alt: false } as KeyEvent);
         expect(result).toBe(false);
     });
 
     it('handleKey returns true for normal character keys', () => {
         const chat = new AgentChat({ onQuery: emptyQuery });
-        const result = chat.handleKey({ key: 'a', ctrl: false, alt: false } as any);
+        // Cast required: test helper builds a minimal KeyEvent without shift/meta.
+        const result = chat.handleKey({ key: 'a', ctrl: false, alt: false } as KeyEvent);
         expect(result).toBe(true);
     });
 
@@ -158,9 +162,10 @@ describe('AgentChat', () => {
         const chat = new AgentChat({ onQuery: echo, welcomeMessage: 'hi' });
 
         // Simulate keypress: type 'hi' then press Enter
-        chat.handleKey({ key: 'h', ctrl: false, alt: false } as any);
-        chat.handleKey({ key: 'i', ctrl: false, alt: false } as any);
-        chat.handleKey({ key: 'enter', ctrl: false, alt: false } as any);
+        // Cast required: test helper builds a minimal KeyEvent without shift/meta.
+        chat.handleKey({ key: 'h', ctrl: false, alt: false } as KeyEvent);
+        chat.handleKey({ key: 'i', ctrl: false, alt: false } as KeyEvent);
+        chat.handleKey({ key: 'enter', ctrl: false, alt: false } as KeyEvent);
 
         // Wait for async streaming to complete
         await new Promise<void>((r) => setTimeout(r, 200));

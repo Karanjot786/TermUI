@@ -66,13 +66,19 @@ async function* openAIQuery(msg: string): AsyncGenerator<string> {
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
+    // Buffer incomplete lines: SSE `data: ...` lines can be split across chunks.
+    let remainder = '';
 
     while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split('\n')) {
+        const chunk = remainder + decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        // The last element is either empty (complete line) or a partial line.
+        remainder = lines.pop() ?? '';
+
+        for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             const data = line.slice('data: '.length).trim();
             if (data === '[DONE]') return;
@@ -101,7 +107,8 @@ async function* anthropicQuery(msg: string): AsyncGenerator<string> {
             'content-type': 'application/json',
         },
         body: JSON.stringify({
-            model: 'claude-haiku-3-5-latest',
+            // claude-haiku-4-5-20251001 is the current Haiku model alias.
+            model: 'claude-haiku-4-5-20251001',
             max_tokens: 1024,
             stream: true,
             messages: [{ role: 'user', content: msg }],
@@ -114,13 +121,19 @@ async function* anthropicQuery(msg: string): AsyncGenerator<string> {
 
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
+    // Buffer incomplete lines: SSE `data: ...` lines can be split across chunks.
+    let remainder = '';
 
     while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        for (const line of chunk.split('\n')) {
+        const chunk = remainder + decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        // The last element is either empty (complete line) or a partial line.
+        remainder = lines.pop() ?? '';
+
+        for (const line of lines) {
             if (!line.startsWith('data: ')) continue;
             const data = line.slice('data: '.length).trim();
             try {

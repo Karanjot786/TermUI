@@ -178,6 +178,13 @@ class AgentInputBar extends Widget {
                 this.moveRight();
                 break;
 
+            case 'space':
+                // Terminal input parsers emit key: 'space' (not ' '), so we
+                // must handle it explicitly — the length === 1 guard below
+                // would never match a 5-character key name.
+                this.insertChar(' ');
+                break;
+
             default:
                 if (event.key && event.key.length === 1 && !event.ctrl && !event.alt) {
                     this.insertChar(event.key);
