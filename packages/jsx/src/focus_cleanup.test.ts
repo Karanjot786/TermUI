@@ -73,7 +73,7 @@ describe('focus cleanup & autoBlurNode integration', () => {
 
         // Trigger state change (unmount ChildComponent)
         triggerUnmount();
-        reRenderComponent(rootInstance);
+        reRenderComponent(rootInstance!);
 
         // Verify that the focus cleanup blurred the unmounted node
         expect(mockContextValue.blur).toHaveBeenCalled();
@@ -107,21 +107,30 @@ describe('focus cleanup & autoBlurNode integration', () => {
         const rootInstance = instances.get(rootWidget);
 
         triggerUnmount();
-        reRenderComponent(rootInstance);
+        reRenderComponent(rootInstance!);
 
         expect(mockContextValue.blur).not.toHaveBeenCalled();
     });
 
     it('falls back to routing focus to fallback deterministically if other widgets exist', () => {
         // Mock widget properties and instances
-        const mockWidget1 = { id: 'child-id', focusable: true, parent: null };
-        const mockWidget2 = { id: 'sibling-id', focusable: true, parent: null };
+        const mockWidget1 = { id: 'child-id', focusable: true, parent: null } as any;
+        const mockWidget2 = { id: 'sibling-id', focusable: true, parent: null } as any;
 
-        const mockInstances = new Map();
-        mockInstances.set(mockWidget1, { fiber: {} });
-        mockInstances.set(mockWidget2, { fiber: {} });
-        // Accessing global mapping for test assertions on widgets
-        (globalThis as any).__termuijs_instances = mockInstances;
+        const mockInstances = getInstanceMap();
+        mockInstances.clear();
+        const createMockFiber = () => ({
+            effects: [],
+            layoutEffects: [],
+            intervals: [],
+            childFibers: new Set(),
+            hooks: [],
+            cleanups: [],
+            portalChildren: [],
+            contextValues: new Map()
+        } as any);
+        mockInstances.set(mockWidget1, { fiber: createMockFiber() } as any);
+        mockInstances.set(mockWidget2, { fiber: createMockFiber() } as any);
 
         mockContextValue.focused = 'child-id';
 
