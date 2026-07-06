@@ -23,8 +23,8 @@ class FormsExampleApp extends Widget {
 
         // 1. Text Form
         this.form = new Form([
-            { name: 'username', label: 'Username', type: 'text', required: true, validate: (v) => v.length < 3 ? 'Min 3 chars' : null },
-            { name: 'email', label: 'Email', type: 'text', required: true, validate: (v) => !v.includes('@') ? 'Invalid email' : null },
+            { name: 'username', label: 'Username', type: 'text', required: true, validate: (v) => typeof v === 'string' && v.length < 3 ? 'Min 3 chars' : null },
+            { name: 'email', label: 'Email', type: 'text', required: true, validate: (v) => typeof v === 'string' && !v.includes('@') ? 'Invalid email' : null },
         ], {
             onSubmit: () => this.trySubmit()
         });
@@ -83,7 +83,7 @@ class FormsExampleApp extends Widget {
         }
 
         // Pwd validation
-        if (this.pwdInput.rawValue.length < 6) {
+        if (this.pwdInput.value.length < 6) {
             errors.push('Password must be at least 6 characters');
         }
 

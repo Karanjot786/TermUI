@@ -7,7 +7,8 @@
     "scripts": {
         "start": "bun src/index.tsx",
         "dev": "bun --watch src/index.tsx",
-        "build": "echo 'no build needed'"
+        "build": "echo 'no build needed'",
+        "typecheck": "tsc --noEmit"
     },
     "dependencies": {
         "@termuijs/core": "workspace:*",

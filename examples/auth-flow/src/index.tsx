@@ -1,7 +1,8 @@
 import { App, type KeyEvent } from '@termuijs/core';
-import { render, useKeymap, ErrorBoundary, useState, useInput, useRef, useEffect } from '@termuijs/jsx';
+import { render, useKeymap, ErrorBoundary, useState, useInput, useRef } from '@termuijs/jsx';
 import { TextInput } from '@termuijs/widgets';
 import { PasswordInput } from '@termuijs/ui';
+import { Router, RouterView, useNavigate } from '@termuijs/router';
 import { useAuthStore } from './authStore.js';
 
 function TextInputJSX({ value, onChange, placeholder, isFocused }: { value: string, onChange: (val: string) => void, placeholder?: string, isFocused: boolean }) {
@@ -65,6 +66,7 @@ function LoginScreen() {
     const [focusedIndex, setFocusedIndex] = useState(0); // 0 = username, 1 = password
     
     const login = useAuthStore(state => state.login);
+    const navigate = useNavigate();
 
     useKeymap([
         { key: 'c', ctrl: true, action: () => process.exit(0) },
@@ -72,6 +74,7 @@ function LoginScreen() {
         { key: 'enter', action: () => {
             if (username !== '' && password !== '') {
                 login(username);
+                navigate('/protected');
             } else {
                 setError('Username and password are required');
             }
@@ -79,6 +82,7 @@ function LoginScreen() {
         { key: 'return', action: () => {
             if (username !== '' && password !== '') {
                 login(username);
+                navigate('/protected');
             } else {
                 setError('Username and password are required');
             }
@@ -108,7 +112,7 @@ function LoginScreen() {
                     isFocused={focusedIndex === 1}
                 />
             </box>
-
+            
             {error ? <text color="red">{error}</text> : null}
 
             <text dim margin={1}>Press Tab to switch fields, Enter to login, Ctrl+C to quit</text>
@@ -119,10 +123,14 @@ function LoginScreen() {
 function ProtectedScreen() {
     const username = useAuthStore(state => state.username);
     const logout = useAuthStore(state => state.logout);
+    const navigate = useNavigate();
 
     useKeymap([
         { key: 'c', ctrl: true, action: () => process.exit(0) },
-        { key: 'l', action: () => logout() }
+        { key: 'l', action: () => {
+            logout();
+            navigate('/login');
+        } }
     ]);
 
     return (
@@ -137,14 +145,28 @@ function ProtectedScreen() {
     );
 }
 
-function MainApp() {
-    const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+const router = new Router({ initialPath: '/' });
 
-    if (isAuthenticated) {
-        return <ProtectedScreen />;
+router.addRoute('/', () => null, undefined, {
+    redirect: '/protected'
+});
+
+router.addRoute('/login', LoginScreen, undefined, {
+    beforeEnter: () => {
+        const isAuth = useAuthStore.getState().isAuthenticated;
+        return isAuth ? '/protected' : true;
     }
+});
 
-    return <LoginScreen />;
+router.addRoute('/protected', ProtectedScreen, undefined, {
+    beforeEnter: () => {
+        const isAuth = useAuthStore.getState().isAuthenticated;
+        return isAuth ? true : '/login';
+    }
+});
+
+function MainApp() {
+    return <RouterView router={router} />;
 }
 
 const app = render(

@@ -88,6 +88,7 @@
       "dependencies": {
         "@termuijs/core": "workspace:*",
         "@termuijs/jsx": "workspace:*",
+        "@termuijs/router": "workspace:*",
         "@termuijs/store": "workspace:*",
         "@termuijs/ui": "workspace:*",
         "@termuijs/widgets": "workspace:*",
