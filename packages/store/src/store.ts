@@ -555,6 +555,15 @@ export function createStore<T extends object>(
     (useStore as any).reset = reset;
     (useStore as any).getInitialState = getInitialState;
 
+    // Attach middleware APIs to the store instance (e.g. store.devtools)
+    if (options?.middleware) {
+        for (const mw of options.middleware) {
+            if ((mw as any).api) {
+                Object.assign(useStore, (mw as any).api);
+            }
+        }
+    }
+
     return useStore as UseStore<T>;
 }
 

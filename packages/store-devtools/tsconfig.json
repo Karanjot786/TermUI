@@ -4,7 +4,9 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "jsx": "react-jsx",
-    "jsxImportSource": "@termuijs/jsx"
+    "jsxImportSource": "@termuijs/jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler"
   },
   "include": ["src/**/*"]
 }

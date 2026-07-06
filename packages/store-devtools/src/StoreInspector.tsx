@@ -1,4 +1,4 @@
-import { useState, useEffect } from '@termuijs/jsx';
+import { useState, useEffect, useInput } from '@termuijs/jsx';
 
 export interface StoreInspectorProps {
     storeName: string;
@@ -6,26 +6,38 @@ export interface StoreInspectorProps {
 }
 
 export function StoreInspector({ storeName, storeHook }: StoreInspectorProps) {
-    const [historyInfo, setHistoryInfo] = useState<any>(null);
+    const devtoolsAPI = (storeHook as any).history ? storeHook as any : null;
+    const [historyInfo, setHistoryInfo] = useState<any>(devtoolsAPI);
     const [selectedIndex, setSelectedIndex] = useState(-1);
     
     // Subscribe to store updates to refresh devtools view
     useEffect(() => {
         const unsub = storeHook.subscribe(() => {
-            const devtoolsMap = (globalThis as any).__TERMUIJS_DEVTOOLS__;
-            if (devtoolsMap) {
-                setHistoryInfo(devtoolsMap.get(storeName));
+            if ((storeHook as any).history) {
+                // clone to trigger re-render
+                setHistoryInfo({ history: (storeHook as any).history, goTo: (storeHook as any).goTo });
             }
         });
         
-        // Initial fetch
-        const devtoolsMap = (globalThis as any).__TERMUIJS_DEVTOOLS__;
-        if (devtoolsMap) {
-            setHistoryInfo(devtoolsMap.get(storeName));
-        }
-        
         return unsub;
     }, [storeName]);
+
+    useInput((key) => {
+        if (!historyInfo) return;
+        const { history, goTo } = historyInfo;
+        const total = history.past.length + 1 + history.future.length;
+        const current = selectedIndex === -1 ? history.past.length : selectedIndex;
+        
+        if (key === 'up') {
+            const nextIdx = Math.max(0, current - 1);
+            setSelectedIndex(nextIdx);
+            goTo(nextIdx, (storeHook as any).setState);
+        } else if (key === 'down') {
+            const nextIdx = Math.min(total - 1, current + 1);
+            setSelectedIndex(nextIdx);
+            goTo(nextIdx, (storeHook as any).setState);
+        }
+    });
 
     if (!historyInfo) {
         return <text>Waiting for store '{storeName}'...</text>;

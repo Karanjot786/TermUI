@@ -17,18 +17,31 @@ export interface DevToolsOptions {
     maxHistory?: number;
 }
 
-export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> {
+export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> & { api: any } {
     const { name = 'store', maxHistory = 50 } = options;
-    
-    // Initialize global store register
-    if (typeof globalThis !== 'undefined') {
-        (globalThis as any).__TERMUIJS_DEVTOOLS__ = (globalThis as any).__TERMUIJS_DEVTOOLS__ || new Map();
-    }
     
     let isTimeTraveling = false;
     let history: DevToolsState<T> = { past: [], present: null as any, future: [] };
 
-    return (prevState: T, update: Partial<T>, next: (update: Partial<T>, actionName?: string) => T, actionName?: string) => {
+    const api = {
+        history,
+        goTo: (index: number, setState: (state: T) => void) => {
+            const allStates = [...history.past, { state: history.present, action: null as any }, ...history.future];
+            if (index >= 0 && index < allStates.length) {
+                isTimeTraveling = true;
+                const target = allStates[index];
+                setState(target.state);
+                
+                history.past = allStates.slice(0, index) as any;
+                history.present = target.state;
+                history.future = allStates.slice(index + 1) as any;
+                
+                isTimeTraveling = false;
+            }
+        }
+    };
+
+    const mw = ((prevState: T, update: Partial<T>, next: (update: Partial<T>, actionName?: string) => T, actionName?: string) => {
         if (isTimeTraveling) {
             next(update, actionName);
             return;
@@ -38,12 +51,7 @@ export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> {
             history.present = prevState;
         }
 
-        next(update, actionName);
-        
-        // At this point, the update is applied, but we need the store's reference to getState.
-        // Wait, the middleware doesn't give us the computed nextState easily, but we know
-        // `update` is merged into `prevState`.
-        const nextState = { ...prevState, ...update };
+        const nextState = next(update, actionName);
         
         const action: DevToolsAction<T> = {
             type: actionName || 'anonymous',
@@ -57,26 +65,13 @@ export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> {
         }
         history.present = nextState;
         history.future = [];
+        
+        // Update the API reference to the mutated history
+        api.history = history;
 
-        if (typeof globalThis !== 'undefined') {
-            const devtoolsMap = (globalThis as any).__TERMUIJS_DEVTOOLS__ as Map<string, any>;
-            devtoolsMap.set(name, {
-                history,
-                goTo: (index: number, setState: (state: T) => void) => {
-                    const allStates = [...history.past, { state: history.present, action: null as any }, ...history.future];
-                    if (index >= 0 && index < allStates.length) {
-                        isTimeTraveling = true;
-                        const target = allStates[index];
-                        setState(target.state);
-                        
-                        history.past = allStates.slice(0, index) as any;
-                        history.present = target.state;
-                        history.future = allStates.slice(index + 1) as any;
-                        
-                        isTimeTraveling = false;
-                    }
-                }
-            });
-        }
-    };
+    }) as Middleware<T> & { api: typeof api };
+    
+    mw.api = api;
+
+    return mw;
 }
