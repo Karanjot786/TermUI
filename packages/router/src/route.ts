@@ -19,21 +19,11 @@ export interface QueryParams {
 }
 
 export function parseQuery(queryString: string): QueryParams {
-    const query: QueryParams = {};
-    if (!queryString) return query;
-    const searchParams = new URLSearchParams(queryString);
-    for (const [key, val] of searchParams.entries()) {
-        query[key] = val;
-    }
-    return query;
+    return Object.fromEntries(new URLSearchParams(queryString));
 }
 
 export function serializeQuery(query: QueryParams): string {
-    const searchParams = new URLSearchParams();
-    for (const [key, val] of Object.entries(query)) {
-        searchParams.append(key, val);
-    }
-    return searchParams.toString();
+    return new URLSearchParams(query).toString();
 }
 
 export type RedirectTarget =
@@ -169,7 +159,7 @@ export function matchRoute(path: string, routes: Route[]): RouteMatch | null {
 
     const match = matchNested(pathname, routes);
     if (match) {
-        match.query = parseQuery(queryString);
+        match.query = Object.fromEntries(new URLSearchParams(queryString));
         return match;
     }
     return null;

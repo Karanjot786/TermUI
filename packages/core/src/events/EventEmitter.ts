@@ -76,12 +76,12 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
             this._onceHandlers.delete(event);
         }
 
-        // Regular handlers — skip if re-entrant for the same event
+        // Regular handlers — iterate over a snapshot to prevent concurrent modification issues
         if (!this._emitting.has(event)) {
             this._emitting.add(event);
             const handlers = this._handlers.get(event);
             if (handlers) {
-                for (const handler of handlers) {
+                for (const handler of [...handlers]) {
                     try { handler(data); } catch (_err) {
                         // handler errors are silently ignored to prevent crash during rendering
                     }

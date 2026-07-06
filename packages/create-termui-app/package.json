@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Scaffold a new TermUI project with templates, themes, and dev server",
   "type": "module",
   "bin": {

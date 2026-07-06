@@ -71,7 +71,8 @@ export class CommandHistory {
     }
 
     import(data: string): void {
-        this.commands = JSON.parse(data);
+        const parsed: string[] = JSON.parse(data);
+        this.commands = parsed.slice(-this.maxSize);
         this.index = this.commands.length;
     }
 }

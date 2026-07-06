@@ -34,6 +34,12 @@ export class FocusManager {
     private _trapStack: string[] = [];
 
     /**
+     * Parallel stack to _trapStack. Captures the focused widget ID
+     * before each trap() call so release() can restore it.
+     */
+    private _preTrapFocus: string[] = [];
+
+    /**
      * Map of container ID → child widget IDs that belong to it.
      * Used for trap membership lookup.
      */
@@ -244,6 +250,7 @@ export class FocusManager {
      * nested modals create nested traps.
      */
     trap(containerId: string): void {
+        this._preTrapFocus.push(this.currentId ?? '');
         this._trapStack.push(containerId);
 
         // Focus the first focusable inside the trap
@@ -257,11 +264,37 @@ export class FocusManager {
         }
     }
 
+    // REPLACE WITH:
     /**
-     * Release the current focus trap. Restores previous trap or free navigation.
+     * Release a focus trap by container ID.
+     *
+     * - Must be called with the same containerId passed to trap().
+     * - Must be called in LIFO order — innermost trap released first.
+     * - Emits console.warn and is a no-op if stack is empty or ID mismatches.
+     * - Restores focus to the widget that was focused before trap() was called.
      */
-    release(): void {
+    release(containerId: string): void {
+        if (this._trapStack.length === 0) {
+            console.warn('FocusManager.release(): called with empty trap stack — ignoring.');
+            return;
+        }
+
+        const top = this._trapStack[this._trapStack.length - 1];
+        if (top !== containerId) {
+            console.warn(
+                `FocusManager.release(): expected "${top}" but got "${containerId}" — ignoring. ` +
+                `Ensure nested modals are released in LIFO order.`
+            );
+            return;
+        }
+
         this._trapStack.pop();
+
+        // Restore focus to what was focused before this trap was activated
+        const previousFocusId = this._preTrapFocus.pop();
+        if (previousFocusId) {
+            this.focusWidget(previousFocusId);
+        }
     }
 
     /** Whether a focus trap is currently active */

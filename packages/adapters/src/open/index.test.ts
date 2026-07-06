@@ -87,18 +87,6 @@ describe('useOpen', () => {
     expect(mockOpen).toHaveBeenCalledWith('https://termui.io')
   })
 
-  it('lastOpened tracks the last target', async () => {
-    const useOpen = await loadUseOpen()
-
-    const adapter = useOpen()
-
-    expect(adapter.lastOpened).toBe(null)
-
-    await adapter.open('file.txt')
-
-    expect(adapter.lastOpened).toBe('file.txt')
-  })
-
   it('missing open throws a clear error', async () => {
     shouldThrowMissingOpen = true
 

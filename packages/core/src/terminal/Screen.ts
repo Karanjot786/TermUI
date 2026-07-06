@@ -40,6 +40,8 @@ export interface Cell {
     width: number;
     /** Optional OSC 8 hyperlink target for this cell. */
     link?: string;
+    /** DevTools Widget ID for Inspector Mode */
+    debugWidgetId?: string;
 }
 
 /** Create a blank cell with default attributes */
@@ -56,6 +58,7 @@ export function emptyCell(): Cell {
         inverse: false,
         width: 1,
         link: undefined,
+        debugWidgetId: undefined,
     };
 }
 
@@ -72,6 +75,7 @@ export function resetCell(cell: Cell): void {
     cell.inverse = false;
     cell.width = 1;
     cell.link = undefined;
+    cell.debugWidgetId = undefined;
 }
 
 /** Check if two cells are visually identical */
@@ -436,6 +440,14 @@ export class Screen {
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
         this._previousLines = [];
+        this._previousStyleLines = [];
+        this._clipStack = [];
+        this._translateYStack = [];
+        this._translateY = 0;
+        this._ansiQueue = [];
+        this._flushEpoch = -1;
+        this._swapping = false;
+        this._backdropFilters = [];
     }
 
     /**
@@ -510,4 +522,42 @@ export class Screen {
         }
         return grid;
     }
+
+    private _backdropFilters: Array<{ x: number; y: number; width: number; height: number; }> = [];
+
+    /**
+     * Schedules a backdrop filter to be applied during the compositing pass.
+     * The excluded rectangle will NOT be dimmed.
+     */
+    applyBackdropFilter(excludeRect: { x: number; y: number; width: number; height: number; }): void {
+        this._backdropFilters.push({ ...excludeRect });
+    }
+
+    /**
+     * Applies all scheduled backdrop filters in a render-order-independent way,
+     * dimming any cell that falls outside of ALL scheduled exclude rectangles.
+     * Called automatically by the App render loop.
+     */
+    flushBackdropFilters(): void {
+        if (this._backdropFilters.length === 0) return;
+
+        for (let y = 0; y < this._rows; y++) {
+            for (let x = 0; x < this._cols; x++) {
+                let exclude = false;
+                for (const rect of this._backdropFilters) {
+                    if (x >= rect.x && x < rect.x + rect.width &&
+                        y >= rect.y && y < rect.y + rect.height) {
+                        exclude = true;
+                        break;
+                    }
+                }
+                if (!exclude) {
+                    this.setCell(x, y, { dim: true });
+                }
+            }
+        }
+        
+        this._backdropFilters = [];
+    }
+
 }

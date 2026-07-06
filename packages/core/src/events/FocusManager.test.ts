@@ -381,3 +381,113 @@ describe('FocusManager Re-entrancy', () => {
         expect(fm.currentId).toBe('b');
     });
 });
+
+describe('FocusManager Focus Trap', () => {
+    it('release() on empty stack warns and does not throw', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('a'));
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        expect(() => fm.release('some-modal')).not.toThrow();
+        expect(warnSpy).toHaveBeenCalledOnce();
+        expect(warnSpy.mock.calls[0][0]).toContain('empty trap stack');
+
+        warnSpy.mockRestore();
+    });
+
+    it('release() with mismatched containerId warns and keeps trap active', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('a'));
+        fm.register(makeWidget('b'));
+        fm.registerContainerMembers('modal-1', ['b']);
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        fm.trap('modal-1');
+        fm.release('modal-2'); // wrong ID
+
+        expect(warnSpy).toHaveBeenCalledOnce();
+        expect(warnSpy.mock.calls[0][0]).toContain('modal-2');
+        expect(fm.isTrapped).toBe(true);
+        expect(fm.currentTrapId).toBe('modal-1');
+
+        warnSpy.mockRestore();
+    });
+
+    it('release() with correct containerId removes the trap', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('a'));
+        fm.register(makeWidget('b'));
+        fm.registerContainerMembers('modal-1', ['b']);
+
+        fm.trap('modal-1');
+        expect(fm.isTrapped).toBe(true);
+
+        fm.release('modal-1');
+        expect(fm.isTrapped).toBe(false);
+        expect(fm.currentTrapId).toBeNull();
+    });
+
+    it('release() restores focus to widget focused before trap() was called', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('trigger-btn'));
+        fm.register(makeWidget('modal-input'));
+        fm.register(makeWidget('modal-confirm'));
+        fm.registerContainerMembers('dialog', ['modal-input', 'modal-confirm']);
+
+        fm.focusWidget('trigger-btn');
+        expect(fm.currentId).toBe('trigger-btn');
+
+        fm.trap('dialog');
+        expect(fm.currentId).toBe('modal-input');
+
+        fm.focusNext(); // move around inside modal
+        expect(fm.currentId).toBe('modal-confirm');
+
+        fm.release('dialog');
+        // Must go back to what had focus before trap, not stay inside modal
+        expect(fm.currentId).toBe('trigger-btn');
+    });
+
+    it('nested traps: each release restores to the correct prior focus', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('main-btn'));
+        fm.register(makeWidget('outer-input'));
+        fm.register(makeWidget('inner-input'));
+        fm.registerContainerMembers('outer-modal', ['outer-input']);
+        fm.registerContainerMembers('inner-modal', ['inner-input']);
+
+        fm.focusWidget('main-btn');
+
+        fm.trap('outer-modal');
+        expect(fm.currentId).toBe('outer-input');
+
+        fm.trap('inner-modal');
+        expect(fm.currentId).toBe('inner-input');
+
+        fm.release('inner-modal');
+        expect(fm.currentId).toBe('outer-input'); // restored to pre-inner-trap focus
+        expect(fm.currentTrapId).toBe('outer-modal');
+
+        fm.release('outer-modal');
+        expect(fm.currentId).toBe('main-btn'); // restored to pre-outer-trap focus
+        expect(fm.isTrapped).toBe(false);
+    });
+
+    it('double release() warns on second call and leaves state clean', () => {
+        const fm = new FocusManager();
+        fm.register(makeWidget('a'));
+        fm.register(makeWidget('b'));
+        fm.registerContainerMembers('modal', ['b']);
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        fm.trap('modal');
+        fm.release('modal'); // correct
+        fm.release('modal'); // duplicate — stack now empty
+
+        expect(warnSpy).toHaveBeenCalledOnce();
+        expect(warnSpy.mock.calls[0][0]).toContain('empty trap stack');
+        expect(fm.isTrapped).toBe(false);
+
+        warnSpy.mockRestore();
+    });
+});

@@ -1,5 +1,5 @@
 import { useCallback } from '../hooks.js';
-import { bell } from '@termuijs/core';
+import { ansi } from '@termuijs/core';
 
 /**
  * useBell - A React-like hook for triggering the terminal bell.
@@ -17,6 +17,6 @@ import { bell } from '@termuijs/core';
  */
 export function useBell(): () => void {
     return useCallback(() => {
-        bell();
+        process.stdout.write(ansi.bell);
     }, []);
 }

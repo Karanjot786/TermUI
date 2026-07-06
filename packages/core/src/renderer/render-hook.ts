@@ -54,19 +54,3 @@ export class RenderHook {
         process.stdout.write(text);
     }
 }
-
-/**
- * Queues a render pass for the next event loop tick.
- * Ensures high-frequency mutations are batched together.
- * * Using .call() or .bind() from the application context invokes this safely.
- */
-export function queueUpdate(this: any) { // any: this is bound dynamically via .call() at render time
-    setImmediate(() => {
-        if (this && typeof this.render === 'function') {
-            this.render();
-        }
-        if (this && typeof this.clearDirty === 'function') {
-            this.clearDirty();
-        }
-    });
-}

@@ -183,4 +183,23 @@ it('cli-tool template generates a minimal entry under 15 source lines', () => {
         const tsconfig = files.find((f) => f.path === 'tsconfig.json')!
         expect(tsconfig.content).toContain('jsx')
     })
+
+    it('generates a Vitest starter with config and test dependencies', () => {
+        const files = generateProject(baseConfig)
+
+        const pkg = files.find((f) => f.path === 'package.json')!
+        const parsed = JSON.parse(pkg.content)
+        expect(parsed.scripts.test).toBe('vitest run')
+        expect(parsed.devDependencies.vitest).toBeDefined()
+        expect(parsed.devDependencies['@termuijs/testing']).toBe('latest')
+
+        const vitestConfig = files.find((f) => f.path === 'vitest.config.ts')
+        expect(vitestConfig).toBeDefined()
+        expect(vitestConfig?.content).toContain('defineConfig')
+
+        const starterTest = files.find((f) => f.path === 'src/index.test.tsx')
+        expect(starterTest).toBeDefined()
+        expect(starterTest?.content).toContain('@termuijs/testing')
+        expect(starterTest?.content).toContain('describe(')
+    })
 })
