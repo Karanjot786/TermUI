@@ -7,6 +7,21 @@ import { styleToCellAttrs } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 /**
+ * Properties for configuring the Box widget.
+ */
+export interface BoxProps {
+    /** 
+     * Optional identifier for the box, useful for testing or debugging.
+     */
+    id?: string;
+    
+    /** 
+     * Accessible label for screen readers or testing.
+     */
+    label?: string;
+}
+
+/**
  * Box — the fundamental container widget, similar to a `<div>`.
  *
  * Supports:
@@ -16,7 +31,7 @@ import { Widget } from '../base/Widget.js';
  * - Background color
  */
 export class Box extends Widget {
-    constructor(style: Partial<Style> = {}) {
+    constructor(style: Partial<Style> = {}, props: Partial<BoxProps> = {}) {
         super(style);
     }
     /** Check if this Box has no children */

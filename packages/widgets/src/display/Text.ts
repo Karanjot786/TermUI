@@ -5,14 +5,52 @@
 import { type Screen, type Style, styleToCellAttrs, wordWrap, stringWidth } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
+/**
+ * Properties for configuring the Text widget.
+ */
 export interface TextProps {
+    /** 
+     * The text content to display.
+     * Can contain newlines for explicit line breaks.
+     */
     content: string;
+    
+    /** 
+     * Whether the text should automatically word-wrap to fit the container's width.
+     * @default true
+     */
     wrap?: boolean;
+    
+    /** 
+     * Text alignment within the available container width.
+     * @default 'left'
+     */
     align?: 'left' | 'center' | 'right';
-    /** Vertical scroll offset (lines to skip from top). Default: 0. */
+    
+    /** 
+     * Vertical scroll offset. 
+     * Number of lines to skip from the top when rendering.
+     * @default 0
+     */
     scrollY?: number;
-    /** Horizontal scroll offset (columns to skip from left). Default: 0. */
+    
+    /** 
+     * Horizontal scroll offset.
+     * Number of columns to skip from the left when rendering.
+     * @default 0
+     */
     scrollX?: number;
+    
+    /** 
+     * Text color using theme tokens.
+     * (Illustrative prop to support styled content integration)
+     */
+    color?: 'primary' | 'secondary' | 'error';
+    
+    /** 
+     * Font weight for the text content.
+     */
+    weight?: 'normal' | 'bold';
 }
 
 /**

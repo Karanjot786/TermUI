@@ -17,6 +17,42 @@ import { type VimMode } from './vim.js';
 export type { VimMode };
 
 /**
+ * Properties for configuring the TextInput widget.
+ */
+export interface TextInputProps {
+    /** 
+     * Placeholder text shown when the input is empty.
+     */
+    placeholder?: string;
+    
+    /** 
+     * Character used to mask input (e.g. '*' for password fields).
+     */
+    mask?: string;
+    
+    /** 
+     * Maximum number of characters allowed in the input field.
+     */
+    maxLength?: number;
+    
+    /** 
+     * Array of strings for auto-completion suggestions.
+     * Accessible via Tab key.
+     */
+    suggestions?: string[];
+    
+    /** 
+     * Callback fired whenever the input value changes.
+     */
+    onChange?: (value: string) => void;
+    
+    /** 
+     * Callback fired when the user presses Enter/Return to submit.
+     */
+    onSubmit?: (value: string) => void;
+}
+
+/**
  * TextInput — a single-line text input field
  * with optional command auto-completion support.
  */
@@ -34,14 +70,7 @@ export class TextInput extends Widget {
 
     constructor(
         style: Partial<Style> = {},
-        options: {
-            placeholder?: string;
-            mask?: string;
-            maxLength?: number;
-            suggestions?: string[];
-            onChange?: (value: string) => void;
-            onSubmit?: (value: string) => void;
-        } = {},
+        options: TextInputProps = {},
     ) {
         super({ border: 'single', height: 3, ...style });
 
