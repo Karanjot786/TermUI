@@ -4,6 +4,7 @@ import { Screen } from '@termuijs/core';
 import type { VNode } from './vnode.js';
 import { reconcile, reRenderComponent, unmountAll, _pruneInstancesForWidget, getInstanceMap } from './reconciler.js';
 import { destroyFiber } from './hooks.js';
+import { instanceMap } from './globals.js';
 
 // ── Helper: make a functional component VNode ──
 
@@ -34,8 +35,6 @@ function ReturnsBoxDirectly(): Box {
 function ReturnsTextVNode(): VNode {
     return h('text', {}, ['hello']);
 }
-
-// Use the exported getInstanceMap accessor
 
 
 describe('_instanceMap leak prevention', () => {

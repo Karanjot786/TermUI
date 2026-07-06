@@ -113,6 +113,8 @@ export abstract class Widget {
      * Newly created widgets start dirty.
      */
     protected _dirty = true;
+    /** Idempotency guard — true once unmount() has completed */
+    private _unmounted = false;
     /** Render profiling statistics */
     private _renderStats: RenderStats = {
         renderCount: 0,
@@ -173,6 +175,11 @@ export abstract class Widget {
     addChild(child: Widget): void {
         child.parent = this;
         this._children.push(child);
+        // Propagate any dirty state the child accumulated before being added
+        // to the tree (e.g., Pty output that arrived before mount).
+        if (child._dirty) {
+            this.markDirty();
+        }
     }
 
     /** Remove a child widget */
@@ -199,13 +206,12 @@ export abstract class Widget {
      * Fiber-level cleanup is handled by the reconciler's _pruneInstancesForWidget.
      */
     destroy(): void {
+        this.unmount();
         const children = [...this._children];
         this._children = [];
         for (const child of children) {
             child.destroy();
         }
-        this.events.emit('unmount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
-        this.events.removeAll();
         this.parent = null;
     }
 
@@ -254,8 +260,7 @@ export abstract class Widget {
     render(screen: Screen): void {
         if (this._style.visible === false) return;
 
-        const _emitA11y = typeof emitA11y === 'function' ? emitA11y : (() => {});
-        _emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'start');
+        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'start');
 
         // Push clip region if overflow is hidden (default style)
         const shouldClip = this._style.overflow !== 'visible';
@@ -303,8 +308,7 @@ export abstract class Widget {
             screen.popClip();
         }
 
-        const _emitA11yEnd = typeof emitA11y === 'function' ? emitA11y : (() => {});
-        _emitA11yEnd(this._a11y, (data: string) => screen.writeAnsi(data), 'end');
+        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'end');
     }
 
     /**
@@ -354,33 +358,33 @@ export abstract class Widget {
             this._rect = newRect;
             return;
         }
-
+        
         // If target is same, ignore
-        if (this._targetRect &&
-            this._targetRect.x === newRect.x &&
-            this._targetRect.y === newRect.y &&
-            this._targetRect.width === newRect.width &&
+        if (this._targetRect && 
+            this._targetRect.x === newRect.x && 
+            this._targetRect.y === newRect.y && 
+            this._targetRect.width === newRect.width && 
             this._targetRect.height === newRect.height) {
             return;
         }
-
-        if (this._rect.x === newRect.x &&
-            this._rect.y === newRect.y &&
-            this._rect.width === newRect.width &&
+        
+        if (this._rect.x === newRect.x && 
+            this._rect.y === newRect.y && 
+            this._rect.width === newRect.width && 
             this._rect.height === newRect.height) {
             return;
         }
-
+        
         if (this._layoutCancel) {
             this._layoutCancel();
         }
-
+        
         this._targetRect = { ...newRect };
-
-        const config = typeof this.layoutTransition === 'boolean'
-            ? 'default'
+        
+        const config = typeof this.layoutTransition === 'boolean' 
+            ? 'default' 
             : this.layoutTransition;
-
+            
         this._layoutCancel = animateRect(this._rect, newRect, {
             config,
             onFrame: (rect) => {
@@ -551,6 +555,7 @@ export abstract class Widget {
 
     /** Lifecycle: called when the widget is mounted */
     mount(): void {
+        this._unmounted = false;
         this.events.emit('mount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         for (const child of this._children) {
             child.mount();
@@ -559,6 +564,8 @@ export abstract class Widget {
 
     /** Lifecycle: called when the widget is unmounted */
     unmount(): void {
+        if (this._unmounted) return;
+        this._unmounted = true;
         for (const child of this._children) {
             child.unmount();
         }

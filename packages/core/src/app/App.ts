@@ -10,7 +10,7 @@ import { InputParser } from '../input/InputParser.js';
 import { FocusManager } from '../events/FocusManager.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import { computeLayout, type LayoutNode } from '../layout/LayoutEngine.js';
-import type { EventMap, FocusEvent } from '../events/types.js';
+import type { EventMap, FocusEvent, MouseEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
 import { mergeBorders } from '../renderer/border-merge.js';
@@ -87,6 +87,7 @@ export class App {
     private _unsubUncaughtException: (() => void) | null = null;
     private _unsubUnhandledRejection: (() => void) | null = null;
     private _widgetById = new Map<string, any>(); // any: Widget shape varies; narrowed at retrieval
+    private _hoveredWidgetId: string | null = null;
     private _pendingFocusState = new Map<string, boolean>();
 
     private _consecutiveRenderFailures = 0;
@@ -134,6 +135,7 @@ export class App {
         }
 
         this._mounted = true;
+        this._hoveredWidgetId = null;
         // Focus subscriptions are interactive-only; fallback mount returns
         // without unmount(), so constructor subscriptions would leak there.
         this._subscribeFocusEvents();
@@ -164,7 +166,8 @@ export class App {
         }
 
         if (this._options.title) {
-            this.terminal.write(`\x1b]0;${this._options.title}\x07`);
+            const safeTitle = this._options.title.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+            this.terminal.write(`\x1b]0;${safeTitle}\x07`);
         }
 
         // Handle resize
@@ -217,6 +220,33 @@ export class App {
         // Forward mouse events
         this._unsubMouse = this.input.onMouse((event) => {
             this.events.emit('mouse', event);
+
+            if (event.type === 'mousedown' || event.type === 'mouseup') {
+                const hitWidget = this._findWidgetAt(event.x, event.y);
+                if (hitWidget) {
+                    hitWidget.events.emit('mouse', event);
+                }
+            }
+
+            if (event.type === 'mousemove') {
+                const hitWidget = this._findWidgetAt(event.x, event.y);
+                const hitId = hitWidget?.id ?? null;
+
+                if (hitId !== this._hoveredWidgetId) {
+                    const prevWidget = this._hoveredWidgetId
+                        ? this._widgetById.get(this._hoveredWidgetId)
+                        : null;
+                    if (prevWidget) {
+                        prevWidget.events.emit('mouseleave', { ...event, type: 'mouseleave' });
+                    }
+
+                    if (hitWidget) {
+                        hitWidget.events.emit('mouseenter', { ...event, type: 'mouseenter' });
+                    }
+
+                    this._hoveredWidgetId = hitId;
+                }
+            }
         });
 
         // Forward paste events
@@ -282,6 +312,7 @@ export class App {
     unmount(exitCode: number = 0): void {
         if (!this._mounted) return;
         this._mounted = false;
+        this._hoveredWidgetId = null;
 
         this._rootWidget.unmount?.();
         this.events.emit('unmount', undefined as any); // as any: EventEmitter generic requires a value; payload is intentionally void
@@ -366,6 +397,7 @@ export class App {
                 // callback so the dirty check and the _isRenderPending guard
                 // are never racy with concurrent requestRender() calls.
                 if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
+                    this._isRenderPending = false;
                     return;
                 }
 
@@ -383,6 +415,12 @@ export class App {
                     // Clear the back buffer and render widgets into it
                     this.screen.clear();
                     this._rootWidget.render(this.screen);
+
+                    // Apply any scheduled backdrop filters (e.g. from Modals)
+                    // This runs as a compositing pass after the entire widget tree has drawn,
+                    // ensuring that dimming is order-independent and correctly applies to
+                    // cells outside all active modals.
+                    this.screen.flushBackdropFilters();
 
                     // Merge adjacent borders into junction characters for a cleaner look
                     if (this._options.dockBorders) {
@@ -564,6 +602,52 @@ export class App {
         }
     }
 
+    private _findWidgetAt(x: number, y: number): any { // any: widget shape varies; narrowed at retrieval
+        // 1. Use LayerManager hitTest for overlay layers (respects z-order)
+        const layerHitId = this.layers.hitTest(x, y);
+        if (layerHitId) {
+            const layerWidget = this._widgetById.get(layerHitId);
+            if (layerWidget) {
+                const r = layerWidget.rect;
+                if (r && x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
+                    return layerWidget;
+                }
+            }
+        }
+
+        // 2. Collect all matching widgets, filtering out hidden ones
+        const matches: Array<{ widget: any; zIndex: number }> = [];
+        for (const widget of this._widgetById.values()) {
+            const r = widget.rect;
+            if (!r) continue;
+            if (widget.style?.visible === false) continue;
+            if (x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height) {
+                matches.push({ widget, zIndex: widget.style?.zIndex ?? 0 });
+            }
+        }
+        if (matches.length === 0) return null;
+
+        // 3. Sort by z-index descending (topmost wins)
+        matches.sort((a, b) => b.zIndex - a.zIndex);
+        const topZ = matches[0].zIndex;
+        const topMatches = matches.filter(m => m.zIndex === topZ);
+
+        // 4. Among same z-index, prefer deepest child widget (most specific)
+        if (topMatches.length > 1) {
+            for (const m of topMatches) {
+                let p = m.widget.parent;
+                while (p) {
+                    if (topMatches.some(x => x.widget === p)) {
+                        return m.widget;
+                    }
+                    p = p.parent;
+                }
+            }
+        }
+
+        return matches[0].widget;
+    }
+
     private _isFocusAwareWidget(widget: unknown): widget is FocusAwareWidget {
         return typeof widget === 'object'
             && widget !== null
@@ -573,3 +657,11 @@ export class App {
             && typeof widget.isFocused === 'boolean';
     }
 }
+
+
+
+
+
+
+
+

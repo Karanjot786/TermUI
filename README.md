@@ -1,8 +1,7 @@
-<p align="center">
-  <h1 align="center">TermUI</h1>
-    
-  <p align="center">Build terminal applications in TypeScript.</p>
-</p>
+# TermUI
+
+A powerful TypeScript and JavaScript framework tailored for building rich terminal applications. Includes flexbox layout, state management, animations, and hot-reload.
+
 
 
 <p align="center">
@@ -478,6 +477,8 @@ examples/
 
 ## Development
 > **Note:** This project uses [Bun](https://bun.sh) as its package manager. Install Bun first: https://bun.sh/docs/installation
+> **Note:** If you encounter execution policy or permission errors during setup, open your terminal as an Administrator (Windows) or use `sudo` before running commands (Mac/Linux).
+
 
 ```bash
 bun install

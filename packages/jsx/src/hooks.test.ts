@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { timerPoolUnsubscribeAll } from '@termuijs/motion';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
-    useState, useEffect, useRef, useId, useCallback,
+    useState, useEffect, useRef, useId, useCallback, useKeymap,
     useAsync, useInterval, useInsertBefore, setRequestRender, setInsertBefore, runEffects, destroyFiber,
     type Fiber, type AsyncState,
 } from './hooks.js';
@@ -257,6 +257,7 @@ describe('useInsertBefore', () => {
         expect(insertBefore).toHaveBeenCalledWith('HEADER LINE');
     });
 });
+
 describe('useId', () => {
     it('returns a string id', () => {
         const fiber = createFiber();
@@ -295,5 +296,60 @@ describe('useId', () => {
         clearCurrentFiber();
 
         expect(idA).not.toBe(idB);
+    });
+});
+
+describe('useKeymap — cross-call duplicate detection (dev-mode)', () => {
+    let fiber: Fiber;
+
+    beforeEach(() => {
+        fiber = createFiber();
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        clearCurrentFiber();
+    });
+
+    it('warns when the same key is registered across two useKeymap calls in the same render', () => {
+        setCurrentFiber(fiber);
+        useKeymap([{ key: '/', action: () => {} }]);
+        useKeymap([{ key: '/', action: () => {} }]); // duplicate across calls
+        clearCurrentFiber();
+
+        expect(console.warn).toHaveBeenCalledTimes(1);
+        expect(console.warn).toHaveBeenCalledWith(
+            expect.stringContaining('/|false|false|false')
+        );
+    });
+
+    it('does not warn when distinct keys are registered across two useKeymap calls', () => {
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action: () => {} }]);
+        useKeymap([{ key: 'r', action: () => {} }]);
+        clearCurrentFiber();
+
+        expect(console.warn).not.toHaveBeenCalled();
+    });
+
+    it('cross-call duplicate tracking resets between render passes', () => {
+        // First render pass — no duplicates
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action: () => {} }]);
+        useKeymap([{ key: 'r', action: () => {} }]);
+        clearCurrentFiber();
+
+        expect(console.warn).not.toHaveBeenCalled();
+
+        // Second render pass — same keys but _keymapKeys was reset by setCurrentFiber
+        fiber.hookIndex = 0;
+        setCurrentFiber(fiber);
+        useKeymap([{ key: 'q', action: () => {} }]);
+        useKeymap([{ key: 'r', action: () => {} }]);
+        clearCurrentFiber();
+
+        // Still no warning — same keys across renders is fine, only within a single render matters
+        expect(console.warn).not.toHaveBeenCalled();
     });
 });

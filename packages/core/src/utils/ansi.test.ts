@@ -139,6 +139,14 @@ describe('ANSI Title Functions', () => {
         expect(setTitle('My App')).toBe('\x1b]0;My App\x07');
         expect(setTitle('')).toBe('\x1b]0;\x07');
     });
+
+    it('strips control/escape chars to prevent OSC injection', () => {
+        // BEL terminates OSC, ESC opens new sequences — neither may survive in the payload.
+        const out = setTitle('a\x07evil\x1b]0;pwn');
+        const payload = out.slice(4, -1); // between the `\x1b]0;` prefix and the trailing \x07
+        expect(out.endsWith('\x07')).toBe(true);
+        expect(payload).not.toMatch(/[\x00-\x1f\x7f-\x9f]/); // no control/escape chars remain
+    });
 });
 
 describe('ANSI Clipboard Functions', () => {

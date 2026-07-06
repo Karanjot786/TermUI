@@ -1,6 +1,6 @@
 import { Widget } from '@termuijs/widgets';
 import { type Style, type Screen, type KeyEvent, styleToCellAttrs, truncate, caps, splitGraphemes, stringWidth } from '@termuijs/core';
-import { type VimMode } from './vim_modes.js';
+import type { VimMode } from '@termuijs/widgets';
 
 export interface PasswordInputOptions {
     placeholder?: string;

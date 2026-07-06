@@ -5,8 +5,11 @@ import {
     mergeStyles,
     defaultStyle,
     styleToCellAttrs,
+    stringWidth,
     caps,
+    prefersReducedMotion,
 } from '@termuijs/core';
+import { fadeIn, fadeOut } from '@termuijs/motion';
 
 export interface SwitchOptions {
     defaultValue?: boolean;
@@ -18,6 +21,8 @@ export class Switch extends Widget {
     private _value: boolean;
     private _label?: string;
     onChange?: (value: boolean) => void;
+    private _animProgress: number;
+    private _animCancel?: () => void;
 
     focusable = true;
 
@@ -27,6 +32,7 @@ export class Switch extends Widget {
         this._value = options.defaultValue ?? false;
         this._label = options.label;
         this.onChange = options.onChange;
+        this._animProgress = this._value ? 1 : 0;
     }
 
     get value(): boolean {
@@ -38,11 +44,51 @@ export class Switch extends Widget {
 
         this._value = value;
         this.onChange?.(value);
+        this._animCancel?.();
         this.markDirty();
+
+        if (prefersReducedMotion()) {
+            this._animProgress = value ? 1 : 0;
+            return;
+        }
+
+        if (value) {
+            this._animProgress = 0;
+            this._animCancel = fadeIn(150, (p) => {
+                this._animProgress = p;
+                this.markDirty();
+            }, () => {
+                this._animProgress = 1;
+                this._animCancel = undefined;
+            });
+        } else {
+            this._animProgress = 1;
+            this._animCancel = fadeOut(150, (p) => {
+                this._animProgress = p;
+                this.markDirty();
+            }, () => {
+                this._animProgress = 0;
+                this._animCancel = undefined;
+            });
+        }
     }
 
     toggle(): void {
         this.setValue(!this._value);
+    }
+
+    mount(): void {
+        super.mount();
+        if (this._value && this._animProgress < 1) {
+            this._animProgress = 1;
+            this.markDirty();
+        }
+    }
+
+    unmount(): void {
+        this._animCancel?.();
+        this._animCancel = undefined;
+        super.unmount();
     }
 
     handleKey(event: KeyEvent): void {
@@ -67,20 +113,35 @@ export class Switch extends Widget {
         if (width <= 0) return;
 
         const attrs = styleToCellAttrs(this.style);
+        const knobPos = Math.round(this._animProgress * 2);
+        const transitioning = this._animProgress > 0 && this._animProgress < 1;
 
-        const track = caps.unicode
-            ? (this._value ? '──●' : '●──')
-            : (this._value ? '--O' : 'O--');
+        let trackChars: string[];
+        let knobChar: string;
+        if (caps.unicode) {
+            trackChars = ['─', '─', '─'];
+            knobChar = '●';
+        } else {
+            trackChars = ['-', '-', '-'];
+            knobChar = 'O';
+        }
 
-        const text = this._label
-            ? `${this._label} ${track}`
-            : track;
+        let cursorX = x;
 
-        screen.writeString(
-            x,
-            y,
-            text.slice(0, width),
-            attrs
-        );
+        if (this._label) {
+            screen.writeString(cursorX, y, `${this._label} `, attrs);
+            cursorX += stringWidth(`${this._label} `);
+        }
+
+        for (let i = 0; i < 3; i++) {
+            const isKnob = i === knobPos;
+            const isOn = this._value;
+            screen.setCell(cursorX + i, y, {
+                char: isKnob ? knobChar : trackChars[i],
+                fg: attrs.fg,
+                dim: transitioning || (!isKnob && !isOn),
+                bold: isKnob,
+            });
+        }
     }
 }
