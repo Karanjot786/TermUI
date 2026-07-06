@@ -165,10 +165,13 @@ export class ThemeEngine {
                 const rawValue = this._variables[value.name];
                 if (!rawValue) return '';
                 _visited.add(value.name);
-                // If stored value is itself a var() reference, resolve recursively
+                // Theme variable aliases are stored either as "--name" or "var(--name)".
+                if (rawValue.startsWith('--')) {
+                    return this._resolveValue({ kind: 'var', name: rawValue }, _visited);
+                }
                 const varMatch = rawValue.match(/^var\(--([^)]+)\)$/);
                 if (varMatch) {
-                    return this._resolveValue({ kind: 'var', name: varMatch[1] }, _visited);
+                    return this._resolveValue({ kind: 'var', name: `--${varMatch[1]}` }, _visited);
                 }
                 return rawValue;
             }

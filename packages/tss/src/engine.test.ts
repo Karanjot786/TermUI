@@ -63,6 +63,41 @@ describe('ThemeEngine', () => {
         expect(style.fg).toEqual({ type: 'named', name: 'cyan' });
     });
 
+    it('resolves variable aliases that reference another variable', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            @theme default {
+                --primary: cyan;
+                --accent: var(--primary);
+            }
+
+            Box {
+                color: var(--accent);
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.fg).toEqual({ type: 'named', name: 'cyan' });
+    });
+
+    it('resolves chained variable aliases', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            @theme default {
+                --primary: cyan;
+                --accent: var(--primary);
+                --focus: var(--accent);
+            }
+
+            Box {
+                border-color: var(--focus);
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.borderColor).toEqual({ type: 'named', name: 'cyan' });
+    });
+
     it('resolves negative numeric style values', () => {
         const engine = new ThemeEngine();
         engine.load(`
