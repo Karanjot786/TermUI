@@ -84,4 +84,9 @@ export class Clock extends Widget {
             }
         }
     }
+
+    override destroy(): void {
+        this._digits.destroy();
+        super.destroy();
+    }
 }

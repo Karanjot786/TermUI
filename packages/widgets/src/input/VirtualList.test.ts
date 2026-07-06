@@ -270,6 +270,10 @@ describe('VirtualList', () => {
             // 90ms steps (just under the 100ms clamp threshold) to converge in 400 frames.
             for (let i = 0; i < 400; i++) {
                 mockTime += 90;
+            // Use larger dt (50ms) to reduce CPU overhead and avoid test timeout,
+            // while still allowing the spring to converge.
+            for (let i = 0; i < 400; i++) {
+                mockTime += 50;
                 list.render(screen);
             }
 

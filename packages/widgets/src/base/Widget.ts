@@ -175,6 +175,11 @@ export abstract class Widget {
     addChild(child: Widget): void {
         child.parent = this;
         this._children.push(child);
+        // Propagate any dirty state the child accumulated before being added
+        // to the tree (e.g., Pty output that arrived before mount).
+        if (child._dirty) {
+            this.markDirty();
+        }
     }
 
     /** Remove a child widget */

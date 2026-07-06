@@ -323,6 +323,26 @@ export function createStore<T extends object>(
             }
             persistFilePath = path.join(persistDir, `${persistOpt.key}.json`);
         }
+        // Resolve symlinks in the persist directory to prevent writes through
+        // symlink targets (e.g., ~/.config or ~/AppData/Roaming being a symlink).
+        // Walk up from the file to find the first existing ancestor, resolve it,
+        // and reconstruct the remainder.
+        try {
+            const dir = path.dirname(persistFilePath);
+            if (fs.existsSync(dir)) {
+                persistFilePath = path.join(fs.realpathSync(dir), path.basename(persistFilePath));
+            } else {
+                const segments: string[] = [];
+                let current = dir;
+                while (!fs.existsSync(current)) {
+                    segments.unshift(path.basename(current));
+                    current = path.dirname(current);
+                }
+                persistFilePath = path.join(fs.realpathSync(current), ...segments, path.basename(persistFilePath));
+            }
+        } catch {
+            // If realpath fails (permissions, etc.), use the unresolved path
+        }
     }
 
     const persistState = () => {
