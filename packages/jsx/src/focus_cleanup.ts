@@ -8,9 +8,8 @@ export const autoBlurNode = (focusManager: FocusContextValue, nodeId: string) =>
         return;
     }
 
-    // Find the widget instance matching nodeId
-    // Retrieve the instance map via accessor; fall back to global mutable map for test overrides
-    const instances = (globalThis as any).__termuijs_instances || getInstanceMap();
+    // Retrieve the instance map via accessor
+    const instances = getInstanceMap();
     let widget: Widget & { id: string; focusable: boolean; parent: Widget | null } | null = null;
     if (instances instanceof Map) {
         for (const w of instances.keys()) {
