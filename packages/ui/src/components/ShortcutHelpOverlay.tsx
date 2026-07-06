@@ -26,49 +26,6 @@ function ShortcutHelpOverlayContent({ shortcuts, onClose }: { shortcuts: Shortcu
         return null as any; // as any: reconciler requires non-null return; null as any is workaround for no-content state
     }
 
-    useEffect(() => {
-        const app = getCurrentApp();
-        if (!app) return;
-
-        const handler = (evt: any) => {
-            if (evt.type !== 'mousedown' && evt.type !== 'mouseup') return;
-
-            // Find the Card widget instance with title 'Keyboard Shortcuts'
-            const instances: Map<any, any> = (globalThis as any).__termuijs_instances;
-            if (!instances) {
-                onClose();
-                return;
-            }
-
-            let cardRect: { x: number; y: number; width: number; height: number } | undefined;
-            for (const [widget] of instances) {
-                try {
-                    // Card instances have a private _title we can inspect
-                    if ((widget as any)._title === 'Keyboard Shortcuts' && (widget as any)._rect) {
-                        cardRect = (widget as any)._rect;
-                        break;
-                    }
-                } catch {
-                    // ignore
-                }
-            }
-
-            const x = evt.x ?? evt.clientX ?? 0;
-            const y = evt.y ?? evt.clientY ?? 0;
-
-            if (!cardRect) {
-                onClose();
-                return;
-            }
-
-            if (x < cardRect.x || x >= cardRect.x + cardRect.width || y < cardRect.y || y >= cardRect.y + cardRect.height) {
-                onClose();
-            }
-        };
-
-        const unsub = app.events.on('mouse', handler);
-        return () => unsub();
-    }, [onClose]);
 
     return (
         // Outer full-screen box — clicking outside the card closes the overlay

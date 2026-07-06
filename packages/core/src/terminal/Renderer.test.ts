@@ -236,4 +236,30 @@ describe('Renderer profiling hooks', () => {
         const output = fakeStdout.writes;
         expect(output).toBeTruthy();
     });
+
+    it('resets style fingerprint at each row boundary in diff renderer', () => {
+        const narrowScreen = new Screen(5, 2);
+        const renderer = new Renderer(terminal, narrowScreen);
+
+        // Row 0: bold red cell at col 0
+        narrowScreen.setCell(0, 0, { char: 'A', bold: true, fg: { type: 'named', name: 'red' } });
+
+        // Row 1: same style at col 0 — after moveTo, must re-emit ANSI style even though
+        // the fingerprint matches the last cell of row 0
+        narrowScreen.setCell(0, 1, { char: 'B', bold: true, fg: { type: 'named', name: 'red' } });
+
+        // Capture output
+        const initialWrites = fakeStdout.writes.length;
+        renderer.renderNow();
+        const output = fakeStdout.writes.slice(initialWrites);
+
+        // The output must contain at least one ANSI reset sequence with style re-application
+        // for row 1 (the moveTo + reset + bold + color + char sequence).
+        // The key assertion: the diff renderer should emit \x1b[0m (reset) after the moveTo
+        // for row 1 to force the terminal into the correct style state.
+        expect(output).toContain('\x1b[0m');
+        // Verify reset appears at least twice (once for row 0 first cell, once for row 1)
+        const resetCount = (output.match(/\x1b\[0m/g) || []).length;
+        expect(resetCount).toBeGreaterThanOrEqual(2);
+    });
 });

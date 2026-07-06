@@ -1,5 +1,9 @@
 import { App, type KeyEvent } from '@termuijs/core';
-import { Box, Text, Widget, LogView, TextInput } from '@termuijs/widgets';
+import { Box, Text, Widget } from '@termuijs/widgets';
+import { HeaderBar } from './components/HeaderBar.js';
+import { FilterBar } from './components/FilterBar.js';
+import { StatsSidebar } from './components/StatsSidebar.js';
+import { LogTable, parseLogString } from './components/LogTable.js';
 
 const LOG_TEMPLATES = [
     { level: 'INFO',  service: 'auth-service',  message: 'User login successful (user_id=' },
@@ -39,89 +43,177 @@ function getRandomLog(): string {
     return `[${timestamp}] [${template.level}] ${template.service}: ${template.message}${suffix}`;
 }
 
+function extractLatency(msg: string): number | null {
+    // Matches e.g. "processed in 45ms" or "warning limit (120ms)" or "expired keys in 2ms"
+    const match = msg.match(/(?:processed in|warning limit \(|in)\s*(\d+)ms/);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+    return null;
+}
+
 class LogViewerApp extends Widget {
     private allLogs: string[] = [];
     private filteredLogs: string[] = [];
-    private filterInput: TextInput;
-    private logView: LogView;
+    
+    private headerBar: HeaderBar;
+    private filterBar: FilterBar;
+    private logTable: LogTable;
+    private statsSidebar: StatsSidebar;
+
     private intervalId: ReturnType<typeof setInterval> | null = null;
-    private lastHeight = 0;
+    private connectionState: 'connected' | 'reconnecting' | 'disconnected' = 'connected';
+    
+    // Focus Index: 
+    // 0: Search Input, 1: Level Dropdown, 2: Chips, 3: Clear Button, 4: Log Table
+    private focusIdx = 0; 
+    
+    // Observability stats counters
+    private infoCount = 0;
+    private warnCount = 0;
+    private errorCount = 0;
+    private rollingLatencies: number[] = [];
 
     constructor() {
-        super({ flexDirection: 'column', padding: 1, gap: 1 });
-
-        const title = new Text(" 📝 Log Viewer - Realtime Log Stream ", {
-            bold: true,
-            fg: { type: 'named', name: 'cyan' },
-            height: 1
+        super({
+            flexDirection: 'column',
+            bg: { type: 'hex', hex: '#0c0d12' },
+            padding: 1,
+            gap: 1
         });
 
-        const filterBox = new Box({ flexDirection: 'row', height: 3, gap: 1 });
-        filterBox.addChild(new Text("\nFilter: ", { fg: { type: 'named', name: 'yellow' }, bold: true }));
-        this.filterInput = new TextInput({ flexGrow: 1 }, {
-            placeholder: "Type to filter logs...",
-            onChange: () => this.applyFilter()
-        });
-        filterBox.addChild(this.filterInput);
-
-        this.logView = new LogView({ border: 'single', flexGrow: 1 });
-
-        const footer = new Text(" Controls: [Type] to Filter | [Esc] to Clear | [Up/Down/PgUp/PgDn] to Scroll | [q / Ctrl+C] to Exit", {
-            dim: true,
-            height: 1
+        // 1. Header Bar
+        this.headerBar = new HeaderBar({
+            totalLogs: 0,
+            errorCount: 0,
+            connectionState: this.connectionState
         });
 
-        this.addChild(title);
-        this.addChild(filterBox);
-        this.addChild(this.logView);
+        // 2. Main Content Area (Split Left column and Right Sidebar)
+        const bodyBox = new Box({ flexDirection: 'row', flexGrow: 1, gap: 1 });
+
+        // Left Container Box (Filter bar + Log list)
+        const leftBox = new Box({ flexDirection: 'column', flexGrow: 1, gap: 1 });
+
+        this.filterBar = new FilterBar({
+            onSearchChange: () => this.applyFilter(),
+            onLevelChange: () => this.applyFilter(),
+            onClear: () => this.applyFilter()
+        });
+
+        this.logTable = new LogTable();
+
+        leftBox.addChild(this.filterBar);
+        leftBox.addChild(this.logTable);
+
+        // Right Sidebar Box (Observability statistics and latency sparkline)
+        this.statsSidebar = new StatsSidebar();
+
+        bodyBox.addChild(leftBox);
+        bodyBox.addChild(this.statsSidebar);
+
+        // 3. Footer Bar
+        const footer = new Text(
+            " Controls: [Tab] Cycle Focus | [/] Search | [Space] Pause/Resume | [c] Cycle Conn | [Esc] Reset | [q] Exit",
+            { dim: true, height: 1 }
+        );
+
+        this.addChild(this.headerBar);
+        this.addChild(bodyBox);
         this.addChild(footer);
 
-        // Make filterInput focused initially
-        this.filterInput.isFocused = true;
-
-        // Generate 30 initial logs
+        // Seed 30 initial logs
         for (let i = 0; i < 30; i++) {
-            this.allLogs.push(getRandomLog());
+            this.receiveLog(getRandomLog());
         }
+        
         this.applyFilter();
+        this.updateFocusVisuals();
     }
 
-    override syncLayout(): void {
-        super.syncLayout();
-        const currentHeight = this.logView.rect.height;
-        if (currentHeight !== this.lastHeight) {
-            this.lastHeight = currentHeight;
-            this.applyFilter();
+    private receiveLog(logLine: string) {
+        this.allLogs.push(logLine);
+        // Cap logs history to avoid memory leaks
+        if (this.allLogs.length > 500) {
+            const removed = this.allLogs.shift();
+            if (removed) {
+                const parsed = parseLogString(removed);
+                if (parsed.level === 'INFO') this.infoCount = Math.max(0, this.infoCount - 1);
+                if (parsed.level === 'WARN') this.warnCount = Math.max(0, this.warnCount - 1);
+                if (parsed.level === 'ERROR') this.errorCount = Math.max(0, this.errorCount - 1);
+            }
         }
+
+        // Process statistics
+        const parsed = parseLogString(logLine);
+        if (parsed.level === 'INFO') this.infoCount++;
+        if (parsed.level === 'WARN') this.warnCount++;
+        if (parsed.level === 'ERROR') this.errorCount++;
+
+        const latency = extractLatency(parsed.message);
+        if (latency !== null) {
+            this.rollingLatencies.push(latency);
+            if (this.rollingLatencies.length > 30) {
+                this.rollingLatencies.shift();
+            }
+            this.statsSidebar.pushLatencyValue(latency);
+        }
+
+        // Update statistics displays
+        const avgLat = this.rollingLatencies.length > 0 
+            ? this.rollingLatencies.reduce((a, b) => a + b, 0) / this.rollingLatencies.length
+            : 0;
+
+        this.headerBar.setStats(this.allLogs.length, this.errorCount);
+        this.statsSidebar.updateStats({
+            total: this.allLogs.length,
+            info: this.infoCount,
+            warn: this.warnCount,
+            error: this.errorCount,
+            avgLatency: avgLat
+        });
     }
 
     startSimulation(app: App) {
         this.intervalId = setInterval(() => {
-            const nextLog = getRandomLog();
-            this.allLogs.push(nextLog);
-            // Cap history to 500 lines to avoid memory leak
-            if (this.allLogs.length > 500) {
-                this.allLogs.shift();
+            if (this.connectionState === 'connected') {
+                this.receiveLog(getRandomLog());
+                this.applyFilter();
+                app.requestRender();
             }
-            this.applyFilter();
-            app.requestRender();
         }, 800);
     }
 
     stopSimulation() {
         if (this.intervalId) {
             clearInterval(this.intervalId);
+            this.intervalId = null;
         }
     }
 
     applyFilter() {
-        const filterText = this.filterInput.value.toLowerCase().trim();
-        if (filterText === '') {
-            this.filteredLogs = [...this.allLogs];
-        } else {
-            this.filteredLogs = this.allLogs.filter(log => log.toLowerCase().includes(filterText));
+        const filterText = this.filterBar.searchInput.value.toLowerCase().trim();
+        const selectedLvl = this.filterBar.getSelectedLevel();
+
+        this.filteredLogs = this.allLogs.filter(log => {
+            const parsed = parseLogString(log);
+            const matchesText = filterText === '' || log.toLowerCase().includes(filterText);
+            const matchesLvl = selectedLvl === 'ALL' || parsed.level === selectedLvl;
+            return matchesText && matchesLvl;
+        });
+
+        this.logTable.setLines(this.filteredLogs);
+    }
+
+    private updateFocusVisuals() {
+        if (this.focusIdx >= 0 && this.focusIdx <= 3) {
+            this.filterBar.setFocusedField(this.focusIdx);
+            this.logTable.isFocused = false;
+        } else if (this.focusIdx === 4) {
+            this.filterBar.setFocusedField(-1);
+            this.logTable.isFocused = true;
         }
-        this.logView.setLines(this.filteredLogs);
+        this.markDirty();
     }
 
     handleKey(event: KeyEvent): boolean {
@@ -130,39 +222,111 @@ class LogViewerApp extends Widget {
             return false;
         }
 
-        // Escape to clear filter input
-        if (event.key === 'escape') {
-            this.filterInput.clear();
-            this.applyFilter();
+        // Global key shortcut: '/' focuses the search input
+        if (event.key === '/' && this.focusIdx !== 0) {
+            this.focusIdx = 0;
+            this.updateFocusVisuals();
             return true;
         }
 
-        // Pass standard editing and scrolling keys
-        if (event.key === 'backspace') {
-            this.filterInput.deleteBack();
+        // Global key shortcut: 'c' cycles simulated connection state
+        if (event.key === 'c') {
+            if (this.connectionState === 'connected') {
+                this.connectionState = 'reconnecting';
+            } else if (this.connectionState === 'reconnecting') {
+                this.connectionState = 'disconnected';
+            } else {
+                this.connectionState = 'connected';
+            }
+            this.headerBar.setConnectionState(this.connectionState);
+            return true;
+        }
+
+        // Space toggles simulation pause/resume (if search input is not focused)
+        if (event.key === 'space' && this.focusIdx !== 0) {
+            if (this.connectionState === 'connected') {
+                this.connectionState = 'disconnected';
+            } else {
+                this.connectionState = 'connected';
+            }
+            this.headerBar.setConnectionState(this.connectionState);
+            return true;
+        }
+
+        // Tab switches focus
+        if (event.key === 'tab') {
+            this.focusIdx = (this.focusIdx + 1) % 5;
+            this.updateFocusVisuals();
+            return true;
+        }
+
+        // Escape clears search query and level filter
+        if (event.key === 'escape') {
+            this.filterBar.clearAll();
             this.applyFilter();
-        } else if (event.key === 'delete') {
-            this.filterInput.deleteForward();
-            this.applyFilter();
-        } else if (event.key === 'left') {
-            this.filterInput.moveCursorLeft();
-        } else if (event.key === 'right') {
-            this.filterInput.moveCursorRight();
-        } else if (event.key === 'home') {
-            this.filterInput.moveCursorHome();
-        } else if (event.key === 'end') {
-            this.filterInput.moveCursorEnd();
-        } else if (event.key === 'up') {
-            this.logView.scrollUp(1);
-        } else if (event.key === 'down') {
-            this.logView.scrollDown(1);
-        } else if (event.key === 'pageup') {
-            this.logView.scrollUp(this.logView.rect.height || 10);
-        } else if (event.key === 'pagedown') {
-            this.logView.scrollDown(this.logView.rect.height || 10);
-        } else if (event.key && event.key.length === 1 && !event.ctrl && !event.alt) {
-            this.filterInput.insertChar(event.key);
-            this.applyFilter();
+            this.focusIdx = 0;
+            this.updateFocusVisuals();
+            return true;
+        }
+
+        // Route keys based on focused element
+        if (this.focusIdx === 0) {
+            // Typing in Search bar
+            if (event.key === 'backspace') {
+                this.filterBar.searchInput.deleteBack();
+                this.applyFilter();
+            } else if (event.key === 'delete') {
+                this.filterBar.searchInput.deleteForward();
+                this.applyFilter();
+            } else if (event.key === 'left') {
+                this.filterBar.searchInput.moveCursorLeft();
+            } else if (event.key === 'right') {
+                this.filterBar.searchInput.moveCursorRight();
+            } else if (event.key === 'home') {
+                this.filterBar.searchInput.moveCursorHome();
+            } else if (event.key === 'end') {
+                this.filterBar.searchInput.moveCursorEnd();
+            } else if (event.key && event.key.length === 1 && !event.ctrl && !event.alt) {
+                this.filterBar.searchInput.insertChar(event.key);
+                this.applyFilter();
+            }
+        } else if (this.focusIdx === 1) {
+            // Level Dropdown: Enter or Space cycles through the levels
+            if (event.key === 'enter' || event.key === 'space') {
+                this.filterBar.cycleLevel(true);
+                this.applyFilter();
+            }
+        } else if (this.focusIdx === 2) {
+            // Quick Filter Chips: Left/Right switches chips, Enter activates it
+            if (event.key === 'left') {
+                this.filterBar.cycleLevel(false);
+                this.applyFilter();
+            } else if (event.key === 'right') {
+                this.filterBar.cycleLevel(true);
+                this.applyFilter();
+            }
+        } else if (this.focusIdx === 3) {
+            // Clear Button: Enter clears
+            if (event.key === 'enter' || event.key === 'space') {
+                this.filterBar.clearAll();
+                this.applyFilter();
+            }
+        } else if (this.focusIdx === 4) {
+            // Log Table scrolling
+            if (event.key === 'up') {
+                this.logTable.moveSelectionUp();
+            } else if (event.key === 'down') {
+                this.logTable.moveSelectionDown();
+            } else if (event.key === 'pageup') {
+                this.logTable.scrollUp(10);
+            } else if (event.key === 'pagedown') {
+                this.logTable.scrollDown(10);
+            } else if (event.key === 'space' || event.key === 'enter' || event.key === 'j') {
+                // If scrolled up, space or enter jumps back to latest
+                if (!this.logTable.getAutoScroll()) {
+                    this.logTable.setAutoScroll(true);
+                }
+            }
         }
 
         return true;

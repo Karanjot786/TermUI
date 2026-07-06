@@ -1,16 +1,7 @@
 import { useState, useEffect } from '@termuijs/jsx';
-import { execFile } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import * as os from 'node:os';
-
-const execFileAsync = (file: string, args: string[], opts?: any): Promise<{ stdout: string; stderr: string }> => { // any: execFile options shape not importable without pulling child_process into public type surface
-    return new Promise((resolve, reject) => {
-        execFile(file, args, opts, (err, stdout, stderr) => {
-            if (err) reject(err);
-            else resolve({ stdout: String(stdout), stderr: String(stderr) });
-        });
-    });
-};
+import { execFileAsync } from './_exec.js';
 
 export interface BatteryData {
     level: number;

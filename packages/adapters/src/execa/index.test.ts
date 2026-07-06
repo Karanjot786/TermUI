@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useExeca, useShell } from './index.js';
+import { useExeca } from './index.js';
 import { Readable } from 'node:stream';
 import { execa } from 'execa';
 
@@ -166,7 +166,4 @@ describe('useExeca', () => {
     expect(killSpy).toHaveBeenCalled();
   });
 
-  it('exposes useShell as an alias of useExeca', () => {
-    expect(useShell).toBe(useExeca);
-  });
 });

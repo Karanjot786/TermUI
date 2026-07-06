@@ -137,8 +137,8 @@ export class Renderer {
             let output = beginSyncUpdate;
 
             if (this._diffRenderer) {
-                this._lastStyleFingerprint = null;
                 for (let r = 0; r < rows; r++) {
+                    this._lastStyleFingerprint = null;
                     output += this._renderDiffLine(r, front, back, cols);
                 }
 

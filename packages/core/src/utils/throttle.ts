@@ -3,109 +3,47 @@
 // ─────────────────────────────────────────────────────
 
 export interface ThrottleOptions {
-    /** Invoke on the leading edge of the timeout */
+    /** Invoke on the leading edge of the timeout (default: true) */
     leading?: boolean;
-    /** Invoke on the trailing edge of the timeout */
-    trailing?: boolean;
 }
 
 /**
  * Creates a throttled function that only invokes `func` at most once per
  * every `wait` milliseconds.
  *
+ * Leading edge fires immediately; a trailing call fires after `wait` ms
+ * only if additional calls were made during the interval.
+ *
  * @param func The function to throttle
  * @param wait The number of milliseconds to throttle invocations to
  * @param options.leading Invoke on the leading edge (default: true)
- * @param options.trailing Invoke on the trailing edge (default: true)
  * @returns The throttled function with a `cancel()` method
  */
-export function throttle<T extends (...args: unknown[]) => unknown>(
+export function throttle<T extends (...args: unknown[]) => void>(
     func: T,
     wait: number,
-    options: ThrottleOptions = {},
+    options?: ThrottleOptions,
 ): T & { cancel: () => void } {
-    const { leading = true, trailing = true } = options;
+    const leading = options?.leading ?? true;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let lastArgs: Parameters<T> | undefined;
 
-    let timeoutId: ReturnType<typeof setTimeout> | null = null;
-    let lastArgs: Parameters<T> | null = null;
-    let lastCallTime: number | null = null;
-    let lastInvokeTime = 0;
-
-    function invokeFunc(time: number): ReturnType<T> | undefined {
-        const args = lastArgs!;
-        lastArgs = null;
-        lastInvokeTime = time;
-        return func(...args) as ReturnType<T>;
-    }
-
-    function leadingEdge(time: number): ReturnType<T> | undefined {
-        lastInvokeTime = time;
-        timeoutId = setTimeout(timerExpired, wait);
-        return leading ? invokeFunc(time) : undefined;
-    }
-
-    function remainingWait(time: number): number {
-        const timeSinceLastInvoke = time - lastInvokeTime;
-        return wait - timeSinceLastInvoke;
-    }
-
-    function shouldInvoke(time: number): boolean {
-        const timeSinceLastInvoke = time - lastInvokeTime;
-
-        return (
-            lastCallTime === null ||
-            timeSinceLastInvoke >= wait ||
-            timeSinceLastInvoke < 0
-        );
-    }
-
-    function trailingEdge(time: number): ReturnType<T> | undefined {
-        timeoutId = null;
-
-        if (trailing && lastArgs) {
-            return invokeFunc(time);
-        }
-        lastArgs = null;
-        return undefined;
-    }
-
-    function timerExpired(): void {
-        const time = Date.now();
-        if (shouldInvoke(time)) {
-            trailingEdge(time);
-        } else {
-            timeoutId = setTimeout(timerExpired, remainingWait(time));
-        }
-    }
-
-    const throttled = function (this: unknown, ...args: Parameters<T>): ReturnType<T> | undefined {
-        const time = Date.now();
-        const isInvoking = shouldInvoke(time);
-
+    const throttled = function (...args: Parameters<T>) {
         lastArgs = args;
-        lastCallTime = time;
-
-        if (isInvoking) {
-            if (timeoutId === null) {
-                return leadingEdge(time);
-            }
+        if (!timer) {
+            if (leading) func(...args);
+            timer = setTimeout(() => {
+                timer = undefined;
+                if (lastArgs !== args || !leading) func(...lastArgs!);
+                lastArgs = undefined;
+            }, wait);
         }
-
-        if (timeoutId === null && trailing) {
-            timeoutId = setTimeout(timerExpired, wait);
-        }
-
-        return undefined;
     } as T & { cancel: () => void };
 
     throttled.cancel = () => {
-        if (timeoutId !== null) {
-            clearTimeout(timeoutId);
-        }
-        lastInvokeTime = 0;
-        lastArgs = null;
-        lastCallTime = null;
-        timeoutId = null;
+        clearTimeout(timer);
+        timer = undefined;
+        lastArgs = undefined;
     };
 
     return throttled;

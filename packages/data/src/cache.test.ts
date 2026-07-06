@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
     getCache,
     setCache,
+    setCacheMaxSize,
     isFresh,
     invalidate,
     clearCache,
@@ -78,6 +79,80 @@ describe('Response Cache Provider', () => {
             clearCache();
             expect(getCache('key1')).toBeUndefined();
             expect(getCache('key2')).toBeUndefined();
+        });
+    });
+
+    describe('LRU eviction', () => {
+        afterEach(() => {
+            setCacheMaxSize(100);
+        });
+
+        it('evicts the oldest entry when cache exceeds maxSize on set', () => {
+            setCacheMaxSize(3);
+            setCache('a', 1, 5000);
+            setCache('b', 2, 5000);
+            setCache('c', 3, 5000);
+            // Adding a 4th entry should evict 'a' (oldest)
+            setCache('d', 4, 5000);
+            expect(getCache('a')).toBeUndefined();
+            expect(getCache('b')).toBeDefined();
+            expect(getCache('c')).toBeDefined();
+            expect(getCache('d')).toBeDefined();
+        });
+
+        it('promotes an entry on getCache, preventing its eviction', () => {
+            setCacheMaxSize(3);
+            setCache('a', 1, 5000);
+            setCache('b', 2, 5000);
+            setCache('c', 3, 5000);
+            getCache('a'); // promotes to MRU — order is now b, c, a
+            setCache('d', 4, 5000); // evicts b
+            expect(getCache('a')).toBeDefined();
+            expect(getCache('b')).toBeUndefined();
+            expect(getCache('c')).toBeDefined();
+            expect(getCache('d')).toBeDefined();
+        });
+
+        it('promotes an entry on isFresh, preventing its eviction', () => {
+            setCacheMaxSize(3);
+            setCache('a', 1, 5000);
+            setCache('b', 2, 5000);
+            setCache('c', 3, 5000);
+            isFresh('a'); // promotes to MRU — order is now b, c, a
+            setCache('d', 4, 5000); // evicts b
+            expect(getCache('a')).toBeDefined();
+            expect(getCache('b')).toBeUndefined();
+            expect(getCache('c')).toBeDefined();
+            expect(getCache('d')).toBeDefined();
+        });
+
+        it('re-setting an existing key promotes it', () => {
+            setCacheMaxSize(3);
+            setCache('a', 1, 5000);
+            setCache('b', 2, 5000);
+            setCache('c', 3, 5000);
+            setCache('a', 10, 5000); // re-set promotes to MRU — order is b, c, a
+            setCache('d', 4, 5000); // evicts b
+            expect(getCache('a')).toBeDefined();
+            expect(getCache('b')).toBeUndefined();
+            expect(getCache('c')).toBeDefined();
+            expect(getCache('d')).toBeDefined();
+        });
+
+        it('converges to the new limit when maxSize is shrunk below current size', () => {
+            setCacheMaxSize(5);
+            setCache('a', 1, 5000);
+            setCache('b', 2, 5000);
+            setCache('c', 3, 5000);
+            setCache('d', 4, 5000);
+            setCache('e', 5, 5000); // 5 entries, at limit
+            setCacheMaxSize(2);
+            setCache('f', 6, 5000); // one set must drain down to the new limit of 2
+            expect(getCache('e')).toBeDefined();
+            expect(getCache('f')).toBeDefined();
+            for (const k of ['a', 'b', 'c', 'd']) {
+                expect(getCache(k)).toBeUndefined();
+            }
         });
     });
 

@@ -1,7 +1,8 @@
 import { App } from '@termuijs/core';
 import { Widget, Box, Text, ChatMessage, ToolCall, StreamingText } from '@termuijs/widgets';
 import type { Screen, KeyEvent } from '@termuijs/core';
-import { mockResponse } from './mockStream.js';
+
+const mockResponse = "Hello! This is a mock AI response streaming token by token. No API key is required and no network requests are made.";
 
 class AIStreamingApp extends Widget {
     private _streamingText: StreamingText;

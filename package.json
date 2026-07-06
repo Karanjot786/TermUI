@@ -5,8 +5,7 @@
   "description": "A TypeScript-first framework for building beautiful, interactive terminal user interfaces",
   "workspaces": [
     "packages/*",
-    "examples/*",
-    "website"
+    "examples/*"
   ],
   "scripts": {
     "build": "turbo run build",
@@ -17,7 +16,8 @@
     "lint": "turbo run lint",
     "bench": "bun packages/core/src/benchmark/run-all.ts",
     "clean": "turbo run clean && rm -rf node_modules",
-    "format": "prettier --write \".\""
+    "format": "prettier --write \".\"",
+    "registry:build": "bun scripts/build-registry.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

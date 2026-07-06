@@ -4,7 +4,6 @@
 
 export {
     createStore,
-    createPersistentStore,
     batch,
 } from './store.js';
 export type {
@@ -20,7 +19,6 @@ export type {
     StoreOptions,
     PersistOptions,
 } from './store.js';
-
 export * from './slice.js';
 export type { SliceDefinition } from './slice.js';
 
@@ -32,6 +30,7 @@ export type { LoggerOptions } from './logger.js';
 
 export { signal, mutate } from './mutate.js';
 export type { Signal } from './mutate.js';
+
 export type { EqualityFn } from './shallow.js';
 export { shallow } from './shallow.js';
 
