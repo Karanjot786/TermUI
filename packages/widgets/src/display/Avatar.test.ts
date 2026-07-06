@@ -112,4 +112,19 @@ describe('Avatar', () => {
         const rendered = screen.back[0].map(c => c.char).join('').trim();
         expect(rendered).toBe('[]');
     });
+
+    it('handles unicode multi-byte characters (emojis) correctly', async () => {
+        const { Avatar } = await import('./Avatar.js');
+        const { Screen, caps } = await import('@termuijs/core');
+        
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        
+        const a = new Avatar('🌟 Star');
+        a.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        a.render(screen);
+        
+        const rendered = screen.back[0].map(c => c.char).join('').trim();
+        expect(rendered).toContain('[🌟S]');
+    });
 });

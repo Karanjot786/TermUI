@@ -115,6 +115,8 @@ export class InputParser {
         }
         this._escapeBuffer = Buffer.alloc(0);
         this._graphemeBuffer = '';
+        this._isPasting = false;
+        this._pasteBuffer = '';
         this._decoder.end();
         for (const req of this._cursorRequests) {
             clearTimeout(req.timeout);

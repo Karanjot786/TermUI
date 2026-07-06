@@ -18,7 +18,13 @@ export function parseArgs(argv: string[]): CliArgs {
 
     for (let i = 0; i < rest.length; i++) {
         const a = rest[i]!;
-        if (a === '--dir') { dir = rest[++i]; }
+        if (a === '--dir') {
+            const value = rest[++i];
+            if (!value || value.startsWith('-')) {
+                throw new Error('--dir requires a path value');
+            }
+            dir = value;
+        }
         else if (a === '--dry-run') { dryRun = true; }
         else if (a === '--yes' || a === '-y') { yes = true; }
         else if (!a.startsWith('-')) { components.push(a); }
