@@ -55,22 +55,24 @@ export function toSlug(name: string): string {
 }
 
 export function detectCategory(filePath: string): RegistryEntry['category'] {
-  if (filePath.includes('/hooks/')) return 'hook';
-  if (filePath.includes('/display/')) return 'display';
-  if (filePath.includes('/input/')) return 'input';
-  if (filePath.includes('/feedback/')) return 'feedback';
-  if (filePath.includes('/layout/')) return 'layout';
-  if (filePath.includes('/data/')) return 'data';
-  if (filePath.includes('packages/ui/')) return 'template';
+  const normalized = filePath.replace(/\\/g, '/');
+  if (normalized.includes('/hooks/')) return 'hook';
+  if (normalized.includes('/display/')) return 'display';
+  if (normalized.includes('/input/')) return 'input';
+  if (normalized.includes('/feedback/')) return 'feedback';
+  if (normalized.includes('/layout/')) return 'layout';
+  if (normalized.includes('/data/')) return 'data';
+  if (normalized.includes('packages/ui/')) return 'template';
   return 'display';
 }
 
 function detectPackage(filePath: string): string {
-  if (filePath.includes('packages/widgets/')) return '@termuijs/widgets';
-  if (filePath.includes('packages/jsx/')) return '@termuijs/jsx';
-  if (filePath.includes('packages/ui/')) return '@termuijs/ui';
-  if (filePath.includes('packages/tss/')) return '@termuijs/tss';
-  if (filePath.includes('packages/core/')) return '@termuijs/core';
+  const normalized = filePath.replace(/\\/g, '/');
+  if (normalized.includes('packages/widgets/')) return '@termuijs/widgets';
+  if (normalized.includes('packages/jsx/')) return '@termuijs/jsx';
+  if (normalized.includes('packages/ui/')) return '@termuijs/ui';
+  if (normalized.includes('packages/tss/')) return '@termuijs/tss';
+  if (normalized.includes('packages/core/')) return '@termuijs/core';
   return '@termuijs/widgets';
 }
 
@@ -368,7 +370,9 @@ function scanDirectory(dir: string, entries: { path: string; content: string }[]
         scanDirectory(full, entries);
       }
     } else if (file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.d.ts')) {
-      entries.push({ path: full.replace(ROOT + '/', ''), content: readFileSync(full, 'utf-8') });
+      const normalizedFull = full.replace(/\\/g, '/');
+      const normalizedRoot = ROOT.replace(/\\/g, '/');
+      entries.push({ path: normalizedFull.replace(normalizedRoot + '/', ''), content: readFileSync(full, 'utf-8') });
     }
   }
 }
