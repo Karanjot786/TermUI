@@ -63,6 +63,18 @@ describe('ThemeEngine', () => {
         expect(style.fg).toEqual({ type: 'named', name: 'cyan' });
     });
 
+    it('resolves negative numeric style values', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            Box {
+                margin: -2;
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.margin).toBe(-2);
+    });
+
     it('onChange notifies listeners on theme switch', () => {
         const engine = new ThemeEngine();
         engine.load(TSS_SOURCE);

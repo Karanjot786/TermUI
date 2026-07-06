@@ -141,9 +141,10 @@ export function tokenize(source: string): Token[] {
         }
 
         // Numbers
-        if (/[0-9]/.test(ch)) {
+        if (/[0-9]/.test(ch) || (ch === '-' && /[0-9.]/.test(at(pos + 1)))) {
             const startCol = col;
             let num = '';
+            if (ch === '-') num += advance();
             while (pos < source.length && /[0-9.]/.test(peek())) num += advance();
             tokens.push({ type: TokenType.Number, value: num, line, col: startCol });
             continue;

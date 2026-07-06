@@ -39,6 +39,13 @@ describe('TSS Tokenizer', () => {
         expect(num!.value).toBe('42');
     });
 
+    it('tokenizes negative numbers', () => {
+        const tokens = tokenize('margin: -2;');
+        const num = tokens.find(t => t.type === TokenType.Number);
+        expect(num).toBeDefined();
+        expect(num!.value).toBe('-2');
+    });
+
     it('tokenizes CSS variables --name', () => {
         const tokens = tokenize('--primary: cyan;');
         const variable = tokens.find(t => t.type === TokenType.Variable);

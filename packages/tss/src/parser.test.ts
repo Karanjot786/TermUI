@@ -75,4 +75,15 @@ describe('TSS Parser', () => {
         expect(prop.value.kind).toBe('number');
         expect((prop.value as any).value).toBe(50);
     });
+
+    it('parses negative numeric values', () => {
+        const ast = parseTSS(`
+            Box {
+                margin: -2;
+            }
+        `);
+        const prop = ast.rules[0].properties[0];
+        expect(prop.value.kind).toBe('number');
+        expect((prop.value as any).value).toBe(-2);
+    });
 });
