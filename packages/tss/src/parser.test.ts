@@ -75,4 +75,14 @@ describe('TSS Parser', () => {
         expect(prop.value.kind).toBe('number');
         expect((prop.value as any).value).toBe(50);
     });
+
+    it('parses calc expressions as literal values', () => {
+        const ast = parseTSS(`
+            Box {
+                width: calc(10 - 2);
+            }
+        `);
+        const prop = ast.rules[0].properties[0];
+        expect(prop.value).toEqual({ kind: 'literal', value: 'calc(10 - 2)' });
+    });
 });
