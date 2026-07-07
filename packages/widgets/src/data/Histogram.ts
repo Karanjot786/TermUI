@@ -1,5 +1,6 @@
 import { type Screen, type Style, type Color, caps, truncate } from "@termuijs/core";
 import { Widget } from "../base/Widget.js";
+import { filterFinite } from "./utils.js";
 
 export interface HistogramOptions {
     bins?: number;
@@ -22,7 +23,7 @@ export class Histogram extends Widget {
     }
 
     setData(values: number[]): void {
-        this._values = values;
+        this._values = filterFinite(values);
         this.markDirty();
     }
 

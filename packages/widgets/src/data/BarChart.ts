@@ -9,6 +9,7 @@ import {
     VERTICAL_BAR_SYMBOLS, HORIZONTAL_BAR_SYMBOLS,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { filterFinite } from './utils.js';
 
 // ── Types ────────────────────────────────────────────
 
@@ -71,7 +72,10 @@ export class BarChart extends Widget {
     }
 
     setData(data: BarGroup[]): void {
-        this._data = data;
+        this._data = data.map(g => ({
+            ...g,
+            bars: g.bars.map(b => ({ ...b, value: filterFinite([b.value])[0] ?? 0 })),
+        }));
         this.markDirty();
     }
 

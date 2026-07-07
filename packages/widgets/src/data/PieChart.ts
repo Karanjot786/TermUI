@@ -16,6 +16,7 @@ import {
     truncate,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { filterFinite } from './utils.js';
 
 export interface PieSlice {
     label: string;
@@ -45,7 +46,7 @@ export class PieChart extends Widget {
     get slices(): ReadonlyArray<PieSlice> { return this._slices; }
 
     setSlices(slices: PieSlice[]): void {
-        this._slices = slices;
+        this._slices = slices.map(s => ({ ...s, value: filterFinite([s.value])[0] ?? 0 }));
         this.markDirty();
     }
 
