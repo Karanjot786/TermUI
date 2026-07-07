@@ -22,6 +22,7 @@ export enum TokenType {
     Number = 'NUMBER',
     Color = 'COLOR',           // #rrggbb or #rgb
     Var = 'VAR',               // var(--name)
+    Calc = 'CALC',             // calc(...)
     Variable = 'VARIABLE',     // --name
 
     // Pseudo-selectors
@@ -165,13 +166,23 @@ export function tokenize(source: string): Token[] {
             let ident = '';
             while (pos < source.length && /[a-zA-Z0-9_-]/.test(peek())) ident += advance();
 
-            if (ident === 'var' && peek() === '(') {
+            if ((ident === 'var' || ident === 'calc') && peek() === '(') {
                 advance();
                 while (pos < source.length && /\s/.test(peek())) advance();
-                let varName = '';
-                while (pos < source.length && peek() !== ')') varName += advance();
-                if (pos < source.length) advance();
-                tokens.push({ type: TokenType.Var, value: varName.trim(), line, col: startCol });
+                let value = '';
+                let depth = 1;
+                while (pos < source.length && depth > 0) {
+                    const next = advance();
+                    if (next === '(') depth++;
+                    if (next === ')') depth--;
+                    if (depth > 0) value += next;
+                }
+                tokens.push({
+                    type: ident === 'var' ? TokenType.Var : TokenType.Calc,
+                    value: ident === 'var' ? value.trim() : `calc(${value.trim()})`,
+                    line,
+                    col: startCol,
+                });
             } else {
                 tokens.push({ type: TokenType.Ident, value: ident, line, col: startCol });
             }

@@ -53,6 +53,13 @@ describe('TSS Tokenizer', () => {
         expect(v!.value).toBe('--primary');
     });
 
+    it('tokenizes calc() expressions as a single value', () => {
+        const tokens = tokenize('width: calc(10 - 2);');
+        const calc = tokens.find(t => t.type === TokenType.Calc);
+        expect(calc).toBeDefined();
+        expect(calc!.value).toBe('calc(10 - 2)');
+    });
+
     it('tokenizes pseudo-classes', () => {
         const tokens = tokenize('Box:focused { }');
         const pseudo = tokens.find(t => t.type === TokenType.PseudoClass);

@@ -77,6 +77,18 @@ describe('ThemeEngine', () => {
         expect(style.margin).toEqual({ top: 1, right: 2, bottom: 3, left: 4 });
     });
 
+    it('resolves calc expressions in numeric style properties', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            Box {
+                width: calc(10 - 2);
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.width).toBe(8);
+    });
+
     it('onChange notifies listeners on theme switch', () => {
         const engine = new ThemeEngine();
         engine.load(TSS_SOURCE);

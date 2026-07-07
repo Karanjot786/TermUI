@@ -93,4 +93,14 @@ describe('TSS Parser', () => {
             value: '1 2 3 4',
         });
     });
+
+    it('parses calc expressions as literal values', () => {
+        const ast = parseTSS(`
+            Box {
+                width: calc(10 - 2);
+            }
+        `);
+        const prop = ast.rules[0].properties[0];
+        expect(prop.value).toEqual({ kind: 'literal', value: 'calc(10 - 2)' });
+    });
 });

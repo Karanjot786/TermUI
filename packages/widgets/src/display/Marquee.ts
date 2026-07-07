@@ -61,9 +61,43 @@ export class Marquee extends Widget {
             ? (this._offset % repeatLen)
             : (repeatLen - (this._offset % repeatLen));
 
-        const start = effectiveOffset % full.length;
-        const visible = full.slice(start, start + width);
+        const visible = visualSlice(full, effectiveOffset, width);
 
         screen.writeString(x, y, visible, attrs);
     }
+}
+
+function visualSlice(str: string, startCol: number, widthCols: number): string {
+    let currentCol = 0;
+    let result = '';
+    
+    for (const char of str) {
+        const w = stringWidth(char);
+        if (currentCol >= startCol + widthCols) {
+            break;
+        }
+        if (currentCol >= startCol) {
+            if (currentCol + w > startCol + widthCols) {
+                result += ' '.repeat(startCol + widthCols - currentCol);
+                break;
+            }
+            result += char;
+            currentCol += w;
+        } else {
+            if (currentCol + w > startCol) {
+                const visiblePart = currentCol + w - startCol;
+                result += ' '.repeat(Math.min(visiblePart, widthCols));
+                currentCol += w;
+            } else {
+                currentCol += w;
+            }
+        }
+    }
+    
+    const totalW = stringWidth(result);
+    if (totalW < widthCols) {
+        result += ' '.repeat(widthCols - totalW);
+    }
+    
+    return result;
 }

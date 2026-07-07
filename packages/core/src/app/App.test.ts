@@ -188,6 +188,20 @@ describe('App', () => {
             const code = await mountPromise;
             expect(code).toBe(0);
         });
+
+        it('removes the resize subscription on unmount', async () => {
+            const cleanup = vi.fn();
+            const app = new App(createMockRootWidget(), createInteractiveTestOptions());
+            const onResizeSpy = vi.spyOn(app.terminal, 'onResize').mockImplementation(() => cleanup);
+            const mountPromise = app.mount();
+
+            expect(onResizeSpy).toHaveBeenCalledTimes(1);
+
+            app.unmount();
+            await mountPromise;
+
+            expect(cleanup).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('exit()', () => {

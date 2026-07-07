@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { EventEmitter } from '@termuijs/core';
-import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
+import { createElement, ErrorBoundary, unmountAll, type VNode, getCurrentApp } from '@termuijs/jsx';
 import { type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern } from './route.js';
 import { RouterContext } from './hooks.js';
 
@@ -267,6 +267,8 @@ export class Router {
 
                 const notFoundMatch = this._createNotFoundMatch(resolvedPath);
                 this._currentMatch = notFoundMatch;
+                const app = getCurrentApp();
+                if (app) app.focus.clearFocus();
                 if (this.autoUnmount) unmountAll();
                 const screen = this.wrapScreen(notFoundMatch);
                 const emitEvent = direction === 'back' ? 'back' : 'navigate';
@@ -310,6 +312,8 @@ export class Router {
         }
 
         this._currentMatch = match;
+        const app = getCurrentApp();
+        if (app) app.focus.clearFocus();
         if (this.autoUnmount) unmountAll();
         const screen = this.wrapScreen(match);
 
