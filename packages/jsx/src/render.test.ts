@@ -14,9 +14,10 @@ describe('unmountApps', () => {
     });
 
     it('should catch errors thrown during unmount to prevent crashing', () => {
-        const errorConsoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const err = new Error('Failure during unmount');
+        const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
         const unmount1 = vi.fn().mockImplementation(() => {
-            throw new Error('Failure during unmount');
+            throw err;
         });
         const unmount2 = vi.fn();
         const apps = [{ unmount: unmount1 }, { unmount: unmount2 }];
@@ -24,11 +25,10 @@ describe('unmountApps', () => {
         expect(() => unmountApps(apps)).not.toThrow();
         expect(unmount1).toHaveBeenCalled();
         expect(unmount2).toHaveBeenCalled();
-        expect(errorConsoleSpy).toHaveBeenCalledWith(
-            '[jsx] Error during unmount():',
-            expect.any(Error)
+        expect(stderrSpy).toHaveBeenCalledWith(
+            '[jsx] Error during unmount(): ' + String(err) + '\n'
         );
-        errorConsoleSpy.mockRestore();
+        stderrSpy.mockRestore();
     });
 
     it('should safely ignore app instances without unmount method', () => {
