@@ -84,11 +84,13 @@ export function stepSpring(state: SpringState, config: SpringConfig, dt: number)
         Math.abs(newVelocity) < precision &&
         Math.abs(newValue - state.target) < precision;
 
-    // Safety clamp: if the value is within 10× precision of the target but
-    // the primary check hasn't fired yet (e.g. due to a marginal dt clamp),
-    // snap to the target so the animation always terminates.
+    // Safety clamp: snap to target when the *incoming* state is already very
+    // close. Checking pre-step displacement avoids the case where post-step
+    // newVelocity is inflated by the integration itself, causing the clamp to
+    // miss. Using displacement (pre-step) and newVelocity (post-step) gives a
+    // conservative but reliable termination guarantee.
     if (!done &&
-        Math.abs(newValue - state.target) < precision * 10 &&
+        Math.abs(displacement) < precision * 10 &&
         Math.abs(newVelocity) < precision * 10) {
         return { value: state.target, velocity: 0, target: state.target, done: true };
     }
