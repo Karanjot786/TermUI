@@ -375,6 +375,10 @@ export class TextInput extends Widget {
                     event.stopPropagation();
                 }
         }
+
+        // Safety clamp to prevent desync bugs
+        const finalGraphemes = splitGraphemes(this._value);
+        this._cursorPos = Math.max(0, Math.min(this._cursorPos, finalGraphemes.length));
     }
 
     protected _renderSelf(screen: Screen): void {

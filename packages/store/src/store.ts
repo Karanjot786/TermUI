@@ -117,10 +117,21 @@ function flushBatch(threw: boolean, immediate = false) {
             if (_batchEpoch !== epochAtFlush) return;
             const stores = Array.from(_batchStores.entries());
             _batchStores.clear();
-            for (const [listeners, { prevState, commit }] of stores) {
-                const newState = commit();
-                for (const listener of listeners) {
-                    listener(newState, prevState);
+            const newStates = new Map<Set<any>, any>();
+            for (const [listeners, { commit }] of stores) {
+                newStates.set(listeners, commit());
+            }
+            for (const [listeners, { prevState }] of stores) {
+                const newState = newStates.get(listeners);
+                try {
+                    for (const listener of listeners) {
+                        listener(newState, prevState);
+                    }
+                } catch (e) {
+                    for (const [, entry] of stores) {
+                        entry.rollback();
+                    }
+                    throw e;
                 }
             }
         };

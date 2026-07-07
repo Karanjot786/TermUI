@@ -232,6 +232,10 @@ export function parse(tokens: Token[]): TSSStylesheet {
             advance();
             return { kind: 'literal', value: t.value };
         }
+        if (t.type === TokenType.Calc) {
+            advance();
+            return { kind: 'literal', value: t.value };
+        }
         if (t.type === TokenType.Ident) {
             advance();
             return { kind: 'literal', value: t.value };

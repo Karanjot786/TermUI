@@ -104,6 +104,24 @@ describe("CLI args", () => {
         expect(res.yes).toBe(true);
     });
 
+    it("rejects add command --dir without a path value", () => {
+        expect(() => parseArgs(["add", "Badge", "--dir"])).toThrow(
+            "--dir requires a value"
+        );
+    });
+
+    it("rejects add command --dir followed by another flag", () => {
+        expect(() => parseArgs(["add", "Badge", "--dir", "--dry-run"])).toThrow(
+            "--dir requires a value"
+        );
+    });
+
+    it("rejects add command --dir= without an inline path value", () => {
+        expect(() => parseArgs(["add", "Badge", "--dir="])).toThrow(
+            "--dir requires a value"
+        );
+    });
+
     it("isNonInteractive works", () => {
         expect(isNonInteractive(parseArgs(["app", "--yes"]))).toBe(true);
         expect(isNonInteractive(parseArgs(["app"]))).toBe(false);

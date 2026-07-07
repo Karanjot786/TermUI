@@ -91,7 +91,7 @@ export class Text extends Widget {
         const allLines = text.split('\n');
 
         // Apply vertical scroll
-        const startLine = Math.min(this._scrollY, allLines.length);
+        const startLine = Math.min(this._scrollY, Math.max(0, allLines.length - 1));
         const visibleLines = allLines.slice(startLine, startLine + height);
 
         for (let i = 0; i < Math.min(visibleLines.length, height); i++) {
@@ -109,10 +109,13 @@ export class Text extends Widget {
                     if (skipped + charWidth > this._scrollX) {
                         // scrollX lands in the middle of this character
                         // For wide characters, we need to handle the partial column
-                        if (charWidth === 2 && skipped < this._scrollX) {
-                            // We're at the second column of a wide character
-                            // Add a placeholder for the remaining column and skip the character
-                            line = ' ' + line.slice(charIndex + ch.length);
+                        if (charWidth > 1 && skipped < this._scrollX) {
+                            // We're in the middle of a wide character
+                            // Calculate how many columns of this character are visible
+                            const visibleColumns = this._scrollX - skipped;
+                            const remainingColumns = charWidth - visibleColumns;
+                            // Add placeholders for the visible columns that were skipped
+                            line = ' '.repeat(visibleColumns) + line.slice(charIndex + ch.length);
                             lineRebuilt = true;
                         }
                         break;

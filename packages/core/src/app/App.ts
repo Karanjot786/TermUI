@@ -80,6 +80,7 @@ export class App {
     private _unsubKey: (() => void) | null = null;
     private _unsubMouse: (() => void) | null = null;
     private _unsubPaste: (() => void) | null = null;
+    private _unsubResize: (() => void) | null = null;
     private _unsubFocus: (() => void) | null = null;
     private _unsubBlur: (() => void) | null = null;
     private _unsubSigInt: (() => void) | null = null;
@@ -89,6 +90,8 @@ export class App {
     private _widgetById = new Map<string, any>(); // any: Widget shape varies; narrowed at retrieval
     private _hoveredWidgetId: string | null = null;
     private _pendingFocusState = new Map<string, boolean>();
+    private _pendingFocusRetries = new Map<string, number>();
+    private static readonly PENDING_FOCUS_MAX_RETRIES = 5;
 
     private _consecutiveRenderFailures = 0;
     private static readonly MAX_RENDER_FAILURES = 5;
@@ -171,7 +174,7 @@ export class App {
         }
 
         // Handle resize
-        this.terminal.onResize((cols, rows) => {
+        this._unsubResize = this.terminal.onResize((cols, rows) => {
             this.screen.resize(cols, rows);
             this.screen.invalidate();
             this.layers.resize(cols, rows);
@@ -332,6 +335,8 @@ export class App {
         this._unsubBlur = null;
         this._unsubPaste?.();
         this._unsubPaste = null;
+        this._unsubResize?.();
+        this._unsubResize = null;
         this._unsubUncaughtException?.();
         this._unsubUncaughtException = null;
         this._unsubUnhandledRejection?.();
@@ -598,6 +603,15 @@ export class App {
             const stateChanged = this._setWidgetFocused(id, focused);
             if (stateChanged !== null) {
                 this._pendingFocusState.delete(id);
+                this._pendingFocusRetries.delete(id);
+            } else {
+                const retries = this._pendingFocusRetries.get(id) ?? 0;
+                if (retries >= App.PENDING_FOCUS_MAX_RETRIES) {
+                    this._pendingFocusState.delete(id);
+                    this._pendingFocusRetries.delete(id);
+                } else {
+                    this._pendingFocusRetries.set(id, retries + 1);
+                }
             }
         }
     }
@@ -627,12 +641,16 @@ export class App {
         }
         if (matches.length === 0) return null;
 
-        // 3. Sort by z-index descending (topmost wins)
+        // 3. Reverse the array so that later siblings (which are rendered on top) 
+        // win ties when stable-sorted by z-index.
+        matches.reverse();
+        
+        // 4. Sort by z-index descending (topmost wins)
         matches.sort((a, b) => b.zIndex - a.zIndex);
         const topZ = matches[0].zIndex;
         const topMatches = matches.filter(m => m.zIndex === topZ);
 
-        // 4. Among same z-index, prefer deepest child widget (most specific)
+        // 5. Among same z-index, prefer deepest child widget (most specific)
         if (topMatches.length > 1) {
             for (const m of topMatches) {
                 let p = m.widget.parent;

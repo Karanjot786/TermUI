@@ -10,36 +10,32 @@ vi.mock("node:child_process", () => ({
 import * as childProcess from "node:child_process";
 import { runAddCommand } from "./add";
 
-const registrySchema = {
-    components: [
-        {
-            name: "badge",
-            category: "utility",
-            description:
-                "Short inline label with colored background for status indicators.",
-            files: ["registry/components/badge/index.ts"],
-            deps: ["@termuijs/core", "@termuijs/widgets"],
-            peerDeps: [],
-            version: "0.1.0",
-        },
-    ],
-};
+const registryIndex = [
+    {
+        name: "Badge",
+        slug: "badge",
+        category: "utility",
+        description:
+            "Short inline label with colored background for status indicators.",
+        files: [
+            {
+                path: "badge.ts",
+                content: 'export const Badge = () => "badge";',
+            },
+        ],
+        dependencies: ["@termuijs/core", "@termuijs/widgets"],
+        version: "0.1.0",
+    },
+];
 
 let originalFetch: typeof fetch;
 
 function setupFetchMock() {
     const mockFetch = vi.fn(async (url: string) => {
-        if (url.endsWith("/registry/schema.json")) {
+        if (url.endsWith("/r/registry.json")) {
             return {
                 ok: true,
-                json: async () => registrySchema,
-            } as any;
-        }
-
-        if (url.endsWith("/registry/components/badge/index.ts")) {
-            return {
-                ok: true,
-                text: async () => 'export const Badge = () => "badge";',
+                json: async () => registryIndex,
             } as any;
         }
 
@@ -194,20 +190,19 @@ describe("runAddCommand", () => {
     });
 
     it("rejects path traversal in registry file paths", async () => {
-        const traversalSchema = {
-            components: [
-                {
-                    name: "evil",
-                    files: ["registry/components/evil/../../../../../../etc/passwd"],
-                    deps: [],
-                    peerDeps: [],
-                },
-            ],
-        };
+        const traversalIndex = [
+            {
+                name: "evil",
+                slug: "evil",
+                files: ["registry/components/evil/../../../../../../etc/passwd"],
+                deps: [],
+                peerDeps: [],
+            },
+        ];
 
         globalThis.fetch = vi.fn(async (url: string) => {
-            if (url.endsWith("/registry/schema.json")) {
-                return { ok: true, json: async () => traversalSchema } as any;
+            if (url.endsWith("/r/registry.json")) {
+                return { ok: true, json: async () => traversalIndex } as any;
             }
             return { ok: true, text: async () => "malicious content" } as any;
         }) as any;
@@ -215,5 +210,44 @@ describe("runAddCommand", () => {
         await expect(
             runAddCommand({ component: "evil", yes: true }),
         ).rejects.toThrow("is outside project root");
+    });
+
+    it("supports legacy registry entries that list file URLs", async () => {
+        const legacyIndex = {
+            components: [
+                {
+                    name: "badge",
+                    files: ["registry/components/badge/index.ts"],
+                    deps: ["@termuijs/core"],
+                    peerDeps: [],
+                },
+            ],
+        };
+
+        globalThis.fetch = vi.fn(async (url: string) => {
+            if (url.endsWith("/r/registry.json")) {
+                return { ok: true, json: async () => legacyIndex } as any;
+            }
+            if (url.endsWith("/registry/components/badge/index.ts")) {
+                return {
+                    ok: true,
+                    text: async () => 'export const Badge = () => "legacy";',
+                } as any;
+            }
+            return { ok: false, status: 404, statusText: "Not Found" } as any;
+        }) as any;
+
+        vi.spyOn(childProcess, "execFileSync");
+
+        await runAddCommand({ component: "badge", yes: true });
+
+        const destination = join(
+            tempDir,
+            "src",
+            "components",
+            "badge",
+            "index.ts",
+        );
+        expect(readFileSync(destination, "utf-8")).toContain("legacy");
     });
 });
