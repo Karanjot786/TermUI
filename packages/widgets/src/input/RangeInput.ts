@@ -13,6 +13,8 @@ export interface RangeInputOptions {
     min?: number;
     max?: number;
     step?: number;
+    low?: number;
+    high?: number;
     color?: Color;
     showValue?: boolean;
     onChange?: (low: number, high: number) => void;
@@ -43,8 +45,12 @@ export class RangeInput extends Widget {
         this._step = opts.step ?? 1;
         this._color = opts.color ?? { type: 'named', name: 'cyan' };
         this._showValue = opts.showValue ?? true;
-        this._low = this._min;
-        this._high = this._max;
+        
+        const initialLow = opts.low ?? this._min;
+        const initialHigh = opts.high ?? this._max;
+        this._low = Math.max(this._min, Math.min(initialLow, initialHigh));
+        this._high = Math.min(this._max, Math.max(initialLow, initialHigh));
+        
         this._activeHandle = 'low';
         this._onChange = opts.onChange;
 
