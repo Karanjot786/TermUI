@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RenderHook } from './render-hook.js';
 
 describe('RenderHook', () => {
@@ -9,7 +9,6 @@ describe('RenderHook', () => {
     });
 
     afterEach(() => {
-        // Guarantee restoration even if a test fails
         hook.stop();
     });
 
@@ -19,7 +18,7 @@ describe('RenderHook', () => {
         console.log('test log 2');
 
         expect(hook.flush()).toBe('test log 1\ntest log 2\n');
-        expect(hook.flush()).toBe(''); // Buffer should be empty after flush
+        expect(hook.flush()).toBe('');
     });
 
     it('restores original console.log on stop', () => {
@@ -31,22 +30,23 @@ describe('RenderHook', () => {
         expect(console.log).toBe(originalLog);
     });
 
-    it('intercepts console.warn and console.error', () => {
-        const originalWarn = console.warn;
-        const originalError = console.error;
+    it('intercepts console.warn, console.error, and other methods when active', () => {
+        const methods = ['warn', 'error', 'debug', 'trace', 'info'] as const;
+        const originals = methods.map(m => (console as any)[m]);
         hook.start();
-        expect(console.warn).not.toBe(originalWarn);
-        expect(console.error).not.toBe(originalError);
+        for (const m of methods) {
+            expect((console as any)[m]).not.toBe(originals[methods.indexOf(m)]);
+        }
         hook.stop();
-        expect(console.warn).toBe(originalWarn);
-        expect(console.error).toBe(originalError);
+        for (const m of methods) {
+            expect((console as any)[m]).toBe(originals[methods.indexOf(m)]);
+        }
     });
 
     it('writeRaw bypasses the buffer', () => {
         hook.start();
         hook.writeRaw('direct write bypass');
 
-        // The buffer shouldn't capture writeRaw output
         expect(hook.flush()).toBe('');
     });
 
@@ -78,5 +78,14 @@ describe('RenderHook', () => {
         hook.start();
         console.log('a', 'b', 'c');
         expect(hook.flush()).toBe('a b c\n');
+    });
+
+    it('calls through to the original console.log so output remains visible', () => {
+        const spy = vi.spyOn(console, 'log');
+        hook.start();
+        console.log('visible output');
+        expect(hook.flush()).toBe('visible output\n');
+        expect(spy).toHaveBeenCalledWith('visible output');
+        spy.mockRestore();
     });
 });

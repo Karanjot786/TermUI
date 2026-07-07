@@ -2,30 +2,33 @@
 // @termuijs/core — Renderer Hook & Batching Scheduler
 // ─────────────────────────────────────────────────────
 
-type ConsoleMethod = 'log' | 'warn' | 'error';
+type ConsoleMethod = 'log' | 'warn' | 'error' | 'debug' | 'trace' | 'info';
 
 export class RenderHook {
     private _buffer: string[] = [];
     private _isActive = false;
-    private _originalConsole: Partial<Record<ConsoleMethod, (...args: any[]) => void>> = {}; // any[]: console methods accept arbitrary argument shapes
+    private _originalConsole = new Map<ConsoleMethod, (...args: any[]) => void>();
 
     /** Check if the hook is currently intercepting console output */
     get isActive(): boolean {
         return this._isActive;
     }
 
-    /** Wrap console.log/warn/error to buffer external logs instead of writing to stdout */
+    /** Wrap console methods to buffer output while still displaying it */
     start(): void {
         if (this._isActive) return;
         this._isActive = true;
 
-        const methods: ConsoleMethod[] = ['log', 'warn', 'error'];
+        const methods: ConsoleMethod[] = ['log', 'warn', 'error', 'debug', 'trace', 'info'];
         for (const method of methods) {
-            this._originalConsole[method] = console[method];
+            const original = (console as any)[method];
+            if (typeof original !== 'function') continue;
+            this._originalConsole.set(method, original);
             const hook = this;
-            console[method] = function (...args: any[]): void { // any[]: console methods accept arbitrary argument shapes
+            (console as any)[method] = function (...args: any[]): void {
                 const text = args.map(a => typeof a === 'string' ? a : String(a)).join(' ');
                 hook._buffer.push(text + '\n');
+                original.apply(console, args);
             };
         }
     }
@@ -35,10 +38,10 @@ export class RenderHook {
         if (!this._isActive) return;
         this._isActive = false;
 
-        for (const [method, original] of Object.entries(this._originalConsole)) {
-            console[method as ConsoleMethod] = original as (...args: any[]) => void; // any[]: console methods accept arbitrary argument shapes
+        for (const [method, original] of this._originalConsole) {
+            (console as any)[method] = original;
         }
-        this._originalConsole = {};
+        this._originalConsole.clear();
     }
 
     /** Retrieve and clear the buffered logs */
