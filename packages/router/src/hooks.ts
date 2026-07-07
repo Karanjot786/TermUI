@@ -9,6 +9,13 @@ import type { RouteParams, RouteMeta, QueryParams } from './route.js';
 export const RouterContext = createContext<Router | null>(null);
 
 /**
+ * Returns the current router instance.
+ */
+export function useRouter(): Router | null {
+    return useContext(RouterContext);
+}
+
+/**
  * Returns the current route parameters.
  */
 export function useParams(): RouteParams {
@@ -17,6 +24,24 @@ export function useParams(): RouteParams {
         return {};
     }
     return router.params;
+}
+
+/**
+ * Returns the current query parameters.
+ */
+export function useQuery(): QueryParams {
+    const router = useContext(RouterContext);
+    if (!router) {
+        return {};
+    }
+    return router.query;
+}
+
+/**
+ * Returns the current query parameters (alias for useQuery).
+ */
+export function useQueryParams(): QueryParams {
+    return useQuery();
 }
 
 /**
@@ -46,12 +71,12 @@ export function useRouteMeta(): RouteMeta {
 }
 
 /**
- * Returns the current query parameters.
+ * Returns the current location path.
  */
-export function useQueryParams(): QueryParams {
+export function useLocation(): string {
     const router = useContext(RouterContext);
     if (!router) {
-        return {};
+        return '/';
     }
-    return router.query;
+    return router.currentPath;
 }

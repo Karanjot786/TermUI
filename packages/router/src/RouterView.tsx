@@ -2,6 +2,7 @@ import { useState, useEffect, type VNode } from '@termuijs/jsx';
 import { transition } from '@termuijs/motion';
 import { Dim, Pos } from '@termuijs/core';
 import { type Router, type NavigateEvent } from './router.js';
+import { DefaultNotFound } from './DefaultNotFound.js';
 
 // Custom position constraint that offsets by a percentage of the parent's width
 class SlidePos extends Pos {
@@ -14,9 +15,17 @@ class SlidePos extends Pos {
 
 export interface RouterViewProps {
     router: Router;
+    /**
+     * Component to render when navigation targets an unregistered route.
+     * If not provided, DefaultNotFound is used.
+     *
+     * @example
+     * <RouterView router={router} notFound={(path) => <Text>No page at {path}</Text>} />
+     */
+    notFound?: (path: string) => VNode;
 }
 
-export function RouterView({ router }: RouterViewProps) {
+export function RouterView({ router, notFound }: RouterViewProps) {
     const [screens, setScreens] = useState<{
         previous: VNode | null;
         current: VNode | null;
@@ -24,7 +33,7 @@ export function RouterView({ router }: RouterViewProps) {
         progress: number;
     }>({
         previous: null,
-        current: router.current ? router.wrapScreen(router.current) : null,
+        current: router.current ? router.wrapScreen(router.current, notFound) : null,
         direction: 'push',
         progress: 1,
     });
@@ -84,7 +93,7 @@ export function RouterView({ router }: RouterViewProps) {
             router.events.off('navigate', onNav);
             router.events.off('back', onBack);
         };
-    }, [router]);
+    }, [router, notFound]);
 
     const { previous, current, direction, progress } = screens;
     

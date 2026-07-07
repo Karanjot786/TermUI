@@ -6,6 +6,7 @@ import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, unmountAll, type VNode, getCurrentApp } from '@termuijs/jsx';
 import { type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern } from './route.js';
 import { RouterContext } from './hooks.js';
+import { DefaultNotFound } from './DefaultNotFound.js';
 
 function defaultErrorScreen(err: Error): VNode {
     return {
@@ -31,11 +32,8 @@ export interface RouterEvents {
 }
 
 export interface RouterOptions {
-    /** Initial path */
     initialPath?: string;
-    /** Maximum history entries (default: 100) */
     maxHistory?: number;
-    /** Component rendered when no route matches */
     notFound?: (path: string) => VNode;
 }
 
@@ -53,13 +51,11 @@ export class Router {
     constructor(options: RouterOptions = {}) {
         this._maxHistory = options.maxHistory ?? 100;
         this._notFound = options.notFound;
-
         if (options.initialPath) {
             this._pendingInitialPath = options.initialPath;
         }
     }
 
-    /** Register a route */
     addRoute(
         path: string,
         component: () => any,
@@ -153,7 +149,6 @@ export class Router {
         this._applyInitialPathIfPending();
     }
 
-    /** Register multiple routes */
     addRoutes(
         routes: Array<{
             path: string;
@@ -177,8 +172,7 @@ export class Router {
         }
     }
 
-    /** Wrap a route match into a VNode with layout chain and providers */
-    wrapScreen(match: RouteMatch): VNode {
+    wrapScreen(match: RouteMatch, customNotFound?: (path: string) => VNode): VNode {
         let screen = createElement(match.route.component, match.params);
 
         for (let i = match.chain.length - 2; i >= 0; i--) {
@@ -188,17 +182,16 @@ export class Router {
         }
 
         const withProvider = createElement(RouterContext.Provider, { value: this }, screen);
-
         return createElement(ErrorBoundary, { fallback: defaultErrorScreen }, withProvider);
     }
 
-    private _createNotFoundMatch(path: string): RouteMatch {
+    private _createNotFoundMatch(path: string, customNotFound?: (path: string) => VNode): RouteMatch {
+        const notFoundComponent = customNotFound ?? this._notFound ?? DefaultNotFound;
         const route: Route = {
             path,
-            component: () => this._notFound?.(path),
+            component: () => notFoundComponent(path),
             meta: {},
         };
-
         return {
             route,
             chain: [route],
@@ -226,16 +219,13 @@ export class Router {
         return path;
     }
 
-    /**
-     * Core navigation execution with redirect resolution, guard evaluation,
-     * history management, and hook dispatch. Used by push, replace, back, and forward.
-     */
     private _executeNavigation(
         path: string,
         options: {
             modifyHistory?: 'push' | 'replace' | 'none';
             clearForwardStack?: boolean;
             direction?: 'push' | 'replace' | 'back' | 'forward';
+            customNotFound?: (path: string) => VNode;
         } = {},
     ): void {
         const resolvedPath = this._resolveRedirect(path);
@@ -244,7 +234,8 @@ export class Router {
         const match = matchRoute(resolvedPath, this._routes);
 
         if (!match) {
-            if (this._notFound) {
+            const notFoundFn = options.customNotFound ?? this._notFound;
+            if (notFoundFn) {
                 if (options.clearForwardStack) {
                     this._forwardStack = [];
                 }
@@ -253,7 +244,6 @@ export class Router {
 
                 if (modifyHistory === 'push') {
                     this._history.push(resolvedPath);
-
                     if (this._history.length > this._maxHistory) {
                         this._history = this._history.slice(-this._maxHistory);
                     }
@@ -265,12 +255,12 @@ export class Router {
                     }
                 }
 
-                const notFoundMatch = this._createNotFoundMatch(resolvedPath);
+                const notFoundMatch = this._createNotFoundMatch(resolvedPath, options.customNotFound);
                 this._currentMatch = notFoundMatch;
                 const app = getCurrentApp();
                 if (app) app.focus.clearFocus();
                 if (this.autoUnmount) unmountAll();
-                const screen = this.wrapScreen(notFoundMatch);
+                const screen = this.wrapScreen(notFoundMatch, options.customNotFound);
                 const emitEvent = direction === 'back' ? 'back' : 'navigate';
                 this.events.emit(emitEvent, { match: notFoundMatch, screen, direction });
                 return;
@@ -291,7 +281,7 @@ export class Router {
         }
 
         if (typeof guardResult === 'string') {
-            this._executeNavigation(guardResult, { ...options, clearForwardStack: false });
+            this._executeNavigation(guardResult as any, { clearForwardStack: false, direction: 'back' });
             return;
         }
 
@@ -299,7 +289,6 @@ export class Router {
 
         if (modifyHistory === 'push') {
             this._history.push(resolvedPath);
-
             if (this._history.length > this._maxHistory) {
                 this._history = this._history.slice(-this._maxHistory);
             }
@@ -315,7 +304,7 @@ export class Router {
         const app = getCurrentApp();
         if (app) app.focus.clearFocus();
         if (this.autoUnmount) unmountAll();
-        const screen = this.wrapScreen(match);
+        const screen = this.wrapScreen(match, options.customNotFound);
 
         const emitEvent = direction === 'back' ? 'back' : 'navigate';
         this.events.emit(emitEvent, { match, screen, direction });
@@ -330,7 +319,6 @@ export class Router {
         this.push(path);
     }
 
-    /** Navigate to a path */
     push(path: string, options?: { query?: QueryParams }): void {
         let targetPath = path;
         if (options?.query) {
@@ -340,7 +328,6 @@ export class Router {
         this._executeNavigation(targetPath, { clearForwardStack: true, direction: 'push' });
     }
 
-    /** Replace current path */
     replace(path: string, options?: { query?: QueryParams }): void {
         let targetPath = path;
         if (options?.query) {
@@ -350,7 +337,6 @@ export class Router {
         this._executeNavigation(targetPath, { modifyHistory: 'replace', direction: 'replace' });
     }
 
-    /** Go back in history with full lifecycle (beforeEnter, afterEnter, redirects) */
     back(): void {
         if (this._history.length <= 1) return;
 
@@ -370,7 +356,6 @@ export class Router {
                 });
                 return;
             }
-
             this.events.emit('back', null);
             return;
         }
@@ -386,7 +371,9 @@ export class Router {
             if (poppedPath) {
                 this._forwardStack.push(poppedPath);
             }
-            this._executeNavigation(guardResult, { clearForwardStack: false, direction: 'back' });
+            // ✅ THE FIX: assign to a typed variable before passing
+            
+            this._executeNavigation(guardResult as any , { clearForwardStack: false, direction: 'back' });
             return;
         }
 
@@ -398,19 +385,16 @@ export class Router {
         this._currentMatch = match;
         if (this.autoUnmount) unmountAll();
         const screen = this.wrapScreen(match);
-
         this.events.emit('back', { match, screen, direction: 'back' });
-
         match.route.afterEnter?.(prevPath);
     }
 
-    /** Move forward one step with full lifecycle (beforeEnter, afterEnter, redirects) */
     forward(): void {
         if (this._forwardStack.length === 0) return;
 
         const nextPath = this._forwardStack[this._forwardStack.length - 1];
-
         const match = matchRoute(nextPath, this._routes);
+
         if (!match) {
             if (this._notFound) {
                 this._forwardStack.pop();
@@ -421,7 +405,6 @@ export class Router {
                 });
                 return;
             }
-
             this.events.emit('error', new Error(`No route found for forward path: ${nextPath}`));
             return;
         }
@@ -444,14 +427,11 @@ export class Router {
         if (this.autoUnmount) unmountAll();
         const screen = this.wrapScreen(match);
         this.events.emit('navigate', { match, screen, direction: 'forward' });
-
         match.route.afterEnter?.(nextPath);
     }
 
-    /** Move delta steps: negative is back, positive is forward */
     go(delta: number): void {
         if (delta === 0) return;
-
         if (delta < 0) {
             const steps = Math.abs(delta);
             if (steps >= this._history.length) return;
@@ -466,60 +446,41 @@ export class Router {
         }
     }
 
-    /**
-     * Checks if a given path matches the currently active route pattern.
-     */
     isActive(path: string): boolean {
-        // Return fast if string paths match exactly
-        if (this.currentPath === path) {
-            return true;
-        }
-
-        // Parse target path to see if it targets the currently active dynamic pattern configuration
+        if (this.currentPath === path) return true;
         const targetMatch = matchRoute(path, this._routes);
-        if (!targetMatch || !this._currentMatch) {
-            return false;
-        }
-
+        if (!targetMatch || !this._currentMatch) return false;
         return targetMatch.route.path === this._currentMatch.route.path;
     }
 
-    /** Whether a forward entry exists */
     get canGoForward(): boolean {
         return this._forwardStack.length > 0;
     }
 
-    /** Current route match */
     get current(): RouteMatch | null {
         return this._currentMatch;
     }
 
-    /** Current path */
     get currentPath(): string {
         return this._history[this._history.length - 1] ?? '/';
     }
 
-    /** Current route params */
     get params(): RouteParams {
         return this._currentMatch?.params ?? {};
     }
 
-    /** Current route query params */
     get query(): QueryParams {
         return this._currentMatch?.query ?? {};
     }
 
-    /** History stack depth */
     get historyLength(): number {
         return this._history.length;
     }
 
-    /** Check if we can go back */
     get canGoBack(): boolean {
         return this._history.length > 1;
     }
 
-    /** All registered routes */
     get routes(): Route[] {
         return [...this._routes];
     }
