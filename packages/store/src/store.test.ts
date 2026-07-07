@@ -867,3 +867,57 @@ describe('useStore selector memoization', () => {
     })
 })
 
+describe('persist – symlink resolution', () => {
+    const testRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'termuijs-symtest-')));
+    const storeDir = path.join(testRoot, 'termuijs-stores');
+    const realDir = path.join(storeDir, 'real');
+    const linkDir = path.join(storeDir, 'link');
+
+    afterAll(() => {
+        try { fs.rmSync(storeDir, { recursive: true }); } catch { /* ok */ }
+        try { fs.rmdirSync(testRoot); } catch { /* ok */ }
+    });
+
+    const origAppData = process.env.APPDATA;
+    const origXdgConfig = process.env.XDG_CONFIG_HOME;
+    const symlinkType: any = process.platform === 'win32' ? 'junction' : 'dir';
+
+    beforeEach(() => {
+        process.env.APPDATA = testRoot;
+        process.env.XDG_CONFIG_HOME = testRoot;
+        fs.mkdirSync(realDir, { recursive: true });
+        try { fs.rmdirSync(linkDir); } catch { /* ok */ }
+        if (!fs.existsSync(linkDir)) {
+            fs.symlinkSync(realDir, linkDir, symlinkType);
+        }
+    });
+
+    afterEach(() => {
+        process.env.APPDATA = origAppData;
+        process.env.XDG_CONFIG_HOME = origXdgConfig;
+        vi.useRealTimers();
+        try { fs.rmSync(storeDir, { recursive: true }); } catch { /* ok */ }
+    });
+
+    it('resolves symlinks in persist path and writes to real directory', () => {
+        vi.useFakeTimers();
+        const useStore = createStore({ count: 0 }, {
+            persist: { file: path.join(linkDir, 'symtest.json') },
+        });
+        useStore.setState({ count: 42 });
+        vi.advanceTimersByTime(200);
+        const realFilePath = path.join(realDir, 'symtest.json');
+        expect(fs.existsSync(realFilePath)).toBe(true);
+        const content = JSON.parse(fs.readFileSync(realFilePath, 'utf8'));
+        expect(content.count).toBe(42);
+    });
+
+    it('rehydrates from the resolved real path on restart', () => {
+        fs.writeFileSync(path.join(realDir, 'symtest.json'), JSON.stringify({ count: 99 }));
+        const useStore = createStore({ count: 0 }, {
+            persist: { file: path.join(linkDir, 'symtest.json') },
+        });
+        expect(useStore.getState().count).toBe(99);
+    });
+})
+

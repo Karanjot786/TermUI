@@ -127,4 +127,63 @@ describe('List', () => {
         expect(rendered).toContain('No files found');
     });
 
+    describe('Type-to-select navigation', () => {
+        beforeEach(() => {
+            vi.useFakeTimers();
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
+        it('subscribes to key events and invokes handleKey', () => {
+            const list = new List(items);
+            
+            // Firing a key event should invoke the bound handleKey
+            list.events.emit('key', { key: 'b' } as any);
+            expect(list.selectedIndex).toBe(1); // 'Banana'
+        });
+
+        it('navigates to item matching single character', () => {
+            const list = new List(items);
+            list.handleKey({ key: 'c' } as any);
+            expect(list.selectedIndex).toBe(2); // 'Cherry'
+        });
+
+        it('accumulates characters for multi-letter search within timeout', () => {
+            const list = new List([
+                { label: 'Apple', value: 'apple' },
+                { label: 'Apricot', value: 'apricot' },
+                { label: 'Banana', value: 'banana' },
+            ]);
+            
+            // 'a' jumps to Apple
+            list.handleKey({ key: 'a' } as any);
+            expect(list.selectedIndex).toBe(0);
+            
+            // quickly 'p' and 'r' jumps to Apricot
+            list.handleKey({ key: 'p' } as any);
+            list.handleKey({ key: 'r' } as any);
+            expect(list.selectedIndex).toBe(1);
+        });
+
+        it('resets the search buffer after 500ms', () => {
+            const list = new List([
+                { label: 'Apple', value: 'apple' },
+                { label: 'Apricot', value: 'apricot' },
+                { label: 'Banana', value: 'banana' },
+            ]);
+            
+            // 'a' jumps to Apple
+            list.handleKey({ key: 'a' } as any);
+            expect(list.selectedIndex).toBe(0);
+            
+            // wait 500+ ms
+            vi.advanceTimersByTime(550);
+            
+            // 'b' jumps to Banana (not 'apb' which doesn't exist)
+            list.handleKey({ key: 'b' } as any);
+            expect(list.selectedIndex).toBe(2);
+        });
+    });
 });

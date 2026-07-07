@@ -353,13 +353,13 @@ describe('InputParser', () => {
     });
 
     describe('FSM escape sequence handling', () => {
-        it('emits standalone Escape key after 200ms timeout', () => {
+        it('emits standalone Escape key after 500ms timeout', () => {
             const { stdin, handler } = createParser();
             // Lone ESC byte
             originalSendKey(stdin, Buffer.from([0x1b]));
             expect(handler).not.toHaveBeenCalled();
-            // Advance past the 200ms timeout
-            vi.advanceTimersByTime(250);
+            // Advance past the 500ms timeout
+            vi.advanceTimersByTime(550);
             expect(handler).toHaveBeenCalledTimes(1);
             expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'escape' }));
         });
@@ -380,9 +380,9 @@ describe('InputParser', () => {
             const { stdin, handler } = createParser();
             // Simulate ESC arriving alone (as if it was the start of an escape sequence)
             originalSendKey(stdin, Buffer.from([0x1b]));
-            // Advance time past 200ms timeout - should NOT emit yet if buffer was appended
+            // Advance time past 500ms timeout - should NOT emit yet if buffer was appended
             // But in this test, no continuation arrives, so after timeout Escape fires
-            vi.advanceTimersByTime(250);
+            vi.advanceTimersByTime(550);
             expect(handler).toHaveBeenCalledTimes(1);
             expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'escape' }));
         });

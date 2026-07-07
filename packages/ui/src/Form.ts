@@ -11,6 +11,7 @@ export interface FormField {
 export interface FormOptions {
     labelColor?: Style['fg']; errorColor?: Style['fg']; activeColor?: Style['fg'];
     onSubmit?: (values: Record<string, string>) => void;
+    signal?: AbortSignal;
 }
 
 export class Form extends Widget {
@@ -24,7 +25,9 @@ export class Form extends Widget {
     private _activeColor: Style['fg'];
     private _onSubmit?: (values: Record<string, string>) => void;
     private _isValidating = false;
+    private _onComplete?: (values: Record<string, string>) => void;
     focusable = true;
+    public signal?: AbortSignal;
 
     constructor(fields: FormField[], options: FormOptions = {}) {
         super(mergeStyles(defaultStyle(), { height: fields.length * 2 + 1, flexGrow: 1 }));
@@ -33,6 +36,7 @@ export class Form extends Widget {
         this._errorColor = options.errorColor ?? { type: 'named', name: 'red' };
         this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSubmit = options.onSubmit;
+        this.signal = options.signal;
         for (const f of fields) this._values.set(f.name, '');
         // Wire key events from the App/event system into this widget's handlers.
         // Minimal: only route printable chars and backspace to existing methods.
@@ -79,8 +83,15 @@ export class Form extends Widget {
         }
 
         this._isValidating = false;
-        if (!hasErr) this._onSubmit?.(this.values);
+        if (!hasErr) {
+            this._onSubmit?.(this.values);
+            this._onComplete?.(this.values);
+        }
         this.markDirty();
+    }
+
+    onComplete(cb: (values: Record<string, string>) => void): void {
+        this._onComplete = cb;
     }
 
     /** Minimal key router — printable chars -> insertChar, backspace -> deleteBack */
