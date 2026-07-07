@@ -204,6 +204,37 @@ describe('Widget', () => {
         ).toBe(0);
     });
 
+    describe('child hierarchy dirty marking', () => {
+        it('marks parent dirty when addChild is called', () => {
+            const parent = new TestWidget();
+            const child = new TestWidget();
+            parent.clearDirty();
+            expect(parent.isDirty).toBe(false);
+            parent.addChild(child);
+            expect(parent.isDirty).toBe(true);
+        });
+
+        it('marks parent dirty when removeChild is called', () => {
+            const parent = new TestWidget();
+            const child = new TestWidget();
+            parent.addChild(child);
+            parent.clearDirty();
+            expect(parent.isDirty).toBe(false);
+            parent.removeChild(child);
+            expect(parent.isDirty).toBe(true);
+        });
+
+        it('marks parent dirty when clearChildren is called', () => {
+            const parent = new TestWidget();
+            const child = new TestWidget();
+            parent.addChild(child);
+            parent.clearDirty();
+            expect(parent.isDirty).toBe(false);
+            parent.clearChildren();
+            expect(parent.isDirty).toBe(true);
+        });
+    });
+
     describe('destroy() lifecycle', () => {
         it('emits unmount and removes event listeners', () => {
             const w = new TestWidget();

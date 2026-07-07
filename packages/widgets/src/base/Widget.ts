@@ -175,6 +175,7 @@ export abstract class Widget {
     addChild(child: Widget): void {
         child.parent = this;
         this._children.push(child);
+        this.markDirty();
     }
 
     /** Remove a child widget */
@@ -183,6 +184,7 @@ export abstract class Widget {
         if (idx >= 0) {
             this._children.splice(idx, 1);
             child.destroy();
+            this.markDirty();
         }
     }
 
@@ -193,6 +195,7 @@ export abstract class Widget {
         for (const child of children) {
             child.destroy();
         }
+        this.markDirty();
     }
 
     /**
