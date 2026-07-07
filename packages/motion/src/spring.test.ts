@@ -2,8 +2,9 @@
 // @termuijs/motion — Tests for Spring Physics
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { stepSpring, animateSpring, SPRING_PRESETS, MAX_DT } from './spring.js';
+import { unsubscribeAll } from './timer-pool.js';
 import type { SpringState } from './spring.js';
 
 describe('stepSpring', () => {
@@ -147,35 +148,60 @@ describe('animateSpring — caps.motion=false', () => {
 });
 
 // ── Regression: timer-pool subscription leak after large dt ─────────────────
-// animateSpring() must always call unsub() when done=true, even if the
-// animation settles on a tick where dt was clamped from a large wall-clock
-// delta. Without the MAX_DT cap, state.done could never become true for
-// underdamped presets after a suspend, leaking the setInterval permanently.
 
 describe('animateSpring — MAX_DT prevents timer-pool leak', () => {
+    beforeEach(() => {
+        // Force caps.motion = true so animateSpring doesn't short-circuit in
+        // reduced-motion CI environments (NO_MOTION=1 / CI=1). Without this,
+        // the test passes vacuously because the spring path is never entered.
+        vi.stubEnv('NO_MOTION', '');
+        vi.stubEnv('CI', '');
+    });
+
+    afterEach(() => {
+        vi.unstubAllEnvs();
+        vi.useRealTimers();
+        // Clean up any leftover timer-pool subscriptions from the test.
+        unsubscribeAll();
+    });
+
     it('MAX_DT is exported and equals 1/30', () => {
         expect(MAX_DT).toBeCloseTo(1 / 30, 5);
     });
 
-    it('animateSpring dt is clamped: large wall-clock gap does not prevent settling', () => {
+    it('stepSpring with MAX_DT never overshoots for wobbly preset', () => {
+        const state: SpringState = { value: 0, velocity: 0, target: 1, done: false };
+        const next = stepSpring(state, SPRING_PRESETS.wobbly, MAX_DT);
+        expect(next.value).toBeGreaterThanOrEqual(-0.5);
+        expect(next.value).toBeLessThan(10);
+    });
+
+    it('animateSpring with MAX_DT: wobbly eventually settles when driven manually', () => {
+        let state: SpringState = { value: 0, velocity: 0, target: 1, done: false };
+        for (let i = 0; i < 2000; i++) {
+            state = stepSpring(state, SPRING_PRESETS.wobbly, MAX_DT);
+            if (state.done) break;
+        }
+        expect(state.done).toBe(true);
+        expect(state.value).toBe(1);
+    });
+
+    it('large wall-clock gap does not prevent settling', () => {
         vi.useFakeTimers();
 
         const frames: number[] = [];
         let completed = false;
 
-        animateSpring(0, 1, SPRING_PRESETS.default, v => frames.push(v), () => { completed = true; });
+        animateSpring(0, 1, SPRING_PRESETS.default, v => frames.push(v), () => {
+            completed = true;
+        });
 
-        // Simulate a 10-second suspend by advancing fake time in one huge jump.
-        // Without MAX_DT, this would inject dt=10 into the integrator and
-        // cause overshoot. With MAX_DT, dt is clamped to 1/30 and the animation
-        // continues normally from where it left off.
+        // Advance fake time in one large jump to simulate suspend.
+        // With MAX_DT, each tick still uses at most 1/30s of dt regardless
+        // of how much wall-clock time elapsed between ticks.
         vi.advanceTimersByTime(10_000);
 
-        // The animation must complete — unsub must have been called.
         expect(completed).toBe(true);
-        // The final frame must land exactly on the target.
         expect(frames[frames.length - 1]).toBe(1);
-
-        vi.useRealTimers();
     });
 });
