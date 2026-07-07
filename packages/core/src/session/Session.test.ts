@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createSession, Session } from './Session.js';
-import { existsSync, unlinkSync, mkdirSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { createSession } from './Session.js';
+import { existsSync, unlinkSync, mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import * as os from 'node:os';
 
 describe('Session', () => {
     it('stores and retrieves values', () => {
@@ -32,16 +33,18 @@ describe('Session', () => {
 });
 
 describe('Session persistence', () => {
-    const testPath = '/tmp/termui-test-session.json';
+    // Use a temporary directory that works on all platforms
+    const tmpDir = join(os.tmpdir(), 'termui-session-test');
+    const testPath = join(tmpDir, 'session.json');
 
     beforeEach(() => {
-        const dir = dirname(testPath);
-        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+        if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
         if (existsSync(testPath)) unlinkSync(testPath);
     });
 
     afterEach(() => {
         if (existsSync(testPath)) unlinkSync(testPath);
+        // Optionally remove the directory after all tests – keep it simple
     });
 
     it('persists data to disk and restores it across instances', () => {
@@ -65,9 +68,9 @@ describe('Session persistence', () => {
     });
 
     it('handles corrupt JSON gracefully', () => {
-        const dir = dirname(testPath);
-        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-        require('node:fs').writeFileSync(testPath, 'not-valid-json');
+        // Ensure directory exists
+        if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
+        writeFileSync(testPath, 'not-valid-json');
 
         const s = createSession({ storagePath: testPath });
         expect(s.get('anything')).toBeUndefined();
