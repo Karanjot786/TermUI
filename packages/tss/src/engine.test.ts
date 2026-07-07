@@ -75,6 +75,20 @@ describe('ThemeEngine', () => {
         expect(style.margin).toBe(-2);
     });
 
+    it('resolves multi-value padding and margin declarations', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            Box {
+                padding: 1 2;
+                margin: 1 2 3 4;
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.padding).toEqual({ top: 1, bottom: 1, left: 2, right: 2 });
+        expect(style.margin).toEqual({ top: 1, right: 2, bottom: 3, left: 4 });
+    });
+
     it('resolves calc expressions in numeric style properties', () => {
         const engine = new ThemeEngine();
         engine.load(`

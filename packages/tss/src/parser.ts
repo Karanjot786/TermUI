@@ -215,33 +215,52 @@ export function parse(tokens: Token[]): TSSStylesheet {
     }
 
     function parseValue(): TSSValue {
-        const t = peek();
-        if (t.type === TokenType.Var) {
-            advance();
-            return { kind: 'var', name: t.value };
+        const valueTokens: Token[] = [];
+        while (peek().type !== TokenType.Semicolon && peek().type !== TokenType.RBrace && peek().type !== TokenType.EOF) {
+            valueTokens.push(advance());
         }
-        if (t.type === TokenType.Color) {
-            advance();
-            return { kind: 'color', value: t.value };
+
+        if (valueTokens.length === 1) {
+            const t = valueTokens[0];
+            if (t.type === TokenType.Var) {
+                return { kind: 'var', name: t.value };
+            }
+            if (t.type === TokenType.Color) {
+                return { kind: 'color', value: t.value };
+            }
+            if (t.type === TokenType.Number) {
+                return { kind: 'number', value: parseFloat(t.value) };
+            }
+            if (t.type === TokenType.String || t.type === TokenType.Ident) {
+                return { kind: 'literal', value: t.value };
+            }
         }
-        if (t.type === TokenType.Number) {
-            advance();
-            return { kind: 'number', value: parseFloat(t.value) };
+
+        return {
+            kind: 'literal',
+            value: valueTokens.map(tokenToRawValue).join(' ').trim(),
+        };
+    }
+
+    function tokenToRawValue(token: Token): string {
+        switch (token.type) {
+            case TokenType.Color:
+            case TokenType.Ident:
+            case TokenType.Number:
+            case TokenType.String:
+            case TokenType.Var:
+            case TokenType.Variable:
+            case TokenType.Percent:
+                return token.value;
+            case TokenType.Colon:
+                return ':';
+            case TokenType.Comma:
+                return ',';
+            case TokenType.Dot:
+                return '.';
+            default:
+                return token.value;
         }
-        if (t.type === TokenType.String) {
-            advance();
-            return { kind: 'literal', value: t.value };
-        }
-        if (t.type === TokenType.Calc) {
-            advance();
-            return { kind: 'literal', value: t.value };
-        }
-        if (t.type === TokenType.Ident) {
-            advance();
-            return { kind: 'literal', value: t.value };
-        }
-        advance();
-        return { kind: 'literal', value: t.value };
     }
 
     function parseRawValue(): string {
