@@ -35,6 +35,7 @@ export class TextInput extends Widget {
     constructor(
         style: Partial<Style> = {},
         options: {
+            value?: string;
             placeholder?: string;
             mask?: string;
             maxLength?: number;
@@ -51,6 +52,15 @@ export class TextInput extends Widget {
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
         this._suggestions = options.suggestions ?? [];
+
+        const initialVal = options.value ?? '';
+        const graphemes = splitGraphemes(initialVal);
+        if (graphemes.length > this._maxLength) {
+            this._value = graphemes.slice(0, this._maxLength).join('');
+        } else {
+            this._value = initialVal;
+        }
+        this._cursorPos = splitGraphemes(this._value).length;
 
         this.focusable = true;
 
