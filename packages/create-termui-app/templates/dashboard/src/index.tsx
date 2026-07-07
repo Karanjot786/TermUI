@@ -1,8 +1,13 @@
 /** @jsxImportSource @termuijs/jsx */
-import { render, useState, useEffect, useRef, useMemo, useKeymap, ErrorBoundary } from '@termuijs/jsx';
+import { useState, useEffect, useRef, useMemo, useKeymap, ErrorBoundary } from '@termuijs/jsx';
 import { AutoThemeProvider, useTheme } from '@termuijs/tss';
 import { AppShell, Tabs } from '@termuijs/ui';
 import { Box, Text, LineChart, BarChart, type BarGroup } from '@termuijs/widgets';
+
+import { render } from '@termuijs/core';
+import { App } from './app';
+
+render(<App />);
 
 interface CpuMetrics {
     percent: number;

@@ -14,3 +14,15 @@ A dashboard starter app for TermUI with:
 
 bun install
 bun run dev
+
+
+# Dashboard App
+
+A TermUI dashboard application.
+
+## Development
+
+Run the development server:
+
+```bash
+bun run dev
