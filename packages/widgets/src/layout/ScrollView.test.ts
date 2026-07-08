@@ -205,6 +205,73 @@ describe("ScrollView", () => {
         expect(view.isDirty).toBe(false);
     });
 
+    it('scrollTo same offset does not mark dirty', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollTo(3);
+        sv.clearDirty();
+
+        sv.scrollTo(3);
+
+        expect(sv.isDirty).toBe(false);
+    });
+
+    it('scrollTo different offset marks dirty', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollTo(2);
+        sv.clearDirty();
+
+        sv.scrollTo(4);
+
+        expect(sv.isDirty).toBe(true);
+    });
+
+    it('setContentHeight below current offset clamps offset and marks dirty', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollTo(10);
+        sv.clearDirty();
+
+        sv.setContentHeight(8);
+
+        expect(sv.scrollOffset).toBeLessThanOrEqual(3); // maxOffset = 8 - 5 = 3
+        expect(sv.isDirty).toBe(true);
+    });
+
+    it('scrollbar cells appear when contentHeight exceeds viewport height', () => {
+        // Use width=12 and border='single' so content rect is 10 wide.
+        // scrollX = contentRect.x(1) + contentRect.width(10) = 11, inside the 12-col screen.
+        const sv = new ScrollView(
+            { width: 12, height: 5, border: 'single' },
+            { contentHeight: 20, showScrollbar: true },
+        );
+        const screen = new Screen(12, 5);
+        sv.updateRect({ x: 0, y: 0, width: 12, height: 5 });
+        sv.render(screen);
+
+        // Scrollbar occupies col 11 (right edge of content rect)
+        const rightCol = screen.back.map((row) => row[11].char);
+        const hasScrollbar = rightCol.some((ch) => ch !== ' ');
+        expect(hasScrollbar).toBe(true);
+    });
+
+    it('scrollbar not rendered when contentHeight does not exceed viewport height', () => {
+        const sv = new ScrollView(
+            { width: 10, height: 5 },
+            { contentHeight: 3, showScrollbar: true },
+        );
+        const screen = new Screen(10, 5);
+        sv.updateRect({ x: 0, y: 0, width: 10, height: 5 });
+        sv.render(screen);
+
+        const rightCol = screen.back.map((row) => row[9].char);
+        const hasScrollbar = rightCol.some((ch) => ch !== ' ');
+        expect(hasScrollbar).toBe(false);
+    });
+
+
+
     describe('keybindingMode integration', () => {
         afterEach(() => {
             vi.restoreAllMocks();
