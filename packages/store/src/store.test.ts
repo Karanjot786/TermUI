@@ -574,6 +574,41 @@ describe('middleware', () => {
     })
 
 
+    it('middleware that does not call next() suppresses the update', () => {
+        const blockAll = (_prev: any, _update: any, _next: any) => { // any: middleware receives heterogeneous state; no shared interface at this level
+            // deliberately never calls next() — the update is swallowed
+        }
+
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [blockAll] })
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        useStore.setState({ count: 99 })
+
+        expect(useStore.getState().count).toBe(0)
+        expect(spy).not.toHaveBeenCalled()
+    })
+
+    it('middleware receives the correct prevState and update arguments', () => {
+        const calls: Array<{ prev: Record<string, unknown>; update: Record<string, unknown> }> = []
+
+        const recorder = (prev: any, update: any, next: any) => { // any: middleware receives heterogeneous state; no shared interface at this level
+            calls.push({ prev: { ...prev }, update: { ...update } })
+            next(update)
+        }
+
+        const useStore = createStore(() => ({ count: 0, label: 'initial' }), { middleware: [recorder] })
+
+        useStore.setState({ count: 7 })
+        useStore.setState({ label: 'updated' })
+
+        expect(calls[0]?.prev).toEqual({ count: 0, label: 'initial' })
+        expect(calls[0]?.update).toEqual({ count: 7 })
+
+        expect(calls[1]?.prev).toEqual({ count: 7, label: 'initial' })
+        expect(calls[1]?.update).toEqual({ label: 'updated' })
+    })
+
     it('functional updaters chain correctly inside a batch', async () => {
         const useStore = createStore((set) => ({
             a: 0,
