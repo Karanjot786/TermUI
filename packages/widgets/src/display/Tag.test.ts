@@ -147,6 +147,12 @@ describe('Tag', () => {
         expect(() => renderTag('test', {}, {}, 0, 0)).not.toThrow();
     });
 
+    it('truncates double-width characters correctly without overflow', () => {
+        const { screen } = renderTag('测试试', {}, {}, 6, 3);
+        const row = rowText(screen, 1);
+        expect(row.length).toBeLessThanOrEqual(6);
+    });
+
     // ── 6. Constructor signature ────────────────────────────────────────────
     it('canonical signature Tag(text, style, opts) works correctly', () => {
         const { tag } = renderTag('test', {}, { variant: 'info' });
