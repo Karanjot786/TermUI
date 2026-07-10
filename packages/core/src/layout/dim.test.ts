@@ -37,4 +37,22 @@ describe('Dim Algebra', () => {
         const func = Dim.func(ctx => ctx.parentWidth / 2);
         expect(func.evaluate(mockCtx)).toBe(50);
     });
+
+    it('Dim algebra engine supports chaining math operators and composition properties', () => {
+        // 1. Chaining Math Operators
+        const fillMinusMargin = Dim.fill(2).sub(5);
+        const autoPlusOffset = Dim.auto().add(10);
+
+        expect(fillMinusMargin.evaluate(mockCtx)).toBe(93); // (100 - 2) - 5
+        expect(autoPlusOffset.evaluate(mockCtx)).toBe(20);   // 10 + 10
+
+        // 2. Layout Composition Utilities
+        const responsiveWidth = Dim.max(Dim.auto(), Dim.func(ctx => ctx.parentWidth * 0.3));
+        expect(responsiveWidth.evaluate(mockCtx)).toBe(30);  // max(10, 30)
+
+        // 3. Automated Dependency Flag Merging
+        expect(fillMinusMargin.dependencies()).toContain('parentSize');
+        expect(autoPlusOffset.dependencies()).toContain('contentSize');
+        expect(responsiveWidth.dependencies()).toContain('contentSize');
+    });
 });
