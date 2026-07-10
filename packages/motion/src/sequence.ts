@@ -12,6 +12,14 @@ export interface SequenceStep {
 export type AnimationRunner = (done: () => void) => () => void
 
 export function sequence(
+  runners: AnimationRunner[],
+  onComplete?: () => void
+): () => void
+export function sequence(
+  runners: SequenceStep[],
+  onComplete?: () => void
+): SequenceStep[]
+export function sequence(
   runners: AnimationRunner[] | SequenceStep[],
   onComplete?: () => void
 ): (() => void) | SequenceStep[] {
