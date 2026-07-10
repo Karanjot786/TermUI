@@ -33,9 +33,16 @@ describe('Dim Algebra', () => {
         expect(fill.evaluate(mockCtx)).toBe(98); // 100 - 2
     });
 
-    it('Dim.func() uses custom lambda', () => {
-        const func = Dim.func(ctx => ctx.parentWidth / 2);
-        expect(func.evaluate(mockCtx)).toBe(50);
+    it('Dim.fill() uses available space across both layout axes', () => {
+        const fill = Dim.fill(2);
+        expect(fill.dependencies()).toContain('parentSize');
+        
+        // 1. Horizontal Axis Check (parentWidth: 100)
+        expect(fill.evaluate(mockCtx)).toBe(98); // 100 - 2
+
+        // 2. Vertical Axis Check (parentHeight: 50)
+        const vertCtx = { ...mockCtx, axis: 'vertical' as const };
+        expect(fill.evaluate(vertCtx)).toBe(48); // 50 - 2
     });
 
     it('Dim algebra engine supports chaining math operators and composition properties', () => {
