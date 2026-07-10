@@ -33,10 +33,10 @@ constructor(opts?: NotificationBadgeOptions, style?: Partial<Style>)
 
 ### Methods
 
-- `setCount(count: number): void` — Update the notification count
-- `getCount(): number` — Get the current notification count
-- `setPosition(position: BadgePosition): void` — Change corner position
-- `getPosition(): BadgePosition` — Get the current position
+- `setCount(count: number): void` - Update the notification count
+- `getCount(): number` - Get the current notification count
+- `setPosition(position: BadgePosition): void` - Change corner position
+- `getPosition(): BadgePosition` - Get the current position
 
 ## Example
 
