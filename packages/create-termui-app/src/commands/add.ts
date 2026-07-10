@@ -88,7 +88,7 @@ async function fetchRegistryIndex(): Promise<RegistryIndex> {
         );
     }
 
-    return await response.json();
+    return await response.json() as RegistryIndex;
 }
 
 function findComponentEntry(
