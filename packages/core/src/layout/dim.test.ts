@@ -33,8 +33,9 @@ describe('Dim Algebra', () => {
         expect(fill.evaluate(mockCtx)).toBe(98); // 100 - 2
     });
 
-    it('Dim.func() uses custom lambda', () => {
-        const func = Dim.func(ctx => ctx.parentWidth / 2);
+    it('Dim.func() uses custom lambda and tracks dependencies', () => {
+        const func = Dim.func(ctx => ctx.parentWidth / 2, ['parentSize']);
+        expect(func.dependencies()).toContain('parentSize');
         expect(func.evaluate(mockCtx)).toBe(50);
     });
 });
