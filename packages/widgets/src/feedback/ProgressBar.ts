@@ -10,6 +10,12 @@ export interface ProgressBarOptions {
     value?: number;
     /** Maximum value. If provided, value is treated as raw and divided by max. If max is 0, percentage is 0. */
     max?: number;
+    /**
+     * Optional message shown when the progress value has not been initialized.
+     *
+     * Example: `{ emptyMessage: "Not Started" }`.
+     */
+    emptyMessage?: string;
     /** Character for the filled portion */
     fillChar?: string;
     /** Character for the empty portion */
@@ -24,6 +30,7 @@ export interface ProgressBarOptions {
     total?: number;
 }
 
+
 /**
  * ProgressBar — horizontal progress indicator.
  *
@@ -35,7 +42,9 @@ export interface ProgressBarOptions {
  */
 export class ProgressBar extends Widget {
     private _value: number;
+    private _hasValue: boolean;
     private _max?: number;
+    private _emptyMessage?: string;
     private _fillChar: string;
     private _emptyChar: string;
     private _fillColor: Color;
@@ -43,12 +52,17 @@ export class ProgressBar extends Widget {
     private _labelFormat: 'percent' | 'fraction';
     private _total: number;
 
+
     constructor(style: Partial<Style> = {}, options: ProgressBarOptions = {}) {
         super({ height: 1, ...style });
         this._max = options.max;
-        this._value = this._max === undefined 
-            ? Math.max(0, Math.min(1, options.value ?? 0)) 
+        this._hasValue = options.value !== undefined;
+        this._emptyMessage = options.emptyMessage;
+
+        this._value = this._max === undefined
+            ? Math.max(0, Math.min(1, options.value ?? 0))
             : Math.max(0, options.value ?? 0);
+
         this._fillChar = options.fillChar ?? (caps.unicode ? '█' : '#');
         this._emptyChar = options.emptyChar ?? (caps.unicode ? '░' : '-');
         this._fillColor = options.fillColor ?? { type: 'named', name: 'green' };
@@ -56,6 +70,7 @@ export class ProgressBar extends Widget {
         this._labelFormat = options.labelFormat ?? 'percent';
         this._total = options.total ?? 100;
     }
+
 
     public get percentage(): number {
         if (this._max === undefined) {
@@ -73,14 +88,21 @@ export class ProgressBar extends Widget {
         const val = this._max === undefined 
             ? Math.max(0, Math.min(1, value)) 
             : Math.max(0, value);
-            
+
         if (this._value === val) {
+            // If we were previously uninitialized, setting a value (even 0) should switch out of empty state.
+            if (!this._hasValue) {
+                this._hasValue = true;
+                this.markDirty();
+            }
             return;
         }
-    
+
         this._value = val;
+        this._hasValue = true;
         this.markDirty();
     }
+
 
     /** Reset progress back to 0% (or 0/total when max is provided). Keeps all other settings unchanged. */
     clear(): void {
@@ -104,6 +126,25 @@ export class ProgressBar extends Widget {
         if (width <= 0) return;
 
         const attrs = styleToCellAttrs(this._style);
+
+        // Empty state (value not initialized)
+        if (!this._hasValue && this._emptyMessage) {
+            const msg = this._emptyMessage;
+            // Simple left-truncate to fit. (stringWidth is ASCII/Unicode aware.)
+            let rendered = '';
+            for (const ch of msg) {
+                if (stringWidth(rendered + ch) > width) break;
+                rendered += ch;
+            }
+
+            // Clear row first
+            for (let i = 0; i < width; i++) {
+                screen.setCell(x + i, y, { char: ' ', ...attrs, dim: true });
+            }
+
+            screen.writeString(x, y, rendered, { ...attrs, dim: true });
+            return;
+        }
 
         // Label
         let label = '';
@@ -132,4 +173,5 @@ export class ProgressBar extends Widget {
             screen.writeString(x + barWidth, y, label, { ...attrs, bold: true });
         }
     }
+
 }

@@ -58,7 +58,7 @@ Requires `@termuijs/core` as a peer dependency.
 
 | Widget | What it does |
 |--------|-------------|
-| `ProgressBar` | Horizontal bar with percentage fill and optional label |
+| `ProgressBar` | Horizontal bar with percentage fill and optional label (supports an optional empty state) |
 | `Spinner` | Animated loading indicator. Static char when `NO_MOTION=1` |
 | `Skeleton` | Animated loading placeholder (pulse or shimmer) |
 | `MultiProgress` | Multiple labeled progress bars in one widget |
@@ -86,7 +86,7 @@ const container = new Box({
 })
 
 container.addChild(new Text({ content: 'Downloads', bold: true }))
-const progress = new ProgressBar({ value: 0.73, width: 30 })
+const progress = new ProgressBar({ value: 0.73, width: 30, emptyMessage: 'Not Started' })
 container.addChild(progress)
 container.addChild(new StreamingText({ text: 'Processing...', speed: 40 }))
 

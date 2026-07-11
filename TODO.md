@@ -1,13 +1,11 @@
-# TODO — [Feature] Add clear() Method to the ProgressBar Widget (#2347)
+# TODO
 
-- [x] Implement `clear()` in `packages/widgets/src/feedback/ProgressBar.ts`
-- [x] Add unit tests for `clear()` in `packages/widgets/src/feedback/ProgressBar.test.ts`
-  - [x] resets value to 0
-  - [x] keeps `max` and other settings unchanged
-  - [x] does not mark dirty when already cleared
-- [x] Add a simple documentation example demonstrating `clear()`
-- [x] Run tests (vitest) to verify
+- [x] Implement `emptyMessage` option for `ProgressBar` widget.
+- [x] Add internal `_hasValue` flag so “unset” value can render empty state.
+- [x] Update `ProgressBar` rendering to show `emptyMessage` when `_hasValue` is false.
 
-
+- [ ] Add unit tests for empty state behavior (default render, ASCII mode, switching after `setValue`).
+- [ ] Update `packages/widgets/README.md` with example usage.
+- [ ] Run test suite (vitest) to confirm all passing.
 
 

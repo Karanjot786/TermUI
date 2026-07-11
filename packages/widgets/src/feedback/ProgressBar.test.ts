@@ -38,10 +38,12 @@ describe('ProgressBar', () => {
         pb.setValue(-0.5);
         expect(pb.value).toBe(0);
     });
-        it('handles negative initialization by clamping to 0', () => {
+
+    it('handles negative initialization by clamping to 0', () => {
         const pb = new ProgressBar({}, { value: -0.5 });
         expect(pb.value).toBe(0);
     });
+
 
     it('clear() resets value to 0 without changing max', () => {
         const pb = new ProgressBar({}, { max: 50 });
@@ -75,6 +77,44 @@ describe('ProgressBar', () => {
 });
 
 describe('ProgressBar — rendering', () => {
+    it('renders emptyMessage when value is not initialized', async () => {
+        vi.stubEnv('NO_UNICODE', '1');
+        vi.stubEnv('TERM', '');
+        vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { ProgressBar } = await import('./ProgressBar.js');
+
+        const pb = new ProgressBar({}, { emptyMessage: 'Not Started', showLabel: true });
+        pb.updateRect({ x: 0, y: 0, width: 12, height: 1 });
+        const screen = new Screen(12, 1);
+        pb.render(screen);
+
+        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
+        expect(rendered).toContain('Not Started');
+        expect(rendered).not.toContain('#');
+        expect(rendered).not.toContain('-');
+    });
+
+    it('setValue(0) switches out of empty state', async () => {
+        vi.stubEnv('NO_UNICODE', '1');
+        vi.stubEnv('TERM', '');
+        vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { ProgressBar } = await import('./ProgressBar.js');
+
+        const pb = new ProgressBar({}, { emptyMessage: 'Not Started', showLabel: false });
+        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        pb.render(screen);
+
+        pb.setValue(0);
+        pb.render(screen);
+
+        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
+        expect(rendered).toContain('-');
+        expect(rendered).not.toContain('Not Started');
+    });
+
     it('value: 0 renders all empty cells', async () => {
         vi.stubEnv('NO_UNICODE', '1');
         vi.stubEnv('TERM', '');
@@ -91,6 +131,7 @@ describe('ProgressBar — rendering', () => {
         expect(rendered).not.toContain('#');
         expect(rendered).toContain('-');
     });
+
 
     it('value: 1 renders all fill cells', async () => {
         vi.stubEnv('NO_UNICODE', '1');
