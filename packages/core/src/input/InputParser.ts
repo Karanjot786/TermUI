@@ -166,10 +166,6 @@ export class InputParser {
      * Process a chunk of raw input bytes.
      */
     private _processInput(data: Buffer): void {
-        // Cap the data chunk size to prevent memory exhaustion
-        if (data.length > this._maxEscapeSequenceLength) {
-            data = data.slice(0, this._maxEscapeSequenceLength);
-        }
         const PASTE_START = '\x1b[200~';
         const PASTE_END = '\x1b[201~';
 

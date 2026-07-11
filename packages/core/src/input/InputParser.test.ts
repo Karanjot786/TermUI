@@ -480,5 +480,22 @@ describe('InputParser', () => {
             sendKey(stdin, 'hello');
             expect(handler).toHaveBeenCalledTimes(5);
         });
+
+        it('does not drop bytes from a raw chunk larger than maxEscapeSequenceLength', () => {
+            // A single data event bigger than the (default 4096) escape-sequence
+            // limit must not be truncated before parsing — that limit only bounds
+            // escape-sequence buffering, not the whole incoming chunk.
+            const stdin = createMockStdin();
+            const parser = new InputParser(stdin);
+            const pasteHandler = vi.fn();
+            parser.onPaste(pasteHandler);
+            parser.start();
+
+            const content = 'x'.repeat(5000); // > DEFAULT_MAX_ESCAPE_SEQUENCE_LENGTH (4096), < paste buffer cap (1MB)
+            stdin.emit('data', Buffer.from(`\x1b[200~${content}\x1b[201~`, 'utf8'));
+
+            expect(pasteHandler).toHaveBeenCalledWith(content);
+            expect(pasteHandler.mock.calls[0][0]).toHaveLength(5000);
+        });
     });
 });
