@@ -44,8 +44,12 @@ describe('Constraint Layout', () => {
             Constraint.Fill()
         ];
         const result = resolveConstraints(100, constraints);
-        expect(result[0].size).toBe(30);
-        expect(result[1].size).toBe(70);
+        
+        // Verifies both proper sequential offset tracking and accurate size assignment
+        expect(result).toEqual([
+            { offset: 0, size: 30 },
+            { offset: 30, size: 70 }
+        ]);
     });
 });
 
