@@ -23,12 +23,14 @@ const ANSI_ESCAPE_RE =
     /\x1b(?:\[[0-9;<=>?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[PX^_][^\x1b]*\x1b\\|[@-Z\\-_]|.)/g;
 
 // Matches bare C0 control characters (0x00–0x1F) except TAB (0x09) and LF (0x0A),
-// plus DEL (0x7F) and C1 controls (0x80–0x9F).
-const CONTROL_CHAR_RE = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g;
+// plus DEL (0x7F) and C1 controls (0x80–0x9F). Includes CR (0x0D) — a bare CR
+// lets untrusted text overwrite the current line when written to a real
+// terminal, so it is not safe to let through.
+const CONTROL_CHAR_RE = /[\x00-\x08\x0b-\x1f\x7f-\x9f]/g;
 
 // Same as CONTROL_CHAR_RE but excludes ESC (0x1B) — used by sanitizeForDisplay
 // when formatting is allowed so that ESC in preserved SGR sequences is not stripped.
-const CONTROL_NO_ESC_RE = /[\x00-\x08\x0b\x0c\x0e-\x1a\x1c-\x1f\x7f-\x9f]/g;
+const CONTROL_NO_ESC_RE = /[\x00-\x08\x0b-\x1a\x1c-\x1f\x7f-\x9f]/g;
 
 // Matches only cursor-movement, screen-clear, and other non-SGR CSI sequences,
 // while allowing SGR (Select Graphic Rendition — ESC [ <params> m) through.

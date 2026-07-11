@@ -19,6 +19,7 @@ import {
     containsPoint,
     caps,
     stripAnsiEscapes,
+    sanitizeForDisplay,
     type A11yProps,
     emitA11y,
 } from '@termuijs/core';
@@ -456,14 +457,20 @@ export abstract class Widget {
 
     /**
      * Sanitize text content by stripping ANSI escape sequences.
-     * Subclasses can override to customize behavior or bypass sanitization
-     * for trusted content.
+     *
+     * When `sanitizeContent` is `true` (default), all ANSI escapes and
+     * control characters are stripped. When `false` (e.g. `Text` with
+     * `raw: true`), SGR formatting is preserved but cursor movement, screen
+     * clears, and OSC sequences (title, clipboard, hyperlinks) are still
+     * stripped — content is never passed through completely unsanitized.
+     *
+     * Subclasses can override to customize behavior.
      */
     protected sanitize(text: string): string {
         if (this.sanitizeContent) {
             return stripAnsiEscapes(text);
         }
-        return text;
+        return sanitizeForDisplay(text, /* allowFormatting */ true);
     }
 
     /**

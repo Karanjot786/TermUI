@@ -391,16 +391,14 @@ export class Screen {
     /**
      * Write a string to the back buffer.
      *
-     * Unlike `writeString`, this method preserves SGR formatting sequences
-     * (colors, bold, italic, etc.) while still stripping cursor movement,
-     * screen clears, OSC sequences (window title, clipboard, hyperlinks),
-     * and other non-formatting escape sequences.
-     *
-     * Note: TermUI's cell grid does not interpret inline ANSI codes — they
-     * would render as visible characters.  This method is provided for API
-     * completeness and forward compatibility; in practice it behaves the
-     * same as `writeString` for text content.  Use `writeString` for all
-     * user-supplied or untrusted text.
+     * TermUI's cell grid does not interpret inline ANSI codes — colors and
+     * attributes are applied via the `style` param / cell attrs, not via
+     * escape sequences embedded in `str`. Any escape sequences in `str`
+     * (including SGR) would only render as visible garbage characters, so
+     * this method currently delegates to `writeString`, which strips all of
+     * them — identical behavior to calling `writeString` directly. It exists
+     * as a distinct, forward-compatible entry point in case formatted-string
+     * support is added later; it does not currently preserve SGR.
      */
     writeFormattedString(
         col: number,
