@@ -64,4 +64,4 @@ bun run dev
 ## Learn More
 
 - [TermUI Documentation](https://termui.io)
-- [Other Examples](../README.md)
+- [Other Examples](../)
