@@ -6,8 +6,10 @@ import { type Screen, type Style, styleToCellAttrs, type Color, caps, stringWidt
 import { Widget } from '../base/Widget.js';
 
 export interface ProgressBarOptions {
-    /** Current value (0–1) */
+    /** Current value (raw value if max provided, or 0–1 percentage) */
     value?: number;
+    /** Maximum value. If provided, value is treated as raw and divided by max. If max is 0, percentage is 0. */
+    max?: number;
     /** Character for the filled portion */
     fillChar?: string;
     /** Character for the empty portion */
@@ -33,6 +35,7 @@ export interface ProgressBarOptions {
  */
 export class ProgressBar extends Widget {
     private _value: number;
+    private _max?: number;
     private _fillChar: string;
     private _emptyChar: string;
     private _fillColor: Color;
@@ -42,7 +45,10 @@ export class ProgressBar extends Widget {
 
     constructor(style: Partial<Style> = {}, options: ProgressBarOptions = {}) {
         super({ height: 1, ...style });
-        this._value = Math.max(0, Math.min(1, options.value ?? 0));
+        this._max = options.max;
+        this._value = this._max === undefined 
+            ? Math.max(0, Math.min(1, options.value ?? 0)) 
+            : Math.max(0, options.value ?? 0);
         this._fillChar = options.fillChar ?? (caps.unicode ? '█' : '#');
         this._emptyChar = options.emptyChar ?? (caps.unicode ? '░' : '-');
         this._fillColor = options.fillColor ?? { type: 'named', name: 'green' };
@@ -51,15 +57,36 @@ export class ProgressBar extends Widget {
         this._total = options.total ?? 100;
     }
 
-    /** Set progress value (0–1) */
+    public get percentage(): number {
+        if (this._max === undefined) {
+            return Math.max(0, Math.min(1, this._value));
+        }
+        if (this._max === 0) {
+            return 0; // Prevent division by zero
+        }
+        const raw = this._value / this._max;
+        return Math.max(0, Math.min(1, raw));
+    }
+
+    /** Set progress value */
     setValue(value: number): void {
-        const normalized = Math.max(0, Math.min(1, value));
-    
-        if (this._value === normalized) {
+        const val = this._max === undefined 
+            ? Math.max(0, Math.min(1, value)) 
+            : Math.max(0, value);
+            
+        if (this._value === val) {
             return;
         }
     
-        this._value = normalized;
+        this._value = val;
+        this.markDirty();
+    }
+
+    setMax(max: number): void {
+        if (this._max === max) {
+            return;
+        }
+        this._max = max;
         this.markDirty();
     }
 
@@ -76,14 +103,14 @@ export class ProgressBar extends Widget {
         let label = '';
         if (this._showLabel) {
             if (this._labelFormat === 'percent') {
-                label = ` ${Math.round(this._value * 100)}%`;
+                label = ` ${Math.round(this.percentage * 100)}%`;
             } else {
-                label = ` ${Math.round(this._value * this._total)}/${this._total}`;
+                label = ` ${Math.round(this.percentage * this._total)}/${this._total}`;
             }
         }
 
         const barWidth = Math.max(0, width - stringWidth(label));
-        const filled = this._value <= 0 ? 0 : Math.round(barWidth * this._value);
+        const filled = this.percentage <= 0 ? 0 : Math.round(barWidth * this.percentage);
         const empty = barWidth - filled;
 
         // Render bar

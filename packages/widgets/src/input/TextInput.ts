@@ -21,6 +21,11 @@ export type { VimMode };
  */
 export interface TextInputProps {
     /** 
+     * Initial text value for the input field.
+     */
+    value?: string;
+
+    /** 
      * Placeholder text shown when the input is empty.
      */
     placeholder?: string;
@@ -88,6 +93,15 @@ export class TextInput extends Widget {
         this._onSubmit = options.onSubmit;
         this._suggestions = options.suggestions ?? [];
         this.signal = options.signal;
+
+        const initialVal = options.value ?? '';
+        const graphemes = splitGraphemes(initialVal);
+        if (graphemes.length > this._maxLength) {
+            this._value = graphemes.slice(0, this._maxLength).join('');
+        } else {
+            this._value = initialVal;
+        }
+        this._cursorPos = splitGraphemes(this._value).length;
 
         this.focusable = true;
 
@@ -408,6 +422,10 @@ export class TextInput extends Widget {
                     event.stopPropagation();
                 }
         }
+
+        // Safety clamp to prevent desync bugs
+        const finalGraphemes = splitGraphemes(this._value);
+        this._cursorPos = Math.max(0, Math.min(this._cursorPos, finalGraphemes.length));
     }
 
     protected _renderSelf(screen: Screen): void {

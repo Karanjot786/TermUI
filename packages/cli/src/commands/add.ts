@@ -44,7 +44,7 @@ export async function runAdd(args: CliArgs): Promise<void> {
         for (const dep of comp.dependencies) allDeps.add(dep);
 
         console.log(`\n  ${args.dryRun ? 'would add' : 'added'} ${comp.name}:`);
-        for (const w of written) console.log(`    ${args.dryRun ? '·' : '✓'} ${relative(process.cwd(), w)}`);
+        for (const w of written) console.log(`    ${args.dryRun ? '-' : '+'} ${relative(process.cwd(), w)}`);
     }
 
     const deps = [...allDeps].sort();

@@ -74,5 +74,35 @@ describe('Gauge', () => {
         expect(rendered).toMatch(/[█░]/);
         expect(rendered).not.toContain('#');
     });
+
+    it('setLabel marks the widget dirty', async () => {
+        const { Gauge } = await import('./Gauge.js');
+        const g = new Gauge('CPU');
+        g.clearDirty();
+        g.setLabel('Memory');
+        expect(g.isDirty).toBe(true);
+    });
+
+    it('setValue marks the widget dirty when called on a clean widget', async () => {
+        const { Gauge } = await import('./Gauge.js');
+        const g = new Gauge('CPU');
+        g.setValue(0.5);
+        g.clearDirty();
+        g.setValue(0.75);
+        expect(g.isDirty).toBe(true);
+    });
+
+    // Gauge.setValue always calls markDirty() regardless of whether the value
+    // changed. This differs from ProgressBar.setValue which guards with an
+    // early return when the value is unchanged. This test documents the current
+    // intentional behaviour so that a future refactor does not silently break it.
+    it('setValue marks the widget dirty even when the value is unchanged', async () => {
+        const { Gauge } = await import('./Gauge.js');
+        const g = new Gauge('CPU');
+        g.setValue(0.5);
+        g.clearDirty();
+        g.setValue(0.5);
+        expect(g.isDirty).toBe(true);
+    });
 });
 
