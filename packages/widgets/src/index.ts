@@ -40,6 +40,10 @@ export { PerformanceOverlay } from './display/PerformanceOverlay.js';
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
 export type { ScrollRange } from './input/virtual-scroll.js';
 
+// ── Spring Scroll Helper ─────────────────────────────
+export { calculateSpringScroll } from './scroll.js';
+export type { ScrollSpringState } from './scroll.js';
+
 // ─────────────────────────────────────────────────────
 
 
