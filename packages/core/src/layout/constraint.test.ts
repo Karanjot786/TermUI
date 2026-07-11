@@ -92,14 +92,18 @@ describe('Topological Layout Solver', () => {
                 id: 'n1',
                 groupId: 'g1',
                 x: Pos.align('center', 'g1'),
+                y: 0,
                 width: 20,
+                height: 10,
                 contentWidth: 0, contentHeight: 0, computed: { x:0, y:0, width:0, height:0 }
             },
             {
                 id: 'n2',
                 groupId: 'g1',
                 x: Pos.align('center', 'g1'),
+                y: 0,
                 width: 40,
+                height: 10,
                 contentWidth: 0, contentHeight: 0, computed: { x:0, y:0, width:0, height:0 }
             }
         ];
