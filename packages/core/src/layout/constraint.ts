@@ -241,12 +241,16 @@ export function resolveLayoutVariables(
             }
         };
 
-        if (val instanceof Pos) {
+        if (typeof val === 'number') {
+            if (varName === 'x' || varName === 'y') {
+                result = Pos.absolute(val).evaluate(ctx);
+            } else {
+                result = Dim.fixed(val).evaluate(ctx);
+            }
+        } else if (val instanceof Pos) {
             result = val.evaluate(ctx);
         } else if (val instanceof Dim) {
             result = val.evaluate(ctx);
-        } else if (typeof val === 'number') {
-            result = val;
         }
 
         state.set(key, result);
