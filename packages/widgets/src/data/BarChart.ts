@@ -240,7 +240,8 @@ export class BarChart extends Widget {
                     // Label on first row
                     if (row === 0 && bar.label) {
                         const label = bar.label.slice(0, maxLabelWidth);
-                        const padded = label.padStart(maxLabelWidth);
+                        const padCount = Math.max(0, maxLabelWidth - stringWidth(label));
+                        const padded = ' '.repeat(padCount) + label;
                         screen.writeString(ox, cellY, padded, { fg: this._labelColor });
                     }
 

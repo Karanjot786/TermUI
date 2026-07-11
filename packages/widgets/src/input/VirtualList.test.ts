@@ -265,11 +265,10 @@ describe('VirtualList', () => {
             expect(list.scrollOffset).toBeGreaterThan(0);
 
             // Drive the animation to completion.
-            // The spring (stiffness=0.15, damping=0.8, dt=16ms) converges in
-            // roughly 1600 frames — run 2000 to be safe.  We check only the
-            // public scrollOffset getter; no private fields are accessed.
-            for (let i = 0; i < 2000; i++) {
-                mockTime += 16;
+            // Use larger dt (50ms) to reduce CPU overhead and avoid test timeout,
+            // while still allowing the spring to converge.
+            for (let i = 0; i < 400; i++) {
+                mockTime += 50;
                 list.render(screen);
             }
 

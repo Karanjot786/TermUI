@@ -7,10 +7,48 @@ export interface ResolvedComponent {
 
 const BASE_URL = process.env.TERMUI_REGISTRY_URL ?? 'https://termui.io';
 
+export async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = 8000): Promise<Response> {
+    const controller = new AbortController();
+    const { signal: controllerSignal } = controller;
+
+    let timedOut = false;
+
+    if (init?.signal) {
+        const parentSignal = init.signal;
+        if (parentSignal.aborted) {
+            controller.abort();
+        } else {
+            parentSignal.addEventListener('abort', () => {
+                controller.abort();
+            });
+        }
+    }
+
+    const id = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+    }, timeoutMs);
+
+    try {
+        const response = await fetch(url, { ...init, signal: controllerSignal });
+        return response;
+    } catch (err: any) {
+        if (timedOut) {
+            throw new Error(`Request to registry timed out after ${timeoutMs}ms.`);
+        }
+        if (err.name === 'AbortError') {
+            throw new Error(`Request to registry was aborted.`);
+        }
+        throw err;
+    } finally {
+        clearTimeout(id);
+    }
+}
+
 /** Fetch a single component's registry JSON (with files + dependencies). */
 export async function resolveComponent(slug: string): Promise<ResolvedComponent> {
     const url = `${BASE_URL}/r/${slug}.json`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) {
         throw new Error(`Component "${slug}" not found in registry (${res.status} ${url}).`);
     }
@@ -29,7 +67,7 @@ export async function resolveComponent(slug: string): Promise<ResolvedComponent>
 /** Fetch the master list of available components. */
 export async function listComponents(): Promise<Array<{ slug: string; name: string; description?: string }>> {
     const url = `${BASE_URL}/r/registry.json`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error(`Failed to load registry index (${res.status} ${url}).`);
     return await res.json() as Array<{ slug: string; name: string; description?: string }>;
 }

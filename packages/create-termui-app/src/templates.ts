@@ -58,8 +58,42 @@ export function generateProject(config: ProjectConfig): GeneratedFile[] {
                 outDir: 'dist',
                 rootDir: 'src',
             },
-            include: ['src'],
+            include: ['src', 'vitest.config.ts'],
         }, null, 2) + '\n',
+    });
+
+    files.push({
+        path: 'vitest.config.ts',
+        content: `import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+    test: {
+        environment: 'node',
+        include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    },
+});
+`,
+    });
+
+    files.push({
+        path: 'src/index.test.tsx',
+        content: `/** @jsxImportSource @termuijs/jsx */
+import { describe, expect, it } from 'vitest';
+import { render } from '@termuijs/testing';
+import { Text } from '@termuijs/widgets';
+
+function StarterApp() {
+    return <Text>Starter test passed</Text>;
+}
+
+describe('starter app', () => {
+    it('renders the starter text', () => {
+        const testInstance = render(<StarterApp />);
+        expect(testInstance.renderToString()).toContain('Starter test passed');
+        testInstance.unmount();
+    });
+});
+`,
     });
 
     // ── termui.config.ts ──
@@ -126,6 +160,7 @@ function createPackageJson(config: ProjectConfig): string {
             dev: 'bun --watch src/index.tsx',
             build: 'tsup src/index.tsx --format esm',
             start: 'bun dist/index.js',
+            test: 'vitest run',
         },
         dependencies: isAiAssistant
             ? {
@@ -157,8 +192,10 @@ function createPackageJson(config: ProjectConfig): string {
             },
         devDependencies: {
             '@types/bun': 'latest',
+            '@termuijs/testing': 'latest',
             tsup: '^8.0.0',
             typescript: '^5.3.0',
+            vitest: '^2.1.9',
         },
         engines: {
             bun: '>=1.3.0',
@@ -319,9 +356,9 @@ import { AutoThemeProvider, useTheme } from '@termuijs/tss';
 import { caps } from '@termuijs/core';
 
 // ASCII-safe symbols
-const CHECK  = caps.unicode ? '✓' : 'v';
-const BULLET = caps.unicode ? '›' : '>';
-const SEP    = caps.unicode ? '─'.repeat(40) : '-'.repeat(40);
+const CHECK  = caps.unicode ? '\\u2713' : 'v';
+const BULLET = caps.unicode ? '\\u203a' : '>';
+const SEP    = caps.unicode ? '\\u2500'.repeat(40) : '-'.repeat(40);
 
 const INITIAL_ITEMS = ['Option A', 'Option B', 'Option C'];
 
@@ -465,7 +502,7 @@ function CliWrapper() {
     const addLog = (level: LogLevel, text: string) =>
         setLogs(prev => [...prev.slice(-200), { level, text, ts: Date.now() }]);
 
-    // Example: run 'echo hello' — replace with your real command
+    // Example: run 'echo hello' - replace with your real command
     const runCommand = () => {
         if (running) return;
         setRunning(true);
