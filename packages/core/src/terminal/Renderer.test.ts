@@ -262,4 +262,22 @@ describe('Renderer profiling hooks', () => {
         const resetCount = (output.match(/\x1b\[0m/g) || []).length;
         expect(resetCount).toBeGreaterThanOrEqual(2);
     });
+
+    it('emits OSC 8 sequences when cells have link metadata and closes them', () => {
+        const narrowScreen = new Screen(10, 2);
+        const renderer = new Renderer(terminal, narrowScreen);
+
+        narrowScreen.setCell(0, 0, { char: 'A', link: 'https://example.com' });
+        narrowScreen.setCell(1, 0, { char: 'B', link: 'https://example.com' });
+        narrowScreen.setCell(2, 0, { char: 'C', link: 'https://other.com' });
+        narrowScreen.setCell(3, 0, { char: 'D' });
+
+        const initialWrites = fakeStdout.writes.length;
+        renderer.renderNow();
+        const output = fakeStdout.writes.slice(initialWrites);
+
+        expect(output).toContain('\x1b]8;;https://example.com\x1b\\');
+        expect(output).toContain('\x1b]8;;https://other.com\x1b\\');
+        expect(output).toContain('\x1b]8;;\x1b\\');
+    });
 });

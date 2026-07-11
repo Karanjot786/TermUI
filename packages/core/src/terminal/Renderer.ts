@@ -220,6 +220,16 @@ export class Renderer {
         return `${cell.bold ? 'B' : ''}${cell.dim ? 'D' : ''}${cell.italic ? 'I' : ''}${cell.underline ? 'U' : ''}${cell.strikethrough ? 'S' : ''}${cell.inverse ? 'V' : ''}|${fgKey}|${bgKey}`;
     }
 
+    private _lastLink: string | undefined = undefined;
+
+    private _closeLinkIfNeeded(): string {
+        if (this._lastLink !== undefined) {
+            this._lastLink = undefined;
+            return '\x1b]8;;\x1b\\';
+        }
+        return '';
+    }
+
     /**
      * Generate the ANSI escape sequence to render a single cell.
      * Skips ansiReset + re-apply when the adjacent cell has identical style.
@@ -227,6 +237,15 @@ export class Renderer {
     private _renderCell(cell: Cell): string {
         let seq = '';
         const fp = this._styleFingerprint(cell);
+
+        if (cell.link !== this._lastLink) {
+            if (cell.link) {
+                seq += `\x1b]8;;${cell.link}\x1b\\`;
+            } else {
+                seq += '\x1b]8;;\x1b\\';
+            }
+            this._lastLink = cell.link;
+        }
 
         if (fp !== this._lastStyleFingerprint) {
             seq += ansiReset;
@@ -283,6 +302,7 @@ export class Renderer {
                     if (cell.width === 0) continue;
                     output += this._renderCell(cell);
                 }
+                output += this._closeLinkIfNeeded();
                 spanStart = -1;
             }
         }
@@ -296,6 +316,7 @@ export class Renderer {
                 if (cell.width === 0) continue;
                 output += this._renderCell(cell);
             }
+            output += this._closeLinkIfNeeded();
         }
 
         return output;
@@ -308,6 +329,7 @@ export class Renderer {
             if (cell.width === 0) continue;
             output += this._renderCell(cell);
         }
+        output += this._closeLinkIfNeeded();
         return output;
     }
 
