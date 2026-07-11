@@ -464,7 +464,7 @@ export function render(
             let target: Widget | undefined;
             let targetDepth = -1;
 
-            const getDepth = (widget: any): number => {
+            const getDepth = (widget: Widget): number => {
                 let depth = 0;
                 let current = widget.parent;
 
