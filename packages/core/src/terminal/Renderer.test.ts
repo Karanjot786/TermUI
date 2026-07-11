@@ -279,6 +279,8 @@ describe('Renderer profiling hooks', () => {
         expect(output).toContain('\x1b]8;;https://example.com\x1b\\');
         expect(output).toContain('\x1b]8;;https://other.com\x1b\\');
         expect(output).toContain('\x1b]8;;\x1b\\');
+    });
+
     it('correctly adjusts span start backwards and renders from adjustedStart', () => {
         const narrowScreen = new Screen(10, 2);
         const renderer = new Renderer(terminal, narrowScreen);
