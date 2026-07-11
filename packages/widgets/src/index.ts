@@ -217,6 +217,7 @@ export type { TooltipOptions } from './display/Tooltip.js';
 
 
 export { Panel } from './layout/Panel.js';
+export type { PanelOptions } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
