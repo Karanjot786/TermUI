@@ -125,6 +125,8 @@ export function colorToRgb(color: Color): [number, number, number] {
     }
 }
 
+const CUBE_LEVELS = [0, 95, 135, 175, 215, 255];
+
 /**
  * Convert an ANSI 256 code to approximate RGB.
  */
@@ -137,9 +139,9 @@ function ansi256ToRgb(code: number): [number, number, number] {
     // Extended 216-color cube (16-231)
     if (code < 232) {
         const idx = code - 16;
-        const b = (idx % 6) * 51;
-        const g = (Math.floor(idx / 6) % 6) * 51;
-        const r = Math.floor(idx / 36) * 51;
+        const b = CUBE_LEVELS[idx % 6];
+        const g = CUBE_LEVELS[Math.floor(idx / 6) % 6];
+        const r = CUBE_LEVELS[Math.floor(idx / 36)];
         return [r, g, b];
     }
     // Grayscale ramp (232-255)
@@ -151,16 +153,18 @@ function ansi256ToRgb(code: number): [number, number, number] {
  * Find the nearest ANSI 256 color code for a given RGB.
  */
 function rgbToAnsi256(r: number, g: number, b: number): number {
-    // Check if it's a grayscale
-    if (r === g && g === b) {
-        if (r < 8) return 16;
-        if (r > 248) return 231;
-        return Math.round((r - 8) / 247 * 24) + 232;
+    let minDist = Infinity;
+    let best = 0;
+    
+    for (let i = 0; i < 256; i++) {
+        const [cr, cg, cb] = ansi256ToRgb(i);
+        const dist = (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2;
+        if (dist < minDist) {
+            minDist = dist;
+            best = i;
+        }
     }
-    return 16
-        + 36 * Math.round(r / 255 * 5)
-        + 6 * Math.round(g / 255 * 5)
-        + Math.round(b / 255 * 5);
+    return best;
 }
 
 /**
