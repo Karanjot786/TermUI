@@ -34,3 +34,8 @@ export type { InterpolateOptions } from './interpolate.js';
 export { animateRect } from './layout-transition.js';
 export type { LayoutTransitionOptions } from './layout-transition.js';
 
+// 2D Vector Helpers & Path Animations
+export { add, subtract, scale, lerp, distance, length, normalize, dot, circlePath, bezierCurve, pathAnimation } from './vectors.js';
+export type { Vec2, PathAnimationOptions } from './vectors.js';
+
+
