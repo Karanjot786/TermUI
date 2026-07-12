@@ -47,7 +47,7 @@ export async function runAddCommand(options: AddCommandOptions): Promise<void> {
         await fetchComponentEntry(indexEntry.slug ?? indexEntry.name) ??
         indexEntry;
     const outputRoot = resolve(process.cwd(), options.dir ?? "src/components");
-    const componentDirName = componentEntry.slug ?? componentEntry.name;
+    const componentDirName = indexEntry.slug ?? componentEntry.slug ?? indexEntry.name;
     const destinationRoot = join(outputRoot, componentDirName);
     const fileEntries = await resolveComponentFiles(componentEntry);
 
