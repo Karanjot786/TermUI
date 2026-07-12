@@ -50,6 +50,19 @@ export interface TableProps {
     onStateChange?: (state: TableState) => void;
 }
 
+interface TableRowLayoutEntry {
+    height: number;
+    offset: number;
+    cellLines: string[][];
+}
+
+interface TableRowLayoutCache {
+    heights: number[];
+    offsets: number[];
+    entries: TableRowLayoutEntry[];
+    colWidths: number[];
+}
+
 /**
  * Table — renders tabular data with columns, headers, and optional zebra-striping.
  *
@@ -76,6 +89,7 @@ export class Table extends Widget {
     protected _resizable: boolean;
     protected _columnWidths: number[] = [];
     private _lastWidth = -1;
+    private _rowLayoutCache: TableRowLayoutCache | null = null;
     private _isDragging = false;
     private _dragColIndex = -1;
     
@@ -137,6 +151,7 @@ export class Table extends Widget {
 
     setRows(rows: TableRow[]): void {
         this._rows = rows;
+        this._invalidateRowLayoutCache();
         this._clampScroll();
         this.markDirty();
         this._pushState();
@@ -147,6 +162,8 @@ export class Table extends Widget {
         if (colIndex !== -1) {
             this._sortState = { colIndex, direction };
         }
+
+        this._invalidateRowLayoutCache();
 
         this._rows.sort((a, b) => {
             const cmp = String(a[columnKey] ?? '').localeCompare(String(b[columnKey] ?? ''));
@@ -165,6 +182,8 @@ export class Table extends Widget {
             this._sortState = { colIndex, direction: 'asc' };
         }
         
+        this._invalidateRowLayoutCache();
+
         if (this._tableOnSort) {
             this._tableOnSort(colIndex, this._sortState.direction);
         } else {
@@ -264,18 +283,7 @@ export class Table extends Widget {
     }
     
     protected _computeRowHeights(colWidths: number[]): number[] {
-        return this._rows.map(row => {
-            let maxLines = 1;
-            for (let c = 0; c < this._columns.length; c++) {
-                const col = this._columns[c];
-                if (col.overflow === 'wrap') {
-                    const text = String(row[col.key] ?? '');
-                    const lines = wordWrap(text, colWidths[c]).split('\n').length;
-                    if (lines > maxLines) maxLines = lines;
-                }
-            }
-            return maxLines;
-        });
+        return this._getOrCreateRowLayout(colWidths).heights;
     }
 
     private _clampScroll(): void {
@@ -288,13 +296,14 @@ export class Table extends Widget {
 
         const sepWidth = stringWidth(this._separator);
         const colWidths = this._getColWidths(rect.width, sepWidth);
-        const sizes = this._computeRowHeights(colWidths);
+        const layout = this._getOrCreateRowLayout(colWidths);
+        const sizes = layout.heights;
 
-        let selectedTop = 0;
-        for (let i = 0; i < this._selectedRow; i++) {
-            selectedTop += sizes[i] ?? 1;
-        }
-        const selectedBottom = selectedTop + (sizes[this._selectedRow] ?? 1);
+        const selectedRow = this._selectedRow < 0 ? -1 : this._selectedRow;
+        const selectedTop = selectedRow < 0 ? 0 : layout.offsets[selectedRow];
+        const selectedBottom = selectedRow < 0
+            ? 1
+            : layout.offsets[selectedRow + 1];
 
         if (selectedTop < this._scrollOffset) {
             this._scrollOffset = selectedTop;
@@ -360,7 +369,8 @@ export class Table extends Widget {
         const dataHeight = height - headerOffset;
         if (dataHeight <= 0) return;
 
-        const sizes = this._computeRowHeights(colWidths);
+        const layout = this._getOrCreateRowLayout(colWidths);
+        const sizes = layout.heights;
         // Use the virtualization engine with variable heights
         const range = computeVariableRange(this._scrollOffset, dataHeight, sizes, 0);
 
@@ -370,11 +380,7 @@ export class Table extends Widget {
             const isStripe = this._stripe && r % 2 === 1;
             const isSelected = r === this._selectedRow;
             
-            let rowTop = 0;
-            for (let i = 0; i < r; i++) {
-                rowTop += sizes[i] ?? 1;
-            }
-            
+            const rowTop = layout.offsets[r];
             const rowHeight = sizes[r] ?? 1;
 
             for (let line = 0; line < rowHeight; line++) {
@@ -388,9 +394,9 @@ export class Table extends Widget {
                     const rawValue = String(dataRow[col.key] ?? '');
                     
                     let cellText = '';
+                    const cachedLines = layout.entries[r]?.cellLines[c] ?? [rawValue];
                     if (col.overflow === 'wrap') {
-                        const wrapped = wordWrap(rawValue, colWidths[c]).split('\n');
-                        cellText = wrapped[line] ?? '';
+                        cellText = cachedLines[line] ?? '';
                     } else {
                         cellText = line === 0 ? rawValue : '';
                     }
@@ -428,15 +434,61 @@ export class Table extends Widget {
     }
 
     private _getColWidths(rectWidth: number, sepWidth: number): number[] {
-        if (!this._resizable) {
-            return this._computeColumnWidths(Math.max(0, rectWidth - (this._columns.length - 1) * sepWidth));
-        }
-        
-        if (this._columnWidths.length !== this._columns.length || this._lastWidth !== rectWidth) {
-            this._columnWidths = this._computeColumnWidths(Math.max(0, rectWidth - (this._columns.length - 1) * sepWidth));
+        const nextWidths = !this._resizable
+            ? this._computeColumnWidths(Math.max(0, rectWidth - (this._columns.length - 1) * sepWidth))
+            : this._columnWidths.length !== this._columns.length || this._lastWidth !== rectWidth
+                ? this._computeColumnWidths(Math.max(0, rectWidth - (this._columns.length - 1) * sepWidth))
+                : this._columnWidths;
+
+        const widthsChanged = this._columnWidths.length !== nextWidths.length || this._columnWidths.some((width, index) => width !== nextWidths[index]);
+        if (widthsChanged) {
+            this._columnWidths = nextWidths;
             this._lastWidth = rectWidth;
+            this._invalidateRowLayoutCache();
         }
         return this._columnWidths;
+    }
+
+    private _invalidateRowLayoutCache(): void {
+        this._rowLayoutCache = null;
+    }
+
+    private _getOrCreateRowLayout(colWidths: number[]): TableRowLayoutCache {
+        if (this._rowLayoutCache && this._rowLayoutCache.colWidths.length === colWidths.length && this._rowLayoutCache.colWidths.every((width, index) => width === colWidths[index])) {
+            return this._rowLayoutCache;
+        }
+
+        const heights: number[] = [];
+        const offsets: number[] = [0];
+        const entries: TableRowLayoutEntry[] = [];
+        let offset = 0;
+
+        for (let rowIndex = 0; rowIndex < this._rows.length; rowIndex++) {
+            const row = this._rows[rowIndex];
+            const cellLines: string[][] = [];
+            let maxLines = 1;
+
+            for (let c = 0; c < this._columns.length; c++) {
+                const col = this._columns[c];
+                const rawValue = String(row[col.key] ?? '');
+                const lines = col.overflow === 'wrap'
+                    ? wordWrap(rawValue, colWidths[c]).split('\n')
+                    : [rawValue];
+
+                cellLines[c] = lines;
+                if (lines.length > maxLines) {
+                    maxLines = lines.length;
+                }
+            }
+
+            entries[rowIndex] = { height: maxLines, offset, cellLines };
+            heights[rowIndex] = maxLines;
+            offset += maxLines;
+            offsets[rowIndex + 1] = offset;
+        }
+
+        this._rowLayoutCache = { heights, offsets, entries, colWidths: [...colWidths] };
+        return this._rowLayoutCache;
     }
 
     protected _computeColumnWidths(totalWidth: number): number[] {

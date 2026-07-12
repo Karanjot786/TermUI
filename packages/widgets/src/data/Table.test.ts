@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
+import { Screen } from '@termuijs/core';
 import { Table } from './Table.js';
 
 const COLUMNS = [
@@ -84,6 +85,60 @@ describe('Table', () => {
         // Table viewport dataHeight is 10 - 2 (header) = 8
         // So if selected is 20, offset should be clamped to 20 - 8 + 1 = 13
         expect((table as any)._scrollOffset).toBe(13);
+    });
+
+    it('reuses cached row layout while scrolling', () => {
+        const table = new Table([{ header: 'Text', key: 'name', overflow: 'wrap' as const }], [{ name: 'Alice' }]);
+        const screen = new Screen(40, 10);
+
+        table.updateRect({ x: 0, y: 0, width: 20, height: 10 });
+        (table as any)._renderSelf(screen);
+        const initialLayout = (table as any)._rowLayoutCache;
+
+        table.handleKey({ key: 'down' } as any);
+        (table as any)._renderSelf(screen);
+
+        expect((table as any)._rowLayoutCache).toBe(initialLayout);
+    });
+
+    it('invalidates cached layout after data updates', () => {
+        const table = new Table([{ header: 'Text', key: 'name', overflow: 'wrap' as const }], [{ name: 'Alice' }]);
+        const screen = new Screen(40, 10);
+
+        table.updateRect({ x: 0, y: 0, width: 20, height: 10 });
+        (table as any)._renderSelf(screen);
+        const initialLayout = (table as any)._rowLayoutCache;
+
+        table.setRows([{ name: 'Bob' }]);
+        (table as any)._renderSelf(screen);
+
+        expect((table as any)._rowLayoutCache).not.toBe(initialLayout);
+    });
+
+    it('invalidates cached layout after column width changes', () => {
+        const table = new Table([{ header: 'Text', key: 'name', overflow: 'wrap' as const }], [{ name: 'Alice' }]);
+        const screen = new Screen(40, 10);
+
+        table.updateRect({ x: 0, y: 0, width: 20, height: 10 });
+        (table as any)._renderSelf(screen);
+        const initialLayout = (table as any)._rowLayoutCache;
+
+        table.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        (table as any)._renderSelf(screen);
+
+        expect((table as any)._rowLayoutCache).not.toBe(initialLayout);
+    });
+
+    it('renders wrapped text across multiple lines', () => {
+        const table = new Table([{ header: 'Text', key: 'name', overflow: 'wrap' as const }], [{ name: 'hello world from table' }]);
+        const screen = new Screen(40, 10);
+
+        table.updateRect({ x: 0, y: 0, width: 12, height: 10 });
+        (table as any)._renderSelf(screen);
+
+        const renderedText = screen.back.map(row => row.map(cell => cell.char).join('')).join('\n');
+        expect(renderedText).toContain('hello');
+        expect(renderedText).toContain('world');
     });
 
     describe('sorting and header focus', () => {
