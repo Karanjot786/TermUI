@@ -109,6 +109,23 @@ export default defineConfig({
 `,
     });
 
+    if (config.features.router) {
+        files.push({
+            path: 'screens/index.tsx',
+            content: `/** @jsxImportSource @termuijs/jsx */
+
+export default function HomeScreen() {
+    return (
+        <box flexDirection="column" padding={1}>
+            <text bold>${config.name}</text>
+            <text>Edit screens/index.tsx to customize this route.</text>
+        </box>
+    );
+}
+`,
+        });
+    }
+
     // ── Theme file ──
     const themeSrc = getBuiltinTheme(config.theme);
     if (themeSrc) {

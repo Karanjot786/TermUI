@@ -202,4 +202,17 @@ it('cli-tool template generates a minimal entry under 15 source lines', () => {
         expect(starterTest?.content).toContain('@termuijs/testing')
         expect(starterTest?.content).toContain('describe(')
     })
+
+    it('generates a starter screen when router support is selected', () => {
+        const files = generateProject({
+            ...baseConfig,
+            features: { ...baseConfig.features, router: true },
+        })
+
+        const paths = files.map((f) => f.path)
+        expect(paths).toContain('screens/index.tsx')
+
+        const config = files.find((f) => f.path === 'termui.config.ts')!
+        expect(config.content).toContain("router: { dir: './screens' }")
+    })
 })
