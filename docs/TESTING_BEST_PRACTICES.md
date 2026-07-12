@@ -74,7 +74,7 @@ Avoid snapshots for rapidly changing output.
 Always wait for asynchronous updates.
 
 ```ts
-await waitFor(() => {
+await screen.waitFor(() => {
     expect(screen.getByText("Loaded")).toBeTruthy()
 })
 ```
