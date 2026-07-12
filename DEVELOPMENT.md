@@ -101,6 +101,9 @@ Run the full test suite:
 bun run test
 ```
 
+For testing guidelines and recommended practices, see
+`docs/TESTING_BEST_PRACTICES.md`.
+
 ## Typecheck
 
 Run TypeScript type checking:
