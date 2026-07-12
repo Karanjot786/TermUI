@@ -41,7 +41,7 @@ describe('generateProject', () => {
         const files = generateProject({
             ...baseConfig,
             template: 'dashboard',
-            features: { ...baseConfig.features, dataProviders: true },
+            features: { ...baseConfig.features, dataProviders: false },
         })
         const pkg = files.find((f) => f.path === 'package.json')!
         const parsed = JSON.parse(pkg.content)
@@ -50,6 +50,7 @@ describe('generateProject', () => {
             ...parsed.devDependencies,
         }
         expect('@termuijs/core' in deps).toBe(true)
+        expect(parsed.dependencies['@termuijs/data']).toBe('latest')
     })
 
     it('dashboard template copies static template files', () => {
