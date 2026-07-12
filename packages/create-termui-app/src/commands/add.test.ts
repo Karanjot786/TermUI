@@ -138,6 +138,9 @@ describe("runAddCommand", () => {
         expect(logSpy).toHaveBeenCalledWith(
             expect.stringContaining("added successfully"),
         );
+        expect(logSpy).toHaveBeenCalledWith(
+            "    import { Badge } from './components/badge';",
+        );
     });
 
     it("uses bun when bun.lock is present", async () => {

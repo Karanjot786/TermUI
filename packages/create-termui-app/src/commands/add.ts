@@ -77,7 +77,7 @@ export async function runAddCommand(options: AddCommandOptions): Promise<void> {
     console.log();
     console.log("  Import it with:");
     console.log(
-        `    import { ${pascalCase(componentEntry.name)} } from './components/${componentEntry.name}';`,
+        `    import { ${pascalCase(componentEntry.name)} } from './components/${componentDirName}';`,
     );
 }
 
