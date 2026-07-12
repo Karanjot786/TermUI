@@ -110,6 +110,9 @@ bun run typecheck
 ```
 
 ---
+## Troubleshooting
+
+If you encounter Bun installation or setup issues, see the [Bun Installation Troubleshooting Guide](docs/BUN_TROUBLESHOOTING.md).
 
 # Running Tests for a Single Package
 
