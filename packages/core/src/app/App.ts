@@ -16,6 +16,15 @@ import { renderFallback, shouldUseFallback } from './Fallback.js';
 import { mergeBorders } from '../renderer/border-merge.js';
 import { renderInlineToTerminal } from '../inline-viewport.js';
 
+type HitGridEntry = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    visible: boolean;
+    zIndex: number;
+};
+
 export interface AppOptions extends TerminalOptions {
     /** Frames per second for the render loop */
     fps?: number;
@@ -90,7 +99,7 @@ export class App {
     private _widgetById = new Map<string, any>(); // any: Widget shape varies; narrowed at retrieval
     private _hoveredWidgetId: string | null = null;
     private _pendingFocusState = new Map<string, boolean>();
-    private _hitGridState = new Map<string, { x: number; y: number; width: number; height: number; visible: boolean; zIndex: number }>();
+    private _hitGridState = new Map<string, HitGridEntry>();
     private _hitGridDirty = true;
     private _pendingFocusRetries = new Map<string, number>();
     private static readonly PENDING_FOCUS_MAX_RETRIES = 5;
@@ -400,14 +409,13 @@ export class App {
             }
 
             try {
-                const hitGridNeedsRebuild = this._hitGridDirty || this._hasHitGridStateChanged(this._rootWidget);
                 const shouldRender = this._rootWidget.isDirty !== false;
 
                 // Skip the full render pass if neither the widget tree, overlay
                 // layers, nor the runtime hit-grid need work. Done inside the
                 // deferred callback so the dirty check and the _isRenderPending
                 // guard are never racy with concurrent requestRender() calls.
-                if (!shouldRender && !this.layers.hasDirtyLayers() && !hitGridNeedsRebuild) {
+                if (!shouldRender && !this.layers.hasDirtyLayers() && !this._hitGridDirty) {
                     this._isRenderPending = false;
                     return;
                 }
@@ -424,10 +432,13 @@ export class App {
                     this._buildWidgetMap(this._rootWidget);
                 }
 
+                const hitGridSnapshot = this._createHitGridSnapshot(this._rootWidget);
+                const hitGridNeedsRebuild = this._hitGridDirty || this._hasHitGridStateChanged(hitGridSnapshot);
+
                 // Populate the existing spatial hit-grid from the runtime widget tree.
                 // Rebuild only when the widget geometry or visibility state changed.
                 if (hitGridNeedsRebuild) {
-                    this._populateHitGrid(this._rootWidget);
+                    this._populateHitGrid(hitGridSnapshot);
                     this._hitGridDirty = false;
                 }
 
@@ -574,77 +585,56 @@ export class App {
         }
     }
 
-    private _populateHitGrid(root: any): void { // any: Widget tree shape not statically known at traversal
+    private _createHitGridSnapshot(root: any): Map<string, HitGridEntry> { // any: Widget tree shape not statically known at traversal
+        const snapshot = new Map<string, HitGridEntry>();
+        const stack = [root];
+
+        while (stack.length > 0) {
+            const widget = stack.pop();
+            if (!widget) continue;
+
+            const rect = widget.rect ?? widget._rect;
+            const style = widget.style ?? widget._style;
+            if (widget.id && rect && style?.visible !== false) {
+                const width = rect.width ?? 0;
+                const height = rect.height ?? 0;
+                snapshot.set(widget.id, {
+                    x: rect.x,
+                    y: rect.y,
+                    width,
+                    height,
+                    visible: style?.visible !== false,
+                    zIndex: style?.zIndex ?? 0,
+                });
+            }
+
+            const children = widget._children ?? widget.children ?? [];
+            if (Array.isArray(children)) {
+                for (let i = children.length - 1; i >= 0; i--) {
+                    stack.push(children[i]);
+                }
+            }
+        }
+
+        return snapshot;
+    }
+
+    private _populateHitGrid(snapshot: Map<string, HitGridEntry>): void {
         this.layers.clearHitGrid();
         this._hitGridState.clear();
 
-        const stack = [root];
-        while (stack.length > 0) {
-            const widget = stack.pop();
-            if (!widget) continue;
-
-            const rect = widget.rect ?? widget._rect;
-            const style = widget.style ?? widget._style;
-            if (widget.id && rect && style?.visible !== false) {
-                const width = rect.width ?? 0;
-                const height = rect.height ?? 0;
-                if (width > 0 && height > 0) {
-                    this.layers.setHitRegion(widget.id, rect.x, rect.y, width, height, style?.zIndex ?? 0);
-                }
-
-                this._hitGridState.set(widget.id, {
-                    x: rect.x,
-                    y: rect.y,
-                    width,
-                    height,
-                    visible: style?.visible !== false,
-                    zIndex: style?.zIndex ?? 0,
-                });
+        for (const [id, state] of snapshot) {
+            if (state.width > 0 && state.height > 0) {
+                this.layers.setHitRegion(id, state.x, state.y, state.width, state.height, state.zIndex);
             }
-
-            const children = widget._children ?? widget.children ?? [];
-            if (Array.isArray(children)) {
-                for (let i = children.length - 1; i >= 0; i--) {
-                    stack.push(children[i]);
-                }
-            }
+            this._hitGridState.set(id, state);
         }
     }
 
-    private _hasHitGridStateChanged(root: any): boolean { // any: Widget tree shape not statically known at traversal
-        const current = new Map<string, { x: number; y: number; width: number; height: number; visible: boolean; zIndex: number }>();
-        const stack = [root];
+    private _hasHitGridStateChanged(snapshot: Map<string, HitGridEntry>): boolean {
+        if (this._hitGridState.size !== snapshot.size) return true;
 
-        while (stack.length > 0) {
-            const widget = stack.pop();
-            if (!widget) continue;
-
-            const rect = widget.rect ?? widget._rect;
-            const style = widget.style ?? widget._style;
-            if (widget.id && rect && style?.visible !== false) {
-                const width = rect.width ?? 0;
-                const height = rect.height ?? 0;
-                current.set(widget.id, {
-                    x: rect.x,
-                    y: rect.y,
-                    width,
-                    height,
-                    visible: style?.visible !== false,
-                    zIndex: style?.zIndex ?? 0,
-                });
-            }
-
-            const children = widget._children ?? widget.children ?? [];
-            if (Array.isArray(children)) {
-                for (let i = children.length - 1; i >= 0; i--) {
-                    stack.push(children[i]);
-                }
-            }
-        }
-
-        if (this._hitGridState.size !== current.size) return true;
-
-        for (const [id, state] of current) {
+        for (const [id, state] of snapshot) {
             const prev = this._hitGridState.get(id);
             if (!prev) return true;
             if (prev.x !== state.x || prev.y !== state.y || prev.width !== state.width || prev.height !== state.height || prev.visible !== state.visible || prev.zIndex !== state.zIndex) {
