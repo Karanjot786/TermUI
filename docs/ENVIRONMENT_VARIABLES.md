@@ -212,6 +212,8 @@ The following variables are detected automatically by TermUI. They are standard 
 
 ## Notes
 
-- Environment variables are read when the application starts.
-- Most variables are optional and only need to be configured for specific use cases.
+- Most environment variables are optional and only need to be configured for specific use cases.
+- `caps.unicode` and `caps.motion` are evaluated when `env-caps.ts` is initialized.
+- Color support, terminal background detection, and keyboard binding mode read environment variables when accessed.
 - Terminal-specific variables are automatically detected whenever possible.
+- If you change environment variables while developing, restart the application to ensure all settings are applied consistently.
