@@ -18,6 +18,25 @@ describe('Select', () => {
         expect(sel.isOpen).toBe(false);
     });
 
+    it('initializes on the first enabled option', () => {
+        const sel = new Select([
+            { label: 'Unavailable', value: 'unavailable', disabled: true },
+            { label: 'Available', value: 'available' },
+        ]);
+
+        expect(sel.selectedIndex).toBe(1);
+        expect(sel.selectedOption?.value).toBe('available');
+    });
+
+    it('uses no selected option when every option is disabled', () => {
+        const sel = new Select([
+            { label: 'Unavailable', value: 'unavailable', disabled: true },
+        ]);
+
+        expect(sel.selectedIndex).toBe(-1);
+        expect(sel.selectedOption).toBeUndefined();
+    });
+
     it('open() sets isOpen to true', () => {
         const sel = new Select(OPTIONS);
         sel.open();

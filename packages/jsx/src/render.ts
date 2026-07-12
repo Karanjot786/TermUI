@@ -25,7 +25,7 @@ export function unmountApps(apps: Array<{ unmount?: () => void }>): void {
             try {
                 app.unmount();
             } catch (err) {
-                console.error('[jsx] Error during unmount():', err);
+                process.stderr.write('[jsx] Error during unmount(): ' + String(err) + '\n');
             }
         }
     });

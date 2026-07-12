@@ -267,18 +267,17 @@ export class Renderer {
         let spanStart = -1;
 
         for (let c = 0; c < cols; c++) {
-            // Skip continuation cells (right half of wide chars) - they are not
-            // independently renderable and their primary cell handles the output.
-            if (back[row][c].width === 0) continue;
-            
             const changed = !cellsEqual(front[row][c], back[row][c]);
+            // Skip continuation cells (right half of wide chars) if they haven't changed.
+            // If they have changed, we must process them so we can adjust the span start back to the primary cell.
+            if (back[row][c].width === 0 && !changed) continue;
             if (changed && spanStart === -1) {
                 spanStart = c; // start a new changed span
             } else if (!changed && spanStart !== -1) {
                 // flush the span
                 const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
                 output += moveTo(adjustedStart, row);
-                for (let sc = spanStart; sc < c; sc++) {
+                for (let sc = adjustedStart; sc < c; sc++) {
                     const cell = back[row][sc];
                     if (cell.width === 0) continue;
                     output += this._renderCell(cell);
@@ -291,7 +290,7 @@ export class Renderer {
         if (spanStart !== -1) {
             const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
             output += moveTo(adjustedStart, row);
-            for (let sc = spanStart; sc < cols; sc++) {
+            for (let sc = adjustedStart; sc < cols; sc++) {
                 const cell = back[row][sc];
                 if (cell.width === 0) continue;
                 output += this._renderCell(cell);

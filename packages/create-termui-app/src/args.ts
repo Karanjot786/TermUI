@@ -33,10 +33,18 @@ function getValue(
     const value = argv[index];
 
     if (value.includes("=")) {
-        return value.split("=")[1];
+        const inlineValue = value.split("=")[1];
+        if (!inlineValue || inlineValue.startsWith("-")) {
+            throw new Error(`${key} requires a value`);
+        }
+        return inlineValue;
     }
 
-    return argv[index + 1];
+    const next = argv[index + 1];
+    if (!next || next.startsWith("-")) {
+        throw new Error(`${key} requires a value`);
+    }
+    return next;
 }
 
 export function parseArgs(argv: string[]): CliArgs {

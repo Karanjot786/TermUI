@@ -1,55 +1,56 @@
 {
-    "name": "@termuijs/router",
-    "homepage": "https://www.termui.io/docs/router/overview",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/Karanjot786/TermUI"
-    },
-    "version": "0.1.7",
-    "description": "File-based screen routing for TermUI with typed params and navigation guards",
-    "type": "module",
-    "main": "./dist/index.cjs",
-    "module": "./dist/index.js",
-    "types": "./dist/index.d.ts",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js",
-            "require": "./dist/index.cjs"
-        }
-    },
-    "files": [
-        "dist"
-    ],
-    "publishConfig": {
-        "access": "public"
-    },
-    "scripts": {
-        "build": "tsup",
-        "dev": "tsup --watch"
-    },
-    "dependencies": {
-        "@termuijs/core": "workspace:*",
-        "@termuijs/jsx": "workspace:*",
-        "@termuijs/motion": "workspace:*",
-        "@termuijs/widgets": "workspace:*"
-    },
-    "devDependencies": {
-        "@termuijs/testing": "workspace:*",
-        "tsup": "^8.0.0",
-        "typescript": "^5.3.0"
-    },
-    "keywords": [
-        "terminal",
-        "tui",
-        "cli",
-        "router",
-        "navigation",
-        "screens"
-    ],
-    "license": "MIT",
-    "engines": {
-        "bun": ">=1.3.0",
-        "node": ">=18.0.0"
+  "name": "@termuijs/router",
+  "homepage": "https://www.termui.io/docs/router/overview",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Karanjot786/TermUI"
+  },
+  "version": "0.1.7",
+  "description": "File-based screen routing for TermUI with typed params and navigation guards",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --config ../../vitest.config.ts"
+  },
+  "dependencies": {
+    "@termuijs/core": "workspace:*",
+    "@termuijs/jsx": "workspace:*",
+    "@termuijs/motion": "workspace:*",
+    "@termuijs/widgets": "workspace:*"
+  },
+  "devDependencies": {
+    "@termuijs/testing": "workspace:*",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "keywords": [
+    "terminal",
+    "tui",
+    "cli",
+    "router",
+    "navigation",
+    "screens"
+  ],
+  "license": "MIT",
+  "engines": {
+    "bun": ">=1.3.0",
+    "node": ">=18.0.0"
+  }
 }

@@ -107,4 +107,15 @@ describe('UnorderedList', () => {
         list.render(nextScreen);
         expect(rowText(nextScreen, 0)).toContain('New item');
     });
+
+    it('getItems returns the items and setItems does not dirty when unchanged', () => {
+        const items = [{ text: 'Item' }];
+        const { list } = renderList(items);
+
+        expect(list.getItems()).toBe(items);
+
+        list.clearDirty();
+        list.setItems(items);
+        expect(list.isDirty).toBe(false);
+    });
 });

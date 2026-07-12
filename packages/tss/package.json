@@ -26,7 +26,8 @@
   },
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "test": "vitest run --config ../../vitest.config.ts"
   },
   "dependencies": {
     "@termuijs/core": "workspace:*",
