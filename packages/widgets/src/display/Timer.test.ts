@@ -59,6 +59,21 @@ describe('Timer – rendering', () => {
     });
 });
 
+describe('Timer validation', () => {
+    it('rejects invalid durations', () => {
+        expect(() => new Timer({ duration: -1 })).toThrow(/duration/);
+        expect(() => new Timer({ duration: Number.NaN })).toThrow(/duration/);
+        expect(() => new Timer({ duration: Infinity })).toThrow(/duration/);
+    });
+
+    it('rejects invalid intervals', () => {
+        expect(() => new Timer({ duration: 1_000, interval: 0 })).toThrow(/interval/);
+        expect(() => new Timer({ duration: 1_000, interval: -1 })).toThrow(/interval/);
+        expect(() => new Timer({ duration: 1_000, interval: Number.NaN })).toThrow(/interval/);
+        expect(() => new Timer({ duration: 1_000, interval: Infinity })).toThrow(/interval/);
+    });
+});
+
 // ── 2. Timer fires onComplete ─────────────────────────────────────────────────
 describe('Timer – onComplete callback', () => {
     beforeEach(() => {

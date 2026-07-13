@@ -49,6 +49,12 @@ export class Timer extends Widget {
 
     constructor(options: TimerOptions, style: Partial<Style> = {}) {
         super({ height: 1, ...style });
+        if (!Number.isFinite(options.duration) || options.duration < 0) {
+            throw new Error('Timer duration must be a finite non-negative number');
+        }
+        if (options.interval !== undefined && (!Number.isFinite(options.interval) || options.interval <= 0)) {
+            throw new Error('Timer interval must be a finite positive number');
+        }
         this._duration = options.duration;
         this._interval = options.interval ?? 1000;
         this._remaining = options.duration;
