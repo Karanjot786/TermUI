@@ -5,17 +5,32 @@
 import { watch, existsSync } from 'node:fs';
 import { resolve, extname } from 'node:path';
 
+/**
+ * A single detected file change emitted by the {@link FileWatcher}.
+ */
 export interface FileChange {
+    /** Path/name of the changed file. */
     filename: string;
+    /** Category of the changed file. */
     type: 'tsx' | 'tss' | 'config';
+    /** Epoch milliseconds when the change was detected. */
     timestamp: number;
 }
 
+/**
+ * Callback registries for {@link FileWatcher} events.
+ */
 export interface WatcherEvents {
+    /** Invoked (debounced) when a relevant file changes. */
     change: (change: FileChange) => void;
+    /** Invoked when watching fails for a directory. */
     error: (err: Error) => void;
 }
 
+/**
+ * Recursively watches one or more directories for `.tsx`/`.tss`/config changes
+ * and emits debounced {@link FileChange} events.
+ */
 export class FileWatcher {
     private _abortControllers: AbortController[] = [];
     private _dirs: string[];
@@ -27,9 +42,12 @@ export class FileWatcher {
         this._dirs = dirs.map(d => resolve(d));
     }
 
+    /** Register a callback invoked when a watched file changes. */
     onChange(fn: (change: FileChange) => void): void { this._onChangeCallbacks.push(fn); }
+    /** Register a callback invoked when a watch error occurs. */
     onError(fn: (err: Error) => void): void { this._onErrorCallbacks.push(fn); }
 
+    /** Begin watching all configured directories, debouncing rapid changes. */
     start(): void {
         for (const dir of this._dirs) {
             if (!existsSync(dir)) continue;
@@ -74,6 +92,7 @@ export class FileWatcher {
         }
     }
 
+    /** Stop all watchers and clear pending debounce timers. */
     stop(): void {
         for (const ac of this._abortControllers) ac.abort();
         this._abortControllers = [];
