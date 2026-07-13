@@ -58,7 +58,7 @@ export class PieChart extends Widget {
 
         const totalHeight = this._showLegend ? Math.max(0, height - this._slices.length) : height;
         if (totalHeight <= 0) {
-            this._renderLegend(screen, x, y, width);
+            this._renderLegend(screen, x, y, width, height);
             return;
         }
 
@@ -69,7 +69,7 @@ export class PieChart extends Widget {
         }
 
         if (this._showLegend) {
-            this._renderLegend(screen, x, y + totalHeight, width);
+            this._renderLegend(screen, x, y + totalHeight, width, height - totalHeight);
         }
     }
 
@@ -133,11 +133,11 @@ export class PieChart extends Widget {
 
     // ── Legend ───────────────────────────────────────
 
-    private _renderLegend(screen: Screen, ox: number, oy: number, width: number): void {
+    private _renderLegend(screen: Screen, ox: number, oy: number, width: number, maxRows: number): void {
         const total = this._total();
         const bullet = caps.unicode ? LEGEND_BULLET_UNICODE : LEGEND_BULLET_ASCII;
         const attrs = styleToCellAttrs(this._style);
-        for (let i = 0; i < this._slices.length; i++) {
+        for (let i = 0; i < this._slices.length && i < maxRows; i++) {
             const slice = this._slices[i];
             if (!slice) continue;
             const pct = total > 0 ? Math.round((slice.value / total) * 100) : 0;
