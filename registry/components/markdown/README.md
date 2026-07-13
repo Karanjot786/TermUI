@@ -23,12 +23,12 @@ The current implementation supports:
 * Headings
 * Paragraph text
 * Line breaks
-* **Bold** — `**text**`
-* *Italic* — `_text_`
-* Inline code — `` `code` ``
-* Unordered lists — `- item`
-* Ordered lists — `1. item`
-* Code fences — fenced code blocks
+* **Bold** - `**text**`
+* *Italic* - `_text_`
+* Inline code - `` `code` ``
+* Unordered lists - `- item`
+* Ordered lists - `1. item`
+* Code fences - fenced code blocks
 
 ## Features
 
@@ -46,8 +46,8 @@ constructor(opts: MarkdownOptions, style?: Partial<Style>)
 
 ### Methods
 
-* `setContent(content: string): void` — Update the markdown content
-* `getContent(): string` — Get the current markdown content
+* `setContent(content: string): void` - Update the markdown content
+* `getContent(): string` - Get the current markdown content
 
 ## Example
 

@@ -18,6 +18,8 @@ import {
     styleToCellAttrs,
     containsPoint,
     caps,
+    stripAnsiEscapes,
+    sanitizeForDisplay,
     type A11yProps,
     emitA11y,
 } from '@termuijs/core';
@@ -130,6 +132,13 @@ export abstract class Widget {
     private _layoutCancel: (() => void) | null = null;
     private _targetRect: Rect | null = null;
 
+    /**
+     * Whether to automatically strip ANSI escape sequences from text content
+     * before rendering.  Defaults to `true` for security — set to `false` only
+     * when the widget displays trusted, internally-generated formatted text.
+     */
+    protected sanitizeContent = true;
+
     constructor(style: Partial<Style> = {}) {
         this.id = `widget_${++_widgetIdCounter}`;
         this._style = mergeStyles(defaultStyle(), style);
@@ -175,6 +184,7 @@ export abstract class Widget {
     addChild(child: Widget): void {
         child.parent = this;
         this._children.push(child);
+        this.markDirty();
         // Propagate any dirty state the child accumulated before being added
         // to the tree (e.g., Pty output that arrived before mount).
         if (child._dirty) {
@@ -188,6 +198,7 @@ export abstract class Widget {
         if (idx >= 0) {
             this._children.splice(idx, 1);
             child.destroy();
+            this.markDirty();
         }
     }
 
@@ -198,6 +209,7 @@ export abstract class Widget {
         for (const child of children) {
             child.destroy();
         }
+        this.markDirty();
     }
 
     /**
@@ -447,6 +459,24 @@ export abstract class Widget {
     get renderError(): Error | null { return this._renderError; }
 
     /**
+     * Sanitize text content by stripping ANSI escape sequences.
+     *
+     * When `sanitizeContent` is `true` (default), all ANSI escapes and
+     * control characters are stripped. When `false` (e.g. `Text` with
+     * `raw: true`), SGR formatting is preserved but cursor movement, screen
+     * clears, and OSC sequences (title, clipboard, hyperlinks) are still
+     * stripped — content is never passed through completely unsanitized.
+     *
+     * Subclasses can override to customize behavior.
+     */
+    protected sanitize(text: string): string {
+        if (this.sanitizeContent) {
+            return stripAnsiEscapes(text);
+        }
+        return sanitizeForDisplay(text, /* allowFormatting */ true);
+    }
+
+    /**
      * Render the border around this widget, including focus ring if focused.
      */
     protected _renderBorder(screen: Screen): void {
@@ -505,28 +535,33 @@ export abstract class Widget {
             const fg = this._style.focusRingColor ?? { type: 'named' as const, name: 'cyan' as const };
             const cellStyle = { fg, bold: true };
 
+            const useAscii = (this._style.asciiOnly ?? false) || !caps.unicode;
+            const corner = useAscii ? '+' : '┌';
+            const horizontal = useAscii ? '-' : '─';
+            const vertical = useAscii ? '|' : '│';
+
             // Top-left corner
-            screen.setCell(x, y, { char: '┌', ...cellStyle });
-            if (width > 2) screen.setCell(x + 1, y, { char: '─', ...cellStyle });
+            screen.setCell(x, y, { char: corner, ...cellStyle });
+            if (width > 2) screen.setCell(x + 1, y, { char: horizontal, ...cellStyle });
 
             // Top-right corner
-            screen.setCell(x + width - 1, y, { char: '┐', ...cellStyle });
-            if (width > 2) screen.setCell(x + width - 2, y, { char: '─', ...cellStyle });
+            screen.setCell(x + width - 1, y, { char: corner, ...cellStyle });
+            if (width > 2) screen.setCell(x + width - 2, y, { char: horizontal, ...cellStyle });
 
             // Bottom-left corner
-            screen.setCell(x, y + height - 1, { char: '└', ...cellStyle });
-            if (width > 2) screen.setCell(x + 1, y + height - 1, { char: '─', ...cellStyle });
+            screen.setCell(x, y + height - 1, { char: corner, ...cellStyle });
+            if (width > 2) screen.setCell(x + 1, y + height - 1, { char: horizontal, ...cellStyle });
 
             // Bottom-right corner
-            screen.setCell(x + width - 1, y + height - 1, { char: '┘', ...cellStyle });
-            if (width > 2) screen.setCell(x + width - 2, y + height - 1, { char: '─', ...cellStyle });
+            screen.setCell(x + width - 1, y + height - 1, { char: corner, ...cellStyle });
+            if (width > 2) screen.setCell(x + width - 2, y + height - 1, { char: horizontal, ...cellStyle });
 
             // Short vertical marks if tall enough
             if (height > 2) {
-                screen.setCell(x, y + 1, { char: '│', ...cellStyle });
-                screen.setCell(x + width - 1, y + 1, { char: '│', ...cellStyle });
-                screen.setCell(x, y + height - 2, { char: '│', ...cellStyle });
-                screen.setCell(x + width - 1, y + height - 2, { char: '│', ...cellStyle });
+                screen.setCell(x, y + 1, { char: vertical, ...cellStyle });
+                screen.setCell(x + width - 1, y + 1, { char: vertical, ...cellStyle });
+                screen.setCell(x, y + height - 2, { char: vertical, ...cellStyle });
+                screen.setCell(x + width - 1, y + height - 2, { char: vertical, ...cellStyle });
             }
         }
     }

@@ -35,6 +35,16 @@ describe("TimePicker", () => {
         expect(picker.value.getHours()).toBe(15);
     });
 
+    it("returns a defensive copy from value getter", () => {
+        const d = new Date(2020, 1, 1, 14, 30);
+        const picker = new TimePicker({ value: d });
+
+        const value = picker.value;
+        value.setHours(23);
+
+        expect(picker.value.getHours()).toBe(14);
+    });
+
     it("handles keyboard events to increment minutes", () => {
         const d = new Date(2020, 1, 1, 14, 30);
         const picker = new TimePicker({ value: d });

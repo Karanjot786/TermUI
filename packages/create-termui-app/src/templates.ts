@@ -356,9 +356,9 @@ import { AutoThemeProvider, useTheme } from '@termuijs/tss';
 import { caps } from '@termuijs/core';
 
 // ASCII-safe symbols
-const CHECK  = caps.unicode ? '✓' : 'v';
-const BULLET = caps.unicode ? '›' : '>';
-const SEP    = caps.unicode ? '─'.repeat(40) : '-'.repeat(40);
+const CHECK  = caps.unicode ? '\\u2713' : 'v';
+const BULLET = caps.unicode ? '\\u203a' : '>';
+const SEP    = caps.unicode ? '\\u2500'.repeat(40) : '-'.repeat(40);
 
 const INITIAL_ITEMS = ['Option A', 'Option B', 'Option C'];
 
@@ -502,7 +502,7 @@ function CliWrapper() {
     const addLog = (level: LogLevel, text: string) =>
         setLogs(prev => [...prev.slice(-200), { level, text, ts: Date.now() }]);
 
-    // Example: run 'echo hello' — replace with your real command
+    // Example: run 'echo hello' - replace with your real command
     const runCommand = () => {
         if (running) return;
         setRunning(true);

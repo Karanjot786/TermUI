@@ -1,4 +1,4 @@
-import { type Screen, type Style, type KeyEvent, styleToCellAttrs, caps, truncate, mergeStyles, defaultStyle } from '@termuijs/core';
+import { type Screen, type Style, type KeyEvent, styleToCellAttrs, caps, truncate, mergeStyles, defaultStyle, splitGraphemes, stringWidth } from '@termuijs/core';
 import { Widget } from '@termuijs/widgets';
 
 export interface TextAreaOptions {
@@ -42,21 +42,22 @@ export class TextArea extends Widget {
         this._lines = v.split('\n');
         if (this._lines.length === 0) this._lines = [''];
         this._cursor.row = Math.min(this._cursor.row, this._lines.length - 1);
-        this._cursor.col = Math.min(this._cursor.col, this._lines[this._cursor.row].length);
+        this._cursor.col = Math.min(this._cursor.col, splitGraphemes(this._lines[this._cursor.row]).length);
         this.markDirty();
     }
 
     insertChar(char: string): void {
-        const line = this._lines[this._cursor.row];
-        this._lines[this._cursor.row] = line.slice(0, this._cursor.col) + char + line.slice(this._cursor.col);
+        const graphemes = splitGraphemes(this._lines[this._cursor.row]);
+        graphemes.splice(this._cursor.col, 0, char);
+        this._lines[this._cursor.row] = graphemes.join('');
         this._cursor.col++;
         this._notify();
     }
 
     insertNewline(): void {
-        const line = this._lines[this._cursor.row];
-        const before = line.slice(0, this._cursor.col);
-        const after = line.slice(this._cursor.col);
+        const graphemes = splitGraphemes(this._lines[this._cursor.row]);
+        const before = graphemes.slice(0, this._cursor.col).join('');
+        const after = graphemes.slice(this._cursor.col).join('');
         this._lines[this._cursor.row] = before;
         this._lines.splice(this._cursor.row + 1, 0, after);
         this._cursor.row++;
@@ -66,8 +67,9 @@ export class TextArea extends Widget {
 
     deleteBack(): void {
         if (this._cursor.col > 0) {
-            const line = this._lines[this._cursor.row];
-            this._lines[this._cursor.row] = line.slice(0, this._cursor.col - 1) + line.slice(this._cursor.col);
+            const graphemes = splitGraphemes(this._lines[this._cursor.row]);
+            graphemes.splice(this._cursor.col - 1, 1);
+            this._lines[this._cursor.row] = graphemes.join('');
             this._cursor.col--;
             this._notify();
         } else if (this._cursor.row > 0) {
@@ -75,7 +77,7 @@ export class TextArea extends Widget {
             const curLine = this._lines[this._cursor.row];
             this._lines.splice(this._cursor.row, 1);
             this._cursor.row--;
-            this._cursor.col = prevLine.length;
+            this._cursor.col = splitGraphemes(prevLine).length;
             this._lines[this._cursor.row] = prevLine + curLine;
             this._notify();
         }
@@ -87,14 +89,14 @@ export class TextArea extends Widget {
             this.markDirty();
         } else if (this._cursor.row > 0) {
             this._cursor.row--;
-            this._cursor.col = this._lines[this._cursor.row].length;
+            this._cursor.col = splitGraphemes(this._lines[this._cursor.row]).length;
             this.markDirty();
         }
     }
 
     moveCursorRight(): void {
-        const line = this._lines[this._cursor.row];
-        if (this._cursor.col < line.length) {
+        const lineLength = splitGraphemes(this._lines[this._cursor.row]).length;
+        if (this._cursor.col < lineLength) {
             this._cursor.col++;
             this.markDirty();
         } else if (this._cursor.row < this._lines.length - 1) {
@@ -107,7 +109,7 @@ export class TextArea extends Widget {
     moveCursorUp(): void {
         if (this._cursor.row > 0) {
             this._cursor.row--;
-            this._cursor.col = Math.min(this._cursor.col, this._lines[this._cursor.row].length);
+            this._cursor.col = Math.min(this._cursor.col, splitGraphemes(this._lines[this._cursor.row]).length);
             this.markDirty();
         }
     }
@@ -115,7 +117,7 @@ export class TextArea extends Widget {
     moveCursorDown(): void {
         if (this._cursor.row < this._lines.length - 1) {
             this._cursor.row++;
-            this._cursor.col = Math.min(this._cursor.col, this._lines[this._cursor.row].length);
+            this._cursor.col = Math.min(this._cursor.col, splitGraphemes(this._lines[this._cursor.row]).length);
             this.markDirty();
         }
     }
@@ -176,28 +178,23 @@ export class TextArea extends Widget {
             scrollY = this._cursor.row - height + 1;
         }
 
-        // Scroll X to keep cursor visible
-        let scrollX = 0;
-        if (this._cursor.col >= width) {
-            scrollX = this._cursor.col - width + 1;
-        }
-
         // Render visible lines
         for (let r = 0; r < height; r++) {
             const lineIdx = r + scrollY;
             if (lineIdx >= this._lines.length) break;
-            const lineStr = this._lines[lineIdx];
-            const visibleText = lineStr.slice(scrollX, scrollX + width).padEnd(width, ' ').slice(0, width);
+            const { visibleText } = this._visibleLine(this._lines[lineIdx], lineIdx === this._cursor.row ? this._cursor.col : 0, width);
             screen.writeString(x, y + r, visibleText, attrs);
         }
 
         // Draw cursor
         if (this.isFocused) {
             const screenRow = this._cursor.row - scrollY;
-            const screenCol = this._cursor.col - scrollX;
+            const currentLine = this._lines[this._cursor.row] || '';
+            const { scrollIndex } = this._visibleLine(currentLine, this._cursor.col, width);
+            const screenCol = this._widthUntil(currentLine, scrollIndex, this._cursor.col);
             if (screenRow >= 0 && screenRow < height && screenCol >= 0 && screenCol < width) {
-                const lineStr = this._lines[this._cursor.row] || '';
-                const cursorChar = this._cursor.col < lineStr.length ? lineStr[this._cursor.col] : ' ';
+                const graphemes = splitGraphemes(currentLine);
+                const cursorChar = this._cursor.col < graphemes.length ? graphemes[this._cursor.col] : ' ';
                 const asciiFallback = cursorChar === ' ' ? '_' : cursorChar;
                 const cursorGlyph = caps.unicode ? cursorChar : asciiFallback;
                 screen.setCell(x + screenCol, y + screenRow, {
@@ -207,5 +204,33 @@ export class TextArea extends Widget {
                 });
             }
         }
+    }
+
+    private _visibleLine(line: string, cursorCol: number, width: number): { visibleText: string; scrollIndex: number } {
+        const graphemes = splitGraphemes(line);
+        let scrollIndex = 0;
+        while (scrollIndex < cursorCol && this._widthUntil(line, scrollIndex, cursorCol) >= width) {
+            scrollIndex++;
+        }
+
+        let endIndex = scrollIndex;
+        let visibleWidth = 0;
+        while (endIndex < graphemes.length) {
+            const nextWidth = stringWidth(graphemes[endIndex]);
+            if (visibleWidth + nextWidth > width) break;
+            visibleWidth += nextWidth;
+            endIndex++;
+        }
+
+        return {
+            visibleText: graphemes.slice(scrollIndex, endIndex).join('').padEnd(Math.max(0, width - visibleWidth), ' '),
+            scrollIndex,
+        };
+    }
+
+    private _widthUntil(line: string, start: number, end: number): number {
+        return splitGraphemes(line)
+            .slice(start, end)
+            .reduce((sum, grapheme) => sum + stringWidth(grapheme), 0);
     }
 }

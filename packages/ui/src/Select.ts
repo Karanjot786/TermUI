@@ -12,7 +12,7 @@ export interface SelectOptions {
 
 export class Select extends Widget {
     private _options: SelectOption[];
-    private _selectedIndex = 0;
+    private _selectedIndex = -1;
     private _isOpen = false;
     private _placeholder: string;
     private _activeColor: Style['fg'];
@@ -26,13 +26,14 @@ export class Select extends Widget {
         super(mergeStyles(mergeStyles(defaultStyle(), { height: 1 }), style ?? {}));
         this._closedHeight = typeof this._style.height === 'number' ? this._style.height : 1;
         this._options = options;
+        this._selectedIndex = options.findIndex(option => !option.disabled);
         this._placeholder = config.placeholder ?? 'Select...';
         this._activeColor = config.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSelect = config.onSelect;
         this.signal = config.signal;
     }
 
-    get selectedOption(): SelectOption | undefined { return this._options[this._selectedIndex]; }
+    get selectedOption(): SelectOption | undefined { return this._selectedIndex >= 0 ? this._options[this._selectedIndex] : undefined; }
     get selectedIndex(): number { return this._selectedIndex; }
     get isOpen(): boolean { return this._isOpen; }
     open(): void { this._isOpen = true; this._expandHeight(); this.markDirty(); }
@@ -79,7 +80,7 @@ export class Select extends Widget {
         const { x, y, width } = this._rect;
         if (width <= 0) return;
         const attrs = styleToCellAttrs(this.style);
-        const sel = this._options[this._selectedIndex];
+        const sel = this.selectedOption;
         const label = sel ? sel.label : this._placeholder;
         const prefix = this._isOpen ? (caps.unicode ? '▼ ' : 'v ') : (caps.unicode ? '▶ ' : '> ');
         screen.writeString(x, y, prefix + label.slice(0, width - 2), { ...attrs, fg: this._activeColor });
