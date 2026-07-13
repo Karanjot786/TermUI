@@ -87,6 +87,39 @@ export class BrailleCanvas extends Widget {
     }
     this.markDirty();
 }
+
+    drawCircle(xc: number, yc: number, r: number): void {
+        if (r < 0) return;
+        let x = 0;
+        let y = r;
+        let d = 3 - 2 * r;
+
+        const drawSymmetricPixels = (xc: number, yc: number, x: number, y: number) => {
+            this.drawPixel(xc + x, yc + y);
+            this.drawPixel(xc - x, yc + y);
+            this.drawPixel(xc + x, yc - y);
+            this.drawPixel(xc - x, yc - y);
+            this.drawPixel(xc + y, yc + x);
+            this.drawPixel(xc - y, yc + x);
+            this.drawPixel(xc + y, yc - x);
+            this.drawPixel(xc - y, yc - x);
+        };
+
+        drawSymmetricPixels(xc, yc, x, y);
+
+        while (y >= x) {
+            x++;
+            if (d > 0) {
+                y--;
+                d = d + 4 * (x - y) + 10;
+            } else {
+                d = d + 4 * x + 6;
+            }
+            drawSymmetricPixels(xc, yc, x, y);
+        }
+        this.markDirty();
+    }
+
     
 
     protected _renderSelf(screen: Screen): void {

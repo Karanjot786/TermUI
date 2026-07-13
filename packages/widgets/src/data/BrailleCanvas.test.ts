@@ -154,6 +154,16 @@ describe('drawLine()', () => {
 
         expect(lines[0]![0]).not.toBe('⠀');
     });
+
+    describe('drawCircle()', () => {
+        it('draws a circle', async () => {
+            const lines = await renderCanvas(canvas => {
+                canvas.drawCircle(1, 2, 1);
+            });
+
+            expect(lines[0]![0]).not.toBe('⠀');
+        });
+    });
 });
 
 describe('rendering', () => {
@@ -172,4 +182,4 @@ describe('rendering', () => {
         expect(lines[0]![0]).toBe('⠃');
     });
 });
-});
+});
