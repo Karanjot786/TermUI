@@ -163,6 +163,16 @@ export abstract class Widget {
     /** Get the current style */
     get style(): Style { return this._style; }
 
+    /** Get the z-index stacking order */
+    get zIndex(): number {
+        return this._style.zIndex ?? 0;
+    }
+
+    /** Set the z-index stacking order */
+    set zIndex(value: number) {
+        this.setStyle({ zIndex: value });
+    }
+
     get a11y(): A11yProps | undefined { return this._a11y; }
 
     public setA11y(props: A11yProps): this {
@@ -311,7 +321,12 @@ export abstract class Widget {
         this._renderBorder(screen);
 
         // Render children
-        for (const child of this._children) {
+        const sortedChildren = [...this._children].sort((a, b) => {
+            const az = a.style.zIndex ?? 0;
+            const bz = b.style.zIndex ?? 0;
+            return az - bz;
+        });
+        for (const child of sortedChildren) {
             child.render(screen);
         }
 
