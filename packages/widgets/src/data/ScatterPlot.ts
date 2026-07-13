@@ -1,5 +1,5 @@
 import { Widget } from '../base/Widget.js';
-import { type Style, type Color, Screen, caps } from '@termuijs/core';
+import { type Style, type Color, Screen, caps, truncate } from '@termuijs/core';
 
 export interface ScatterPoint {
     x: number;
@@ -63,10 +63,10 @@ export class ScatterPlot extends Widget {
 
         // Render Labels
         if (this.options.yLabel) {
-            screen.writeString(x + 1, y, this.options.yLabel);
+            screen.writeString(x + 1, y, truncate(this.options.yLabel, Math.max(0, width - 1)));
         }
         if (this.options.xLabel) {
-            const xL = this.options.xLabel;
+            const xL = truncate(this.options.xLabel, Math.max(0, width - 1));
             const startX = Math.max(plotX, x + width - xL.length);
             screen.writeString(startX, originY, xL);
         }
