@@ -32,9 +32,7 @@ export class ScatterPlot extends Widget {
     }
 
     protected override _renderSelf(screen: Screen): void {
-        if (!this.rect) return;
-
-        const { x, y, width, height } = this.rect;
+        const { x, y, width, height } = this._getContentRect();
         if (width < 2 || height < 2) return;
 
         const isUnicode = caps.unicode;

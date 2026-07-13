@@ -38,6 +38,19 @@ class RecoversWidget extends Widget {
     }
 }
 
+// Exposes the protected sanitize() so tests can exercise both the default
+// (sanitizeContent = true) and raw (sanitizeContent = false) code paths
+// directly, independent of any specific widget's render pipeline.
+class SanitizingWidget extends Widget {
+    protected _renderSelf(_screen: Screen): void {}
+    setRaw(raw: boolean): void {
+        this.sanitizeContent = !raw;
+    }
+    publicSanitize(text: string): string {
+        return this.sanitize(text);
+    }
+}
+
 describe('Widget', () => {
     it('generates unique IDs', () => {
         const a = new TestWidget();
@@ -343,6 +356,38 @@ async function advanceSpring(ms: number) {
         await Promise.resolve();
     }
 }
+
+describe('Widget.sanitize()', () => {
+    it('default mode (sanitizeContent = true) strips everything, including SGR', () => {
+        const w = new SanitizingWidget();
+        const out = w.publicSanitize('\x1b[31mred\x1b[0m\x1b[2Jcleared');
+        expect(out).toBe('redcleared');
+    });
+
+    it('raw mode (sanitizeContent = false) is no longer a no-op: it strips OSC-52 clipboard exfiltration', () => {
+        const w = new SanitizingWidget();
+        w.setRaw(true);
+        const out = w.publicSanitize('\x1b]52;c;ZXZpbA==\x07safe');
+        expect(out).not.toContain('\x1b]52');
+        expect(out).toBe('safe');
+    });
+
+    it('raw mode strips cursor movement and screen-clear sequences', () => {
+        const w = new SanitizingWidget();
+        w.setRaw(true);
+        const out = w.publicSanitize('\x1b[2Jhi\x1b[10;20H');
+        expect(out).not.toContain('\x1b[2J');
+        expect(out).not.toContain('\x1b[10;20H');
+        expect(out).toBe('hi');
+    });
+
+    it('raw mode still preserves SGR formatting sequences, matching the documented Text.raw behavior', () => {
+        const w = new SanitizingWidget();
+        w.setRaw(true);
+        const out = w.publicSanitize('\x1b[31mred\x1b[0m');
+        expect(out).toBe('\x1b[31mred\x1b[0m');
+    });
+});
 
 describe('Widget.layoutTransition', () => {
     beforeEach(() => {

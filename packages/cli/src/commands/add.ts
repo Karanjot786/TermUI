@@ -15,7 +15,7 @@ export function writeComponentFiles(
     const componentRoot = resolve(destRoot, slug);
     const written: string[] = [];
     for (const file of files) {
-        const dest = resolve(componentRoot, file.path);
+        const dest = resolve(componentRoot, normalizeComponentPath(slug, file.path));
         const rel = relative(componentRoot, dest);
         if (rel.startsWith('..') || isAbsolute(rel)) {
             throw new Error(`Refusing to write ${dest}: path is outside ${componentRoot}`);
@@ -26,6 +26,14 @@ export function writeComponentFiles(
         writeFileSync(dest, file.content, 'utf-8');
     }
     return written;
+}
+
+function normalizeComponentPath(slug: string, filePath: string): string {
+    const prefix = `registry/components/${slug}/`;
+    if (filePath.startsWith(prefix)) {
+        return filePath.slice(prefix.length);
+    }
+    return filePath;
 }
 
 export async function runAdd(args: CliArgs): Promise<void> {

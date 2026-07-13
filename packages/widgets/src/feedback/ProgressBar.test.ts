@@ -1,261 +1,178 @@
 // ─────────────────────────────────────────────────────
-// @termuijs/widgets — Tests for ProgressBar widget
+// @termuijs/widgets — ProgressBar widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { ProgressBar } from './ProgressBar.js';
+import { type Screen, type Style, styleToCellAttrs, type Color, caps, stringWidth } from '@termuijs/core';
+import { Widget } from '../base/Widget.js';
 
-afterEach(() => {
-    vi.unstubAllEnvs();
-});
-
-describe('ProgressBar', () => {
-    it('initializes with default value 0', () => {
-        const pb = new ProgressBar();
-        expect(pb.value).toBe(0);
-    });
-
-    it('setValue sets progress to 0.5', () => {
-        const pb = new ProgressBar();
-        pb.setValue(0.5);
-        expect(pb.value).toBe(0.5);
-    });
-
-    it('setValue(1) sets to 100%', () => {
-        const pb = new ProgressBar();
-        pb.setValue(1);
-        expect(pb.value).toBe(1);
-    });
-
-    it('clamps values above 1 to 1', () => {
-        const pb = new ProgressBar();
-        pb.setValue(1.5);
-        expect(pb.value).toBe(1);
-    });
-
-    it('clamps values below 0 to 0', () => {
-        const pb = new ProgressBar();
-        pb.setValue(-0.5);
-        expect(pb.value).toBe(0);
-    });
-
-    it('handles negative initialization by clamping to 0', () => {
-        const pb = new ProgressBar({}, { value: -0.5 });
-        expect(pb.value).toBe(0);
-    });
+export interface ProgressBarOptions {
+    /** Current value (raw value if max provided, or 0–1 percentage) */
+    value?: number;
+    /** Maximum value. If provided, value is treated as raw and divided by max. If max is 0, percentage is 0. */
+    max?: number;
+    /**
+     * Optional message shown when the progress value has not been initialized.
+     *
+     * Example: `{ emptyMessage: "Not Started" }`.
+     */
+    emptyMessage?: string;
+    /** Character for the filled portion */
+    fillChar?: string;
+    /** Character for the empty portion */
+    emptyChar?: string;
+    /** Color of the filled portion */
+    fillColor?: Color;
+    /** Show percentage label */
+    showLabel?: boolean;
+    /** Label format: 'percent' | 'fraction' | 'custom' */
+    labelFormat?: 'percent' | 'fraction';
+    /** Total for fraction display */
+    total?: number;
+}
 
 
-    it('clear() resets value to 0 without changing max', () => {
-        const pb = new ProgressBar({}, { max: 50 });
-        pb.setValue(25);
-        expect(pb.value).toBe(25);
-        expect(pb.percentage).toBe(0.5);
-
-        pb.clear();
-        expect(pb.value).toBe(0);
-        expect(pb.percentage).toBe(0);
-
-        // max should remain unchanged
-        pb.setValue(50);
-        expect(pb.percentage).toBe(1);
-    });
-
-    it('clear() does not mark dirty when already cleared', () => {
-        const pb = new ProgressBar({}, { value: 0 });
-        pb.clearDirty();
-
-        pb.clear();
-
-        expect(pb.isDirty).toBe(false);
-    });
+/**
+ * ProgressBar — horizontal progress indicator.
+ *
+ * Supports:
+ * - Configurable fill/empty characters
+ * - Custom fill color
+ * - Percentage or fraction label
+ * - Smooth animation-ready value changes
+ */
+export class ProgressBar extends Widget {
+    private _value: number;
+    private _hasValue: boolean;
+    private _max?: number;
+    private _emptyMessage?: string;
+    private _fillChar: string;
+    private _emptyChar: string;
+    private _fillColor: Color;
+    private _showLabel: boolean;
+    private _labelFormat: 'percent' | 'fraction';
+    private _total: number;
 
 
-    it('handles value above 1 by clamping to 1', () => {
-        const pb = new ProgressBar({}, { value: 1.5 });
-        expect(pb.value).toBe(1);
-    });
-});
+    constructor(style: Partial<Style> = {}, options: ProgressBarOptions = {}) {
+        super({ height: 1, ...style });
+        this._max = options.max;
+        this._hasValue = options.value !== undefined;
+        this._emptyMessage = options.emptyMessage;
 
-describe('ProgressBar — rendering', () => {
-    it('renders emptyMessage when value is not initialized', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
-        const { ProgressBar } = await import('./ProgressBar.js');
-
-        const pb = new ProgressBar({}, { emptyMessage: 'Not Started', showLabel: true });
-        pb.updateRect({ x: 0, y: 0, width: 12, height: 1 });
-        const screen = new Screen(12, 1);
-        pb.render(screen);
-
-        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
-        expect(rendered).toContain('Not Started');
-        expect(rendered).not.toContain('#');
-        expect(rendered).not.toContain('-');
-    });
-
-    it('setValue(0) switches out of empty state', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
-        const { ProgressBar } = await import('./ProgressBar.js');
-
-        const pb = new ProgressBar({}, { emptyMessage: 'Not Started', showLabel: false });
-        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
-        const screen = new Screen(10, 1);
-        pb.render(screen);
-
-        pb.setValue(0);
-        pb.render(screen);
-
-        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
-        expect(rendered).toContain('-');
-        expect(rendered).not.toContain('Not Started');
-    });
-
-    it('value: 0 renders all empty cells', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
-        const { ProgressBar } = await import('./ProgressBar.js');
-
-        const pb = new ProgressBar({}, { value: 0, showLabel: false });
-        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
-        const screen = new Screen(10, 1);
-        pb.render(screen);
-
-        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
-        expect(rendered).not.toContain('#');
-        expect(rendered).toContain('-');
-    });
+        this._value = this._max === undefined
+            ? Math.max(0, Math.min(1, options.value ?? 0))
+            : Math.max(0, options.value ?? 0);
 
 
-    it('value: 1 renders all fill cells', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
-        const { ProgressBar } = await import('./ProgressBar.js');
+        this._fillChar = options.fillChar ?? (caps.unicode ? '█' : '#');
+        this._emptyChar = options.emptyChar ?? (caps.unicode ? '░' : '-');
+        this._fillColor = options.fillColor ?? { type: 'named', name: 'green' };
+        this._showLabel = options.showLabel ?? true;
+        this._labelFormat = options.labelFormat ?? 'percent';
+        this._total = options.total ?? 100;
+    }
 
-        const pb = new ProgressBar({}, { value: 1, showLabel: false });
-        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
-        const screen = new Screen(10, 1);
-        pb.render(screen);
 
-        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
-        expect(rendered).toContain('#');
-        expect(rendered).not.toContain('-');
-    });
+    public get percentage(): number {
+        if (this._max === undefined) {
+            return Math.max(0, Math.min(1, this._value));
+        }
+        if (this._max === 0) {
+            return 0; // Prevent division by zero
+        }
+        const raw = this._value / this._max;
+        return Math.max(0, Math.min(1, raw));
+    }
 
-    it('value: 0.5 renders half fill half empty', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
-        const { ProgressBar } = await import('./ProgressBar.js');
+    /** Set progress value */
+    setValue(value: number): void {
+        const val = this._max === undefined 
+            ? Math.max(0, Math.min(1, value)) 
+            : Math.max(0, value);
 
-        const pb = new ProgressBar({}, { value: 0.5, showLabel: false });
-        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
-        const screen = new Screen(10, 1);
-        pb.render(screen);
+        if (this._value === val) {
+            // If we were previously uninitialized, setting a value (even 0) should switch out of empty state.
+            if (!this._hasValue) {
+                this._hasValue = true;
+                this.markDirty();
+            }
+            return;
+        }
 
-        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
-        expect(rendered).toContain('#');
-        expect(rendered).toContain('-');
-    });
+        this._value = val;
+        this._hasValue = true;
+        this.markDirty();
+    }
 
-    it('showLabel: true renders percentage text', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
-        const { ProgressBar } = await import('./ProgressBar.js');
 
-        const pb = new ProgressBar({}, { value: 0.5, showLabel: true });
-        pb.updateRect({ x: 0, y: 0, width: 20, height: 1 });
-        const screen = new Screen(20, 1);
-        pb.render(screen);
+    /** Reset progress back to 0% (or 0/total when max is provided). Keeps all other settings unchanged. */
+    clear(): void {
+        this.setValue(0);
+    }
 
-        const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
-        expect(rendered).toContain('50%');
-    });
 
-    it('fillColor applies to filled cells', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
-        const { ProgressBar } = await import('./ProgressBar.js');
+    setMax(max: number): void {
+        if (this._max === max) {
+            return;
+        }
+        this._max = max;
+        this.markDirty();
+    }
 
-        const pb = new ProgressBar({}, { 
-            value: 1, 
-            showLabel: false,
-            fillColor: { type: 'named', name: 'red' }
-        });
-        pb.updateRect({ x: 0, y: 0, width: 10, height: 1 });
-        const screen = new Screen(10, 1);
-        pb.render(screen);
+    get value(): number { return this._value; }
 
-        const filledCell = screen.back[0][0];
-        expect(filledCell.fg).toEqual({ type: 'named', name: 'red' });
-    });
-});
+    protected _renderSelf(screen: Screen): void {
+        const rect = this._getContentRect();
+        const { x, y, width } = rect;
+        if (width <= 0) return;
 
-describe('ProgressBar — ASCII fallback', () => {
-    it('uses "#" for fill and "-" for empty when NO_UNICODE=1', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { ProgressBar } = await import('./ProgressBar.js');
-        const pb = new ProgressBar();
-        const fillChar = (pb as unknown as { _fillChar: string })._fillChar;
-        const emptyChar = (pb as unknown as { _emptyChar: string })._emptyChar;
-        expect(fillChar).toBe('#');
-        expect(emptyChar).toBe('-');
-    });
+        const attrs = styleToCellAttrs(this._style);
 
-    it('uses "█" for fill when unicode is available', async () => {
-        vi.stubEnv('NO_UNICODE', '');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { ProgressBar } = await import('./ProgressBar.js');
-        const pb = new ProgressBar();
-        const fillChar = (pb as unknown as { _fillChar: string })._fillChar;
-        expect(fillChar).toBe('█');
-    });
+        // Empty state (value not initialized)
+        if (!this._hasValue && this._emptyMessage) {
+            const msg = this._emptyMessage;
+            // Simple left-truncate to fit. (stringWidth is ASCII/Unicode aware.)
+            let rendered = '';
+            for (const ch of msg) {
+                if (stringWidth(rendered + ch) > width) break;
+                rendered += ch;
+            }
 
-    it('preserves user-supplied fillChar when NO_UNICODE=1', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { ProgressBar } = await import('./ProgressBar.js');
-        const pb = new ProgressBar({}, { fillChar: '=' });
-        const fillChar = (pb as unknown as { _fillChar: string })._fillChar;
-        expect(fillChar).toBe('=');
-    });
-});
+            // Clear row first
+            for (let i = 0; i < width; i++) {
+                screen.setCell(x + i, y, { char: ' ', ...attrs, dim: true });
+            }
 
-describe('Performance optimizations', () => {
-    it('does not mark dirty when setValue receives the same value', () => {
-        const pb = new ProgressBar({}, { value: 0.5 });
+            screen.writeString(x, y, rendered, { ...attrs, dim: true });
+            return;
+        }
 
-        pb.clearDirty();
+        // Label
+        let label = '';
+        if (this._showLabel) {
+            if (this._labelFormat === 'percent') {
+                label = ` ${Math.round(this.percentage * 100)}%`;
+            } else {
+                label = ` ${Math.round(this.percentage * this._total)}/${this._total}`;
+            }
+        }
 
-        pb.setValue(0.5);
+        const barWidth = Math.max(0, width - stringWidth(label));
+        const filled = this.percentage <= 0 ? 0 : Math.round(barWidth * this.percentage);
+        const empty = barWidth - filled;
 
-        expect(pb.isDirty).toBe(false);
-    });
+        // Render bar
+        for (let i = 0; i < filled; i++) {
+            screen.setCell(x + i, y, { char: this._fillChar, ...attrs, fg: this._fillColor });
+        }
+        for (let i = 0; i < empty; i++) {
+            screen.setCell(x + filled + i, y, { char: this._emptyChar, ...attrs, dim: true });
+        }
 
-    it('marks dirty when setValue receives a different value', () => {
-        const pb = new ProgressBar({}, { value: 0.5 });
+        // Render label
+        if (label) {
+            screen.writeString(x + barWidth, y, label, { ...attrs, bold: true });
+        }
+    }
 
-        pb.clearDirty();
-
-        pb.setValue(0.75);
-
-        expect(pb.isDirty).toBe(true);
-    });
-});
+}

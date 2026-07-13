@@ -64,6 +64,7 @@ export class ProgressBar extends Widget {
             : Math.max(0, options.value ?? 0);
 
         this._fillChar = options.fillChar ?? (caps.unicode ? '█' : '#');
+
         this._emptyChar = options.emptyChar ?? (caps.unicode ? '░' : '-');
         this._fillColor = options.fillColor ?? { type: 'named', name: 'green' };
         this._showLabel = options.showLabel ?? true;
