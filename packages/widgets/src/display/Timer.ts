@@ -110,7 +110,6 @@ export class Timer extends Widget {
      */
     override destroy(): void {
         this.stop();
-        this._clearInterval();
         super.destroy();
     }
 

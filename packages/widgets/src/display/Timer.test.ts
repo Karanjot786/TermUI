@@ -204,6 +204,27 @@ describe('Timer – destroy()', () => {
 });
 
 // ── 5. reset() optimization ───────────────────────────────────────────────
+describe('Timer unmount', () => {
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('stops a running timer so it can be restarted later', () => {
+        const timer = new Timer({ duration: 5_000, interval: 1_000 });
+
+        timer.start();
+        timer.unmount();
+
+        expect((timer as any)._running).toBe(false);
+        expect((timer as any)._intervalId).toBeUndefined();
+
+        timer.start();
+        vi.advanceTimersByTime(1_000);
+
+        expect(timer.getRemaining()).toBe(4_000);
+        timer.destroy();
+    });
+});
+
 describe('Timer – reset() optimization', () => {
     it('marks dirty when reset changes state', () => {
         const timer = new Timer({ duration: 5000 });
