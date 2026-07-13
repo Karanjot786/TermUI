@@ -1,5 +1,5 @@
 export interface CliArgs {
-    command: 'add' | 'list' | 'help';
+    command: 'add' | 'list' | 'init' | 'help';
     components: string[];
     dir?: string;
     dryRun: boolean;
@@ -9,7 +9,7 @@ export interface CliArgs {
 export function parseArgs(argv: string[]): CliArgs {
     const [cmd, ...rest] = argv;
     const command: CliArgs['command'] =
-        cmd === 'add' ? 'add' : cmd === 'list' ? 'list' : 'help';
+        cmd === 'add' ? 'add' : cmd === 'list' ? 'list' : cmd === 'init' ? 'init' : 'help';
 
     const components: string[] = [];
     let dir: string | undefined;
