@@ -31,6 +31,9 @@ import { animateRect, type SpringConfig, type SpringPresetName } from '@termuijs
 export interface WidgetEvents {
     key: KeyEvent;
     mouse: TermMouseEvent;
+    click: TermMouseEvent;
+    mouseenter: TermMouseEvent;
+    mouseleave: TermMouseEvent;
     focus: void;
     blur: void;
     mount: void;
@@ -109,6 +112,13 @@ export abstract class Widget {
 
     /** Whether the widget is currently focused */
     isFocused = false;
+
+    /** Optional callback for mouse click events */
+    onClick?: (event: TermMouseEvent) => void;
+    /** Optional callback for mouse enter events */
+    onMouseEnter?: (event: TermMouseEvent) => void;
+    /** Optional callback for mouse leave events */
+    onMouseLeave?: (event: TermMouseEvent) => void;
 
     /**
      * Dirty flag — true when this widget needs re-rendering.

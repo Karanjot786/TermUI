@@ -89,6 +89,7 @@ export class App {
     private _unsubUnhandledRejection: (() => void) | null = null;
     private _widgetById = new Map<string, any>(); // any: Widget shape varies; narrowed at retrieval
     private _hoveredWidgetId: string | null = null;
+    private _clickedWidgetId: string | null = null;
     private _pendingFocusState = new Map<string, boolean>();
     private _pendingFocusRetries = new Map<string, number>();
     private static readonly PENDING_FOCUS_MAX_RETRIES = 5;
@@ -224,11 +225,27 @@ export class App {
         this._unsubMouse = this.input.onMouse((event) => {
             this.events.emit('mouse', event);
 
-            if (event.type === 'mousedown' || event.type === 'mouseup') {
+            if (event.type === 'mousedown') {
+                const hitWidget = this._findWidgetAt(event.x, event.y);
+                if (hitWidget) {
+                    this._clickedWidgetId = hitWidget.id;
+                    hitWidget.events.emit('mouse', event);
+                } else {
+                    this._clickedWidgetId = null;
+                }
+            }
+
+            if (event.type === 'mouseup') {
                 const hitWidget = this._findWidgetAt(event.x, event.y);
                 if (hitWidget) {
                     hitWidget.events.emit('mouse', event);
+                    if (hitWidget.id === this._clickedWidgetId) {
+                        const clickEvent = { ...event, type: 'click' as const };
+                        hitWidget.events.emit('click' as any, clickEvent);
+                        hitWidget.onClick?.(clickEvent);
+                    }
                 }
+                this._clickedWidgetId = null;
             }
 
             if (event.type === 'mousemove') {
@@ -240,11 +257,15 @@ export class App {
                         ? this._widgetById.get(this._hoveredWidgetId)
                         : null;
                     if (prevWidget) {
-                        prevWidget.events.emit('mouseleave', { ...event, type: 'mouseleave' });
+                        const leaveEvent = { ...event, type: 'mouseleave' as const };
+                        prevWidget.events.emit('mouseleave' as any, leaveEvent);
+                        prevWidget.onMouseLeave?.(leaveEvent);
                     }
 
                     if (hitWidget) {
-                        hitWidget.events.emit('mouseenter', { ...event, type: 'mouseenter' });
+                        const enterEvent = { ...event, type: 'mouseenter' as const };
+                        hitWidget.events.emit('mouseenter' as any, enterEvent);
+                        hitWidget.onMouseEnter?.(enterEvent);
                     }
 
                     this._hoveredWidgetId = hitId;
