@@ -96,3 +96,12 @@ export function sanitizeForDisplay(text: string, allowFormatting = false): strin
 
     return out;
 }
+
+/**
+ * Sanitize text to prevent ANSI escape sequence injection.
+ * Strips all ANSI escapes unless allowFormatting is true, which allows SGR sequences.
+ */
+export function sanitizeText(text: string, allowFormatting = false): string {
+    return sanitizeForDisplay(text, allowFormatting);
+}
+

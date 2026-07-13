@@ -154,3 +154,25 @@ describe('Text – mutation regression tests', () => {
         expect(text.isDirty).toBe(true);
     });
 });
+
+describe('Text – dangerouslySetRawAnsi mode', () => {
+    it('does not sanitize anything at all when dangerouslySetRawAnsi is true', () => {
+        class TestText extends Text {
+            public testSanitize(t: string) {
+                return this.sanitize(t);
+            }
+        }
+        const text = new TestText('test', {}, { dangerouslySetRawAnsi: true });
+        expect(text.testSanitize('\x1b[2Jhi\x1b[10;20H')).toBe('\x1b[2Jhi\x1b[10;20H');
+    });
+
+    it('sanitizes inputs by default (strips SGR and other ANSI escapes)', () => {
+        const { screen } = renderText(
+            '\x1b[31mred\x1b[0m\x1b[2Jclear',
+            {},
+            {},
+        );
+        const text = screen.back[0].map(c => c.char).join('').trimEnd();
+        expect(text).toBe('redclear');
+    });
+});

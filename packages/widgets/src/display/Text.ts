@@ -2,7 +2,7 @@
 // @termuijs/widgets — Text widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, wordWrap, stringWidth } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, wordWrap, stringWidth, sanitizeText } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface TextProps {
@@ -20,6 +20,11 @@ export interface TextProps {
      * Use only for trusted formatted content (e.g., log output).
      */
     raw?: boolean;
+    /**
+     * If true, bypasses all ANSI sanitization and renders raw escape sequences.
+     * WARNING: Only use if you are absolutely sure the content is trusted.
+     */
+    dangerouslySetRawAnsi?: boolean;
 }
 
 /**
@@ -32,6 +37,7 @@ export class Text extends Widget {
     private _scrollY: number;
     private _scrollX: number;
     private _raw: boolean;
+    private _dangerouslySetRawAnsi: boolean;
 
     constructor(content: string, style: Partial<Style> = {}, props: Partial<TextProps> = {}) {
         super(style);
@@ -41,9 +47,18 @@ export class Text extends Widget {
         this._scrollY = props.scrollY ?? 0;
         this._scrollX = props.scrollX ?? 0;
         this._raw = props.raw ?? false;
+        this._dangerouslySetRawAnsi = props.dangerouslySetRawAnsi ?? false;
         // When raw mode is enabled, bypass sanitization (trusted formatted content)
-        this.sanitizeContent = !this._raw;
+        this.sanitizeContent = !this._raw && !this._dangerouslySetRawAnsi;
     }
+
+    protected override sanitize(text: string): string {
+        if (this._dangerouslySetRawAnsi) {
+            return text;
+        }
+        return sanitizeText(text, this._raw);
+    }
+
 
     /** Update the text content */
     setContent(content: string): void {
