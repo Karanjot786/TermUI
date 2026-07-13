@@ -16,7 +16,11 @@ export class Histogram extends Widget {
     constructor(style: Partial<Style> = {}, opts: HistogramOptions = {}) {
         super(style);
 
-        this._bins = opts.bins ?? 10;
+        const bins = opts.bins ?? 10;
+        if (!Number.isInteger(bins) || bins <= 0) {
+            throw new Error("Histogram bins must be a positive integer");
+        }
+        this._bins = bins;
         this._barColor = opts.barColor ?? { type: "named", name: "cyan" };
         this._xLabel = opts.xLabel;
     }
