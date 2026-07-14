@@ -3,9 +3,11 @@
 // ─────────────────────────────────────────────────────
 
 import { EventEmitter } from '@termuijs/core';
-import { createElement, ErrorBoundary, unmountAll, type VNode, getCurrentApp } from '@termuijs/jsx';
+import { createElement, ErrorBoundary, setRouterScope, unmountScoped, type VNode, getCurrentApp } from '@termuijs/jsx';
 import { type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern } from './route.js';
 import { RouterContext } from './hooks.js';
+
+let _routerIdCounter = 0;
 
 function defaultErrorScreen(err: Error): VNode {
     return {
@@ -47,10 +49,12 @@ export class Router {
     private _maxHistory: number;
     private _notFound?: (path: string) => VNode;
     private _pendingInitialPath: string | null = null;
-    public autoUnmount = true;
+    public autoUnmount = false;
     readonly events = new EventEmitter<RouterEvents>();
+    private readonly _routerId: string;
 
     constructor(options: RouterOptions = {}) {
+        this._routerId = `router_${++_routerIdCounter}`;
         this._maxHistory = options.maxHistory ?? 100;
         this._notFound = options.notFound;
 
@@ -269,7 +273,10 @@ export class Router {
                 this._currentMatch = notFoundMatch;
                 const app = getCurrentApp();
                 if (app) app.focus.clearFocus();
-                if (this.autoUnmount) unmountAll();
+                if (this.autoUnmount) {
+                    setRouterScope(this._routerId);
+                    unmountScoped(this._routerId);
+                }
                 const screen = this.wrapScreen(notFoundMatch);
                 const emitEvent = direction === 'back' ? 'back' : 'navigate';
                 this.events.emit(emitEvent, { match: notFoundMatch, screen, direction });
@@ -314,7 +321,10 @@ export class Router {
         this._currentMatch = match;
         const app = getCurrentApp();
         if (app) app.focus.clearFocus();
-        if (this.autoUnmount) unmountAll();
+        if (this.autoUnmount) {
+            setRouterScope(this._routerId);
+            unmountScoped(this._routerId);
+        }
         const screen = this.wrapScreen(match);
 
         const emitEvent = direction === 'back' ? 'back' : 'navigate';
@@ -398,7 +408,10 @@ export class Router {
         this._currentMatch = match;
         const app = getCurrentApp();
         if (app) app.focus.clearFocus();
-        if (this.autoUnmount) unmountAll();
+        if (this.autoUnmount) {
+            setRouterScope(this._routerId);
+            unmountScoped(this._routerId);
+        }
         const screen = this.wrapScreen(match);
 
         this.events.emit('back', { match, screen, direction: 'back' });
@@ -449,7 +462,10 @@ export class Router {
         this._currentMatch = match;
         const fwdApp = getCurrentApp();
         if (fwdApp) fwdApp.focus.clearFocus();
-        if (this.autoUnmount) unmountAll();
+        if (this.autoUnmount) {
+            setRouterScope(this._routerId);
+            unmountScoped(this._routerId);
+        }
         const screen = this.wrapScreen(match);
         this.events.emit('navigate', { match, screen, direction: 'forward' });
 

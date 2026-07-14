@@ -54,6 +54,9 @@ export interface Fiber {
     // ── Keymap collision tracking (dev-mode, reset each render) ──
     /** All keymap binding keys registered in the current render pass, for cross-call duplicate detection */
     _keymapKeys?: Map<string, KeyBinding>;
+    // ── Router scope tracking ──
+    /** Scope identifier for router-scoped unmounting. Fibers inherit this from their parent. */
+    routerScope?: string;
 }
 
 interface HookState {

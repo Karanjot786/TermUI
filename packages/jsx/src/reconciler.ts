@@ -443,6 +443,13 @@ function renderComponent(
         }
     }
 
+    // Inherit router scope from parent or current scope
+    if (parentFiber?.routerScope) {
+        fiber.routerScope = parentFiber.routerScope;
+    } else if (_currentRouterScope) {
+        fiber.routerScope = _currentRouterScope;
+    }
+
     // Mark ErrorBoundary fibers so the error handler can find them
     if (component === ErrorBoundary) {
         fiber.isErrorBoundary = true;
@@ -692,4 +699,42 @@ export function unmountAll(): void {
     }
     instanceMap.clear();
     fiberToWidgetMap.clear();
+}
+
+// ── Router-scoped unmounting ──
+
+let _currentRouterScope: string | null = null;
+
+/**
+ * Set the active router scope. Fibers created during subsequent renders
+ * will be tagged with this scope. Pass `null` to clear.
+ */
+export function setRouterScope(scope: string | null): void {
+    _currentRouterScope = scope;
+}
+
+/**
+ * Get the current router scope (used when creating fibers).
+ * @internal
+ */
+export function getCurrentRouterScope(): string | undefined {
+    return _currentRouterScope ?? undefined;
+}
+
+/**
+ * Unmount only fibers that belong to a specific router scope.
+ * This prevents destroying fibers belonging to other parts of the application.
+ */
+export function unmountScoped(scope: string): void {
+    const toDestroy: Array<ReturnType<typeof instanceMap.get>> = [];
+    for (const [widget, instance] of instanceMap) {
+        if (instance.fiber.routerScope === scope) {
+            toDestroy.push({ widget, instance });
+        }
+    }
+    for (const { widget, instance } of toDestroy) {
+        destroyFiber(instance.fiber);
+        instanceMap.delete(widget);
+        fiberToWidgetMap.delete(instance.fiber);
+    }
 }

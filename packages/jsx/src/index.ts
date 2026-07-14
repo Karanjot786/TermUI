@@ -86,7 +86,7 @@ export type { RenderOptions } from './render.js';
 export { getCurrentApp } from './runtime.js';
 
 // ── Reconciler (internal, but useful for testing) ──
-export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
+export { reconcile, reRenderComponent, unmountAll, setRouterScope, unmountScoped } from './reconciler.js';
 
 // ── Internal — used by @termuijs/testing ──
 export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber, resetHooksGlobals, registerCleanup } from './hooks.js';
