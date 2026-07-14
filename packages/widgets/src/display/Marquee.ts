@@ -15,6 +15,12 @@ export class Marquee extends Widget {
     private _speed: number;
     private _gap: number;
     private _offset: number = 0;
+    private _gapSpaces = '';
+    private _cachedGap = -1;
+
+    private _cachedFull = '';
+    private _cachedWidth = -1;
+    private _cachedRepeatLen = -1;
 
     constructor(text: string, style: Partial<Style> = {}, opts: MarqueeOptions = {}) {
         super(style);
@@ -22,6 +28,8 @@ export class Marquee extends Widget {
         this._direction = opts.direction ?? 'left';
         this._speed = opts.speed ?? 1;
         this._gap = opts.gap ?? 4;
+        this._gapSpaces = ' '.repeat(this._gap); 
+        this._cachedGap = this._gap;
     }
 
     tick(): void {
@@ -34,6 +42,9 @@ export class Marquee extends Widget {
         if (text === this._text) return;
         this._text = text;
         this._offset = 0;
+        this._cachedFull = '';
+        this._cachedWidth = -1;
+        this._cachedRepeatLen = -1;
         this.markDirty();
     }
 
@@ -47,15 +58,30 @@ export class Marquee extends Widget {
         const textW = stringWidth(this._text);
         if (textW === 0) return;
 
-        const gapSpaces = ' '.repeat(this._gap);
+        if (this._cachedGap !== this._gap) {
+            this._gapSpaces = ' '.repeat(this._gap);
+            this._cachedGap = this._gap;
+        }
         const repeatLen = textW + this._gap;
 
         const totalNeeded = width + repeatLen;
         const repeats = Math.ceil(totalNeeded / repeatLen);
-        let full = '';
-        for (let i = 0; i < repeats; i++) {
-            full += this._text + gapSpaces;
+
+        if (
+            this._cachedFull === '' ||
+            this._cachedWidth !== width ||
+            this._cachedRepeatLen !== repeatLen
+        ) {
+            this._cachedFull = '';
+            for (let i = 0; i < repeats; i++) {
+                this._cachedFull += this._text + this._gapSpaces;
+            }
+
+            this._cachedWidth = width;
+            this._cachedRepeatLen = repeatLen;
         }
+
+        const full = this._cachedFull;
 
         const effectiveOffset = this._direction === 'left'
             ? (this._offset % repeatLen)

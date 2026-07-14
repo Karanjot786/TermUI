@@ -9,7 +9,8 @@ import {
     stringWidth,
     truncate,
     type KeyEvent,
-    splitGraphemes
+    splitGraphemes,
+    stripAnsiEscapes,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type VimMode } from './vim.js';
@@ -34,9 +35,12 @@ export class TextInput extends Widget {
     private _onComplete?: (value: string) => void;
     public signal?: AbortSignal;
 
+    private _raw: boolean;
+
     constructor(
         style: Partial<Style> = {},
         options: {
+            value?: string;
             placeholder?: string;
             mask?: string;
             maxLength?: number;
@@ -44,6 +48,8 @@ export class TextInput extends Widget {
             onChange?: (value: string) => void;
             onSubmit?: (value: string) => void;
             signal?: AbortSignal;
+            /** If true, ANSI escape sequences in the input value are preserved. */
+            raw?: boolean;
         } = {},
     ) {
         super({ border: 'single', height: 3, ...style });
@@ -55,6 +61,16 @@ export class TextInput extends Widget {
         this._onSubmit = options.onSubmit;
         this._suggestions = options.suggestions ?? [];
         this.signal = options.signal;
+        this._raw = options.raw ?? false;
+
+        const initialVal = options.value ?? '';
+        const graphemes = splitGraphemes(initialVal);
+        if (graphemes.length > this._maxLength) {
+            this._value = graphemes.slice(0, this._maxLength).join('');
+        } else {
+            this._value = initialVal;
+        }
+        this._cursorPos = splitGraphemes(this._value).length;
 
         this.focusable = true;
 
@@ -389,7 +405,8 @@ export class TextInput extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         if (this._value.length === 0 && !this.isFocused) {
-            screen.writeString(x, y, truncate(this._placeholder, width), { ...attrs, dim: true });
+            const placeholderText = this._raw ? this._placeholder : stripAnsiEscapes(this._placeholder);
+            screen.writeString(x, y, truncate(placeholderText, width), { ...attrs, dim: true });
             return;
         }
 
@@ -438,7 +455,8 @@ export class TextInput extends Widget {
 
         const visibleGraphemes = displayGraphemes.slice(scrollGraphemeIndex, endGraphemeIndex);
         const visibleText = visibleGraphemes.join('');
-        screen.writeString(x, y, visibleText, attrs);
+        const displayText = this._raw ? visibleText : stripAnsiEscapes(visibleText);
+        screen.writeString(x, y, displayText, attrs);
 
         if (this.isFocused) {
             const cursorOffset = prefixWidths[this._cursorPos] - prefixWidths[scrollGraphemeIndex];

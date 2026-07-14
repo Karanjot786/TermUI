@@ -55,12 +55,15 @@ export class Rating extends Widget {
     focusable = true;
 
     constructor(style: Partial<Style> = {}, opts: RatingOptions = {}) {
-        const max = Math.max(opts.max ?? 5, 1);
+        const rawMax = opts.max ?? 5;
+        const max = Number.isFinite(rawMax) ? Math.max(Math.floor(rawMax), 1) : 5;
+        const rawValue = opts.value ?? 0;
+        const value = Number.isFinite(rawValue) ? rawValue : 0;
 
         super(mergeStyles(defaultStyle(), { ...style, height: 1 }));
 
         this._max = max;
-        this._value = Math.max(0, Math.min(opts.value ?? 0, max));
+        this._value = Math.max(0, Math.min(value, max));
         this._filledChar = opts.filledChar;
         this._emptyChar = opts.emptyChar;
         this._filledColor = opts.filledColor;
@@ -83,7 +86,8 @@ export class Rating extends Widget {
 
     /** Set the rating value (clamped to 0..max). Calls markDirty(). */
     setValue(value: number): void {
-        const clamped = Math.max(0, Math.min(value, this._max));
+        const finiteValue = Number.isFinite(value) ? value : 0;
+        const clamped = Math.max(0, Math.min(finiteValue, this._max));
         if (clamped === this._value) return;
         this._value = clamped;
         this.markDirty();

@@ -12,10 +12,41 @@ import { EventEmitter } from '../events/EventEmitter.js';
 import { splitGraphemes } from './grapheme.js';
 
 const ESCAPE_TIMEOUT_MS = 500;
+const DEFAULT_MAX_ESCAPE_SEQUENCE_LENGTH = 4096;
+const DEFAULT_MAX_PASTE_BUFFER_SIZE = 1024 * 1024; // 1 MB
+const DEFAULT_MAX_GRAPHENE_BUFFER_SIZE = 4096;
+const DEFAULT_MAX_KEY_EVENTS_PER_CHUNK = 1000;
 
 export interface CursorPosition {
     row: number;
     col: number;
+}
+
+export interface InputParserOptions {
+    /**
+     * Maximum byte length for an escape sequence buffer.
+     * Sequences exceeding this are discarded to prevent memory exhaustion.
+     * Default: 4096
+     */
+    maxEscapeSequenceLength?: number;
+    /**
+     * Maximum byte length for the paste buffer.
+     * Paste content exceeding this is truncated.
+     * Default: 1,048,576 (1 MB)
+     */
+    maxPasteBufferSize?: number;
+    /**
+     * Maximum byte length for the grapheme buffer.
+     * Grapheme content exceeding this is discarded.
+     * Default: 4096
+     */
+    maxGraphemeBufferSize?: number;
+    /**
+     * Maximum number of key events to emit from a single _processInput call.
+     * Prevents event loop starvation from a flood of input data.
+     * Default: 1000
+     */
+    maxKeyEventsPerChunk?: number;
 }
 
 interface InputEvents {
@@ -46,9 +77,17 @@ export class InputParser {
         reject: (error: Error) => void;
         timeout: ReturnType<typeof setTimeout>;
     }> = [];
+    private _maxEscapeSequenceLength: number;
+    private _maxPasteBufferSize: number;
+    private _maxGraphemeBufferSize: number;
+    private _maxKeyEventsPerChunk: number;
 
-    constructor(stdin: NodeJS.ReadStream) {
+    constructor(stdin: NodeJS.ReadStream, options: InputParserOptions = {}) {
         this._stdin = stdin;
+        this._maxEscapeSequenceLength = options.maxEscapeSequenceLength ?? DEFAULT_MAX_ESCAPE_SEQUENCE_LENGTH;
+        this._maxPasteBufferSize = options.maxPasteBufferSize ?? DEFAULT_MAX_PASTE_BUFFER_SIZE;
+        this._maxGraphemeBufferSize = options.maxGraphemeBufferSize ?? DEFAULT_MAX_GRAPHENE_BUFFER_SIZE;
+        this._maxKeyEventsPerChunk = options.maxKeyEventsPerChunk ?? DEFAULT_MAX_KEY_EVENTS_PER_CHUNK;
     }
 
     /** Subscribe to key events */
@@ -136,19 +175,36 @@ export class InputParser {
             const str = this._decoder.write(data);
             const endIdx = str.indexOf(PASTE_END);
             if (endIdx !== -1) {
-                this._pasteBuffer += str.substring(0, endIdx);
+                const chunk = str.substring(0, endIdx);
+                const newLen = this._pasteBuffer.length + chunk.length;
+                if (newLen > this._maxPasteBufferSize) {
+                    const excess = newLen - this._maxPasteBufferSize;
+                    this._pasteBuffer = this._pasteBuffer.slice(excess) + chunk;
+                    this._pasteBuffer = this._pasteBuffer.slice(-this._maxPasteBufferSize);
+                } else {
+                    this._pasteBuffer += chunk;
+                }
                 const pastedText = this._pasteBuffer;
                 this._isPasting = false;
                 this._pasteBuffer = '';
                 this._clearPasteTimeout();
                 this._events.emit('paste', pastedText);
-                
+
                 const remaining = str.substring(endIdx + PASTE_END.length);
                 if (remaining.length > 0) {
                     this._processInput(Buffer.from(remaining, 'utf8'));
                 }
             } else {
-                this._pasteBuffer += str;
+                const newLen = this._pasteBuffer.length + str.length;
+                if (newLen > this._maxPasteBufferSize) {
+                    const excess = newLen - this._maxPasteBufferSize;
+                    this._pasteBuffer = this._pasteBuffer.slice(excess) + str;
+                    if (this._pasteBuffer.length > this._maxPasteBufferSize) {
+                        this._pasteBuffer = this._pasteBuffer.slice(-this._maxPasteBufferSize);
+                    }
+                } else {
+                    this._pasteBuffer += str;
+                }
                 this._startPasteTimeout();
             }
             return;
@@ -156,7 +212,10 @@ export class InputParser {
 
         // If we are currently collecting an escape sequence, continue collecting it
         if (this._escapeBuffer.length > 0) {
-            this._escapeBuffer = Buffer.concat([this._escapeBuffer, data]);
+            const newBuf = Buffer.concat([this._escapeBuffer, data]);
+            this._escapeBuffer = newBuf.length > this._maxEscapeSequenceLength
+                ? newBuf.slice(0, this._maxEscapeSequenceLength)
+                : newBuf;
             if (this._escapeTimeout) {
                 clearTimeout(this._escapeTimeout);
                 this._escapeTimeout = null;
@@ -190,7 +249,9 @@ export class InputParser {
                 }
             } else {
                 this._isPasting = true;
-                this._pasteBuffer = afterStart;
+                this._pasteBuffer = afterStart.length > this._maxPasteBufferSize
+                    ? afterStart.slice(-this._maxPasteBufferSize)
+                    : afterStart;
                 this._startPasteTimeout();
             }
             return;
@@ -215,7 +276,16 @@ export class InputParser {
 
         // Decode input and append to grapheme buffer
         const decoded = this._decoder.write(data);
-        this._graphemeBuffer += decoded;
+        const newLen = this._graphemeBuffer.length + decoded.length;
+        if (newLen > this._maxGraphemeBufferSize) {
+            const excess = newLen - this._maxGraphemeBufferSize;
+            this._graphemeBuffer = this._graphemeBuffer.slice(excess) + decoded;
+            if (this._graphemeBuffer.length > this._maxGraphemeBufferSize) {
+                this._graphemeBuffer = this._graphemeBuffer.slice(-this._maxGraphemeBufferSize);
+            }
+        } else {
+            this._graphemeBuffer += decoded;
+        }
 
         if (this._graphemeTimeout) {
             clearTimeout(this._graphemeTimeout);
@@ -235,11 +305,11 @@ export class InputParser {
         const graphemes = splitGraphemes(this._graphemeBuffer);
         if (graphemes.length === 0) return;
 
-        let processCount = graphemes.length;
+        let processCount = Math.min(graphemes.length, this._maxKeyEventsPerChunk);
         // Check if the last grapheme is potentially incomplete
-        const lastGrapheme = graphemes[graphemes.length - 1];
-        if (this._isPossiblyIncompleteGrapheme(lastGrapheme)) {
-            processCount = graphemes.length - 1;
+        const lastGrapheme = graphemes[processCount - 1];
+        if (processCount > 0 && this._isPossiblyIncompleteGrapheme(lastGrapheme)) {
+            processCount = processCount - 1;
         }
 
         for (let i = 0; i < processCount; i++) {
@@ -369,15 +439,24 @@ export class InputParser {
         const seq = this._escapeBuffer.toString('utf8');
 
         const PASTE_START = '\x1b[200~';
+        const PASTE_END = '\x1b[201~';
         const pasteStartIdx = seq.indexOf(PASTE_START);
         if (pasteStartIdx !== -1) {
             this._escapeBuffer = Buffer.alloc(0);
             if (pasteStartIdx > 0) {
-                const before = seq.substring(0, pasteStartIdx);
-                this._processInput(Buffer.from(before, 'utf8'));
+                queueMicrotask(() => this._processInput(Buffer.from(seq.substring(0, pasteStartIdx), 'utf8')));
             }
-            const after = seq.substring(pasteStartIdx);
-            this._processInput(Buffer.from(after, 'utf8'));
+            const after = seq.substring(pasteStartIdx + PASTE_START.length);
+            const endIdx = after.indexOf(PASTE_END);
+            if (endIdx !== -1) {
+                this._events.emit('paste', after.substring(0, endIdx));
+                const remaining = after.substring(endIdx + PASTE_END.length);
+                if (remaining.length > 0) {
+                    this._processInput(Buffer.from(remaining, 'utf8'));
+                }
+            } else {
+                queueMicrotask(() => this._processInput(Buffer.from(after, 'utf8')));
+            }
             return;
         }
 
@@ -390,7 +469,7 @@ export class InputParser {
                 return;
             }
             // Might be incomplete mouse sequence — wait for more data (no timeout, FSM handles via _escapeBuffer)
-            if (seq.length < 20) { // safety cap
+            if (seq.length < 20) {
                 return;
             }
         }
@@ -462,8 +541,8 @@ export class InputParser {
             return;
         }
 
-        // If the sequence is getting too long, give up
-        if (seq.length > 20) {
+        // If the sequence is at or over the limit, discard it
+        if (seq.length >= this._maxEscapeSequenceLength) {
             this._escapeBuffer = Buffer.alloc(0);
             return;
         }

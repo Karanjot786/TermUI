@@ -230,6 +230,8 @@ export class List extends Widget {
             return;
         }
 
+        const hasScrollbar = this._items.length > height;
+        const itemWidth = hasScrollbar ? Math.max(0, width - 1) : width;
         const visibleCount = Math.min(this._items.length - this._scrollOffset, height);
 
         for (let i = 0; i < visibleCount; i++) {
@@ -240,7 +242,7 @@ export class List extends Widget {
             // Compose the line
             const prefix = isSelected ? (caps.unicode ? '▸ ' : '> ') : '  ';
             let line = prefix + item.label;
-            line = truncate(line, width);
+            line = truncate(line, itemWidth);
 
             // Style
             const cellStyle = {
@@ -254,7 +256,7 @@ export class List extends Widget {
 
             // Fill rest of line for inverse highlight
             if (isSelected && this.isFocused) {
-                const remaining = width - stringWidth(line);
+                const remaining = itemWidth - stringWidth(line);
                 for (let c = 0; c < remaining; c++) {
                     screen.setCell(x + stringWidth(line) + c, y + i, { char: ' ', ...cellStyle });
                 }

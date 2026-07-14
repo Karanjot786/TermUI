@@ -152,4 +152,11 @@ describe('OrderedList', () => {
         });
     });
 
+    describe('getItems getter API', () => {
+        it('returns correct items', () => {
+            const items = [{ text: 'Item 1' }];
+            const list = makeList(items);
+            expect(list.getItems()).toBe(items);
+        });
+    });
 });

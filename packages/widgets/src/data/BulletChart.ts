@@ -4,6 +4,7 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { validateFinite } from './utils.js';
 
 export interface BulletRange {
     to: number;
@@ -40,12 +41,12 @@ export class BulletChart extends Widget {
     }
 
     setValue(value: number): void {
-        this._value = Math.max(0, Math.min(this._max, value));
+        this._value = validateFinite(value, 0, 0, this._max);
         this.markDirty();
     }
 
     setTarget(target: number): void {
-        this._target = Math.max(0, Math.min(this._max, target));
+        this._target = validateFinite(target, 0, 0, this._max);
         this.markDirty();
     }
 

@@ -36,15 +36,18 @@ export async function runAddCommand(options: AddCommandOptions): Promise<void> {
     }
 
     const registry = await fetchRegistryIndex();
-    const componentEntry = findComponentEntry(registry, componentName);
+    const indexEntry = findComponentEntry(registry, componentName);
 
-    if (!componentEntry) {
+    if (!indexEntry) {
         printAvailableComponents(registry);
         throw new Error(`Component "${componentName}" not found in registry.`);
     }
 
+    const componentEntry =
+        await fetchComponentEntry(indexEntry.slug ?? indexEntry.name) ??
+        indexEntry;
     const outputRoot = resolve(process.cwd(), options.dir ?? "src/components");
-    const componentDirName = componentEntry.slug ?? componentEntry.name;
+    const componentDirName = indexEntry.slug ?? componentEntry.slug ?? indexEntry.name;
     const destinationRoot = join(outputRoot, componentDirName);
     const fileEntries = await resolveComponentFiles(componentEntry);
 
@@ -74,7 +77,7 @@ export async function runAddCommand(options: AddCommandOptions): Promise<void> {
     console.log();
     console.log("  Import it with:");
     console.log(
-        `    import { ${pascalCase(componentEntry.name)} } from './components/${componentEntry.name}';`,
+        `    import { ${pascalCase(componentEntry.name)} } from './components/${componentDirName}';`,
     );
 }
 
@@ -88,7 +91,28 @@ async function fetchRegistryIndex(): Promise<RegistryIndex> {
         );
     }
 
-    return await response.json();
+    return await response.json() as RegistryIndex;
+}
+
+async function fetchComponentEntry(componentSlug: string): Promise<RegistryComponent | undefined> {
+    const url = `${REGISTRY_BASE_URL}/r/${componentSlug}.json`;
+    const response = await fetch(url);
+
+    if (response.status === 404) {
+        return undefined;
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to fetch component "${componentSlug}" from ${url}: ${response.status} ${response.statusText}`,
+        );
+    }
+
+    if (typeof response.json !== "function") {
+        return undefined;
+    }
+
+    return await response.json() as RegistryComponent;
 }
 
 function findComponentEntry(

@@ -680,6 +680,54 @@ describe('middleware', () => {
             expect(useStore.getState().count).toBe(1)
         })
     })
+
+    it('setState after mutate inside batch does not lose intermediate state', async () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            name: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            // mutate creates the batch entry (commit captures nextState const)
+            useStore.mutate((draft) => {
+                draft.count = 1
+            })
+            // setState updates the existing entry but must also update the commit closure
+            useStore.setState({ name: 'test' })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ count: 1, name: 'test' })
+    })
+
+    it('nested batch with mutate and setState does not lose state', async () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            name: '',
+            label: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ count: 1 })
+            batch(() => {
+                useStore.mutate((draft) => {
+                    draft.name = 'inner'
+                })
+                useStore.setState({ label: 'nested' })
+            })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ count: 1, name: 'inner', label: 'nested' })
+    })
 })
 
 describe('persistence', () => {

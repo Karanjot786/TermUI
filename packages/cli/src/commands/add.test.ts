@@ -22,6 +22,16 @@ describe('writeComponentFiles', () => {
         expect(existsSync(join(root, 'spinner', 'spinner.ts'))).toBe(false);
     });
 
+    it('strips registry component prefixes before writing files', () => {
+        const root = mkdtempSync(join(tmpdir(), 'tcli-'));
+        const written = writeComponentFiles(root, 'spinner',
+            [{ path: 'registry/components/spinner/index.ts', content: 'x' }], { dryRun: false });
+
+        const target = join(root, 'spinner', 'index.ts');
+        expect(existsSync(target)).toBe(true);
+        expect(written).toEqual([target]);
+    });
+
     it('rejects a file path that escapes the destination root', () => {
         const root = mkdtempSync(join(tmpdir(), 'tcli-'));
         expect(() => writeComponentFiles(root, 'spinner',

@@ -12,7 +12,8 @@ import {
     styleToCellAttrs,
     caps,
     truncate,
-    stringWidth
+    stringWidth,
+    splitGraphemes
 } from '@termuijs/core';
 import { Widget } from '@termuijs/widgets';
 
@@ -143,7 +144,7 @@ export class Autocomplete extends Widget {
 
         if (key === 'backspace') {
             if (this._query.length > 0) {
-                this._query = this._query.slice(0, -1);
+                this._query = splitGraphemes(this._query).slice(0, -1).join('');
                 this._isOpen = true;
                 this._selectedIndex = -1;
                 this._onChange?.(this._query);

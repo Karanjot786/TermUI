@@ -2,9 +2,10 @@
 // @termuijs/core — Screen buffer (double-buffered cell grid)
 // ─────────────────────────────────────────────────────
 
-import type { Color } from '../style/Color.js';
+import { type Color, colorToRgb } from '../style/Color.js';
 import { stringWidth, segmenter } from '../utils/unicode.js';
 import { stripAnsiControl } from '../utils/ansi.js';
+import { stripAnsiEscapes, sanitizeForDisplay } from './sanitize.js';
 import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
@@ -106,6 +107,30 @@ function colorsEqual(a: Color, b: Color): boolean {
     }
 }
 
+/** ASCII hex digit char code -> 0-15, branch-free-ish (no string allocation). */
+function hexDigit(code: number): number {
+    // '0'-'9' = 48-57, 'A'-'F' = 65-70, 'a'-'f' = 97-102
+    return code >= 97 ? code - 87 : code >= 65 ? code - 55 : code - 48;
+}
+
+function hashColor(color: Color, hash: number): number {
+    switch (color.type) {
+        case 'none':    return ((hash << 3) - hash) | 0;
+        case 'named':   return ((hash << 5) - hash + color.name.charCodeAt(0) * 256 + color.name.charCodeAt(color.name.length - 1)) | 0;
+        case 'ansi256': return ((hash << 7) - hash + color.code) | 0;
+        case 'rgb':     return ((hash << 9) - hash + color.r * 65536 + color.g * 256 + color.b) | 0;
+        case 'hex':     {
+            // '#rrggbb' — decode the 3 byte pairs directly via charCodeAt instead of
+            // looping over the string (this runs per-cell in the render hot path).
+            const s = color.hex;
+            const r = (hexDigit(s.charCodeAt(1)) << 4) | hexDigit(s.charCodeAt(2));
+            const g = (hexDigit(s.charCodeAt(3)) << 4) | hexDigit(s.charCodeAt(4));
+            const b = (hexDigit(s.charCodeAt(5)) << 4) | hexDigit(s.charCodeAt(6));
+            return ((hash << 9) - hash + r * 65536 + g * 256 + b) | 0;
+        }
+    }
+}
+
 /**
  * Double-buffered 2D cell grid for the terminal.
  *
@@ -198,8 +223,10 @@ export class Screen {
         let hash = 0;
         for (const cell of this.back[row]) {
             if (cell.width === 0) continue;
-            const fg = cell.fg.type;
-            const bg = cell.bg.type;
+            
+            hash = hashColor(cell.fg, hash);
+            hash = hashColor(cell.bg, hash);
+            
             const bits =
                 (cell.bold ? 1 : 0) |
                 (cell.italic ? 2 : 0) |
@@ -207,8 +234,9 @@ export class Screen {
                 (cell.dim ? 8 : 0) |
                 (cell.strikethrough ? 16 : 0) |
                 (cell.inverse ? 32 : 0);
-            const seed = fg.charCodeAt(0) * 65536 + bg.charCodeAt(0) * 4096 + bits;
-            hash = ((hash << 7) - hash + seed) | 0;
+                
+            hash = ((hash << 7) - hash + bits) | 0;
+            
             if (cell.link) {
                 for (let i = 0; i < cell.link.length; i++)
                     hash = ((hash << 5) - hash + cell.link.charCodeAt(i)) | 0;
@@ -343,7 +371,7 @@ export class Screen {
         if (!(row >= 0 && row < this._rows)) return;
 
         // Strip ANSI control sequences from user-supplied content to prevent escape injection
-        const safeStr = stripAnsiControl(str);
+        const safeStr = stripAnsiEscapes(str);
         let x = col;
         
         const segments = segmenter.segment(safeStr);
@@ -385,6 +413,29 @@ export class Screen {
 
             x += width;
         }
+    }
+
+    /**
+     * Write a string to the back buffer.
+     *
+     * TermUI's cell grid does not interpret inline ANSI codes — colors and
+     * attributes are applied via the `style` param / cell attrs, not via
+     * escape sequences embedded in `str`. Any escape sequences in `str`
+     * (including SGR) would only render as visible garbage characters, so
+     * this method currently delegates to `writeString`, which strips all of
+     * them — identical behavior to calling `writeString` directly. It exists
+     * as a distinct, forward-compatible entry point in case formatted-string
+     * support is added later; it does not currently preserve SGR.
+     */
+    writeFormattedString(
+        col: number,
+        row: number,
+        str: string,
+        style: Partial<Omit<Cell, 'char' | 'width'>> = {},
+    ): void {
+        // Delegate to writeString — the cell grid cannot interpret inline
+        // ANSI codes, so all text paths must be sanitized.
+        this.writeString(col, row, str, style);
     }
 
     /**
@@ -480,14 +531,83 @@ export class Screen {
      * Export current screen as SVG.
      */
     exportSVG(): string {
-        return `
-<svg xmlns="http://www.w3.org/2000/svg"
-     width="${this._cols * 8}"
-     height="${this._rows * 16}">
-    <text x="10" y="20">
-        Terminal Export
-    </text>
-</svg>`;
+        const bgElements: string[] = [];
+        const textElements: string[] = [];
+
+        for (let r = 0; r < this._rows; r++) {
+            for (let c = 0; c < this._cols; c++) {
+                const cell = this.back[r][c];
+                if (cell.width === 0) {
+                    continue;
+                }
+
+                // Resolve colors (considering inverse)
+                let fg = cell.fg;
+                let bg = cell.bg;
+                if (cell.inverse) {
+                    fg = cell.bg;
+                    bg = cell.fg;
+                }
+
+                let fgHex = '#ffffff';
+                if (fg.type !== 'none') {
+                    fgHex = rgbToHex(colorToRgb(fg));
+                } else if (cell.inverse) {
+                    fgHex = '#000000';
+                }
+
+                let bgHex: string | null = null;
+                if (bg.type !== 'none') {
+                    bgHex = rgbToHex(colorToRgb(bg));
+                } else if (cell.inverse) {
+                    bgHex = '#ffffff';
+                }
+
+                // Draw background
+                if (bgHex) {
+                    const rectWidth = cell.width * 8;
+                    bgElements.push(
+                        `    <rect x="${c * 8}" y="${r * 16}" width="${rectWidth}" height="16" fill="${bgHex}" />`
+                    );
+                }
+
+                // Draw text
+                const char = cell.char;
+                if (char && char !== ' ' && char !== '\0') {
+                    const escaped = escapeXml(char);
+                    const attrs: string[] = [];
+                    
+                    if (cell.bold) attrs.push('font-weight="bold"');
+                    if (cell.italic) attrs.push('font-style="italic"');
+                    
+                    const decors: string[] = [];
+                    if (cell.underline) decors.push('underline');
+                    if (cell.strikethrough) decors.push('line-through');
+                    if (decors.length > 0) {
+                        attrs.push(`text-decoration="${decors.join(' ')}"`);
+                    }
+                    
+                    if (cell.dim) {
+                        attrs.push('opacity="0.6"');
+                    }
+
+                    const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
+                    textElements.push(
+                        `    <text x="${c * 8}" y="${r * 16 + 12}" fill="${fgHex}" font-family="monospace" font-size="14"${attrStr}>${escaped}</text>`
+                    );
+                }
+            }
+        }
+
+        const lines = [
+            `<svg xmlns="http://www.w3.org/2000/svg" width="${this._cols * 8}" height="${this._rows * 16}" xml:space="preserve">`,
+            `    <rect width="${this._cols * 8}" height="${this._rows * 16}" fill="#121212" />`,
+            ...bgElements,
+            ...textElements,
+            `</svg>`
+        ];
+
+        return lines.join('\n');
     }
 
     /**
@@ -560,4 +680,22 @@ export class Screen {
         this._backdropFilters = [];
     }
 
+}
+
+function escapeXml(str: string): string {
+    return str.replace(/[&<>"']/g, (m) => {
+        switch (m) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&apos;';
+            default: return m;
+        }
+    });
+}
+
+function rgbToHex(rgb: [number, number, number]): string {
+    const [r, g, b] = rgb;
+    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
 }
