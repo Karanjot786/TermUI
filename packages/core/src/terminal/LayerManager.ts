@@ -30,6 +30,8 @@ export interface Layer {
  * An empty cell with no explicit colors is considered transparent.
  */
 function isCellTransparent(cell: Cell): boolean {
+    // Wide character continuation cells (empty string, zero width) are transparent
+    if (cell.char === '' && cell.width === 0) return true;
     return (
         cell.char === ' ' &&
         cell.fg.type === 'none' &&
@@ -242,7 +244,19 @@ export class LayerManager {
                         continue;
                     }
                     Object.assign(backRow[c], cell);
-                    c++;
+
+                    // Handle wide characters atomically: write continuation
+                    // cells and advance by the full width so continuation
+                    // cells (width 0, char '') aren't processed individually
+                    // where they'd be treated as non-transparent and
+                    // overwrite valid screen content.
+                    const w = cell.width ?? 1;
+                    for (let i = 1; i < w; i++) {
+                        if (c + i < maxCol) {
+                            Object.assign(backRow[c + i], layerRow[c + i]);
+                        }
+                    }
+                    c += w;
                 }
             }
         }

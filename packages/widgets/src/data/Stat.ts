@@ -1,5 +1,6 @@
 import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { validateFinite } from './utils.js';
 
 export interface StatOptions {
     delta?: number;
@@ -26,7 +27,7 @@ export class Stat extends Widget {
     }
 
     setDelta(delta: number | undefined): void {
-        this._delta = delta;
+        this._delta = delta !== undefined ? validateFinite(delta) : undefined;
         this.markDirty();
     }
 

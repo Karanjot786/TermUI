@@ -5,17 +5,15 @@ import { TypingIndicator } from './TypingIndicator.js';
 describe('TypingIndicator', () => {
     let screen: Screen;
 
-    let originalMotion: boolean;
+
 
     beforeEach(() => {
         screen = new Screen(20, 5);
         vi.useFakeTimers();
-        originalMotion = caps.motion;
-        Object.defineProperty(caps, 'motion', { value: true, configurable: true });
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     });
 
     afterEach(() => {
-        Object.defineProperty(caps, 'motion', { value: originalMotion, configurable: true });
         vi.useRealTimers();
         vi.restoreAllMocks();
     });
@@ -67,7 +65,7 @@ describe('TypingIndicator', () => {
     });
 
     it('respects caps.motion (reduced motion)', () => {
-        Object.defineProperty(caps, 'motion', { value: false, configurable: true });
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
         
         const indicator = new TypingIndicator({}, { fallbackText: 'Typing...' });
         indicator.updateRect({ x: 0, y: 0, width: 15, height: 1 });

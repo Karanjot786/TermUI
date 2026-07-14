@@ -153,6 +153,15 @@ describe('Tree', () => {
             expect(tree.selectedIndex).toBe(1);
         });
 
+        it('supports standard KeyEvent objects', () => {
+            const nodes = makeNodes();
+            const tree = makeTree(nodes);
+            expect(tree.selectedIndex).toBe(0);
+
+            tree.handleKey({ key: 'down', ch: '', ctrl: false, meta: false, shift: false });
+            expect(tree.selectedIndex).toBe(1);
+        });
+
         it('j moves cursor down (vim keybinding)', () => {
             vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
             const nodes = makeNodes();

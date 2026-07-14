@@ -10,6 +10,7 @@ import {
     stringWidth,
     caps,
     normalizeNavigationKey,
+    type KeyEvent,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { computeRange } from '../input/virtual-scroll.js';
@@ -181,8 +182,9 @@ export class Tree extends Widget {
      * Handle a key event. Call this from your app's key-routing logic
      * when this widget is focused.
      */
-    handleKey(key: string): void {
-        const normalized = normalizeNavigationKey(key.toLowerCase());
+    handleKey(event: KeyEvent | string): void {
+        const keyName = typeof event === 'string' ? event : event.key;
+        const normalized = normalizeNavigationKey(keyName.toLowerCase());
 
         // Handle selection via spacebar
         if ((normalized === ' ' || normalized === 'space') && this._selectable) {

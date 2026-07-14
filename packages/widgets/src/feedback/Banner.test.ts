@@ -295,4 +295,13 @@ describe('Banner', () => {
         expect(cell(screen, 0, 3).char).not.toBe(' ');
         expect(cell(screen, 9, 3).char).not.toBe(' ');
     });
+
+    describe('Banner — getters', () => {
+        it('returns correct title, body, and variant via getters', () => {
+            const banner = new Banner({}, { title: 'T', body: 'B', variant: 'warning' });
+            expect(banner.getTitle()).toBe('T');
+            expect(banner.getBody()).toBe('B');
+            expect(banner.getVariant()).toBe('warning');
+        });
+    });
 });

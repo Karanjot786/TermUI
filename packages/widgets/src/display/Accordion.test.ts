@@ -389,4 +389,11 @@ describe('Accordion', () => {
             vi.restoreAllMocks();
         });
     });
+
+    describe('12. getSections getter API', () => {
+        it('returns correct sections', () => {
+            const accordion = makeAccordion(SECTIONS);
+            expect(accordion.getSections()).toBe(SECTIONS);
+        });
+    });
 });

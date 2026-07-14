@@ -22,3 +22,5 @@ export type {
 export type { EqualityFn } from './shallow.js';
 export { shallow } from './shallow.js';
 
+export { setIn, updateIn, deleteIn } from './immutable.js';
+

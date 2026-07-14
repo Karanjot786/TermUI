@@ -61,6 +61,11 @@ TermUI is managed as a Bun workspace monorepo. All packages are located under th
   * `widgets` $\leftarrow$ `ui`
 * **Imports**: Do not import across packages unless explicitly specified in the issue. If package `A` depends on `B`, specify the dependency in `packages/A/package.json` under `dependencies` as `"@termuijs/B": "workspace:*"` and run `bun install` from the root.
 
+For testing guidelines and recommended practices, see
+`docs/TESTING_BEST_PRACTICES.md`.
+
+## Typecheck
+
 ### Directory Structure of a Package
 Each package under `packages/` follows a standardized layout:
 
