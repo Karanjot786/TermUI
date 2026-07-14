@@ -471,9 +471,12 @@ function renderComponent(
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
             destroyFiber(fiber);
+            const savedParent = _parentFiber;
             _parentFiber = boundary;
             const fallbackVNode = boundary.errorFallback(error);
-            return reconcile(fallbackVNode);
+            const widget = reconcile(fallbackVNode);
+            _parentFiber = savedParent;
+            return widget;
         }
         // No boundary found — destroy fiber and show default error widget
         destroyFiber(fiber);
@@ -595,8 +598,11 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
             destroyFiber(fiber);
             _pruneInstancesForWidget(instance.widget);
             invalidateLayout(instance.widget.getLayoutNode());
+            const savedParent = _parentFiber;
             _parentFiber = boundary;
-            return reconcile(boundary.errorFallback(err));
+            const widget = reconcile(boundary.errorFallback(err));
+            _parentFiber = savedParent;
+            return widget;
         }
         // No error boundary found — destroy fiber and prune old widget
         destroyFiber(fiber);

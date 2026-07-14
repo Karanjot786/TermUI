@@ -34,6 +34,17 @@ describe("SurveyPrompt", () => {
         expect(text).toContain("1 / 2");
     });
 
+    it("renders content inside the content rect", () => {
+        const prompt = new SurveyPrompt(QUESTIONS, { border: "single" });
+        const screen = new Screen(40, 10);
+
+        prompt.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        prompt.render(screen);
+
+        expect(screen.back[1][0].char).not.toBe("1");
+        expect(screen.back[1][1].char).toBe("1");
+    });
+
     it("enter on a text question advances to question 2", () => {
         const prompt = new SurveyPrompt(QUESTIONS);
 

@@ -31,6 +31,9 @@ import { animateRect, type SpringConfig, type SpringPresetName } from '@termuijs
 export interface WidgetEvents {
     key: KeyEvent;
     mouse: TermMouseEvent;
+    click: TermMouseEvent;
+    mouseenter: TermMouseEvent;
+    mouseleave: TermMouseEvent;
     focus: void;
     blur: void;
     mount: void;
@@ -110,6 +113,13 @@ export abstract class Widget {
     /** Whether the widget is currently focused */
     isFocused = false;
 
+    /** Optional callback for mouse click events */
+    onClick?: (event: TermMouseEvent) => void;
+    /** Optional callback for mouse enter events */
+    onMouseEnter?: (event: TermMouseEvent) => void;
+    /** Optional callback for mouse leave events */
+    onMouseLeave?: (event: TermMouseEvent) => void;
+
     /**
      * Dirty flag — true when this widget needs re-rendering.
      * Newly created widgets start dirty.
@@ -162,6 +172,16 @@ export abstract class Widget {
 
     /** Get the current style */
     get style(): Style { return this._style; }
+
+    /** Get the z-index stacking order */
+    get zIndex(): number {
+        return this._style.zIndex ?? 0;
+    }
+
+    /** Set the z-index stacking order */
+    set zIndex(value: number) {
+        this.setStyle({ zIndex: value });
+    }
 
     get a11y(): A11yProps | undefined { return this._a11y; }
 
@@ -311,7 +331,12 @@ export abstract class Widget {
         this._renderBorder(screen);
 
         // Render children
-        for (const child of this._children) {
+        const sortedChildren = [...this._children].sort((a, b) => {
+            const az = a.style.zIndex ?? 0;
+            const bz = b.style.zIndex ?? 0;
+            return az - bz;
+        });
+        for (const child of sortedChildren) {
             child.render(screen);
         }
 

@@ -19,12 +19,26 @@ export class EmptyState extends Widget {
         this._icon = opts.icon ?? (caps.unicode ? '📭' : '[]');
         if (opts.description !== undefined) this._description = opts.description;
         if (opts.hint !== undefined) this._hint = opts.hint;
+        this._updateA11y();
+    }
+  
+    private _updateA11y(): void {
+        const parts = [this._title];
+    
+        if (this._description) parts.push(this._description);
+        if (this._hint) parts.push(this._hint);
+    
+        this.setA11y({
+            role: 'region',
+            label: parts.join('. '),
+        });
     }
 
     setTitle(title: string): void {
         if (this._title === title) return;
 
         this._title = title;
+        this._updateA11y();
         this.markDirty();
     }
 
@@ -32,6 +46,7 @@ export class EmptyState extends Widget {
         if (this._description === description) return;
 
         this._description = description;
+        this._updateA11y();
         this.markDirty();
     }
 
@@ -46,6 +61,7 @@ export class EmptyState extends Widget {
         if (this._hint === hint) return;
     
         this._hint = hint;
+        this._updateA11y();
         this.markDirty();
     }
 

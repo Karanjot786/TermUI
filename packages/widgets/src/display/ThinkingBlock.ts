@@ -28,6 +28,9 @@ export class ThinkingBlock extends Widget {
     private _dots = '';
     private _timerUnsub?: () => void;
 
+    private _wrappedLines: string[] = [];
+    private _cachedWrapWidth = -1;
+
     private _topBorder = '';
     private _bottomBorder = '';
     private _cachedBorderWidth = -1;
@@ -45,11 +48,17 @@ export class ThinkingBlock extends Widget {
 
     appendText(chunk: string): void {
         this._text += chunk;
+        this._wrappedLines = [];
+        this._cachedWrapWidth = -1;
         this.markDirty();
     }
 
     setStreaming(streaming: boolean): void {
+        if (this._streaming === streaming) return;
+    
         this._streaming = streaming;
+        this._wrappedLines = [];
+        this._cachedWrapWidth = -1;
         this.markDirty();
     }
 
@@ -74,7 +83,10 @@ export class ThinkingBlock extends Widget {
                 this._dots.length >= 3
                     ? ''
                     : this._dots + '.';
-
+            
+            this._wrappedLines = [];
+            this._cachedWrapWidth = -1;
+            
             this.markDirty();
         });
     }
@@ -125,13 +137,20 @@ export class ThinkingBlock extends Widget {
             attrs,
         );
 
-        const wrapped = wordWrap(
-            this._text +
-                (this._streaming ? `\n\nthinking${this._dots}` : ''),
-            Math.max(1, boxWidth - 4),
-        );
+        const wrapWidth = Math.max(1, boxWidth - 4);
 
-        const lines = wrapped.split('\n');
+        if (this._cachedWrapWidth !== wrapWidth || this._wrappedLines.length === 0) {
+            const wrapped = wordWrap(
+                this._text +
+                    (this._streaming ? `\n\nthinking${this._dots}` : ''),
+                wrapWidth,
+            );
+        
+            this._wrappedLines = wrapped.split('\n');
+            this._cachedWrapWidth = wrapWidth;
+        }
+        
+        const lines = this._wrappedLines;
 
         const availableHeight = Math.max(0, rect.height - 2);
         const limit = Math.min(lines.length, availableHeight);
