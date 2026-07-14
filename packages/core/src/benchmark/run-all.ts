@@ -11,6 +11,7 @@
 //   - one JSON line prefixed with `BENCH_RESULT_JSON:` for CI parsing
 
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const report = (msg: string) => process.stdout.write(msg + '\n');
 
@@ -113,7 +114,7 @@ async function main(): Promise<void> {
         const fullPath = new URL(benchmarkFile, benchmarkDir);
         report(`Running ${benchmarkFile}...`);
         try {
-            const result = await runBenchmark(fullPath.pathname);
+            const result = await runBenchmark(fileURLToPath(fullPath));
             results.push(result);
             report(`  ✓ ${result.benchmark} completed\n`);
         } catch (error) {

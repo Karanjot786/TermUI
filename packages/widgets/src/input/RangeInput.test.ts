@@ -23,6 +23,29 @@ describe('RangeInput', () => {
         expect(r.getHigh()).toBe(100);
     });
 
+    it('constructs with custom low and high and clamps them', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price', {}, { min: 10, max: 90, low: 30, high: 70 });
+        expect(r.getLow()).toBe(30);
+        expect(r.getHigh()).toBe(70);
+
+        const clamped = new RangeInput('Price', {}, { min: 10, max: 90, low: 5, high: 95 });
+        expect(clamped.getLow()).toBe(10);
+        expect(clamped.getHigh()).toBe(90);
+    });
+
+    it('clamps low and high into range when both are out of range on the same side', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price', {}, { min: 10, max: 90, low: 95, high: 95 });
+        expect(r.getLow()).toBeGreaterThanOrEqual(10);
+        expect(r.getLow()).toBeLessThanOrEqual(90);
+        expect(r.getHigh()).toBeGreaterThanOrEqual(10);
+        expect(r.getHigh()).toBeLessThanOrEqual(90);
+        expect(r.getLow()).toBeLessThanOrEqual(r.getHigh());
+        expect(r.getLow()).toBe(90);
+        expect(r.getHigh()).toBe(90);
+    });
+
     it('setLow and setHigh work', async () => {
         const { RangeInput } = await import('./RangeInput.js');
         const r = new RangeInput('Price');
@@ -129,6 +152,30 @@ describe('RangeInput', () => {
 
         r.handleKey(makeKey('right')); // low 0 → 1
         expect(onChange).toHaveBeenCalledWith(1, 100);
+    });
+
+    it('arrow keys clamp low handle at min boundary', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price');
+        r.handleKey(makeKey('left')); // already at min (0), should stay 0
+        expect(r.getLow()).toBe(0);
+    });
+
+    it('arrow keys clamp high handle at max boundary', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price');
+        r.handleKey(makeKey('tab')); // switch to high handle
+        r.handleKey(makeKey('right')); // already at max (100), should stay 100
+        expect(r.getHigh()).toBe(100);
+    });
+
+    it('respects custom step option for arrow key movement', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price', {}, { step: 5 });
+        r.handleKey(makeKey('right')); // low 0 → 5
+        expect(r.getLow()).toBe(5);
+        r.handleKey(makeKey('right')); // low 5 → 10
+        expect(r.getLow()).toBe(10);
     });
 
     it('renders unicode track chars', async () => {

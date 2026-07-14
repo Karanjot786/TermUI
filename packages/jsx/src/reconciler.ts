@@ -22,6 +22,8 @@ import {
 } from './hooks.js';
 import { ErrorBoundary } from './error-boundary.js';
 import { Suspense } from './Suspense.js';
+import { scheduleRender, currentFiber } from './hooks.js';
+import { instanceMap, fiberToWidgetMap, suspendedFibers } from './globals.js';
 // ── Component instance tracking ──
 
 interface ComponentInstance {
@@ -33,13 +35,6 @@ interface ComponentInstance {
     childInstances: ComponentInstance[];
     lastVNode: VNode | Widget;
 }
-
-const _instanceMap = new Map<Widget, ComponentInstance>();
-/** Reverse map: Fiber → Widget for O(1) cleanup in destroyFiber */
-const _fiberToWidgetMap = new Map<Fiber, Widget>();
-// Expose globally so render() and @termuijs/testing can dispatch to useInput handlers and destroyFiber
-(globalThis as any).__termuijs_instances = _instanceMap;
-(globalThis as any).__termuijs_fiberToWidget = _fiberToWidgetMap;
 
 // ── Parent fiber tracking ──
 // Tracks the currently-rendering fiber so child components
@@ -132,8 +127,7 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
             return new Grid({ ...style }, {
                 columns: props.columns ?? 12,
                 gap: props.gap,
-                rowGap: props.rowGap,
-                colGap: props.colGap,
+                rows: props.rows,
             });
         }
 
@@ -353,6 +347,10 @@ function defaultErrorVNode(err: Error): VNode {
  * (_currentFiber, _parentFiber) is correctly set, so the fallback subtree
  * has proper parent references, context propagation, and error boundary
  * traversal.
+ *
+ * The thrown Promise is stored so that when it resolves, a re-render of
+ * this boundary is scheduled. On re-render the lazy component's module is
+ * available and the real content replaces the fallback.
  */
 function SuspenseBoundary(props: Record<string, any>): any {
     const children = Array.isArray(props.children) ? props.children : [props.children];
@@ -362,10 +360,23 @@ function SuspenseBoundary(props: Record<string, any>): any {
         children,
     } as any;
 
+    // Capture fiber before reconcile: renderComponent clears _currentFiber
+    // when a Promise is thrown (to prevent stale hook context for error
+    // boundaries), so currentFiber() in the catch block would fail.
+    const thisFiber = currentFiber();
+
     try {
         return reconcile(child);
     } catch (err) {
         if (err instanceof Promise) {
+            suspendedFibers.set(thisFiber.id, { promise: err, fiber: thisFiber });
+            err.then(() => {
+                const entry = suspendedFibers.get(thisFiber.id);
+                if (entry && entry.promise === err) {
+                    suspendedFibers.delete(thisFiber.id);
+                    scheduleRender(thisFiber);
+                }
+            });
             return reconcile(props.fallback ?? null);
         }
         throw err;
@@ -460,9 +471,12 @@ function renderComponent(
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
             destroyFiber(fiber);
+            const savedParent = _parentFiber;
             _parentFiber = boundary;
             const fallbackVNode = boundary.errorFallback(error);
-            return reconcile(fallbackVNode);
+            const widget = reconcile(fallbackVNode);
+            _parentFiber = savedParent;
+            return widget;
         }
         // No boundary found — destroy fiber and show default error widget
         destroyFiber(fiber);
@@ -478,7 +492,7 @@ function renderComponent(
         runLayoutEffects(fiber);
         runEffects(fiber);
 
-        _instanceMap.set(vnode, {
+        instanceMap.set(vnode, {
             fiber,
             component,
             props,
@@ -487,7 +501,7 @@ function renderComponent(
             childInstances: [],
             lastVNode: vnode,
         });
-        _fiberToWidgetMap.set(fiber, vnode);
+        fiberToWidgetMap.set(fiber, vnode);
 
         return vnode;
     }
@@ -506,7 +520,7 @@ function renderComponent(
     runEffects(fiber);
 
     // Store instance for cleanup and re-renders
-    _instanceMap.set(widget, {
+    instanceMap.set(widget, {
         fiber,
         component,
         props,
@@ -515,23 +529,34 @@ function renderComponent(
         childInstances: [],
         lastVNode: vnode,
     });
-    _fiberToWidgetMap.set(fiber, widget);
+    fiberToWidgetMap.set(fiber, widget);
 
     return widget;
 }
 
 /**
- * Recursively remove stale _instanceMap entries for a widget and all its
+ * Recursively remove stale instanceMap entries for a widget and all its
  * descendants. Fiber destruction is handled separately by
  * cleanupStaleChildFibers for stale subtrees after each reconcile pass.
  */
 /** @internal exposed for testing */
 export function _pruneInstancesForWidget(widget: Widget): void {
-    const instance = _instanceMap.get(widget);
-    if (instance && _fiberToWidgetMap.get(instance.fiber) === widget) {
-        _fiberToWidgetMap.delete(instance.fiber);
+    const inst = instanceMap.get(widget);
+    if (inst && fiberToWidgetMap.get(inst.fiber) === widget) {
+        fiberToWidgetMap.delete(inst.fiber);
     }
-    _instanceMap.delete(widget);
+    instanceMap.delete(widget);
+
+    // Recursively clean up portal children registered on the fiber
+    // so they are removed from their target widgets when the portal owner is destroyed.
+    if (inst?.fiber?.portalChildren) {
+        for (const entry of inst.fiber.portalChildren) {
+            for (const portalWidget of entry.widgets) {
+                _pruneInstancesForWidget(portalWidget);
+            }
+        }
+        inst.fiber.portalChildren = undefined;
+    }
 
     const children = widget.children;
     if (Array.isArray(children)) {
@@ -573,8 +598,11 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
             destroyFiber(fiber);
             _pruneInstancesForWidget(instance.widget);
             invalidateLayout(instance.widget.getLayoutNode());
+            const savedParent = _parentFiber;
             _parentFiber = boundary;
-            return reconcile(boundary.errorFallback(err));
+            const widget = reconcile(boundary.errorFallback(err));
+            _parentFiber = savedParent;
+            return widget;
         }
         // No error boundary found — destroy fiber and prune old widget
         destroyFiber(fiber);
@@ -599,8 +627,8 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
 
         instance.widget = vnode;
         instance.lastVNode = vnode;
-        _instanceMap.set(vnode, instance);
-        _fiberToWidgetMap.set(fiber, vnode);
+        instanceMap.set(vnode, instance);
+        fiberToWidgetMap.set(fiber, vnode);
 
         return vnode;
     }
@@ -637,8 +665,8 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
     instance.lastVNode = vnode;
 
     // Re-register with new widget
-    _instanceMap.set(newWidget, instance);
-    _fiberToWidgetMap.set(fiber, newWidget);
+    instanceMap.set(newWidget, instance);
+    fiberToWidgetMap.set(fiber, newWidget);
 
     return newWidget;
 }
@@ -647,9 +675,9 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
  * Unmount all component instances — run cleanups.
  */
 export function unmountAll(): void {
-    for (const [, instance] of _instanceMap) {
+    for (const [, instance] of instanceMap) {
         destroyFiber(instance.fiber);
     }
-    _instanceMap.clear();
-    _fiberToWidgetMap.clear();
+    instanceMap.clear();
+    fiberToWidgetMap.clear();
 }

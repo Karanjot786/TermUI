@@ -77,6 +77,27 @@ describe('SearchInput', () => {
         expect(onSearch).toHaveBeenCalledWith('');
     });
 
+    it('backspace removes one grapheme at a time', () => {
+        const input = new SearchInput();
+        input.setValue('e\u0301👍🏽');
+
+        input.handleKey(createKeyEvent({
+            key: 'backspace',
+            raw: Buffer.from('\b'),
+            ctrl: false, alt: false, shift: false,
+        }));
+
+        expect(input.value).toBe('e\u0301');
+
+        input.handleKey(createKeyEvent({
+            key: 'backspace',
+            raw: Buffer.from('\b'),
+            ctrl: false, alt: false, shift: false,
+        }));
+
+        expect(input.value).toBe('');
+    });
+
     it('uses ASCII icon when unicode is off and Unicode icon when on', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const asciiInput = new SearchInput({ placeholder: 'x' });
@@ -111,4 +132,21 @@ describe('SearchInput', () => {
         // The icon and placeholder should start at x=2
         expect(row[2]?.char).not.toBe(' ');
     });
+
+        it('clears the debounce timer when destroyed to prevent memory leaks', () => {
+        vi.useFakeTimers();
+        const onSearch = vi.fn();
+        const input = new SearchInput({ debounce: 100, onSearch });
+        
+        input.handleKey(typeChar('a'));
+        
+        // Destroy the component while the timer is still running
+        input.destroy();
+        
+        vi.advanceTimersByTime(100);
+        
+        // The timer should have been cleared, so onSearch should NOT fire
+        expect(onSearch).not.toHaveBeenCalled();
+    });
+
 });

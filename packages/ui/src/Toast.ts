@@ -1,6 +1,6 @@
-﻿// Toast - auto-dismiss notification
+// Toast - auto-dismiss notification
 import { Widget } from '@termuijs/widgets';
-import { type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Screen, stripAnsiControl, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
 
 export type ToastType = 'info' | 'success' | 'warning' | 'error';
 
@@ -19,7 +19,7 @@ export interface ToastOptions {
   animationMs?: number;
 }
 
-const ICONS_UNICODE: Record<ToastType, string> = { info: 'i', success: '+', warning: '!', error: 'x' };
+const ICONS_UNICODE: Record<ToastType, string> = { info: 'ℹ', success: '✓', warning: '⚠', error: '✗' };
 const ICONS_ASCII: Record<ToastType, string> = { info: 'i', success: '+', warning: '!', error: 'x' };
 const COLORS: Record<ToastType, string> = { info: 'cyan', success: 'green', warning: 'yellow', error: 'red' };
 
@@ -30,6 +30,7 @@ export class Toast extends Widget {
   private _maxVisible: number;
   private _announce: boolean;
   private _animationMs: number;
+  private _animationTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(options: ToastOptions = {}) {
     super(mergeStyles(defaultStyle(), {}));
@@ -54,7 +55,8 @@ export class Toast extends Widget {
 
   private _announceToScreenReader(text: string, _type: ToastType): void {
     try {
-      process.stderr.write('\x1b]777;notify;TermUI;[' + text + ']\x07');
+      const safeText = stripAnsiControl(text);
+      process.stderr.write('\x1b]777;notify;TermUI;[' + safeText + ']\x07');
     } catch { }
   }
 
@@ -93,6 +95,15 @@ export class Toast extends Widget {
       const remaining = m.expireAt - now;
       return elapsed < this._animationMs || remaining < this._animationMs;
     });
-    if (anyAnimating) setTimeout(() => this.markDirty(), 16);
+    if (anyAnimating) this._animationTimer = setTimeout(() => this.markDirty(), 16);
+  }
+
+  /** Lifecycle: stop the pending animation re-render timer. */
+  unmount(): void {
+    if (this._animationTimer !== undefined) {
+      clearTimeout(this._animationTimer);
+      this._animationTimer = undefined;
+    }
+    super.unmount();
   }
 }

@@ -72,6 +72,18 @@ describe('TagInput', () => {
         expect(ti.tags).toEqual(['keep', 'a']);
     });
 
+    it('backspace on draft removes one grapheme', () => {
+        const ti = new TagInput();
+
+        for (const ch of 'Cafe\u0301') {
+            ti.handleKey(key(ch));
+        }
+        ti.handleKey(key('backspace'));
+        ti.handleKey(key('enter'));
+
+        expect(ti.tags).toEqual(['Caf']);
+    });
+
     it('placeholder renders when empty', () => {
         const ti = new TagInput({}, { placeholder: 'Add tags...' });
         const output = renderToString(ti);

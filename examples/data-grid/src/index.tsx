@@ -13,5 +13,5 @@ const rows = [
   { name: 'Dave', age: 28, city: 'Chennai' },
 ];
 
-const grid = new DataGrid({ columns, rows });
+const grid = new DataGrid(columns, rows);
 console.log('DataGrid example running. Use arrow keys to navigate.');

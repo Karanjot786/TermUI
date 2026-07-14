@@ -63,6 +63,10 @@ export class Renderer {
         this._onTick = onTick ?? null;
         const interval = Math.floor(1000 / this._fps);
         this._frameTimer = setInterval(() => {
+            if (this._renderRequested) {
+                this._renderRequested = false;
+                this._flush();
+            }
             this._onTick?.();
         }, interval);
     }
@@ -98,6 +102,7 @@ export class Renderer {
      */
     fullRender(): void {
         this._screen.invalidate();
+        this._terminal.writeSync('\x1b[2J\x1b[H');
         this._flush();
     }
 
@@ -132,20 +137,24 @@ export class Renderer {
             let output = beginSyncUpdate;
 
             if (this._diffRenderer) {
-                this._lastStyleFingerprint = null;
                 for (let r = 0; r < rows; r++) {
+                    this._lastStyleFingerprint = null;
                     output += this._renderDiffLine(r, front, back, cols);
                 }
 
                 output += ansiReset;
                 output += endSyncUpdate;
 
-                // Write buffered logs wrapped in cursor save/restore so they
-                // don't shift the frame's expected cursor position
+                // Write frame content first (inside synchronized update), then
+                // buffered logs with cursor save/restore to prevent flicker
+                this._terminal.writeSync(output);
                 if (bufferedLogs) {
                     this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
                 }
-                this._terminal.writeSync(output);
+
+                // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
+                const ansiQueue = this._screen.drainAnsiQueue();
+                if (ansiQueue) this._terminal.writeSync(ansiQueue);
 
                 this._screen.saveLines();
                 this._emitStats(start, bufferedLogs, output);
@@ -163,10 +172,14 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
+            this._terminal.writeSync(output);
             if (bufferedLogs) {
                 this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
             }
-            this._terminal.writeSync(output);
+
+            // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
+            const ansiQueue = this._screen.drainAnsiQueue();
+            if (ansiQueue) this._terminal.writeSync(ansiQueue);
 
             this._emitStats(start, bufferedLogs, output);
             this._screen.saveLines();
@@ -254,18 +267,17 @@ export class Renderer {
         let spanStart = -1;
 
         for (let c = 0; c < cols; c++) {
-            // Skip continuation cells (right half of wide chars) - they are not
-            // independently renderable and their primary cell handles the output.
-            if (back[row][c].width === 0) continue;
-            
             const changed = !cellsEqual(front[row][c], back[row][c]);
+            // Skip continuation cells (right half of wide chars) if they haven't changed.
+            // If they have changed, we must process them so we can adjust the span start back to the primary cell.
+            if (back[row][c].width === 0 && !changed) continue;
             if (changed && spanStart === -1) {
                 spanStart = c; // start a new changed span
             } else if (!changed && spanStart !== -1) {
                 // flush the span
                 const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
                 output += moveTo(adjustedStart, row);
-                for (let sc = spanStart; sc < c; sc++) {
+                for (let sc = adjustedStart; sc < c; sc++) {
                     const cell = back[row][sc];
                     if (cell.width === 0) continue;
                     output += this._renderCell(cell);
@@ -278,7 +290,7 @@ export class Renderer {
         if (spanStart !== -1) {
             const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
             output += moveTo(adjustedStart, row);
-            for (let sc = spanStart; sc < cols; sc++) {
+            for (let sc = adjustedStart; sc < cols; sc++) {
                 const cell = back[row][sc];
                 if (cell.width === 0) continue;
                 output += this._renderCell(cell);

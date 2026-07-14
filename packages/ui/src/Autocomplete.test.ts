@@ -2,7 +2,7 @@
 // @termuijs/ui — Tests for Autocomplete widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Screen, caps, type KeyEvent } from '@termuijs/core';
 import { Autocomplete } from './Autocomplete.js';
 
@@ -68,6 +68,17 @@ describe('Autocomplete', () => {
 
         expect(widget.query).toBe('ap');
         expect(onChange).toHaveBeenCalledWith('ap');
+    });
+
+    it('backspace removes one grapheme from the query', () => {
+        const onChange = vi.fn();
+        const widget = new Autocomplete({}, { items: [], onChange });
+
+        widget.query = 'Cafe\u0301';
+        widget.handleKey(makeKey('backspace'));
+
+        expect(widget.query).toBe('Caf');
+        expect(onChange).toHaveBeenCalledWith('Caf');
     });
 
     it('arrow keys and tab navigate suggestions list', () => {

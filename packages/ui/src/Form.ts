@@ -11,6 +11,7 @@ export interface FormField {
 export interface FormOptions {
     labelColor?: Style['fg']; errorColor?: Style['fg']; activeColor?: Style['fg'];
     onSubmit?: (values: Record<string, string>) => void;
+    signal?: AbortSignal;
 }
 
 export class Form extends Widget {
@@ -23,7 +24,10 @@ export class Form extends Widget {
     private _errorColor: Style['fg'];
     private _activeColor: Style['fg'];
     private _onSubmit?: (values: Record<string, string>) => void;
+    private _isValidating = false;
+    private _onComplete?: (values: Record<string, string>) => void;
     focusable = true;
+    public signal?: AbortSignal;
 
     constructor(fields: FormField[], options: FormOptions = {}) {
         super(mergeStyles(defaultStyle(), { height: fields.length * 2 + 1, flexGrow: 1 }));
@@ -32,6 +36,7 @@ export class Form extends Widget {
         this._errorColor = options.errorColor ?? { type: 'named', name: 'red' };
         this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSubmit = options.onSubmit;
+        this.signal = options.signal;
         for (const f of fields) this._values.set(f.name, '');
         // Wire key events from the App/event system into this widget's handlers.
         // Minimal: only route printable chars and backspace to existing methods.
@@ -52,18 +57,41 @@ export class Form extends Widget {
         const f = this._fields[this._activeField]; const cur = this._values.get(f.name) ?? '';
         if (this._cursorPos > 0) { this._values.set(f.name, cur.slice(0, this._cursorPos - 1) + cur.slice(this._cursorPos)); this._cursorPos--; this.markDirty(); }
     }
-    submit(): void {
-        this._errors.clear(); let hasErr = false;
-        for (const f of this._fields) {
-            const v = this._values.get(f.name) ?? '';
-            if (f.required && !v.trim()) { this._errors.set(f.name, `${f.label} is required`); hasErr = true; }
-            const e = validateInput(f.validate, v);
-            if (e) {
-                this._errors.set(f.name, e);
-                hasErr = true;}
-        }
-        if (!hasErr) this._onSubmit?.(this.values);
+    async submit(): Promise<void> {
+        this._errors.clear();
+        this._isValidating = true;
         this.markDirty();
+
+        let hasErr = false;
+
+        const validationPromises = this._fields.map(async (f) => {
+            const v = this._values.get(f.name) ?? '';
+            if (f.required && !v.trim()) {
+                return { name: f.name, err: `${f.label} is required` };
+            }
+            const e = await validateInput(f.validate, v);
+            return { name: f.name, err: e };
+        });
+
+        const results = await Promise.all(validationPromises);
+
+        for (const { name, err } of results) {
+            if (err) {
+                this._errors.set(name, err);
+                hasErr = true;
+            }
+        }
+
+        this._isValidating = false;
+        if (!hasErr) {
+            this._onSubmit?.(this.values);
+            this._onComplete?.(this.values);
+        }
+        this.markDirty();
+    }
+
+    onComplete(cb: (values: Record<string, string>) => void): void {
+        this._onComplete = cb;
     }
 
     /** Minimal key router — printable chars -> insertChar, backspace -> deleteBack */
@@ -95,7 +123,11 @@ export class Form extends Widget {
         }
         if (row < height) {
             const isSub = this._activeField >= this._fields.length;
-            screen.writeString(x, y + row, isSub ? '  [ Submit ]' : '    Submit  ', { ...attrs, fg: isSub ? { type: 'named', name: 'green' } : attrs.fg, bold: isSub });
+            if (this._isValidating) {
+                screen.writeString(x, y + row, '  [ Validating... ]', { ...attrs, fg: { type: 'named', name: 'yellow' } });
+            } else {
+                screen.writeString(x, y + row, isSub ? '  [ Submit ]' : '    Submit  ', { ...attrs, fg: isSub ? { type: 'named', name: 'green' } : attrs.fg, bold: isSub });
+            }
         }
     }
 }

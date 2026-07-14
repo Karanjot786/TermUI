@@ -48,6 +48,19 @@ export class PinInput extends Widget {
     return this._value.join("");
   }
 
+  /**
+   * Programmatically sets the pin input value.
+   * Clamps the value to the configured pin length and places the cursor at the end.
+   */
+  setValue(value: string): void {
+    const chars = value.split("").slice(0, this._length);
+    for (let i = 0; i < this._length; i++) {
+      this._value[i] = chars[i] ?? "";
+    }
+    this._cursorPos = Math.min(this._length - 1, chars.length);
+    this.markDirty();
+  }
+
   private get _isFull(): boolean {
     return this._value.every((v) => v !== "");
   }

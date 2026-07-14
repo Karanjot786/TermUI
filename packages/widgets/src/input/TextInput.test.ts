@@ -35,6 +35,11 @@ describe('TextInput', () => {
         expect(input.style.height).toBe(3);
     });
 
+    it('initializes with custom initial value option and clamps it to maxLength', () => {
+        const input = new TextInput({}, { value: 'initial content', maxLength: 10 });
+        expect(input.value).toBe('initial co'); // truncated to maxLength 10
+    });
+
     it('sets and gets value correctly', () => {
         const input = new TextInput({}, { maxLength: 5 });
         input.value = 'hello world';
@@ -157,10 +162,10 @@ describe('TextInput', () => {
         
         const screen = renderTextInput(input, 20, 3);
         
-        // Character at cursor ('b') should be inverted
+        // Character at cursor ('b') should be underlined in default insert mode
         const cell = screen.back[1][2]; // x=1 is start of content, x=2 is index 1 of value
         expect(cell.char).toBe('b');
-        expect(cell.inverse).toBe(true);
+        expect(cell.underline).toBe(true);
     });
 
     it('scrolls value view horizontally when text exceeds viewport width', () => {
@@ -302,6 +307,28 @@ describe('handleKey', () => {
         
         input.handleKey(createMockKeyEvent('enter'));
         expect(onSubmitSpy).toHaveBeenCalledWith('done');
+    });
+
+    it('clears line on Ctrl+U', () => {
+        const input = new TextInput();
+        input.value = 'hello world';
+        input.moveCursorEnd();
+        input.handleKey(createMockKeyEvent('u', true)); // ctrl = true
+        expect(input.value).toBe('');
+    });
+
+    it('deletes previous word on Ctrl+W', () => {
+        const input = new TextInput();
+        input.value = 'hello world';
+        input.moveCursorEnd();
+        
+        input.handleKey(createMockKeyEvent('w', true));
+        expect(input.value).toBe('hello ');
+        expect((input as any)._cursorPos).toBe(6); // cursor at index 6, after space
+        
+        input.handleKey(createMockKeyEvent('w', true));
+        expect(input.value).toBe('');
+        expect((input as any)._cursorPos).toBe(0);
     });
 });
 

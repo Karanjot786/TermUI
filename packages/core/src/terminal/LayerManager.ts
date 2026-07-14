@@ -30,6 +30,8 @@ export interface Layer {
  * An empty cell with no explicit colors is considered transparent.
  */
 function isCellTransparent(cell: Cell): boolean {
+    // Wide character continuation cells (empty string, zero width) are transparent
+    if (cell.char === '' && cell.width === 0) return true;
     return (
         cell.char === ' ' &&
         cell.fg.type === 'none' &&
@@ -166,10 +168,11 @@ export class LayerManager {
             if (x < 0) { x += charWidth; continue; }
 
             this.setCell(layerId, x, row, { char, width: charWidth, ...style });
-            // For wide characters, fill the next cell with a placeholder space
-            // so the grid stays coherent (no stale character bleeds through).
+            // For wide characters, fill the continuation cell with width: 0
+            // to match Screen.writeString() behavior and prevent stray spaces
+            // during compositing.
             if (charWidth === 2 && x + 1 < this._cols) {
-                this.setCell(layerId, x + 1, row, { char: ' ', width: 1, ...style });
+                this.setCell(layerId, x + 1, row, { char: '', width: 0, ...style });
             }
             x += charWidth;
         }
@@ -241,7 +244,19 @@ export class LayerManager {
                         continue;
                     }
                     Object.assign(backRow[c], cell);
-                    c++;
+
+                    // Handle wide characters atomically: write continuation
+                    // cells and advance by the full width so continuation
+                    // cells (width 0, char '') aren't processed individually
+                    // where they'd be treated as non-transparent and
+                    // overwrite valid screen content.
+                    const w = cell.width ?? 1;
+                    for (let i = 1; i < w; i++) {
+                        if (c + i < maxCol) {
+                            Object.assign(backRow[c + i], layerRow[c + i]);
+                        }
+                    }
+                    c += w;
                 }
             }
         }
@@ -256,7 +271,7 @@ export class LayerManager {
 
         for (const layer of this._layers.values()) {
             layer.cells = this._createGrid();
-            layer.dirtyRegion = null;
+            layer.dirtyRegion = { x: 0, y: 0, width: cols, height: rows };
         }
 
         this._allocateHitGrids();

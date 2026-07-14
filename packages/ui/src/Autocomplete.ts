@@ -12,7 +12,8 @@ import {
     styleToCellAttrs,
     caps,
     truncate,
-    stringWidth
+    stringWidth,
+    splitGraphemes
 } from '@termuijs/core';
 import { Widget } from '@termuijs/widgets';
 
@@ -33,8 +34,17 @@ export interface AutocompleteOptions {
     highlightColor?: Color;
 }
 
-const defaultFilter = (query: string, item: string) =>
-    item.toLowerCase().startsWith(query.toLowerCase());
+const defaultFilter = (query: string, item: string) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    const t = item.toLowerCase();
+    let qIdx = 0;
+    for (let i = 0; i < t.length; i++) {
+        if (t[i] === q[qIdx]) qIdx++;
+        if (qIdx === q.length) return true;
+    }
+    return false;
+};
 
 export class Autocomplete extends Widget {
     private _items: string[] = [];
@@ -134,7 +144,7 @@ export class Autocomplete extends Widget {
 
         if (key === 'backspace') {
             if (this._query.length > 0) {
-                this._query = this._query.slice(0, -1);
+                this._query = splitGraphemes(this._query).slice(0, -1).join('');
                 this._isOpen = true;
                 this._selectedIndex = -1;
                 this._onChange?.(this._query);

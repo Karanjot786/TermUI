@@ -2,7 +2,7 @@
 // @termuijs/widgets - Watermark widget
 // -----------------------------------------------------------------------------
 
-import { type Screen, type Style, type Color, styleToCellAttrs } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface WatermarkOptions {
@@ -53,13 +53,26 @@ export class Watermark extends Widget {
             
             while (col < width) {
                 const char = segments[index];
+                const charWidth = Math.max(1, stringWidth(char));
+
+                if (col + charWidth > width) break;
+
                 screen.setCell(x + col, y + row, {
                     char,
+                    width: charWidth,
                     ...attrs,
                 });
-                // TODO: we should handle double-width characters by skipping the next column if width=2
-                // but since Watermark traditionally filled cell by cell, we just let it be.
-                col++;
+                
+                for (let i = 1; i < charWidth; i++) {
+                    if (col + i < width) {
+                        screen.setCell(x + col + i, y + row, {
+                            char: '',
+                            width: 0,
+                            ...attrs,
+                        });
+                    }
+                }
+                col += charWidth;
                 index = (index + 1) % segments.length;
             }
         }

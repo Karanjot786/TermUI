@@ -11,6 +11,7 @@ import { caps } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import type { Widget } from '@termuijs/widgets';
 import type { FC } from './vnode.js';
+import { suspendedFibers, fiberToWidgetMap, instanceMap } from './globals.js';
 
 // ── Fiber — per-component-instance state ──
 
@@ -50,6 +51,9 @@ export interface Fiber {
     // ── Portal tracking ──
     /** Widgets created via createPortal and their target, for proper teardown */
     portalChildren?: Array<{ widgets: Widget[]; target: Widget }>;
+    // ── Keymap collision tracking (dev-mode, reset each render) ──
+    /** All keymap binding keys registered in the current render pass, for cross-call duplicate detection */
+    _keymapKeys?: Map<string, KeyBinding>;
 }
 
 interface HookState {
@@ -71,6 +75,7 @@ let _requestRender: (() => void) | null = null;
 let _insertBefore: ((line: string) => (() => void) | void) | null = null;
 let _nextFiberId = 0;
 let _nextHookId = 0;
+
 export function useId(): string {
     const fiber = currentFiber();
     const idx = fiber.hookIndex++;
@@ -104,6 +109,10 @@ export function setCurrentFiber(fiber: Fiber): void {
     // Snapshot existing child fibers so renderComponent can look them up for reuse
     fiber._prevChildFibers = fiber.childFibers;
     fiber.childFibers = new Map();
+    // Reset cross-call keymap tracking for dev-mode duplicate detection
+    if (process.env.NODE_ENV !== 'production') {
+        fiber._keymapKeys = new Map();
+    }
 }
 
 /** Clear the current render context */
@@ -323,7 +332,7 @@ export interface KeyBinding {
 /**
  * useKeymap — declarative keybindings with optional conflict detection.
  *
- * Mutually exclusive with useInput — only one per component.
+ * Supports multiple calls per component — handlers are chained via prevOnInput.
  *
  * ```tsx
  * useKeymap([
@@ -337,22 +346,39 @@ export function useKeymap(bindings: KeyBinding[]): void {
     const idx = fiber.hookIndex++;
 
     if (idx >= fiber.hooks.length) {
-        // Dev-mode conflict detection on first render
-        if (process.env.NODE_ENV !== 'production') {
-            const seen = new Map<string, KeyBinding>();
-            for (const b of bindings) {
-                const key = `${b.key}|${b.ctrl ?? false}|${b.alt ?? false}|${b.shift ?? false}`;
-                if (seen.has(key)) {
-                    // Conflicting keybinding — silently ignore in dev mode
-                }
-                seen.set(key, b);
-            }
-        }
         fiber.hooks.push({ value: bindings });
     } else {
         fiber.hooks[idx].value = bindings;
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+        // Within-call duplicate check
+        const seen = new Map<string, KeyBinding>();
+        for (const b of bindings) {
+            const compositeKey = `${b.key}|${b.ctrl ?? false}|${b.alt ?? false}|${b.shift ?? false}`;
+            if (seen.has(compositeKey)) {
+                console.warn(
+                    `[useKeymap] Duplicate keymap binding: "${compositeKey}" registered more than once in the same useKeymap call. Last registration wins.`
+                );
+            } else {
+                seen.set(compositeKey, b);
+            }
+        }
+
+        // Cross-call duplicate check
+        if (fiber._keymapKeys) {
+            for (const [compositeKey, b] of seen) {
+                if (fiber._keymapKeys.has(compositeKey)) {
+                    console.warn(
+                        `[useKeymap] Duplicate keymap binding: "${compositeKey}" registered more than once in the same component. Last registration wins.`
+                    );
+                }
+                fiber._keymapKeys.set(compositeKey, b);
+            }
+        }
+    }
+
+    const prevOnInput = fiber.onInput;
     fiber.onInput = (event: KeyEvent) => {
         const currentBindings: KeyBinding[] = fiber.hooks[idx].value;
         for (const b of currentBindings) {
@@ -366,8 +392,10 @@ export function useKeymap(bindings: KeyBinding[]): void {
                 return;
             }
         }
+        prevOnInput?.(event);
     };
 }
+
 
 /**
  * useInsertBefore — register a persistent line above the inline viewport.
@@ -586,17 +614,16 @@ export function runLayoutEffects(fiber: Fiber): void {
     }
 }
 
-
 /** Clean up all effects and intervals for a fiber, including child fibers */
 export function destroyFiber(fiber: Fiber): void {
     for (const record of fiber.effects) {
-        record.cleanup?.();
+        try { record.cleanup?.(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const record of fiber.layoutEffects) {
-        record.cleanup?.();
+        try { record.cleanup?.(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const cleanup of fiber.cleanups) {
-        cleanup();
+        try { cleanup(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const timer of fiber.intervals) {
         clearInterval(timer);
@@ -625,17 +652,14 @@ export function destroyFiber(fiber: Fiber): void {
         }
         fiber.portalChildren = undefined;
     }
-    // Clean up global _instanceMap via reverse fiber→widget mapping (O(1))
-    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
-    if (_fiberToWidget instanceof Map) {
-        const widget = _fiberToWidget.get(fiber);
-        if (widget) {
-            const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
-            if (termuiInstances instanceof Map) {
-                termuiInstances.delete(widget);
-            }
-            _fiberToWidget.delete(fiber);
-        }
+    // Clean up suspended promises (SuspenseBoundary tracking)
+    suspendedFibers.delete(fiber.id);
+
+    // Clean up global instanceMap via reverse fiber→widget mapping (O(1))
+    const widget = fiberToWidgetMap.get(fiber);
+    if (widget) {
+        instanceMap.delete(widget);
+        fiberToWidgetMap.delete(fiber);
     }
     fiber.hooks = [];
     fiber.effects = [];
@@ -670,15 +694,9 @@ export function resetHooksGlobals(): void {
     }
     
     // Clear global instance map
-    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
-    if (termuiInstances instanceof Map) {
-        termuiInstances.clear();
-    }
+    instanceMap.clear();
     // Clear reverse fiber→widget map
-    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
-    if (_fiberToWidget instanceof Map) {
-        _fiberToWidget.clear();
-    }
+    fiberToWidgetMap.clear();
 }
 
 /**
@@ -763,4 +781,3 @@ export function useAsync<T>(
 
     return { data, loading, error, refetch };
 }
-

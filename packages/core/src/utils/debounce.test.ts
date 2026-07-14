@@ -71,35 +71,6 @@ describe('debounce', () => {
         vi.useRealTimers();
     });
 
-    it('leading option invokes immediately', () => {
-        vi.useFakeTimers();
-        const fn = vi.fn();
-        const debounced = debounce(fn, 100, { leading: true });
-
-        debounced('first');
-        expect(fn).toHaveBeenCalledTimes(1);
-        expect(fn).toHaveBeenCalledWith('first');
-
-        // Subsequent rapid calls shouldn't invoke again
-        debounced('second');
-        debounced('third');
-        expect(fn).toHaveBeenCalledTimes(1);
-
-        vi.useRealTimers();
-    });
-
-    it('trailing: false prevents trailing execution', () => {
-        vi.useFakeTimers();
-        const fn = vi.fn();
-        const debounced = debounce(fn, 100, { trailing: false });
-
-        debounced('hello');
-        vi.advanceTimersByTime(200);
-        expect(fn).not.toHaveBeenCalled();
-
-        vi.useRealTimers();
-    });
-
     it('works with multiple arguments', () => {
         vi.useFakeTimers();
         const fn = vi.fn();

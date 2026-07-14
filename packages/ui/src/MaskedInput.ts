@@ -105,9 +105,9 @@ export class MaskedInput extends Widget {
         }
     }
 
-    /** Insert a digit character at the current slot. Auto-advance past filled chars. */
-    private _insertDigit(char: string): void {
-        if (!/^\d$/.test(char)) return; // Only accept digits
+    /** Insert a character at the current slot. Auto-advance past filled chars. */
+    private _insertChar(char: string): void {
+        if (char.length !== 1) return;
         if (this._cursorSlotIndex >= this._slots.length) return; // Already at end
 
         this._slots[this._cursorSlotIndex] = char;
@@ -161,9 +161,9 @@ export class MaskedInput extends Widget {
                 break;
 
             default:
-                // Single character input (digits)
+                // Single character input
                 if (event.key?.length === 1) {
-                    this._insertDigit(event.key);
+                    this._insertChar(event.key);
                 }
                 break;
         }

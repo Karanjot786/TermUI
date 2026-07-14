@@ -155,10 +155,21 @@ export class NotificationCenter extends Widget {
     }
 
     override unmount(): void {
-        this._unsub?.();
-        this._unsub = undefined;
-        this._current = [];
+        this._cleanup();
         super.unmount();
+    }
+
+    override destroy(): void {
+        this._cleanup();
+        super.destroy();
+    }
+
+    private _cleanup(): void {
+        if (this._unsub) {
+            this._unsub();
+            this._unsub = undefined;
+        }
+        this._current = [];
     }
 
     protected override _renderSelf(screen: Screen): void {

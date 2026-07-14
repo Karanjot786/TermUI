@@ -2,9 +2,10 @@
 // @termuijs/core — Screen buffer (double-buffered cell grid)
 // ─────────────────────────────────────────────────────
 
-import type { Color } from '../style/Color.js';
+import { type Color, colorToRgb } from '../style/Color.js';
 import { stringWidth, segmenter } from '../utils/unicode.js';
 import { stripAnsiControl } from '../utils/ansi.js';
+import { stripAnsiEscapes, sanitizeForDisplay } from './sanitize.js';
 import { caps } from './env-caps.js';
 
 const EMPTY_COLOR: Color = Object.freeze({ type: 'none' } as const);
@@ -40,6 +41,8 @@ export interface Cell {
     width: number;
     /** Optional OSC 8 hyperlink target for this cell. */
     link?: string;
+    /** DevTools Widget ID for Inspector Mode */
+    debugWidgetId?: string;
 }
 
 /** Create a blank cell with default attributes */
@@ -56,6 +59,7 @@ export function emptyCell(): Cell {
         inverse: false,
         width: 1,
         link: undefined,
+        debugWidgetId: undefined,
     };
 }
 
@@ -72,6 +76,7 @@ export function resetCell(cell: Cell): void {
     cell.inverse = false;
     cell.width = 1;
     cell.link = undefined;
+    cell.debugWidgetId = undefined;
 }
 
 /** Check if two cells are visually identical */
@@ -99,6 +104,30 @@ function colorsEqual(a: Color, b: Color): boolean {
         case 'ansi256': return a.code === (b as typeof a).code;
         case 'rgb': return a.r === (b as typeof a).r && a.g === (b as typeof a).g && a.b === (b as typeof a).b;
         case 'hex': return a.hex.toLowerCase() === (b as typeof a).hex.toLowerCase();
+    }
+}
+
+/** ASCII hex digit char code -> 0-15, branch-free-ish (no string allocation). */
+function hexDigit(code: number): number {
+    // '0'-'9' = 48-57, 'A'-'F' = 65-70, 'a'-'f' = 97-102
+    return code >= 97 ? code - 87 : code >= 65 ? code - 55 : code - 48;
+}
+
+function hashColor(color: Color, hash: number): number {
+    switch (color.type) {
+        case 'none':    return ((hash << 3) - hash) | 0;
+        case 'named':   return ((hash << 5) - hash + color.name.charCodeAt(0) * 256 + color.name.charCodeAt(color.name.length - 1)) | 0;
+        case 'ansi256': return ((hash << 7) - hash + color.code) | 0;
+        case 'rgb':     return ((hash << 9) - hash + color.r * 65536 + color.g * 256 + color.b) | 0;
+        case 'hex':     {
+            // '#rrggbb' — decode the 3 byte pairs directly via charCodeAt instead of
+            // looping over the string (this runs per-cell in the render hot path).
+            const s = color.hex;
+            const r = (hexDigit(s.charCodeAt(1)) << 4) | hexDigit(s.charCodeAt(2));
+            const g = (hexDigit(s.charCodeAt(3)) << 4) | hexDigit(s.charCodeAt(4));
+            const b = (hexDigit(s.charCodeAt(5)) << 4) | hexDigit(s.charCodeAt(6));
+            return ((hash << 9) - hash + r * 65536 + g * 256 + b) | 0;
+        }
     }
 }
 
@@ -149,6 +178,16 @@ export class Screen {
     private _translateYStack: number[] = [];
     private _translateY = 0;
 
+    /**
+     * Queue of raw ANSI/OSC sequences to be emitted verbatim after the
+     * current frame is flushed to the terminal.  Populated by writeAnsi()
+     * (e.g. from VTE a11y escape sequences) and drained by Renderer._flush()
+     * via drainAnsiQueue() so that all output travels through the same
+     * Terminal.writeSync pipeline instead of bypassing it with
+     * process.stdout.write.
+     */
+    private _ansiQueue: string[] = [];
+
     constructor(cols: number, rows: number) {
         this._cols = cols;
         this._rows = rows;
@@ -184,8 +223,10 @@ export class Screen {
         let hash = 0;
         for (const cell of this.back[row]) {
             if (cell.width === 0) continue;
-            const fg = cell.fg.type;
-            const bg = cell.bg.type;
+            
+            hash = hashColor(cell.fg, hash);
+            hash = hashColor(cell.bg, hash);
+            
             const bits =
                 (cell.bold ? 1 : 0) |
                 (cell.italic ? 2 : 0) |
@@ -193,8 +234,9 @@ export class Screen {
                 (cell.dim ? 8 : 0) |
                 (cell.strikethrough ? 16 : 0) |
                 (cell.inverse ? 32 : 0);
-            const seed = fg.charCodeAt(0) * 65536 + bg.charCodeAt(0) * 4096 + bits;
-            hash = ((hash << 7) - hash + seed) | 0;
+                
+            hash = ((hash << 7) - hash + bits) | 0;
+            
             if (cell.link) {
                 for (let i = 0; i < cell.link.length; i++)
                     hash = ((hash << 5) - hash + cell.link.charCodeAt(i)) | 0;
@@ -233,13 +275,22 @@ export class Screen {
      * any parent clip already on the stack (nested clipping).
      */
     pushClip(region: { x: number; y: number; width: number; height: number }): void {
+        // Convert region from absolute to the current visual coordinate space.
+        // setCell applies _translateY before checking the clip stack, so stored
+        // clip regions must be in the same visual space for the check to be correct.
+        const adjustedRegion = {
+            x: region.x,
+            y: region.y + this._translateY,
+            width: region.width,
+            height: region.height,
+        };
         if (this._clipStack.length > 0) {
             // Intersect with the current clip
             const parent = this._clipStack[this._clipStack.length - 1];
-            const x = Math.max(region.x, parent.x);
-            const y = Math.max(region.y, parent.y);
-            const right = Math.min(region.x + region.width, parent.x + parent.width);
-            const bottom = Math.min(region.y + region.height, parent.y + parent.height);
+            const x = Math.max(adjustedRegion.x, parent.x);
+            const y = Math.max(adjustedRegion.y, parent.y);
+            const right = Math.min(adjustedRegion.x + adjustedRegion.width, parent.x + parent.width);
+            const bottom = Math.min(adjustedRegion.y + adjustedRegion.height, parent.y + parent.height);
             if (right <= x || bottom <= y) {
                 // Fully clipped — push a zero-size region
                 this._clipStack.push({ x: 0, y: 0, width: 0, height: 0 });
@@ -247,7 +298,7 @@ export class Screen {
                 this._clipStack.push({ x, y, width: right - x, height: bottom - y });
             }
         } else {
-            this._clipStack.push({ ...region });
+            this._clipStack.push({ ...adjustedRegion });
         }
     }
 
@@ -320,7 +371,7 @@ export class Screen {
         if (!(row >= 0 && row < this._rows)) return;
 
         // Strip ANSI control sequences from user-supplied content to prevent escape injection
-        const safeStr = stripAnsiControl(str);
+        const safeStr = stripAnsiEscapes(str);
         let x = col;
         
         const segments = segmenter.segment(safeStr);
@@ -362,6 +413,29 @@ export class Screen {
 
             x += width;
         }
+    }
+
+    /**
+     * Write a string to the back buffer.
+     *
+     * TermUI's cell grid does not interpret inline ANSI codes — colors and
+     * attributes are applied via the `style` param / cell attrs, not via
+     * escape sequences embedded in `str`. Any escape sequences in `str`
+     * (including SGR) would only render as visible garbage characters, so
+     * this method currently delegates to `writeString`, which strips all of
+     * them — identical behavior to calling `writeString` directly. It exists
+     * as a distinct, forward-compatible entry point in case formatted-string
+     * support is added later; it does not currently preserve SGR.
+     */
+    writeFormattedString(
+        col: number,
+        row: number,
+        str: string,
+        style: Partial<Omit<Cell, 'char' | 'width'>> = {},
+    ): void {
+        // Delegate to writeString — the cell grid cannot interpret inline
+        // ANSI codes, so all text paths must be sanitized.
+        this.writeString(col, row, str, style);
     }
 
     /**
@@ -417,6 +491,14 @@ export class Screen {
         this.front = this._createGrid(cols, rows);
         this.back = this._createGrid(cols, rows);
         this._previousLines = [];
+        this._previousStyleLines = [];
+        this._clipStack = [];
+        this._translateYStack = [];
+        this._translateY = 0;
+        this._ansiQueue = [];
+        this._flushEpoch = -1;
+        this._swapping = false;
+        this._backdropFilters = [];
     }
 
     /**
@@ -449,14 +531,104 @@ export class Screen {
      * Export current screen as SVG.
      */
     exportSVG(): string {
-        return `
-<svg xmlns="http://www.w3.org/2000/svg"
-     width="${this._cols * 8}"
-     height="${this._rows * 16}">
-    <text x="10" y="20">
-        Terminal Export
-    </text>
-</svg>`;
+        const bgElements: string[] = [];
+        const textElements: string[] = [];
+
+        for (let r = 0; r < this._rows; r++) {
+            for (let c = 0; c < this._cols; c++) {
+                const cell = this.back[r][c];
+                if (cell.width === 0) {
+                    continue;
+                }
+
+                // Resolve colors (considering inverse)
+                let fg = cell.fg;
+                let bg = cell.bg;
+                if (cell.inverse) {
+                    fg = cell.bg;
+                    bg = cell.fg;
+                }
+
+                let fgHex = '#ffffff';
+                if (fg.type !== 'none') {
+                    fgHex = rgbToHex(colorToRgb(fg));
+                } else if (cell.inverse) {
+                    fgHex = '#000000';
+                }
+
+                let bgHex: string | null = null;
+                if (bg.type !== 'none') {
+                    bgHex = rgbToHex(colorToRgb(bg));
+                } else if (cell.inverse) {
+                    bgHex = '#ffffff';
+                }
+
+                // Draw background
+                if (bgHex) {
+                    const rectWidth = cell.width * 8;
+                    bgElements.push(
+                        `    <rect x="${c * 8}" y="${r * 16}" width="${rectWidth}" height="16" fill="${bgHex}" />`
+                    );
+                }
+
+                // Draw text
+                const char = cell.char;
+                if (char && char !== ' ' && char !== '\0') {
+                    const escaped = escapeXml(char);
+                    const attrs: string[] = [];
+                    
+                    if (cell.bold) attrs.push('font-weight="bold"');
+                    if (cell.italic) attrs.push('font-style="italic"');
+                    
+                    const decors: string[] = [];
+                    if (cell.underline) decors.push('underline');
+                    if (cell.strikethrough) decors.push('line-through');
+                    if (decors.length > 0) {
+                        attrs.push(`text-decoration="${decors.join(' ')}"`);
+                    }
+                    
+                    if (cell.dim) {
+                        attrs.push('opacity="0.6"');
+                    }
+
+                    const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
+                    textElements.push(
+                        `    <text x="${c * 8}" y="${r * 16 + 12}" fill="${fgHex}" font-family="monospace" font-size="14"${attrStr}>${escaped}</text>`
+                    );
+                }
+            }
+        }
+
+        const lines = [
+            `<svg xmlns="http://www.w3.org/2000/svg" width="${this._cols * 8}" height="${this._rows * 16}" xml:space="preserve">`,
+            `    <rect width="${this._cols * 8}" height="${this._rows * 16}" fill="#121212" />`,
+            ...bgElements,
+            ...textElements,
+            `</svg>`
+        ];
+
+        return lines.join('\n');
+    }
+
+    /**
+     * Buffer a raw ANSI/OSC escape sequence to be written to the terminal
+     * after the current frame is flushed.  Call this instead of
+     * process.stdout.write() so that the sequence stays in the same
+     * output pipeline as the rest of the rendered frame.
+     */
+    writeAnsi(seq: string): void {
+        this._ansiQueue.push(seq);
+    }
+
+    /**
+     * Return and clear all buffered ANSI sequences accumulated since the
+     * last drain.  Called by Renderer._flush() after the frame is written.
+     */
+    drainAnsiQueue(): string {
+        if (this._ansiQueue.length === 0) return '';
+        const out = this._ansiQueue.join('');
+        this._ansiQueue = [];
+        return out;
     }
 
     private _createGrid(cols: number, rows: number): Cell[][] {
@@ -470,4 +642,60 @@ export class Screen {
         }
         return grid;
     }
+
+    private _backdropFilters: Array<{ x: number; y: number; width: number; height: number; }> = [];
+
+    /**
+     * Schedules a backdrop filter to be applied during the compositing pass.
+     * The excluded rectangle will NOT be dimmed.
+     */
+    applyBackdropFilter(excludeRect: { x: number; y: number; width: number; height: number; }): void {
+        this._backdropFilters.push({ ...excludeRect });
+    }
+
+    /**
+     * Applies all scheduled backdrop filters in a render-order-independent way,
+     * dimming any cell that falls outside of ALL scheduled exclude rectangles.
+     * Called automatically by the App render loop.
+     */
+    flushBackdropFilters(): void {
+        if (this._backdropFilters.length === 0) return;
+
+        for (let y = 0; y < this._rows; y++) {
+            for (let x = 0; x < this._cols; x++) {
+                let exclude = false;
+                for (const rect of this._backdropFilters) {
+                    if (x >= rect.x && x < rect.x + rect.width &&
+                        y >= rect.y && y < rect.y + rect.height) {
+                        exclude = true;
+                        break;
+                    }
+                }
+                if (!exclude) {
+                    this.setCell(x, y, { dim: true });
+                }
+            }
+        }
+        
+        this._backdropFilters = [];
+    }
+
+}
+
+function escapeXml(str: string): string {
+    return str.replace(/[&<>"']/g, (m) => {
+        switch (m) {
+            case '&': return '&amp;';
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '"': return '&quot;';
+            case "'": return '&apos;';
+            default: return m;
+        }
+    });
+}
+
+function rgbToHex(rgb: [number, number, number]): string {
+    const [r, g, b] = rgb;
+    return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
 }

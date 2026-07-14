@@ -5,24 +5,26 @@
 // ── Terminal ──────────────────────────────────────────
 export { Terminal } from './terminal/Terminal.js';
 export type { TerminalOptions } from './terminal/Terminal.js';
-export { Screen, emptyCell, cellsEqual } from './terminal/Screen.js';
+export { Screen, emptyCell, cellsEqual, resetCell } from './terminal/Screen.js';
 export type { Cell } from './terminal/Screen.js';
 export { Renderer } from './terminal/Renderer.js';
+export type { FrameStats } from './terminal/Renderer.js';
 export { LayerManager } from './terminal/LayerManager.js';
 export type { Layer } from './terminal/LayerManager.js';
 export { caps, prefersReducedMotion, shouldUseColor, prefersHighContrast } from './terminal/env-caps.js';
 export { BOX, BRAILLE_SPIN, BLOCK } from './terminal/ascii-map.js';
-export { bell } from './terminal/bell.js';
 
 // ── Renderer ──────────────────────────────────────────
 export { RenderHook } from './renderer/render-hook.js';
 export { mergeBorders } from './renderer/border-merge.js';
+export { Scheduler, scheduler } from './renderer/Scheduler.js';
 
 // ── Input ─────────────────────────────────────────────
 export { InputParser } from './input/InputParser.js';
 export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS, normalizeNavigationKey } from './input/KeyMap.js';
 export { parseMouseEvent, isMouseSequence } from './input/MouseParser.js';
 export { MouseGestures } from './input/MouseGestures.js';
+export { splitGraphemes } from './input/grapheme.js';
 export type { MouseGesturesOptions } from './input/MouseGestures.js';
 export { ChordMatcher } from './input/ChordMatcher.js';
 export type { ChordMatcherOptions, Chord } from './input/ChordMatcher.js';
@@ -65,6 +67,7 @@ export {
     relativeLuminance, contrastRatio, wcagLevel, validateThemeContrast,
 } from './style/Color.js';
 export type { Color, NamedColor, ContrastFailure } from './style/Color.js';
+export { adjustForContrast } from './style/contrast.js';
 
 // ── Symbols ───────────────────────────────────────────
 export {
@@ -88,8 +91,20 @@ export { shouldUseFallback, renderFallback } from './app/Fallback.js';
 export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.js';
 
 // ── Utilities ─────────────────────────────────────────
+export { defineConfig } from './config.js';
+export type { TermUIConfig } from './config.js';
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';
 export * as ansi from './utils/ansi.js';
-export { writeClipboard, readClipboard, clipboard } from './utils/ansi.js';
+export { stripAnsiEscapes, hasAnsiEscapes, sanitizeForDisplay } from './terminal/sanitize.js';
 export { debounce } from './utils/debounce.js';
 export type { DebounceOptions } from './utils/debounce.js';
+export * from './session/Session.js';
+export { writeClipboard, readClipboard, stripAnsiControl } from './utils/ansi.js';
+export { throttle } from './utils/throttle.js';
+export type { ThrottleOptions } from './utils/throttle.js';
+export { CommandHistory } from "./history/CommandHistory.js";
+export type { CommandHistoryOptions } from "./history/CommandHistory.js";
+export * from './errors.js';
+
+// ── Accessibility ─────────────────────────────────────
+export * from './a11y/index.js';

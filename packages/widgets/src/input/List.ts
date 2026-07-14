@@ -2,7 +2,7 @@
 // @termuijs/widgets — List widget (selectable)
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
+import { type Screen, type Style, type MouseEvent, styleToCellAttrs, stringWidth, truncate, caps, type KeyEvent } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type ListState } from '../data/ListState.js';
 
@@ -20,7 +20,12 @@ export interface ListProps {
     state?: ListState;
     /** Called whenever selection or scroll changes */
     onStateChange?: (state: ListState) => void;
+    /** Message to display when the list is empty */
+    emptyMessage?: string;
+    /** Allow items to be reordered via moveItem() */
+    reorderable?: boolean;
 }
+
 
 /**
  * List — a scrollable, selectable list of items.
@@ -36,9 +41,15 @@ export class List extends Widget {
     private _items: ListItem[];
     private _selectedIndex = 0;
     private _scrollOffset = 0;
+    private _mouseDownValid = false;
     private _onSelect?: (item: ListItem, index: number) => void;
     private _state?: ListState;
     private _onStateChange?: (state: ListState) => void;
+    private _emptyMessage?: string;
+    private _reorderable = false;
+    private _searchBuffer = '';
+    private _searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
 
     constructor(
         itemsOrProps: ListItem[] | ListProps,
@@ -56,6 +67,8 @@ export class List extends Widget {
             this._state = props.state;
             this._onStateChange = props.onStateChange;
             this._onSelect = props.onSelect ?? onSelect;
+            this._emptyMessage = props.emptyMessage;
+            this._reorderable = props.reorderable ?? false;
 
             // Initialise from external state if provided
             if (props.state) {
@@ -65,6 +78,8 @@ export class List extends Widget {
         }
 
         this.focusable = true;
+        this.events.on('key', this.handleKey.bind(this));
+        this.events.on('mouse', (event) => this.handleMouse(event));
     }
 
     // ── Getters ───────────────────────────────────────
@@ -82,6 +97,20 @@ export class List extends Widget {
         this._clampScroll();
         this.markDirty();
         this._pushState();
+    }
+
+    /** Move an item to a new position (requires reorderable: true). */
+    moveItem(from: number, to: number): void {
+        if (!this._reorderable) return;
+        if (from < 0 || to < 0 || from >= this._items.length || to >= this._items.length) return;
+        const [item] = this._items.splice(from, 1);
+        if (item) {
+            this._items.splice(to, 0, item);
+            this._selectedIndex = to;
+            this._clampScroll();
+            this.markDirty();
+            this._pushState();
+        }
     }
 
     /** Move selection up */
@@ -127,6 +156,62 @@ export class List extends Widget {
         }
     }
 
+        handleKey(event: KeyEvent): void {
+        const key = (event.key || '').toLowerCase();
+        
+        switch (key) {
+            case 'arrowup':
+            case 'up':
+                this.selectPrev();
+                return;
+            case 'arrowdown':
+            case 'down':
+                this.selectNext();
+                return;
+            case 'home':
+                if (this._items.length > 0) {
+                    this._selectedIndex = 0;
+                    this._clampScroll();
+                    this.markDirty();
+                    this._pushState();
+                }
+                return;
+            case 'end':
+                if (this._items.length > 0) {
+                    this._selectedIndex = this._items.length - 1;
+                    this._clampScroll();
+                    this.markDirty();
+                    this._pushState();
+                }
+                return;
+            case 'enter':
+                this.confirm();
+                return;
+        }
+
+        // Type-to-select logic
+        if (event.key && event.key.length === 1 && /[a-zA-Z0-9]/.test(event.key)) {
+            this._searchBuffer += event.key.toLowerCase();
+            const matchIndex = this._items.findIndex(item => 
+                item.label.toLowerCase().startsWith(this._searchBuffer)
+            );
+            
+            if (matchIndex !== -1) {
+                this._selectedIndex = matchIndex;
+                this._clampScroll();
+                this.markDirty();
+                this._pushState();
+            }
+            
+            if (this._searchTimeout) clearTimeout(this._searchTimeout);
+            this._searchTimeout = setTimeout(() => {
+                this._searchBuffer = '';
+            }, 500);
+        }
+    }
+
+
+
     // ── Rendering ─────────────────────────────────────
 
     protected _renderSelf(screen: Screen): void {
@@ -135,6 +220,18 @@ export class List extends Widget {
         if (width <= 0 || height <= 0) return;
 
         const attrs = styleToCellAttrs(this._style);
+
+        // Render Empty State if no items exist
+        if (this._items.length === 0 && this._emptyMessage) {
+            const msg = truncate(this._emptyMessage, width);
+            const msgX = x + Math.floor((width - stringWidth(msg)) / 2);
+            const msgY = y + Math.floor(height / 2);
+            screen.writeString(msgX, msgY, msg, { ...attrs, dim: true });
+            return;
+        }
+
+        const hasScrollbar = this._items.length > height;
+        const itemWidth = hasScrollbar ? Math.max(0, width - 1) : width;
         const visibleCount = Math.min(this._items.length - this._scrollOffset, height);
 
         for (let i = 0; i < visibleCount; i++) {
@@ -145,7 +242,7 @@ export class List extends Widget {
             // Compose the line
             const prefix = isSelected ? (caps.unicode ? '▸ ' : '> ') : '  ';
             let line = prefix + item.label;
-            line = truncate(line, width);
+            line = truncate(line, itemWidth);
 
             // Style
             const cellStyle = {
@@ -159,7 +256,7 @@ export class List extends Widget {
 
             // Fill rest of line for inverse highlight
             if (isSelected && this.isFocused) {
-                const remaining = width - stringWidth(line);
+                const remaining = itemWidth - stringWidth(line);
                 for (let c = 0; c < remaining; c++) {
                     screen.setCell(x + stringWidth(line) + c, y + i, { char: ' ', ...cellStyle });
                 }
@@ -187,6 +284,46 @@ export class List extends Widget {
         }
         if (this._selectedIndex >= this._scrollOffset + visibleHeight) {
             this._scrollOffset = this._selectedIndex - visibleHeight + 1;
+        }
+    }
+
+    handleMouse(event: MouseEvent): void {
+        if (event.button !== 'left') return;
+        if (event.type !== 'mousedown' && event.type !== 'mouseup') return;
+
+        if (event.type === 'mousedown') {
+            const rect = this._getContentRect();
+            if (event.x < rect.x || event.x >= rect.x + rect.width) {
+                this._mouseDownValid = false;
+                return;
+            }
+            if (event.y < rect.y || event.y >= rect.y + rect.height) {
+                this._mouseDownValid = false;
+                return;
+            }
+
+            const clickedIndex = this._scrollOffset + (event.y - rect.y);
+            const item = this._items[clickedIndex];
+            if (!item || item.disabled) {
+                this._mouseDownValid = false;
+                return;
+            }
+
+            this._mouseDownValid = true;
+            if (this._selectedIndex !== clickedIndex) {
+                this._selectedIndex = clickedIndex;
+                this._clampScroll();
+                this.markDirty();
+                this._pushState();
+            }
+            return;
+        }
+
+        if (event.type === 'mouseup') {
+            if (this._mouseDownValid) {
+                this.confirm();
+            }
+            this._mouseDownValid = false;
         }
     }
 }

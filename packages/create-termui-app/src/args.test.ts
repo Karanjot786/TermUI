@@ -37,6 +37,32 @@ describe("CLI args", () => {
         expect(res.name).toBe("my-app");
     });
 
+    it("skips scaffold flag values when finding the project name", () => {
+        const res = parseArgs([
+            "--template",
+            "dashboard",
+            "my-app",
+            "--theme",
+            "default",
+        ]);
+
+        expect(res.name).toBe("my-app");
+        expect(res.template).toBe("dashboard");
+        expect(res.theme).toBe("default");
+    });
+
+    it("skips inline scaffold flags when finding the project name", () => {
+        const res = parseArgs([
+            "--template=dashboard",
+            "--theme=default",
+            "my-app",
+        ]);
+
+        expect(res.name).toBe("my-app");
+        expect(res.template).toBe("dashboard");
+        expect(res.theme).toBe("default");
+    });
+
     it("parses add command with component only", () => {
         const res = parseArgs(["add", "Badge"]);
 
@@ -104,6 +130,24 @@ describe("CLI args", () => {
         expect(res.yes).toBe(true);
     });
 
+    it("rejects add command --dir without a path value", () => {
+        expect(() => parseArgs(["add", "Badge", "--dir"])).toThrow(
+            "--dir requires a value"
+        );
+    });
+
+    it("rejects add command --dir followed by another flag", () => {
+        expect(() => parseArgs(["add", "Badge", "--dir", "--dry-run"])).toThrow(
+            "--dir requires a value"
+        );
+    });
+
+    it("rejects add command --dir= without an inline path value", () => {
+        expect(() => parseArgs(["add", "Badge", "--dir="])).toThrow(
+            "--dir requires a value"
+        );
+    });
+
     it("isNonInteractive works", () => {
         expect(isNonInteractive(parseArgs(["app", "--yes"]))).toBe(true);
         expect(isNonInteractive(parseArgs(["app"]))).toBe(false);
@@ -115,5 +159,16 @@ describe("CLI args", () => {
         expect(() => parseArgs(["app", "--template", "invalid-template"])).toThrow(
             'Invalid template "invalid-template". Valid: empty, dashboard, interactive-tool, cli-wrapper, cli-tool, file-manager, ai-assistant, form-wizard'
         );
+    });
+    it('parses --version', () => {
+        const res = parseArgs(['--version']);
+
+        expect(res.version).toBe(true);
+    });
+
+    it('parses -v', () => {
+        const res = parseArgs(['-v']);
+
+        expect(res.version).toBe(true);
     });
 });

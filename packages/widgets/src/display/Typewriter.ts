@@ -1,5 +1,5 @@
 import { Widget } from '../base/Widget.js';
-import { type Screen, type Style, caps, styleToCellAttrs, stringWidth } from '@termuijs/core';
+import { type Screen, type Style, caps, styleToCellAttrs, stringWidth, prefersReducedMotion } from '@termuijs/core';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TypewriterOptions
@@ -35,6 +35,7 @@ const segmenter = new Intl.Segmenter();
  */
 export class Typewriter extends Widget {
   private _text: string;
+  private _segments: Intl.SegmentData[];
   private _revealed: number;
   private _speed: number;
   private _cursor: string | undefined;
@@ -46,6 +47,7 @@ export class Typewriter extends Widget {
   ) {
     super(style);
     this._text = text;
+    this._segments = Array.from(segmenter.segment(text));
     this._revealed = 0;
     // Clamp speed to a positive integer: non-positive, NaN, and fractional
     // values would cause reveal to stall or behave non-deterministically.
@@ -60,8 +62,16 @@ export class Typewriter extends Widget {
 
   /** Advance the reveal head by `speed` characters. No-op once fully revealed. */
   tick(): void {
-    const len = Array.from(segmenter.segment(this._text)).length;
+    const len = this._segments.length;
+    if (prefersReducedMotion()) {
+      if (this._revealed >= len) return;
+      this._revealed = len;
+      this.markDirty();
+      return;
+    }
+
     if (this._revealed >= len) return;
+
     this._revealed = Math.min(this._revealed + this._speed, len);
     this.markDirty();
   }
@@ -74,9 +84,16 @@ export class Typewriter extends Widget {
 
   /** Replace the text and reset the reveal counter. */
   setText(text: string): void {
+    if (text === this._text) return;
     this._text = text;
+    this._segments = Array.from(segmenter.segment(text));
     this._revealed = 0;
     this.markDirty();
+  }
+
+  /** Get the current text. */
+  getText(): string {
+    return this._text;
   }
 
   // ── Rendering ─────────────────────────────────────────────────────────────
@@ -85,7 +102,7 @@ export class Typewriter extends Widget {
     const { x, y, width, height } = this._getContentRect();
     if (width <= 0 || height <= 0) return;
 
-    const segments = Array.from(segmenter.segment(this._text));
+    const segments = this._segments;
     const fullyRevealed = this._revealed >= segments.length;
 
     // Cursor glyph: caller-supplied string wins; otherwise caps-aware default.

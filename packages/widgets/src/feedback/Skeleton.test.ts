@@ -24,10 +24,16 @@ describe('Skeleton', () => {
 
     it('creates skeleton and subscribes to timer', () => {
         const s = new Skeleton();
+
         s.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+
         const screen = new Screen(5, 1);
         s.render(screen);
-        const row = screen.back[0].map((c: { char: string }) => c.char).join('');
+
+        const row = screen.back[0]
+            .map((c: { char: string }) => c.char)
+            .join('');
+
         expect(row.length).toBe(5);
         expect(row.trim()).not.toBe('');
         expect(motion.timerPoolSubscribe).toHaveBeenCalled();
@@ -35,48 +41,57 @@ describe('Skeleton', () => {
 
     it('renders initial state', () => {
         const s = new Skeleton();
+
         s.updateRect({ x: 0, y: 0, width: 5, height: 2 });
 
         const screen = new Screen(5, 2);
         s.render(screen);
 
         for (let r = 0; r < 2; r++) {
-            expect(screen.back[r].map(c => c.char).join('')).toBe('░░░░░');
+            expect(
+                screen.back[r].map(c => c.char).join('')
+            ).toBe('░░░░░');
         }
     });
 
     it('updates on timer tick', () => {
         const s = new Skeleton();
+
         s.updateRect({ x: 0, y: 0, width: 5, height: 1 });
 
         const screen1 = new Screen(5, 1);
         s.render(screen1);
 
-        if (timerCallback) timerCallback();
+        timerCallback?.();
 
         const screen2 = new Screen(5, 1);
         s.render(screen2);
 
-        expect(screen2.back[0].map(c => c.char).join('')).toBe('▒▒▒▒▒');
+        expect(
+            screen2.back[0].map(c => c.char).join('')
+        ).toBe('▒▒▒▒▒');
     });
 
-    it('does not animate when caps.motion is false', () => {
+    it('does not animate when reduced motion is preferred', () => {
         vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
 
-        const s = new Skeleton();
+        new Skeleton();
+
         expect(motion.timerPoolSubscribe).not.toHaveBeenCalled();
     });
 
     it('respects custom chars', () => {
         const s = new Skeleton({}, { chars: ['X', 'X'] });
+
         s.updateRect({ x: 0, y: 0, width: 3, height: 1 });
 
         const screen = new Screen(3, 1);
         s.render(screen);
 
-        expect(screen.back[0].map(c => c.char).join('')).toBe('XXX');
+        expect(
+            screen.back[0].map(c => c.char).join('')
+        ).toBe('XXX');
     });
-
 
     it('unmount unsubscribes timer', () => {
         const unsub = vi.fn();
@@ -84,6 +99,7 @@ describe('Skeleton', () => {
         vi.spyOn(motion, 'timerPoolSubscribe').mockReturnValue(unsub);
 
         const s = new Skeleton();
+
         s.unmount();
 
         expect(unsub).toHaveBeenCalled();

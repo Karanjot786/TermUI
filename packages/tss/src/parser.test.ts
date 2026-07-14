@@ -75,4 +75,43 @@ describe('TSS Parser', () => {
         expect(prop.value.kind).toBe('number');
         expect((prop.value as any).value).toBe(50);
     });
+
+    it('parses negative numeric values', () => {
+        const ast = parseTSS(`
+            Box {
+                margin: -2;
+            }
+        `);
+        const prop = ast.rules[0].properties[0];
+        expect(prop.value.kind).toBe('number');
+        expect((prop.value as any).value).toBe(-2);
+    });
+
+    it('preserves multi-token spacing values', () => {
+        const ast = parseTSS(`
+            Box {
+                padding: 1 2;
+                margin: 1 2 3 4;
+            }
+        `);
+
+        expect(ast.rules[0].properties[0].value).toEqual({
+            kind: 'literal',
+            value: '1 2',
+        });
+        expect(ast.rules[0].properties[1].value).toEqual({
+            kind: 'literal',
+            value: '1 2 3 4',
+        });
+    });
+
+    it('parses calc expressions as literal values', () => {
+        const ast = parseTSS(`
+            Box {
+                width: calc(10 - 2);
+            }
+        `);
+        const prop = ast.rules[0].properties[0];
+        expect(prop.value).toEqual({ kind: 'literal', value: 'calc(10 - 2)' });
+    });
 });

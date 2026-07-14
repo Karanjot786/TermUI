@@ -4,6 +4,45 @@ All notable changes to TermUI are documented here. The format is based on [Keep 
 
 ---
 
+## [0.1.7] - 2026-06-29
+
+A CLI for copy-paste component installs, a real component registry, live previews for all 230 components, and an SEO/GEO pass on the docs. 253 commits from 35 contributors. No breaking changes.
+
+### Added
+
+#### @termuijs/cli (new package)
+- `termuijs list` command with an interactive picker (dogfoods the `@termuijs/widgets` List).
+- `termuijs add <component>` copies real source into your project, with path-safety, a registry resolver, package-manager detection, and dependency install.
+- Argument parser and command router scaffold.
+
+#### Component registry
+- `build-registry` extracts each component's real constructor signature and options props (resolves `extends`, union params, inline object-literal options, `*Props` types, multiline-comment args, per-field descriptions).
+- Emits per-component files plus their dependencies for copy-source installs, and a committed slim registry deduped by slug.
+- Published to `/r/<slug>.json` so `termui.io` serves the registry.
+
+#### @termuijs/jsx
+- Publish the feedback API to npm: `useFeedback`, `triggerFeedback`, `AUDIBLE_FEEDBACK_TYPES`, and the `FeedbackType` type.
+- Publish the package-manager helpers: `usePackageManager`, `detectPackageManager`, `getPackageManagerCommands`.
+
+### Fixed
+
+- Docs site (`termui.io`) builds standalone against the published packages instead of only resolving via the workspace.
+- JSX live demos rendered blank: give the reconciled root `flexGrow` and width so it fills the wrapper.
+- `empty.js` browser stub converted to ESM (the site is `type: module`, so the CJS `module.exports` failed under Turbopack).
+
+### Internal
+
+- Re-publish all 14 library packages in lockstep at `0.1.7`. The published `0.1.6` predated the new `@termuijs/jsx` exports, which broke the docs build against the registry.
+- Split the documentation site into its own repository (`TermUI_Docs`); untracked `website/` from the main repo.
+
+### Contributors
+
+35 contributors made commits in this release. Thank you to:
+
+@Karanjot786 @jainiksha @srushti-panara @ionfwsrijan @Harshithk951 @realtushartyagi @ZainabTravadi @pradeep0153 @anshika1179 @pranvxag @knoxiboy @RosheshChaware @atul-upadhyay-7 @RitikOnWork @KrutagyaKaneria @riddhima25bet10005-a11y @pixeltannu @hrx01-dev @Vartika-l7 @Akshith-cdr @theblag @prasannaPratapSingh @palak170306-design @nidhib08 @namrarafique93-del @kotebhakti30 @i-OmSharma @harsh0028-boop @divyanshisrivastava395 @bhumindeshpande8-spec @VirenSumbly @Vaibhavi-1107 @Satvik-art-creator @DivyanshSaharan @Aryan-Agarwal-creator
+
+---
+
 ## [0.1.6] - 2026-06-15
 
 72 new widgets, 35 new hooks, fixes across 14 packages, contributed by 162 developers.

@@ -458,6 +458,23 @@ describe("BasicAuthPrompt – long input strings", () => {
         widget.updateRect({ x: 0, y: 0, width: 80, height: 10 });
         expect(() => widget.render(screen)).not.toThrow();
     });
+
+    it("truncates rendered credential rows to the widget width", () => {
+        const widget = new BasicAuthPrompt();
+        typeInto(widget, "a".repeat(50));
+        pressEnter(widget);
+        typeInto(widget, "b".repeat(50));
+
+        const screen = new Screen(12, 2);
+        const writeSpy = vi.spyOn(screen, "writeString");
+        widget.updateRect({ x: 0, y: 0, width: 12, height: 2 });
+        widget.render(screen);
+
+        expect(writeSpy).toHaveBeenCalledTimes(2);
+        for (const call of writeSpy.mock.calls) {
+            expect(call[2].length).toBeLessThanOrEqual(12);
+        }
+    });
 });
 
 // ─── 9. Password mask length matches password length ─────────────────────────

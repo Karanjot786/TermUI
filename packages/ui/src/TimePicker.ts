@@ -22,7 +22,7 @@ export class TimePicker extends Widget {
     }
 
     get value(): Date {
-        return this._date;
+        return new Date(this._date);
     }
 
     set value(val: Date) {

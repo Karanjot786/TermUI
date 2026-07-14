@@ -14,16 +14,25 @@ export function lazy<TProps = any>(
         if (status === 'uninitialized') {
             status = 'pending';
 
+            const triggerRender = (): void => {
+                try {
+                    const fn = getRequestRender();
+                    if (fn) fn();
+                } catch {
+                    // Silently ignore — outside reconciler context
+                }
+            };
+
             promise = loader().then(
                 (mod) => {
                     status = 'resolved';
                     result = mod.default;
-                    getRequestRender()?.();
+                    triggerRender();
                 },
                 (err) => {
                     status = 'rejected';
                     result = err;
-                    getRequestRender()?.();
+                    triggerRender();
                 },
             );
 

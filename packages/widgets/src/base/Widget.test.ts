@@ -38,6 +38,19 @@ class RecoversWidget extends Widget {
     }
 }
 
+// Exposes the protected sanitize() so tests can exercise both the default
+// (sanitizeContent = true) and raw (sanitizeContent = false) code paths
+// directly, independent of any specific widget's render pipeline.
+class SanitizingWidget extends Widget {
+    protected _renderSelf(_screen: Screen): void {}
+    setRaw(raw: boolean): void {
+        this.sanitizeContent = !raw;
+    }
+    publicSanitize(text: string): string {
+        return this.sanitize(text);
+    }
+}
+
 describe('Widget', () => {
     it('generates unique IDs', () => {
         const a = new TestWidget();
@@ -150,6 +163,91 @@ describe('Widget', () => {
         expect(w.callCount).toBe(2);
     });
 
+    it('tracks render count', () => {
+        const widget = new TestWidget();
+        const screen = new Screen(10, 5);
+    
+        widget.render(screen);
+        widget.render(screen);
+    
+        expect(
+            widget.getRenderStats().renderCount,
+        ).toBe(2);
+    });
+    
+    it('tracks last render duration', () => {
+        const widget = new TestWidget();
+        const screen = new Screen(10, 5);
+    
+        widget.render(screen);
+    
+        expect(
+            widget.getRenderStats().lastDurationMs,
+        ).toBeGreaterThanOrEqual(0);
+    });
+    
+    it('tracks total render duration', () => {
+        const widget = new TestWidget();
+        const screen = new Screen(10, 5);
+    
+        widget.render(screen);
+    
+        expect(
+            widget.getRenderStats().totalDurationMs,
+        ).toBeGreaterThanOrEqual(0);
+    });
+    
+    it('calculates average render duration', () => {
+        const widget = new TestWidget();
+        const screen = new Screen(10, 5);
+    
+        widget.render(screen);
+        widget.render(screen);
+    
+        expect(
+            widget.getAverageRenderDuration(),
+        ).toBeGreaterThanOrEqual(0);
+    });
+    
+    it('returns zero average when no renders occurred', () => {
+        const widget = new TestWidget();
+    
+        expect(
+            widget.getAverageRenderDuration(),
+        ).toBe(0);
+    });
+
+    describe('child hierarchy dirty marking', () => {
+        it('marks parent dirty when addChild is called', () => {
+            const parent = new TestWidget();
+            const child = new TestWidget();
+            parent.clearDirty();
+            expect(parent.isDirty).toBe(false);
+            parent.addChild(child);
+            expect(parent.isDirty).toBe(true);
+        });
+
+        it('marks parent dirty when removeChild is called', () => {
+            const parent = new TestWidget();
+            const child = new TestWidget();
+            parent.addChild(child);
+            parent.clearDirty();
+            expect(parent.isDirty).toBe(false);
+            parent.removeChild(child);
+            expect(parent.isDirty).toBe(true);
+        });
+
+        it('marks parent dirty when clearChildren is called', () => {
+            const parent = new TestWidget();
+            const child = new TestWidget();
+            parent.addChild(child);
+            parent.clearDirty();
+            expect(parent.isDirty).toBe(false);
+            parent.clearChildren();
+            expect(parent.isDirty).toBe(true);
+        });
+    });
+
     describe('destroy() lifecycle', () => {
         it('emits unmount and removes event listeners', () => {
             const w = new TestWidget();
@@ -209,6 +307,19 @@ describe('Widget', () => {
             expect(c1.parent).toBeNull();
             expect(c2.parent).toBeNull();
         });
+
+        it('destroy() calls the overridden unmount() exactly once', () => {
+            const unmountFn = vi.fn();
+            class LifecycleWidget extends TestWidget {
+                override unmount(): void {
+                    unmountFn();
+                    super.unmount();
+                }
+            }
+            const w = new LifecycleWidget();
+            w.destroy();
+            expect(unmountFn).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('isActive() Lifecycle', () => {
@@ -245,6 +356,38 @@ async function advanceSpring(ms: number) {
         await Promise.resolve();
     }
 }
+
+describe('Widget.sanitize()', () => {
+    it('default mode (sanitizeContent = true) strips everything, including SGR', () => {
+        const w = new SanitizingWidget();
+        const out = w.publicSanitize('\x1b[31mred\x1b[0m\x1b[2Jcleared');
+        expect(out).toBe('redcleared');
+    });
+
+    it('raw mode (sanitizeContent = false) is no longer a no-op: it strips OSC-52 clipboard exfiltration', () => {
+        const w = new SanitizingWidget();
+        w.setRaw(true);
+        const out = w.publicSanitize('\x1b]52;c;ZXZpbA==\x07safe');
+        expect(out).not.toContain('\x1b]52');
+        expect(out).toBe('safe');
+    });
+
+    it('raw mode strips cursor movement and screen-clear sequences', () => {
+        const w = new SanitizingWidget();
+        w.setRaw(true);
+        const out = w.publicSanitize('\x1b[2Jhi\x1b[10;20H');
+        expect(out).not.toContain('\x1b[2J');
+        expect(out).not.toContain('\x1b[10;20H');
+        expect(out).toBe('hi');
+    });
+
+    it('raw mode still preserves SGR formatting sequences, matching the documented Text.raw behavior', () => {
+        const w = new SanitizingWidget();
+        w.setRaw(true);
+        const out = w.publicSanitize('\x1b[31mred\x1b[0m');
+        expect(out).toBe('\x1b[31mred\x1b[0m');
+    });
+});
 
 describe('Widget.layoutTransition', () => {
     beforeEach(() => {
@@ -284,5 +427,48 @@ describe('Widget.layoutTransition', () => {
         await advanceSpring(5000);
         expect(widget.rect).toEqual({ x: 100, y: 100, width: 100, height: 100 });
     });
+
+    describe('z-index styling and rendering order', () => {
+        it('supports zIndex getter and setter', () => {
+            const w = new TestWidget();
+            expect(w.zIndex).toBe(0);
+            w.zIndex = 5;
+            expect(w.zIndex).toBe(5);
+            expect(w.style.zIndex).toBe(5);
+        });
+
+        it('renders children sorted by zIndex (Painter\'s Algorithm)', () => {
+            const parent = new TestWidget();
+            const order: string[] = [];
+
+            class OrderedWidget extends Widget {
+                private _name: string;
+                constructor(name: string, z: number) {
+                    super({ zIndex: z });
+                    this._name = name;
+                }
+                protected _renderSelf(): void {
+                    order.push(this._name);
+                }
+            }
+
+            const w1 = new OrderedWidget('first', 10);
+            const w2 = new OrderedWidget('second', 5);
+            const w3 = new OrderedWidget('third', 20);
+            const w4 = new OrderedWidget('fourth', 5); // same zIndex as w2, should preserve insertion order
+
+            parent.addChild(w1);
+            parent.addChild(w2);
+            parent.addChild(w3);
+            parent.addChild(w4);
+
+            const screen = new Screen(10, 5);
+            parent.render(screen);
+
+            // Sorted order by zIndex: w2 (5), w4 (5), w1 (10), w3 (20)
+            expect(order).toEqual(['second', 'fourth', 'first', 'third']);
+        });
+    });
 });
+
 
