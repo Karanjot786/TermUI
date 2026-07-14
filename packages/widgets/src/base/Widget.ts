@@ -274,6 +274,12 @@ export abstract class Widget {
 
         emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'start');
 
+        // Apply z-index if specified
+        const zIndex = this._style.zIndex;
+        if (zIndex !== undefined && (screen as any).pushZIndex) {
+            (screen as any).pushZIndex(zIndex);
+        }
+
         // Push clip region if overflow is hidden (default style)
         const shouldClip = this._style.overflow !== 'visible';
         if (shouldClip) {
@@ -318,6 +324,10 @@ export abstract class Widget {
         // Pop clip region
         if (shouldClip) {
             screen.popClip();
+        }
+
+        if (zIndex !== undefined && (screen as any).popZIndex) {
+            (screen as any).popZIndex();
         }
 
         emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'end');

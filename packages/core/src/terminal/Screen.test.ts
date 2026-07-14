@@ -402,4 +402,68 @@ describe('Screen and Cell Hyperlink Support', () => {
             expect(screen.back[8][0].dim).toBe(true); // bottom left
         });
     });
+
+    describe('Z-Index Support', () => {
+        it('higher z-index overwrites lower z-index', () => {
+            const screen = new Screen(10, 10);
+            
+            screen.pushZIndex(1);
+            screen.setCell(0, 0, { char: 'A' });
+            screen.popZIndex();
+            
+            screen.pushZIndex(2);
+            screen.setCell(0, 0, { char: 'B' });
+            screen.popZIndex();
+            
+            expect(screen.back[0][0].char).toBe('B');
+            expect(screen.back[0][0].z).toBe(2);
+        });
+
+        it('lower z-index does NOT overwrite higher z-index', () => {
+            const screen = new Screen(10, 10);
+            
+            screen.pushZIndex(2);
+            screen.setCell(0, 0, { char: 'B' });
+            screen.popZIndex();
+            
+            screen.pushZIndex(1);
+            screen.setCell(0, 0, { char: 'A' });
+            screen.popZIndex();
+            
+            expect(screen.back[0][0].char).toBe('B');
+            expect(screen.back[0][0].z).toBe(2);
+        });
+
+        it('completely transparent cells do NOT overwrite lower layers even with higher z-index', () => {
+            const screen = new Screen(10, 10);
+            
+            screen.pushZIndex(1);
+            screen.setCell(0, 0, { char: 'A', bg: { type: 'named', name: 'red' } });
+            screen.popZIndex();
+            
+            screen.pushZIndex(2);
+            screen.setCell(0, 0, emptyCell());
+            screen.popZIndex();
+            
+            expect(screen.back[0][0].char).toBe('A');
+            expect(screen.back[0][0].bg).toEqual({ type: 'named', name: 'red' });
+            expect(screen.back[0][0].z).toBe(1);
+        });
+
+        it('cells with text but transparent background preserve the lower layer background', () => {
+            const screen = new Screen(10, 10);
+            
+            screen.pushZIndex(1);
+            screen.setCell(0, 0, { char: 'A', bg: { type: 'named', name: 'red' } });
+            screen.popZIndex();
+            
+            screen.pushZIndex(2);
+            screen.setCell(0, 0, { char: 'B', bg: { type: 'none' } });
+            screen.popZIndex();
+            
+            expect(screen.back[0][0].char).toBe('B');
+            expect(screen.back[0][0].bg).toEqual({ type: 'named', name: 'red' });
+            expect(screen.back[0][0].z).toBe(2);
+        });
+    });
 });

@@ -43,6 +43,8 @@ export interface Cell {
     link?: string;
     /** DevTools Widget ID for Inspector Mode */
     debugWidgetId?: string;
+    /** Z-Index layer */
+    z: number;
 }
 
 /** Create a blank cell with default attributes */
@@ -60,6 +62,7 @@ export function emptyCell(): Cell {
         width: 1,
         link: undefined,
         debugWidgetId: undefined,
+        z: 0,
     };
 }
 
@@ -77,6 +80,7 @@ export function resetCell(cell: Cell): void {
     cell.width = 1;
     cell.link = undefined;
     cell.debugWidgetId = undefined;
+    cell.z = 0;
 }
 
 /** Check if two cells are visually identical */
@@ -177,6 +181,9 @@ export class Screen {
 
     private _translateYStack: number[] = [];
     private _translateY = 0;
+    
+    private _zIndexStack: number[] = [0];
+    private _currentZIndex = 0;
 
     /**
      * Queue of raw ANSI/OSC sequences to be emitted verbatim after the
@@ -328,6 +335,18 @@ export class Screen {
         this._translateY -= offset;
     }
 
+    pushZIndex(z: number): void {
+        this._zIndexStack.push(z);
+        this._currentZIndex = z;
+    }
+
+    popZIndex(): void {
+        this._zIndexStack.pop();
+        this._currentZIndex = this._zIndexStack.length > 0 
+            ? this._zIndexStack[this._zIndexStack.length - 1] 
+            : 0;
+    }
+
     /**
      * Write a cell to the back buffer at position (col, row).
      */
@@ -350,10 +369,30 @@ export class Screen {
         }
 
         const existing = this.back[row][col];
+        const z = this._currentZIndex;
+        const existingZ = existing.z ?? 0;
+
+        if (z < existingZ) return;
+
         if (cell.char !== undefined) {
             cell = { ...cell, char: stripAnsiControl(cell.char) };
         }
+
+        if (z > existingZ) {
+            const charStr = cell.char !== undefined ? cell.char : existing.char;
+            const isCharEmpty = charStr === ' ' || charStr === '';
+            const isBgEmpty = !cell.bg || cell.bg.type === 'none';
+
+            if (isCharEmpty && isBgEmpty) {
+                return;
+            }
+            if (isBgEmpty && cell.bg) {
+                delete cell.bg;
+            }
+        }
+
         Object.assign(existing, cell);
+        existing.z = z;
     }
 
     /**
@@ -495,6 +534,8 @@ export class Screen {
         this._clipStack = [];
         this._translateYStack = [];
         this._translateY = 0;
+        this._zIndexStack = [0];
+        this._currentZIndex = 0;
         this._ansiQueue = [];
         this._flushEpoch = -1;
         this._swapping = false;
