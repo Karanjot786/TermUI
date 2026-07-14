@@ -434,7 +434,11 @@ export class Router {
 
         if (typeof guardResult === 'string') {
             this._forwardStack.pop();
-            this.push(guardResult);
+            this._executeNavigation(guardResult, {
+                modifyHistory: 'push',
+                clearForwardStack: false,
+                direction: 'forward',
+            });
             return;
         }
 
