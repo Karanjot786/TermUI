@@ -16,6 +16,7 @@ import {
     truncate,
     caps,
     stringWidth,
+    splitGraphemes,
 } from '@termuijs/core';
 
 export interface SearchInputOptions {
@@ -65,7 +66,9 @@ export class SearchInput extends Widget {
                 break;
             case 'backspace':
                 if (this._value.length > 0) {
-                    this._value = this._value.slice(0, -1);
+                    const graphemes = splitGraphemes(this._value);
+                    graphemes.pop();
+                    this._value = graphemes.join('');
                     this.markDirty();
                     this._scheduleSearch();
                 }

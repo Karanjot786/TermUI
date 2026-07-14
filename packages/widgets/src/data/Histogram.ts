@@ -1,5 +1,6 @@
 import { type Screen, type Style, type Color, caps, truncate } from "@termuijs/core";
 import { Widget } from "../base/Widget.js";
+import { filterFinite } from "./utils.js";
 
 export interface HistogramOptions {
     bins?: number;
@@ -16,13 +17,17 @@ export class Histogram extends Widget {
     constructor(style: Partial<Style> = {}, opts: HistogramOptions = {}) {
         super(style);
 
-        this._bins = opts.bins ?? 10;
+        const bins = opts.bins ?? 10;
+        if (!Number.isInteger(bins) || bins <= 0) {
+            throw new Error("Histogram bins must be a positive integer");
+        }
+        this._bins = bins;
         this._barColor = opts.barColor ?? { type: "named", name: "cyan" };
         this._xLabel = opts.xLabel;
     }
 
     setData(values: number[]): void {
-        this._values = values;
+        this._values = filterFinite(values);
         this.markDirty();
     }
 

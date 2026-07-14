@@ -16,6 +16,15 @@ import { renderFallback, shouldUseFallback } from './Fallback.js';
 import { mergeBorders } from '../renderer/border-merge.js';
 import { renderInlineToTerminal } from '../inline-viewport.js';
 
+type HitGridEntry = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    visible: boolean;
+    zIndex: number;
+};
+
 export interface AppOptions extends TerminalOptions {
     /** Frames per second for the render loop */
     fps?: number;
@@ -89,7 +98,10 @@ export class App {
     private _unsubUnhandledRejection: (() => void) | null = null;
     private _widgetById = new Map<string, any>(); // any: Widget shape varies; narrowed at retrieval
     private _hoveredWidgetId: string | null = null;
+    private _clickedWidgetId: string | null = null;
     private _pendingFocusState = new Map<string, boolean>();
+    private _hitGridState = new Map<string, HitGridEntry>();
+    private _hitGridDirty = true;
     private _pendingFocusRetries = new Map<string, number>();
     private static readonly PENDING_FOCUS_MAX_RETRIES = 5;
 
@@ -178,6 +190,7 @@ export class App {
             this.screen.resize(cols, rows);
             this.screen.invalidate();
             this.layers.resize(cols, rows);
+            this._hitGridDirty = true;
             this.events.emit('resize', { cols, rows });
             (this._rootWidget as any).markDirty?.(); // as any: RootWidget.markDirty may be absent in some configs
             this.requestRender();
@@ -224,11 +237,27 @@ export class App {
         this._unsubMouse = this.input.onMouse((event) => {
             this.events.emit('mouse', event);
 
-            if (event.type === 'mousedown' || event.type === 'mouseup') {
+            if (event.type === 'mousedown') {
+                const hitWidget = this._findWidgetAt(event.x, event.y);
+                if (hitWidget) {
+                    this._clickedWidgetId = hitWidget.id;
+                    hitWidget.events.emit('mouse', event);
+                } else {
+                    this._clickedWidgetId = null;
+                }
+            }
+
+            if (event.type === 'mouseup') {
                 const hitWidget = this._findWidgetAt(event.x, event.y);
                 if (hitWidget) {
                     hitWidget.events.emit('mouse', event);
+                    if (hitWidget.id === this._clickedWidgetId) {
+                        const clickEvent = { ...event, type: 'click' as const };
+                        hitWidget.events.emit('click' as any, clickEvent);
+                        hitWidget.onClick?.(clickEvent);
+                    }
                 }
+                this._clickedWidgetId = null;
             }
 
             if (event.type === 'mousemove') {
@@ -240,11 +269,15 @@ export class App {
                         ? this._widgetById.get(this._hoveredWidgetId)
                         : null;
                     if (prevWidget) {
-                        prevWidget.events.emit('mouseleave', { ...event, type: 'mouseleave' });
+                        const leaveEvent = { ...event, type: 'mouseleave' as const };
+                        prevWidget.events.emit('mouseleave' as any, leaveEvent);
+                        prevWidget.onMouseLeave?.(leaveEvent);
                     }
 
                     if (hitWidget) {
-                        hitWidget.events.emit('mouseenter', { ...event, type: 'mouseenter' });
+                        const enterEvent = { ...event, type: 'mouseenter' as const };
+                        hitWidget.events.emit('mouseenter' as any, enterEvent);
+                        hitWidget.onMouseEnter?.(enterEvent);
                     }
 
                     this._hoveredWidgetId = hitId;
@@ -397,16 +430,18 @@ export class App {
             }
 
             try {
-                // Skip full render pass if neither the widget tree nor overlay
-                // layers have reported any changes. Done inside the deferred
-                // callback so the dirty check and the _isRenderPending guard
-                // are never racy with concurrent requestRender() calls.
-                if (this._rootWidget.isDirty === false && !this.layers.hasDirtyLayers()) {
+                const shouldRender = this._rootWidget.isDirty !== false;
+
+                // Skip the full render pass if neither the widget tree, overlay
+                // layers, nor the runtime hit-grid need work. Done inside the
+                // deferred callback so the dirty check and the _isRenderPending
+                // guard are never racy with concurrent requestRender() calls.
+                if (!shouldRender && !this.layers.hasDirtyLayers() && !this._hitGridDirty) {
                     this._isRenderPending = false;
                     return;
                 }
 
-                if (this._rootWidget.isDirty !== false) {
+                if (shouldRender) {
                     // Compute layout
                     const layoutRoot = this._rootWidget.getLayoutNode();
                     computeLayout(layoutRoot, this.terminal.cols, this.terminal.rows);
@@ -416,7 +451,19 @@ export class App {
 
                     // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
                     this._buildWidgetMap(this._rootWidget);
+                }
 
+                const hitGridSnapshot = this._createHitGridSnapshot(this._rootWidget);
+                const hitGridNeedsRebuild = this._hitGridDirty || this._hasHitGridStateChanged(hitGridSnapshot);
+
+                // Populate the existing spatial hit-grid from the runtime widget tree.
+                // Rebuild only when the widget geometry or visibility state changed.
+                if (hitGridNeedsRebuild) {
+                    this._populateHitGrid(hitGridSnapshot);
+                    this._hitGridDirty = false;
+                }
+
+                if (shouldRender) {
                     // Clear the back buffer and render widgets into it
                     this.screen.clear();
                     this._rootWidget.render(this.screen);
@@ -559,6 +606,66 @@ export class App {
         }
     }
 
+    private _createHitGridSnapshot(root: any): Map<string, HitGridEntry> { // any: Widget tree shape not statically known at traversal
+        const snapshot = new Map<string, HitGridEntry>();
+        const stack = [root];
+
+        while (stack.length > 0) {
+            const widget = stack.pop();
+            if (!widget) continue;
+
+            const rect = widget.rect ?? widget._rect;
+            const style = widget.style ?? widget._style;
+            if (widget.id && rect && style?.visible !== false) {
+                const width = rect.width ?? 0;
+                const height = rect.height ?? 0;
+                snapshot.set(widget.id, {
+                    x: rect.x,
+                    y: rect.y,
+                    width,
+                    height,
+                    visible: style?.visible !== false,
+                    zIndex: style?.zIndex ?? 0,
+                });
+            }
+
+            const children = widget._children ?? widget.children ?? [];
+            if (Array.isArray(children)) {
+                for (let i = children.length - 1; i >= 0; i--) {
+                    stack.push(children[i]);
+                }
+            }
+        }
+
+        return snapshot;
+    }
+
+    private _populateHitGrid(snapshot: Map<string, HitGridEntry>): void {
+        this.layers.clearHitGrid();
+        this._hitGridState.clear();
+
+        for (const [id, state] of snapshot) {
+            if (state.width > 0 && state.height > 0) {
+                this.layers.setHitRegion(id, state.x, state.y, state.width, state.height, state.zIndex);
+            }
+            this._hitGridState.set(id, state);
+        }
+    }
+
+    private _hasHitGridStateChanged(snapshot: Map<string, HitGridEntry>): boolean {
+        if (this._hitGridState.size !== snapshot.size) return true;
+
+        for (const [id, state] of snapshot) {
+            const prev = this._hitGridState.get(id);
+            if (!prev) return true;
+            if (prev.x !== state.x || prev.y !== state.y || prev.width !== state.width || prev.height !== state.height || prev.visible !== state.visible || prev.zIndex !== state.zIndex) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private _handleFocusEvent(event: FocusEvent): void {
         const focused = event.type === 'focus';
         const changed = this._setWidgetFocused(event.targetId, focused);
@@ -617,7 +724,9 @@ export class App {
     }
 
     private _findWidgetAt(x: number, y: number): any { // any: widget shape varies; narrowed at retrieval
-        // 1. Use LayerManager hitTest for overlay layers (respects z-order)
+        // 1. Use the existing LayerManager hit-grid as the primary lookup path.
+        //    This covers both overlays and normal widgets once the runtime tree
+        //    has populated the grid during layout/render.
         const layerHitId = this.layers.hitTest(x, y);
         if (layerHitId) {
             const layerWidget = this._widgetById.get(layerHitId);
@@ -629,7 +738,8 @@ export class App {
             }
         }
 
-        // 2. Collect all matching widgets, filtering out hidden ones
+        // 2. Fallback scan for safety during the migration window.
+        //    This preserves behavior if the hit-grid has not been populated yet.
         const matches: Array<{ widget: any; zIndex: number }> = [];
         for (const widget of this._widgetById.values()) {
             const r = widget.rect;
