@@ -211,7 +211,7 @@ app('System Monitor')
 
 ```tsx
 import { render, useState, useEffect, useKeymap } from '@termuijs/jsx';
-import { Box, Text, Gauge } from '@termuijs/widgets';
+import { Box, Text, ProgressBar } from '@termuijs/widgets';
 import { getCpuLoad, getMemoryUsage } from './system-metrics';
 
 function Dashboard() {
@@ -240,12 +240,12 @@ function Dashboard() {
             <Box flexDirection="row" gap={2}>
                 <Box flexDirection="column" width="50%">
                     <Text>CPU Load: {Math.round(cpu * 100)}%</Text>
-                    <Gauge percent={cpu} color="green" />
+                    <ProgressBar value={cpu} fillColor="green" />
                 </Box>
                 
                 <Box flexDirection="column" width="50%">
                     <Text>Memory Usage: {Math.round(mem * 100)}%</Text>
-                    <Gauge percent={mem} color="yellow" />
+                    <ProgressBar value={mem} fillColor="yellow" />
                 </Box>
             </Box>
             
