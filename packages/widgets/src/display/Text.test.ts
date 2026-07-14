@@ -67,6 +67,37 @@ describe('Text', () => {
     });
 });
 
+describe('Text – raw mode sanitization', () => {
+    it('strips OSC 52 clipboard exfiltration sequences even when raw', () => {
+        const { screen } = renderText(
+            '\x1b]52;c;ZXZpbA==\x07safe',
+            {},
+            { raw: true },
+        );
+        const text = screen.back[0].map(c => c.char).join('').trimEnd();
+        expect(text).not.toContain('\x1b]52');
+        expect(text).toBe('safe');
+    });
+
+    it('strips cursor movement and screen clear sequences even when raw', () => {
+        const { screen } = renderText(
+            '\x1b[2Jhi\x1b[10;20H',
+            {},
+            { raw: true },
+        );
+        const text = screen.back[0].map(c => c.char).join('').trimEnd();
+        expect(text).not.toContain('\x1b[2J');
+        expect(text).not.toContain('\x1b[10;20H');
+        expect(text).toContain('hi');
+    });
+
+    it('does not sanitize away plain content when raw is true', () => {
+        const { screen } = renderText('plain text', {}, { raw: true });
+        const text = screen.back[0].map(c => c.char).join('').trimEnd();
+        expect(text).toBe('plain text');
+    });
+});
+
 describe('Text – mutation regression tests', () => {
     it('does not mark dirty when content is unchanged', () => {
         const text = new Text('hello');
