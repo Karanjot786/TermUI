@@ -202,3 +202,36 @@ describe('Stopwatch – setInterval()', () => {
     });
 });
 
+// ── 8. unmount and lifecycle ──────────────────────────────────────────────────
+describe('Stopwatch – unmount and lifecycle', () => {
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('unmount() pauses the stopwatch, stops it from running, and prevents elapsed time from growing', () => {
+        const sw = new Stopwatch({ interval: 10 });
+        sw.start();
+        vi.advanceTimersByTime(100);
+        
+        // Unmount
+        sw.unmount();
+        expect(sw.isRunning()).toBe(false);
+        
+        const elapsedAtUnmount = sw.getElapsed();
+        
+        // Time passes while unmounted - elapsed time should not change
+        vi.advanceTimersByTime(200);
+        expect(sw.getElapsed()).toBe(elapsedAtUnmount);
+        
+        // Remount and resume
+        sw.mount();
+        sw.start();
+        expect(sw.isRunning()).toBe(true);
+        
+        vi.advanceTimersByTime(100);
+        expect(sw.getElapsed()).toBeGreaterThan(elapsedAtUnmount);
+        
+        sw.destroy();
+    });
+});
+
+

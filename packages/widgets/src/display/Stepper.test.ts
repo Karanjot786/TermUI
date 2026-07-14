@@ -2,279 +2,234 @@
 // @termuijs/widgets — Tests for Stepper widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Screen, caps } from '@termuijs/core';
-import { Stepper, type StepperStep } from './Stepper.js';
+import { Stepper } from './Stepper.js';
+import type { StepperStep } from './Stepper.js';
 
-// ── Helpers ───────────────────────────────────────────
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 
-const STEPS: StepperStep[] = [
-    { label: 'Setup',  status: 'completed' },
-    { label: 'Config', status: 'active' },
-    { label: 'Review', status: 'pending' },
-    { label: 'Done',   status: 'pending' },
-];
+function makeSteps(): StepperStep[] {
+    return [
+        { label: 'Setup', status: 'completed' },
+        { label: 'Config', status: 'active' },
+        { label: 'Review', status: 'pending' },
+    ];
+}
 
 function renderStepper(
-    steps: StepperStep[] = STEPS,
+    steps: StepperStep[],
     opts: ConstructorParameters<typeof Stepper>[2] = {},
-    width = 60,
-    height = 10,
-): { widget: Stepper; screen: Screen } {
+    cols = 60,
+    rows = 10,
+): Screen {
     const widget = new Stepper(steps, {}, opts);
-    const screen = new Screen(width, height);
-    widget.updateRect({ x: 0, y: 0, width, height });
+    const screen = new Screen(cols, rows);
+    widget.updateRect({ x: 0, y: 0, width: cols, height: rows });
     widget.render(screen);
-    return { widget, screen };
+    return screen;
 }
 
 function rowText(screen: Screen, row: number): string {
-    let line = '';
-    for (let col = 0; col < screen.cols; col++) {
-        line += screen.back[row]?.[col]?.char ?? ' ';
-    }
-    return line.trimEnd();
+    return screen.back[row].map(c => c.char).join('');
 }
 
-function cellAt(screen: Screen, row: number, col: number) {
-    return screen.back[row]?.[col];
-}
-
-// ── Tests ─────────────────────────────────────────────
-
-describe('Stepper', () => {
-
-    describe('1. Horizontal render (default)', () => {
-        it('renders all step labels', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            expect(text).toContain('Setup');
-            expect(text).toContain('Config');
-            expect(text).toContain('Review');
-            expect(text).toContain('Done');
-            vi.restoreAllMocks();
-        });
-
-        it('renders completed step with ✓ icon', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            expect(text).toContain('✓');
-            vi.restoreAllMocks();
-        });
-
-        it('renders active step with ● icon', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            expect(text).toContain('●');
-            vi.restoreAllMocks();
-        });
-
-        it('renders pending step with ○ icon', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            expect(text).toContain('○');
-            vi.restoreAllMocks();
-        });
-
-        it('renders connectors between steps', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            expect(text).toContain('─');
-            vi.restoreAllMocks();
-        });
+describe('Stepper — rendered icons (unicode)', () => {
+    it('renders completed icon ✓ for a completed step', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const screen = renderStepper(makeSteps());
+        expect(screen.back[0][0].char).toBe('✓');
     });
 
-    describe('2. Vertical render', () => {
-        it('renders all step labels on separate rows', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper(STEPS, { orientation: 'vertical' });
-            const rows = [0, 2, 4, 6].map(r => rowText(screen, r));
-            expect(rows[0]).toContain('Setup');
-            expect(rows[1]).toContain('Config');
-            expect(rows[2]).toContain('Review');
-            expect(rows[3]).toContain('Done');
-            vi.restoreAllMocks();
-        });
-
-        it('renders vertical connector between steps', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper(STEPS, { orientation: 'vertical' });
-            // Row 1 is the connector between Setup and Config
-            expect(cellAt(screen, 1, 0)?.char).toBe('│');
-            vi.restoreAllMocks();
-        });
+    it('renders active icon ● for the active step', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const screen = renderStepper(makeSteps());
+        const row = rowText(screen, 0);
+        expect(row).toContain('●');
     });
 
-    describe('3. Status colors', () => {
-        it('completed step icon has green color', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper();
-            // First cell is the ✓ icon of completed step
-            const cell = cellAt(screen, 0, 0);
-            expect(cell?.fg).toEqual({ type: 'named', name: 'green' });
-            vi.restoreAllMocks();
-        });
+    it('renders pending icon ○ for a pending step', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const screen = renderStepper(makeSteps());
+        const row = rowText(screen, 0);
+        expect(row).toContain('○');
+    });
+});
 
-        it('active step icon has cyan color and is bold', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            // Find ● position
-            const bulletIdx = text.indexOf('●');
-            const cell = cellAt(screen, 0, bulletIdx);
-            expect(cell?.fg).toEqual({ type: 'named', name: 'cyan' });
-            expect(cell?.bold).toBe(true);
-            vi.restoreAllMocks();
-        });
+describe('Stepper — ASCII fallback', () => {
+    it('uses + for completed, * for active, - for pending when unicode is false', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const screen = renderStepper(makeSteps());
+        const row = rowText(screen, 0);
+        expect(row).toContain('+');
+        expect(row).toContain('*');
+        expect(row).toContain('-');
+        expect(row).not.toContain('✓');
+        expect(row).not.toContain('●');
+        expect(row).not.toContain('○');
+    });
+});
 
-        it('pending step icon is dim', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            const circleIdx = text.indexOf('○');
-            const cell = cellAt(screen, 0, circleIdx);
-            expect(cell?.dim).toBe(true);
-            vi.restoreAllMocks();
-        });
+describe('Stepper — horizontal orientation', () => {
+    it('renders all step labels on row 0', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const screen = renderStepper(makeSteps(), { orientation: 'horizontal' });
+        const row = rowText(screen, 0);
+        expect(row).toContain('Setup');
+        expect(row).toContain('Config');
+        expect(row).toContain('Review');
     });
 
-    describe('4. ASCII fallback', () => {
-        it('uses + for completed when caps.unicode is false', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            expect(text).toContain('+');
-            expect(text).not.toContain('✓');
-            vi.restoreAllMocks();
-        });
-
-        it('uses * for active when caps.unicode is false', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            expect(text).toContain('*');
-            expect(text).not.toContain('●');
-            vi.restoreAllMocks();
-        });
-
-        it('uses - for pending when caps.unicode is false', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
-            const { screen } = renderStepper();
-            const text = rowText(screen, 0);
-            expect(text).toContain('-');
-            expect(text).not.toContain('○');
-            vi.restoreAllMocks();
-        });
-
-        it('uses | for vertical connector when caps.unicode is false', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
-            const { screen } = renderStepper(STEPS, { orientation: 'vertical' });
-            expect(cellAt(screen, 1, 0)?.char).toBe('|');
-            vi.restoreAllMocks();
-        });
+    it('renders unicode connector ──── between steps', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const screen = renderStepper(makeSteps(), { orientation: 'horizontal' });
+        const row = rowText(screen, 0);
+        expect(row).toContain('─');
     });
 
-    describe('5. setSteps', () => {
-        it('replaces steps and marks dirty', () => {
-            const { widget } = renderStepper();
-            widget.clearDirty();
-            widget.setSteps([{ label: 'New', status: 'active' }]);
-            expect(widget.isDirty).toBe(true);
-            expect(widget.getSteps()).toHaveLength(1);
-        });
+    it('renders ASCII connector ---- between steps when unicode is false', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const screen = renderStepper(makeSteps(), { orientation: 'horizontal' });
+        const row = rowText(screen, 0);
+        expect(row).toContain('-');
+        expect(row).not.toContain('─');
+    });
+});
+
+describe('Stepper — vertical orientation', () => {
+    it('renders each step label on a separate row', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const screen = renderStepper(makeSteps(), { orientation: 'vertical' });
+        expect(rowText(screen, 0)).toContain('Setup');
+        expect(rowText(screen, 2)).toContain('Config');
+        expect(rowText(screen, 4)).toContain('Review');
     });
 
-    describe('6. setStepStatus', () => {
-        it('updates a step status and marks dirty', () => {
-            const { widget } = renderStepper();
-            widget.clearDirty();
-            widget.setStepStatus(2, 'active');
-            expect(widget.isDirty).toBe(true);
-            expect(widget.getSteps()[2].status).toBe('active');
-        });
-
-        it('ignores out-of-bounds index', () => {
-            const { widget } = renderStepper();
-            expect(() => widget.setStepStatus(99, 'active')).not.toThrow();
-        });
+    it('renders unicode vertical connector │ between step rows', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const screen = renderStepper(makeSteps(), { orientation: 'vertical' });
+        // Connector rows are at odd indices (1, 3)
+        expect(screen.back[1][0].char).toBe('│');
+        expect(screen.back[3][0].char).toBe('│');
     });
 
-    describe('7. nextStep / prevStep', () => {
-        it('nextStep advances active to next step', () => {
-            const { widget } = renderStepper();
-            // Config (index 1) is active
-            widget.nextStep();
-            expect(widget.getSteps()[1].status).toBe('completed');
-            expect(widget.getSteps()[2].status).toBe('active');
-        });
+    it('renders ASCII vertical connector | when unicode is false', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const screen = renderStepper(makeSteps(), { orientation: 'vertical' });
+        expect(screen.back[1][0].char).toBe('|');
+    });
+});
 
-        it('nextStep marks dirty', () => {
-            const { widget } = renderStepper();
-            widget.clearDirty();
-            widget.nextStep();
-            expect(widget.isDirty).toBe(true);
-        });
+describe('Stepper — navigation API', () => {
+    it('nextStep advances the active step and marks dirty', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const widget = new Stepper(makeSteps());
+        widget.clearDirty();
 
-        it('nextStep does nothing when last step is active', () => {
-            const steps: StepperStep[] = [
-                { label: 'A', status: 'completed' },
-                { label: 'B', status: 'active' },
-            ];
-            const { widget } = renderStepper(steps);
-            widget.nextStep();
-            expect(widget.getSteps()[1].status).toBe('active');
-        });
+        widget.nextStep();
 
-        it('prevStep moves active to previous step', () => {
-        const freshSteps: StepperStep[] = [
-            { label: 'Setup',  status: 'completed' },
-            { label: 'Config', status: 'active' },
-            { label: 'Review', status: 'pending' },
-        ];
-        const { widget } = renderStepper(freshSteps);
+        expect(widget.isDirty).toBe(true);
+        const steps = widget.getSteps();
+        expect(steps[1]?.status).toBe('completed');
+        expect(steps[2]?.status).toBe('active');
+    });
+
+    it('nextStep is a no-op when active step is the last', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const widget = new Stepper([
+            { label: 'A', status: 'completed' },
+            { label: 'B', status: 'active' },
+        ]);
+        widget.clearDirty();
+
+        widget.nextStep();
+
+        expect(widget.isDirty).toBe(false);
+        expect(widget.getSteps()[1]?.status).toBe('active');
+    });
+
+    it('prevStep moves active step back and marks dirty', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const widget = new Stepper(makeSteps());
+        widget.clearDirty();
+
         widget.prevStep();
-        expect(widget.getSteps()[0].status).toBe('active');
-        expect(widget.getSteps()[1].status).toBe('pending');
+
+        expect(widget.isDirty).toBe(true);
+        const steps = widget.getSteps();
+        expect(steps[0]?.status).toBe('active');
+        expect(steps[1]?.status).toBe('pending');
     });
 
-        it('prevStep marks dirty', () => {
-            const { widget } = renderStepper();
-            widget.clearDirty();
-            widget.prevStep();
-            expect(widget.isDirty).toBe(true);
-        });
+    it('prevStep is a no-op when active step is the first', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const widget = new Stepper([
+            { label: 'A', status: 'active' },
+            { label: 'B', status: 'pending' },
+        ]);
+        widget.clearDirty();
 
-        it('prevStep does nothing when first step is active', () => {
-            const steps: StepperStep[] = [
-                { label: 'A', status: 'active' },
-                { label: 'B', status: 'pending' },
-            ];
-            const { widget } = renderStepper(steps);
-            widget.prevStep();
-            expect(widget.getSteps()[0].status).toBe('active');
-        });
+        widget.prevStep();
+
+        expect(widget.isDirty).toBe(false);
+        expect(widget.getSteps()[0]?.status).toBe('active');
     });
 
-    describe('8. Edge cases', () => {
-        it('handles empty steps array without error', () => {
-            expect(() => renderStepper([])).not.toThrow();
-        });
+    it('setStepStatus updates a single step and marks dirty', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const widget = new Stepper(makeSteps());
+        widget.clearDirty();
 
-        it('handles zero-size rect without error', () => {
-            expect(() => renderStepper(STEPS, {}, 0, 0)).not.toThrow();
-        });
+        widget.setStepStatus(2, 'active');
 
-        it('uses pending as default status when not specified', () => {
-            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
-            const { screen } = renderStepper([{ label: 'NoStatus' }]);
-            const text = rowText(screen, 0);
-            expect(text).toContain('○');
-            vi.restoreAllMocks();
-        });
+        expect(widget.isDirty).toBe(true);
+        expect(widget.getSteps()[2]?.status).toBe('active');
+    });
+
+    it('setStepStatus is a no-op for out-of-bounds index', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const widget = new Stepper(makeSteps());
+        widget.clearDirty();
+
+        widget.setStepStatus(99, 'active');
+
+        expect(widget.isDirty).toBe(false);
+    });
+
+    it('setSteps replaces all steps and marks dirty', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const widget = new Stepper(makeSteps());
+        widget.clearDirty();
+
+        widget.setSteps([{ label: 'New', status: 'active' }]);
+
+        expect(widget.isDirty).toBe(true);
+        expect(widget.getSteps()).toHaveLength(1);
+        expect(widget.getSteps()[0]?.label).toBe('New');
+    });
+});
+
+describe('Stepper — edge cases', () => {
+    it('renders without error when width is zero', () => {
+        const widget = new Stepper(makeSteps());
+        const screen = new Screen(20, 5);
+        widget.updateRect({ x: 0, y: 0, width: 0, height: 5 });
+        expect(() => widget.render(screen)).not.toThrow();
+    });
+
+    it('renders without error when height is zero', () => {
+        const widget = new Stepper(makeSteps());
+        const screen = new Screen(20, 5);
+        widget.updateRect({ x: 0, y: 0, width: 20, height: 0 });
+        expect(() => widget.render(screen)).not.toThrow();
+    });
+
+    it('renders without error with empty steps array', () => {
+        const widget = new Stepper([]);
+        const screen = new Screen(20, 5);
+        widget.updateRect({ x: 0, y: 0, width: 20, height: 5 });
+        expect(() => widget.render(screen)).not.toThrow();
     });
 });

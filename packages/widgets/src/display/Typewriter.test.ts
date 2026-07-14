@@ -182,4 +182,21 @@ describe('Typewriter', () => {
     expect(row).not.toContain('▋');
     expect(row).not.toContain('_');
   });
+
+  it('returns correct text via getText and does not reset reveal count when same text is set', () => {
+    vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
+    const tw = new Typewriter('hello');
+    expect(tw.getText()).toBe('hello');
+
+    tw.tick();
+    expect(renderRow(tw)).toContain('h');
+
+    // Setting same text should not reset progress
+    tw.setText('hello');
+    expect(renderRow(tw)).toContain('h');
+
+    // Setting different text resets progress
+    tw.setText('world');
+    expect(renderRow(tw)).not.toContain('w');
+  });
 });
