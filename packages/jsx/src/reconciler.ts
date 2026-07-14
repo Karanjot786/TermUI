@@ -299,7 +299,13 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
         }
 
         // Intrinsic element (string tag)
-        const widget = createIntrinsicWidget(type, props, children);
+        const { ref: refProp, ...restProps } = (props || {}) as Record<string, any>;
+        const widget = createIntrinsicWidget(type, restProps, children);
+
+        // Handle ref prop — set ref.current to the created widget
+        if (refProp && typeof refProp === 'object' && 'current' in refProp) {
+            refProp.current = widget;
+        }
 
         // Add children (except for self-contained widgets that handle content via props/internal render)
         const SELF_CONTAINED = new Set(['text', 'statusmessage', 'banner', 'keyvalue', 'sidebar', 'divider', 'spinner']);
@@ -505,6 +511,12 @@ function renderComponent(
 
     // Reconcile the returned VNode into a real widget
     const widget = reconcile(vnode);
+
+    // Handle ref from component props — set ref.current to the rendered widget
+    const refFromProps = (props as Record<string, any>)?.ref;
+    if (refFromProps && typeof refFromProps === 'object' && 'current' in refFromProps) {
+        refFromProps.current = widget;
+    }
 
     // Restore parent fiber
     _parentFiber = prevParent;
