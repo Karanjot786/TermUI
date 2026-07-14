@@ -77,6 +77,27 @@ describe('SearchInput', () => {
         expect(onSearch).toHaveBeenCalledWith('');
     });
 
+    it('backspace removes one grapheme at a time', () => {
+        const input = new SearchInput();
+        input.setValue('e\u0301👍🏽');
+
+        input.handleKey(createKeyEvent({
+            key: 'backspace',
+            raw: Buffer.from('\b'),
+            ctrl: false, alt: false, shift: false,
+        }));
+
+        expect(input.value).toBe('e\u0301');
+
+        input.handleKey(createKeyEvent({
+            key: 'backspace',
+            raw: Buffer.from('\b'),
+            ctrl: false, alt: false, shift: false,
+        }));
+
+        expect(input.value).toBe('');
+    });
+
     it('uses ASCII icon when unicode is off and Unicode icon when on', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const asciiInput = new SearchInput({ placeholder: 'x' });

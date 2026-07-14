@@ -1,6 +1,6 @@
 // Toast — auto-dismiss notification
 import { Widget } from '@termuijs/widgets';
-import { type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Screen, stripAnsiControl, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
 
 export type ToastType = 'info' | 'success' | 'warning' | 'error';
 export interface ToastMessage { text: string; type: ToastType; expireAt: number; }
@@ -45,7 +45,8 @@ export class Toast extends Widget {
 
     private _announceToScreenReader(text: string, _type: ToastType): void {
         try {
-            const announcement = `[${text}]`;
+            const safeText = stripAnsiControl(text);
+            const announcement = `[${safeText}]`;
             const oscSequence = `\x1b]777;notify;TermUI;${announcement}\x07`;
             process.stderr.write(oscSequence);
         } catch {

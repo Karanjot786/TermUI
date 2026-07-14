@@ -100,4 +100,19 @@ describe('QuizPrompt', () => {
         expect(result.total).toBe(1);
         expect(result.answers).toEqual([0]);
     });
+
+    it('clears pending feedback timeout when destroyed', () => {
+        vi.useFakeTimers();
+        const onComplete = vi.fn();
+        const quiz = new QuizPrompt([SAMPLE_QUESTIONS[0]], undefined, { onComplete });
+
+        quiz.handleKey({ key: 'down' } as any);
+        quiz.handleKey({ key: 'enter' } as any);
+        quiz.destroy();
+        vi.advanceTimersByTime(800);
+
+        expect(quiz['_currentIndex']).toBe(0);
+        expect(onComplete).not.toHaveBeenCalled();
+        vi.useRealTimers();
+    });
 });
