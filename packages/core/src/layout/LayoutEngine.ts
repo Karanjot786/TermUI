@@ -349,7 +349,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
         else if (style.justifyContent === 'center') flexJustify = Flex.Center;
         else if (style.justifyContent === 'flex-end') flexJustify = Flex.End;
         
-        const results = resolveConstraints(mainAvail, style.constraints, flexJustify);
+        const results = resolveConstraints(mainAvail, style.constraints, flexJustify, gap);
         
         let visibleIndex = 0;
         for (let i = 0; i < node.children.length; i++) {

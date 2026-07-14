@@ -262,4 +262,32 @@ describe('Renderer profiling hooks', () => {
         const resetCount = (output.match(/\x1b\[0m/g) || []).length;
         expect(resetCount).toBeGreaterThanOrEqual(2);
     });
+
+    it('correctly adjusts span start backwards and renders from adjustedStart', () => {
+        const narrowScreen = new Screen(10, 2);
+        const renderer = new Renderer(terminal, narrowScreen);
+
+        // First frame: write a wide character at col 0 and 'A' at col 2
+        narrowScreen.setCell(0, 0, { char: '中', width: 2 });
+        narrowScreen.setCell(1, 0, { char: '', width: 0 });
+        narrowScreen.setCell(2, 0, { char: 'A', width: 1 });
+        renderer.renderNow();
+
+        // Second frame: Keep col 0 unchanged, change col 1 style (continuation) and col 2 char
+        narrowScreen.setCell(0, 0, { char: '中', width: 2 });
+        narrowScreen.setCell(1, 0, { char: '', width: 0, fg: { type: 'named', name: 'red' } });
+        narrowScreen.setCell(2, 0, { char: 'B', width: 1 });
+
+        fakeStdout.writes = '';
+        renderer.renderNow();
+
+        // Verify that the output has redrawn the wide character at col 0
+        const outputStr = fakeStdout.writes;
+        // It should move to col 0, not col 1 or 2, to start rendering
+        expect(outputStr).toContain('\x1b[1;1H');
+        // It should render '中'
+        expect(outputStr).toContain('中');
+        // It should render 'B'
+        expect(outputStr).toContain('B');
+    });
 });

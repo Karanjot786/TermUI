@@ -23,10 +23,6 @@ function parseDf(): DiskPartition[] {
         const lines = output.trim().split('\n');
         if (lines.length < 2) return [];
 
-        // Detect column layout from header
-        const header = lines[0];
-        const isMac = header.includes('iused') || header.includes('Capacity');
-
         return lines.slice(1) // skip header
             .map(line => {
                 const parts = line.split(/\s+/);
@@ -34,7 +30,7 @@ function parseDf(): DiskPartition[] {
 
                 // macOS: Filesystem Size Used Avail Capacity iused ifree %iused Mounted on
                 // Linux:  Filesystem Size Used Avail Use%   Mounted on
-                const percentIdx = isMac ? 7 : 4;
+                const percentIdx = 4;
                 const percentStr = parts[percentIdx]?.replace('%', '');
                 // Mountpoint is always the last field
                 const mountpoint = parts[parts.length - 1];

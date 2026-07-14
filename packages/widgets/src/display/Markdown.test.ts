@@ -1,196 +1,118 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Screen, caps } from '@termuijs/core';
 import { Markdown } from './Markdown.js';
 
+afterEach(() => {
+    vi.restoreAllMocks();
+});
+
+function render(content: string, width = 40, height = 20) {
+    const w = new Markdown({ content });
+    const screen = new Screen(width, height);
+    w.updateRect({ x: 0, y: 0, width, height });
+    w.render(screen);
+    return screen;
+}
+
 describe('Markdown', () => {
     it('renders heading text with bold and underline', () => {
-        const md = new Markdown({
-            content: '# Hello'
-        });
-
-        const screen = new Screen(20, 5);
-
-        md.updateRect({
-            x: 0,
-            y: 0,
-            width: 20,
-            height: 5
-        });
-
-        md.render(screen);
-
+        const screen = render('# Hello');
         expect(screen.back[0][0].char).toBe('H');
         expect(screen.back[0][0].bold).toBe(true);
         expect(screen.back[0][0].underline).toBe(true);
     });
-    it('setContent updates content', () => {
-        const md = new Markdown({
-            content: 'old'
-        });
 
-        md.setContent('new');
-
-        expect(md.getContent()).toBe('new');
-    });
-    it('setContent marks widget dirty', () => {
-        const md = new Markdown({
-            content: 'old'
-        });
-
-        md.clearDirty();
-
-        expect(md.isDirty).toBe(false);
-
-        md.setContent('new');
-
-        expect(md.isDirty).toBe(true);
-    });
-    it('renders list items', () => {
-        const md = new Markdown({
-            content: '- Item'
-        });
-
-        const screen = new Screen(20, 5);
-
-        md.updateRect({
-            x: 0,
-            y: 0,
-            width: 20,
-            height: 5
-        });
-
-        md.render(screen);
-
-        const expected = caps.unicode ? '•' : '*';
-
-        expect(screen.back[0][0].char).toBe(expected);
-    });
-    it('renders numbered list items', () => {
-        const md = new Markdown({
-            content: '1. First item'
-        });
-
-        const screen = new Screen(20, 5);
-
-        md.updateRect({
-            x: 0,
-            y: 0,
-            width: 20,
-            height: 5
-        });
-
-        md.render(screen);
-
-        expect(screen.back[0][0].char).toBe('1');
-        expect(screen.back[0][1].char).toBe('.');
-    });
-    it('wraps long paragraphs', () => {
-        const md = new Markdown({
-            content: 'This is a very long paragraph that should wrap'
-        });
-
-        const screen = new Screen(10, 5);
-
-        md.updateRect({
-            x: 0,
-            y: 0,
-            width: 10,
-            height: 5
-        });
-
-        md.render(screen);
-
-        const firstRow = screen.back[0].map(c => c.char).join('');
-        const secondRow = screen.back[1].map(c => c.char).join('');
-
-        expect(firstRow.trim().length).toBeGreaterThan(0);
-        expect(secondRow.trim().length).toBeGreaterThan(0);
-    });
-    it('renders bold text', () => {
-        const md = new Markdown({
-            content: '**bold**'
-        });
-
-        const screen = new Screen(20, 5);
-
-        md.updateRect({
-            x: 0,
-            y: 0,
-            width: 20,
-            height: 5
-        });
-
-        md.render(screen);
-
+    it('renders bold text via ** markers', () => {
+        const screen = render('**bold**');
         expect(screen.back[0][0].char).toBe('b');
         expect(screen.back[0][0].bold).toBe(true);
     });
-    it('renders italic text', () => {
-        const md = new Markdown({ content: '_italic_' });
 
-        const screen = new Screen(20, 5);
-
-        md.updateRect({ x: 0, y: 0, width: 20, height: 5 });
-        md.render(screen);
-
+    it('renders italic text via _ markers', () => {
+        const screen = render('_italic_');
         expect(screen.back[0][0].char).toBe('i');
         expect(screen.back[0][0].italic).toBe(true);
     });
-    it('renders inline code', () => {
-        const md = new Markdown({ content: '`code`' });
 
-        const screen = new Screen(20, 5);
-
-        md.updateRect({ x: 0, y: 0, width: 20, height: 5 });
-        md.render(screen);
-
+    it('renders inline code with inverse style', () => {
+        const screen = render('`code`');
         expect(screen.back[0][0].char).toBe('c');
-    });
-   it('renders code block as a boxed block', () => {
-    const md = new Markdown({
-        content: '```ts\nconst x = 1\n```'
+        expect(screen.back[0][0].inverse).toBe(true);
     });
 
-    const screen = new Screen(40, 10);
-
-    md.updateRect({
-        x: 0,
-        y: 0,
-        width: 40,
-        height: 10
+    it('renders blockquote with │ prefix and italic style', () => {
+        const screen = render('> quote text');
+        const row = screen.back[0].map(c => c.char).join('');
+        expect(row).toContain('│');
+        expect(row).toContain('quote text');
+        // All cells in the blockquote row should be italic
+        const pipeCell = screen.back[0][0];
+        expect(pipeCell.italic).toBe(true);
     });
 
-    md.render(screen);
-
-    const rendered = screen.back
-        .map(row => row.map(cell => cell.char).join(''))
-        .join('\n');
-
-    expect(rendered).toContain('const x = 1');
-    expect(rendered).toContain('┌');
-    expect(rendered).toContain('└');
-    expect(rendered).toContain('│');
-    expect(rendered).not.toContain('```');
+    it('renders bullet list items with • when unicode is enabled', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const screen = render('- item one');
+        expect(screen.back[0][0].char).toBe('•');
     });
 
-    it('renders code block with ASCII chars when NO_UNICODE=1', async () => {
-        vi.stubEnv('NO_UNICODE', '1');
-        vi.stubEnv('TERM', '');
-        vi.resetModules();
-        const { Screen } = await import('@termuijs/core');
-        const { Markdown } = await import('./Markdown.js');
+    it('renders bullet list items with * when unicode is disabled', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const screen = render('- item one');
+        expect(screen.back[0][0].char).toBe('*');
+    });
 
-        const md = new Markdown({ content: '```ts\nconst x = 1\n```' });
-        const screen = new Screen(40, 10);
-        md.updateRect({ x: 0, y: 0, width: 40, height: 10 });
-        md.render(screen);
+    it('renders ordered list items preserving numbers', () => {
+        const screen = render('1. First item');
+        expect(screen.back[0][0].char).toBe('1');
+        expect(screen.back[0][1].char).toBe('.');
+    });
 
+    it('renders code fence with border chars and language label', () => {
+        const screen = render('```ts\nconst x = 1\n```', 40, 10);
+        const rendered = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
+        expect(rendered).toContain('ts');
+        expect(rendered).toContain('const x = 1');
+        expect(rendered).toContain('┌');
+        expect(rendered).toContain('└');
+        expect(rendered).toContain('│');
+        expect(rendered).not.toContain('```');
+    });
+
+    it('renders code fence with ASCII border chars when unicode is disabled', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const screen = render('```ts\nconst x = 1\n```', 40, 10);
         const rendered = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
         expect(rendered).toContain('const x = 1');
         expect(rendered).toContain('+');
         expect(rendered).toContain('|');
         expect(rendered).not.toContain('┌');
+    });
 
-        vi.unstubAllEnvs();
+    it('wraps long paragraphs to fit width', () => {
+        const screen = render('This is a very long paragraph that should wrap', 10, 10);
+        const firstRow = screen.back[0].map(c => c.char).join('').trim();
+        const secondRow = screen.back[1].map(c => c.char).join('').trim();
+        expect(firstRow.length).toBeGreaterThan(0);
+        expect(secondRow.length).toBeGreaterThan(0);
+    });
+
+    it('setContent updates content and marks the widget dirty', () => {
+        const md = new Markdown({ content: 'old' });
+        md.clearDirty();
+        md.setContent('new');
+        expect(md.getContent()).toBe('new');
+        expect(md.isDirty).toBe(true);
+    });
+
+    it('getContent returns the current content', () => {
+        const md = new Markdown({ content: 'hello' });
+        expect(md.getContent()).toBe('hello');
+        md.setContent('world');
+        expect(md.getContent()).toBe('world');
+    });
+
+    it('renders empty string without error', () => {
+        expect(() => render('', 20, 5)).not.toThrow();
     });
 });

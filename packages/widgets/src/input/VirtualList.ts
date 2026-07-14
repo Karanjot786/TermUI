@@ -321,6 +321,9 @@ export class VirtualList extends Widget {
 
         // Only render items in the visible window
         for (let idx = startIdx; idx < endIdx; idx++) {
+            // Bounds check: ensure index is within valid range
+            if (idx < 0 || idx >= this._totalItems) continue;
+
             const rowY = y + (idx - this._scrollOffset) * this._itemHeight;
 
             // Skip if outside the visible rect

@@ -13,6 +13,7 @@ export interface SliderOptions {
   min?: number;
   max?: number;
   step?: number;
+  value?: number;
   color?: Color;
   showValue?: boolean;
 }
@@ -40,6 +41,7 @@ export class Slider extends Widget {
     this._step = opts.step ?? 1;
     this._color = opts.color ?? { type: "named", name: "cyan" };
     this._showValue = opts.showValue ?? true;
+    this._value = Math.max(this._min, Math.min(this._max, opts.value ?? this._min));
   }
 
   getValue(): number {

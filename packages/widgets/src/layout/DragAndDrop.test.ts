@@ -1,89 +1,194 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { Screen } from "@termuijs/core";
-import { DraggableWidget, DroppableWidget, DragState } from "./DragAndDrop.js";
+// ─────────────────────────────────────────────────────
+// @termuijs/widgets — Tests for DraggableWidget and DroppableWidget
+// ─────────────────────────────────────────────────────
 
-describe("DragAndDrop", () => {
-    beforeEach(() => {
-        DragState.isDragging = false;
-        DragState.activeDragId = null;
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { KeyEvent, MouseEvent as TermMouseEvent } from '@termuijs/core';
+import { DragState, DraggableWidget, DroppableWidget } from './DragAndDrop.js';
+
+function keyEvent(key: string): KeyEvent {
+    return {
+        key,
+        raw: Buffer.alloc(0),
+        ctrl: false,
+        alt: false,
+        shift: false,
+        stopPropagation: () => {},
+        preventDefault: () => {},
+    };
+}
+
+function mouseEvent(type: TermMouseEvent['type']): TermMouseEvent {
+    return { x: 0, y: 0, button: 'left', type };
+}
+
+beforeEach(() => {
+    DragState.activeDragId = null;
+    DragState.isDragging = false;
+});
+
+describe('DraggableWidget', () => {
+    it('space key starts dragging and sets DragState', () => {
+        const widget = new DraggableWidget({ id: 'a' });
+        widget.handleKey(keyEvent('space'));
+
+        expect(DragState.isDragging).toBe(true);
+        expect(DragState.activeDragId).toBe('a');
     });
 
-    it("starts drag on mousedown", () => {
-        let started = false;
-        const drag = new DraggableWidget({
-            id: "drag-1",
-            onDragStart: () => { started = true; }
-        });
-        
-        drag.handleMouse({ type: "mousedown", x: 0, y: 0, button: "left" });
-        expect(started).toBe(true);
+    it('mousedown starts a drag', () => {
+        const widget = new DraggableWidget({ id: 'a' });
+        widget.handleMouse(mouseEvent('mousedown'));
+
         expect(DragState.isDragging).toBe(true);
-        expect(DragState.activeDragId).toBe("drag-1");
+        expect(DragState.activeDragId).toBe('a');
     });
-    
-    it("completes drop on mouseup over droppable", () => {
-        let droppedId: string | null = null;
-        
-        const drag = new DraggableWidget({ id: "drag-2" });
-        const drop = new DroppableWidget({
-            id: "drop-1",
-            onDrop: (id) => { droppedId = id; }
-        });
-        
-        drag.handleMouse({ type: "mousedown", x: 0, y: 0, button: "left" });
-        expect(DragState.isDragging).toBe(true);
-        
-        drop.handleMouse({ type: "mouseup", x: 0, y: 0, button: "left" });
-        expect(droppedId).toBe("drag-2");
+
+    it('escape key cancels dragging and resets DragState', () => {
+        const widget = new DraggableWidget({ id: 'a' });
+        widget.handleKey(keyEvent('space'));
+        widget.handleKey(keyEvent('escape'));
+
         expect(DragState.isDragging).toBe(false);
         expect(DragState.activeDragId).toBeNull();
     });
-    
-    it("starts drag with space key", () => {
-        const drag = new DraggableWidget({ id: "drag-3" });
-        drag.handleKey({ key: "space" });
-        expect(DragState.isDragging).toBe(true);
-        expect(DragState.activeDragId).toBe("drag-3");
-        
-        // second space cancels drag
-        drag.handleKey({ key: "space" });
+
+    it('space key while already dragging cancels the drag', () => {
+        const widget = new DraggableWidget({ id: 'a' });
+        widget.handleKey(keyEvent('space'));
+        widget.handleKey(keyEvent('space'));
+
         expect(DragState.isDragging).toBe(false);
         expect(DragState.activeDragId).toBeNull();
     });
-    
-    it("completes drop with enter key", () => {
-        let droppedId: string | null = null;
-        const drop = new DroppableWidget({
-            id: "drop-2",
-            onDrop: (id) => { droppedId = id; }
-        });
-        
+
+    it('onDragStart callback is called when drag starts', () => {
+        const onDragStart = vi.fn();
+        const widget = new DraggableWidget({ id: 'a', onDragStart });
+        widget.handleKey(keyEvent('space'));
+
+        expect(onDragStart).toHaveBeenCalledOnce();
+    });
+
+    it('onDragStart is not called again when drag is already active for this widget', () => {
+        const onDragStart = vi.fn();
+        const widget = new DraggableWidget({ id: 'a', onDragStart });
+        widget.handleKey(keyEvent('space'));
+        widget.handleKey(keyEvent('space')); // second press cancels, not restarts
+
+        expect(onDragStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('markDirty is called when drag starts', () => {
+        const widget = new DraggableWidget({ id: 'a' });
+        const spy = vi.spyOn(widget, 'markDirty');
+        widget.handleKey(keyEvent('space'));
+
+        expect(spy).toHaveBeenCalled();
+    });
+
+    it('markDirty is called when drag cancels via escape', () => {
+        const widget = new DraggableWidget({ id: 'a' });
+        widget.handleKey(keyEvent('space'));
+        widget.clearDirty();
+
+        const spy = vi.spyOn(widget, 'markDirty');
+        widget.handleKey(keyEvent('escape'));
+
+        expect(spy).toHaveBeenCalled();
+    });
+
+    it('escape on a non-dragging widget is a no-op', () => {
+        const widget = new DraggableWidget({ id: 'a' });
+        widget.handleKey(keyEvent('escape'));
+
+        expect(DragState.isDragging).toBe(false);
+        expect(DragState.activeDragId).toBeNull();
+    });
+});
+
+describe('DroppableWidget', () => {
+    it('enter key triggers drop when a drag is active', () => {
+        const onDrop = vi.fn();
         DragState.isDragging = true;
-        DragState.activeDragId = "some-drag-item";
-        
-        drop.handleKey({ key: "enter" });
-        expect(droppedId).toBe("some-drag-item");
-        expect(DragState.isDragging).toBe(false);
+        DragState.activeDragId = 'dragged';
+
+        const widget = new DroppableWidget({ id: 'target', onDrop });
+        widget.handleKey(keyEvent('enter'));
+
+        expect(onDrop).toHaveBeenCalledWith('dragged');
     });
 
-    it("cancels drag with escape key", () => {
-        const drag = new DraggableWidget({ id: "drag-4" });
-        drag.handleMouse({ type: "mousedown", x: 0, y: 0, button: "left" });
-        expect(DragState.isDragging).toBe(true);
-        
-        drag.handleKey({ key: "escape" });
+    it('space key triggers drop when a drag is active', () => {
+        const onDrop = vi.fn();
+        DragState.isDragging = true;
+        DragState.activeDragId = 'dragged';
+
+        const widget = new DroppableWidget({ id: 'target', onDrop });
+        widget.handleKey(keyEvent('space'));
+
+        expect(onDrop).toHaveBeenCalledWith('dragged');
+    });
+
+    it('mouseup triggers drop when a drag is active', () => {
+        const onDrop = vi.fn();
+        DragState.isDragging = true;
+        DragState.activeDragId = 'dragged';
+
+        const widget = new DroppableWidget({ id: 'target', onDrop });
+        widget.handleMouse(mouseEvent('mouseup'));
+
+        expect(onDrop).toHaveBeenCalledWith('dragged');
+    });
+
+    it('onDrop receives the correct dragged widget id', () => {
+        const onDrop = vi.fn();
+        DragState.isDragging = true;
+        DragState.activeDragId = 'widget-42';
+
+        const widget = new DroppableWidget({ id: 'target', onDrop });
+        widget.handleKey(keyEvent('enter'));
+
+        expect(onDrop).toHaveBeenCalledWith('widget-42');
+    });
+
+    it('drop clears DragState', () => {
+        DragState.isDragging = true;
+        DragState.activeDragId = 'dragged';
+
+        const widget = new DroppableWidget({ id: 'target' });
+        widget.handleKey(keyEvent('enter'));
+
         expect(DragState.isDragging).toBe(false);
         expect(DragState.activeDragId).toBeNull();
     });
-    
-    it("renders transparently", () => {
-        const drag = new DraggableWidget({ id: "drag-5" });
-        const screen = new Screen(10, 10);
-        drag.updateRect({ x: 0, y: 0, width: 5, height: 5 });
-        expect(() => drag.render(screen)).not.toThrow();
-        
-        const drop = new DroppableWidget({ id: "drop-3" });
-        drop.updateRect({ x: 0, y: 0, width: 5, height: 5 });
-        expect(() => drop.render(screen)).not.toThrow();
+
+    it('drop is a no-op when no drag is active', () => {
+        const onDrop = vi.fn();
+        const widget = new DroppableWidget({ id: 'target', onDrop });
+        widget.handleKey(keyEvent('enter'));
+
+        expect(onDrop).not.toHaveBeenCalled();
+        expect(DragState.isDragging).toBe(false);
+    });
+
+    it('markDirty is called after a successful drop', () => {
+        DragState.isDragging = true;
+        DragState.activeDragId = 'dragged';
+
+        const widget = new DroppableWidget({ id: 'target' });
+        const spy = vi.spyOn(widget, 'markDirty');
+        widget.handleKey(keyEvent('enter'));
+
+        expect(spy).toHaveBeenCalled();
+    });
+
+    it('markDirty is not called when drop is a no-op', () => {
+        const widget = new DroppableWidget({ id: 'target' });
+        widget.clearDirty();
+        const spy = vi.spyOn(widget, 'markDirty');
+        widget.handleKey(keyEvent('enter'));
+
+        expect(spy).not.toHaveBeenCalled();
     });
 });
