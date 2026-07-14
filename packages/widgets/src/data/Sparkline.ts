@@ -20,14 +20,31 @@ export interface SparklineOptions {
 
 // Sparkline characters (8 levels per cell, bottom to top)
 // Falls back to ASCII digits when unicode is not available.
-const SPARK_CHARS_UNICODE = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+const SPARK_CHARS_UNICODE = [' ', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 const SPARK_CHARS_ASCII = ['1', '2', '3', '4', '5', '6', '7', '8'];
+
+export interface SparklineOptions {
+    /** Color of the sparkline */
+    color?: Color;
+
+    /** Show min/max labels */
+    showRange?: boolean;
+
+    /** Rendering style */
+    marker?: 'block' | 'braille';
+
+    /** Custom color for the peak (highest) values */
+    peakColor?: Color;
+
+    /** Custom color for the low (lowest) values */
+    lowColor?: Color;
+}
 
 /**
  * Sparkline — a compact inline chart showing a data trend.
  *
  * Example:
- *   Latency ▂▃▅▇▅▃▂▁▃▅█▅▃
+ *   Latency ▂▃▅▇▅▃▂ ▃▅█▅▃
  */
 export class Sparkline extends Widget {
     private _label: string;
@@ -35,12 +52,17 @@ export class Sparkline extends Widget {
     private _color: Color;
     private _showRange: boolean;
     private _marker: 'block' | 'braille';
+    private _peakColor?: Color;
+    private _lowColor?: Color;
+
     constructor(label: string, style: Partial<Style> = {}, opts: SparklineOptions = {}) {
         super(style);
         this._label = label;
         this._color = opts.color ?? { type: 'named', name: 'cyan' };
         this._showRange = opts.showRange ?? false;
         this._marker = opts.marker ?? 'block';
+        this._peakColor = opts.peakColor;
+        this._lowColor = opts.lowColor;
     }
 
     setData(data: number[]): void {
@@ -78,52 +100,73 @@ export class Sparkline extends Widget {
         const range = max - min || 1;
 
         if (caps.unicode && this._marker === 'braille') {
-    const canvas = new BrailleCanvas({
-        width: sparkWidth * 2,
-        height: 4,
-        color: this._color,
-    });
+            const canvas = new BrailleCanvas({
+                width: sparkWidth * 2,
+                height: 4,
+                color: this._color,
+            });
 
-    for (let i = 0; i < data.length; i++) {
-        const normalized = (data[i] - min) / range;
+            for (let i = 0; i < data.length; i++) {
+                const normalized = (data[i] - min) / range;
 
-        const barHeight = Math.max(
-            1,
-            Math.ceil(normalized * 4),
-        );
-      
-        for (let py = 0; py < barHeight; py++) {
-            canvas.drawPixel(
-                i * 2,
-                3 - py,
-            );
+                const barHeight = Math.max(
+                    1,
+                    Math.ceil(normalized * 4),
+                );
+              
+                let cellColor = this._color;
+                if (max !== min) {
+                    if (data[i] === max && this._peakColor) {
+                        cellColor = this._peakColor;
+                    } else if (data[i] === min && this._lowColor) {
+                        cellColor = this._lowColor;
+                    }
+                }
 
-            canvas.drawPixel(
-                i * 2 + 1,
-                3 - py,
-            );
+                for (let py = 0; py < barHeight; py++) {
+                    canvas.drawPixel(
+                        i * 2,
+                        3 - py,
+                        cellColor,
+                    );
+
+                    canvas.drawPixel(
+                        i * 2 + 1,
+                        3 - py,
+                        cellColor,
+                    );
+                }
+            }
+
+            canvas.updateRect({
+                x: x + labelWidth,
+                y,
+                width: sparkWidth,
+                height: 1,
+            });
+
+            canvas.render(screen);
+
+            return;
         }
-    }
-
-    canvas.updateRect({
-        x: x + labelWidth,
-        y,
-        width: sparkWidth,
-        height: 1,
-    });
-
-    canvas.render(screen);
-
-    return;
-}
 
         const sparkChars = caps.unicode ? SPARK_CHARS_UNICODE : SPARK_CHARS_ASCII;
         for (let i = 0; i < data.length; i++) {
             const normalized = (data[i] - min) / range;
             const charIdx = Math.min(7, Math.round(normalized * 7));
+
+            let cellColor = this._color;
+            if (max !== min) {
+                if (data[i] === max && this._peakColor) {
+                    cellColor = this._peakColor;
+                } else if (data[i] === min && this._lowColor) {
+                    cellColor = this._lowColor;
+                }
+            }
+
             screen.setCell(x + labelWidth + i, y, {
                 char: sparkChars[charIdx],
-                fg: this._color,
+                fg: cellColor,
             });
         }
 

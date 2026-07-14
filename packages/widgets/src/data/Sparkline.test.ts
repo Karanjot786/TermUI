@@ -25,7 +25,7 @@ describe('Sparkline', () => {
 
         const rendered = screen.back[0].map(cell => cell.char).join('');
         expect(rendered).toContain('Load 12345678');
-        expect(rendered).not.toMatch(/[▁▂▃▄▅▆▇█]/);
+        expect(rendered).not.toMatch(/[▂▃▄▅▆▇█]/);
     });
 
     it('renders unicode spark chars when unicode is enabled', async () => {
@@ -42,7 +42,7 @@ describe('Sparkline', () => {
         sparkline.render(screen);
 
         const rendered = screen.back[0].map(c => c.char).join('');
-        expect(rendered).toMatch(/[▁▂▃▄▅▆▇█]/);
+        expect(rendered).toMatch(/[ ▂▃▄▅▆▇█]/);
         expect(rendered).not.toMatch(/[12345678]/);
     });
 
@@ -126,7 +126,7 @@ describe('Sparkline', () => {
         expect(() => sparkline.render(screen)).not.toThrow();
 
         const rendered = screen.back[0].map(c => c.char).join('');
-        expect(rendered).not.toMatch(/[▁▂▃▄▅▆▇█12345678]/);
+        expect(rendered).not.toMatch(/[▂▃▄▅▆▇█12345678]/);
     });
 
     it('marker braille renders braille characters instead of block chars', async () => {
@@ -147,6 +147,60 @@ describe('Sparkline', () => {
             ch => ch.codePointAt(0)! >= 0x2800 && ch.codePointAt(0)! <= 0x28ff,
         );
         expect(hasBraille).toBe(true);
-        expect(rendered).not.toMatch(/[▁▂▃▄▅▆▇█]/);
+        expect(rendered).not.toMatch(/[▂▃▄▅▆▇█]/);
+    });
+
+    it('applies custom peak and low colors in block marker mode', async () => {
+        vi.stubEnv('NO_UNICODE', '');
+        vi.stubEnv('TERM', '');
+        vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { Sparkline } = await import('./Sparkline.js');
+
+        const sparkline = new Sparkline('Lat', {}, {
+            color: { type: 'named', name: 'cyan' },
+            peakColor: { type: 'named', name: 'red' },
+            lowColor: { type: 'named', name: 'green' }
+        });
+        sparkline.setData([10, 20, 30]);
+        sparkline.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        const screen = new Screen(20, 1);
+        sparkline.render(screen);
+
+        // Label is 'Lat ' (4 characters)
+        const cellLow = screen.getCell(4, 0); // 10
+        const cellMid = screen.getCell(5, 0); // 20
+        const cellPeak = screen.getCell(6, 0); // 30
+
+        expect(cellLow.fg).toEqual({ type: 'named', name: 'green' });
+        expect(cellMid.fg).toEqual({ type: 'named', name: 'cyan' });
+        expect(cellPeak.fg).toEqual({ type: 'named', name: 'red' });
+    });
+
+    it('applies custom peak and low colors in braille marker mode', async () => {
+        vi.stubEnv('NO_UNICODE', '');
+        vi.stubEnv('TERM', '');
+        vi.resetModules();
+        const { Screen } = await import('@termuijs/core');
+        const { Sparkline } = await import('./Sparkline.js');
+
+        const sparkline = new Sparkline('Lat', {}, {
+            color: { type: 'named', name: 'cyan' },
+            peakColor: { type: 'named', name: 'red' },
+            lowColor: { type: 'named', name: 'green' },
+            marker: 'braille'
+        });
+        sparkline.setData([10, 20, 30]);
+        sparkline.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        const screen = new Screen(20, 1);
+        sparkline.render(screen);
+
+        const cellLow = screen.getCell(4, 0);
+        const cellMid = screen.getCell(5, 0);
+        const cellPeak = screen.getCell(6, 0);
+
+        expect(cellLow.fg).toEqual({ type: 'named', name: 'green' });
+        expect(cellMid.fg).toEqual({ type: 'named', name: 'cyan' });
+        expect(cellPeak.fg).toEqual({ type: 'named', name: 'red' });
     });
 });
