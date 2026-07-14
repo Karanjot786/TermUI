@@ -234,8 +234,7 @@ export abstract class Widget {
 
     /**
      * Destroy this widget and all its descendants.
-     * Cleans up event handlers, removes parent references, and clears children.
-     * Fiber-level cleanup is handled by the reconciler's _pruneInstancesForWidget.
+     * Cleans up event handlers, cancels active animations, removes parent references, and clears children.
      */
     destroy(): void {
         this.unmount();
