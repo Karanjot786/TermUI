@@ -1,5 +1,6 @@
 import { Widget } from '../base/Widget.js';
 import { type Style, type Color, Screen, caps } from '@termuijs/core';
+import { filterFinite, validateFinite } from './utils.js';
 
 export interface ScatterPoint {
     x: number;
@@ -27,14 +28,16 @@ export class ScatterPlot extends Widget {
     }
 
     setData(points: ScatterPoint[]): void {
-        this.points = points;
+        this.points = points.map(p => ({
+            x: validateFinite(p.x, 0),
+            y: validateFinite(p.y, 0),
+            color: p.color,
+        }));
         this.markDirty();
     }
 
     protected override _renderSelf(screen: Screen): void {
-        if (!this.rect) return;
-
-        const { x, y, width, height } = this.rect;
+        const { x, y, width, height } = this._getContentRect();
         if (width < 2 || height < 2) return;
 
         const isUnicode = caps.unicode;

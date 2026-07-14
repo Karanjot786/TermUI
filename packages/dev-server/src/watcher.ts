@@ -2,8 +2,8 @@
 // File Watcher — watches .tsx and .tss files
 // ─────────────────────────────────────────────────────
 
-import { watch, existsSync } from 'node:fs';
-import { resolve, extname } from 'node:path';
+import { watch, existsSync, readdirSync, statSync } from 'node:fs';
+import { resolve, extname, join } from 'node:path';
 
 export interface FileChange {
     filename: string;
@@ -37,41 +37,59 @@ export class FileWatcher {
             this._abortControllers.push(ac);
 
             try {
-                const watcher = watch(dir, { recursive: true, signal: ac.signal });
-
-                watcher.on('change', (_event, filename) => {
-                    if (!filename || typeof filename !== 'string') return;
-                    const ext = extname(filename);
-                    let type: FileChange['type'] | null = null;
-                    if (filename.includes('termui.config')) type = 'config';
-                    else if (ext === '.tsx' || ext === '.ts' || ext === '.jsx' || ext === '.js') type = 'tsx';
-                    else if (ext === '.tss') type = 'tss';
-                    if (!type) return;
-
-                    // Use a per-directory resolved path as the debounce key so files with
-                    // the same basename in different watched directories don't collide.
-                    const resolved = resolve(dir, filename);
-
-                    // Debounce: coalesce rapid saves for the same resolved file path
-                    const existing = this._debounceTimers.get(resolved);
-                    if (existing) clearTimeout(existing);
-                    this._debounceTimers.set(resolved, setTimeout(() => {
-                        this._debounceTimers.delete(resolved);
-                        // Preserve the original filename in the emitted FileChange to
-                        // avoid changing the public API observed by callers/tests.
-                        const change: FileChange = { filename, type: type!, timestamp: Date.now() };
-                        for (const cb of this._onChangeCallbacks) cb(change);
-                    }, 100));
-                });
-
-                watcher.on('error', (err) => {
-                    if ((err as any).name === 'AbortError') return;
-                    for (const cb of this._onErrorCallbacks) cb(err);
-                });
+                this.watchDir(dir, dir, ac, true);
             } catch (err) {
-                for (const cb of this._onErrorCallbacks) cb(err as Error);
+                try {
+                    this.watchDirectoryTree(dir, ac);
+                } catch (fallbackErr) {
+                    for (const cb of this._onErrorCallbacks) cb(fallbackErr as Error);
+                }
             }
         }
+    }
+
+    private watchDirectoryTree(rootDir: string, ac: AbortController): void {
+        this.watchDir(rootDir, rootDir, ac, false);
+
+        for (const entry of readdirSync(rootDir)) {
+            const child = join(rootDir, entry);
+            if (statSync(child).isDirectory()) {
+                this.watchDirectoryTree(child, ac);
+            }
+        }
+    }
+
+    private watchDir(rootDir: string, dir: string, ac: AbortController, recursive: boolean): void {
+        const watcher = watch(dir, { recursive, signal: ac.signal });
+
+        watcher.on('change', (_event, filename) => {
+            this.emitChange(rootDir, dir, filename);
+        });
+
+        watcher.on('error', (err) => {
+            if ((err as any).name === 'AbortError') return;
+            for (const cb of this._onErrorCallbacks) cb(err);
+        });
+    }
+
+    private emitChange(rootDir: string, dir: string, filename: string | Buffer | null): void {
+        if (!filename || typeof filename !== 'string') return;
+        const ext = extname(filename);
+        let type: FileChange['type'] | null = null;
+        if (filename.includes('termui.config')) type = 'config';
+        else if (ext === '.tsx' || ext === '.ts' || ext === '.jsx' || ext === '.js') type = 'tsx';
+        else if (ext === '.tss') type = 'tss';
+        if (!type) return;
+
+        const resolved = resolve(dir, filename);
+        const existing = this._debounceTimers.get(resolved);
+        if (existing) clearTimeout(existing);
+        this._debounceTimers.set(resolved, setTimeout(() => {
+            this._debounceTimers.delete(resolved);
+            const emittedFilename = dir === rootDir ? filename : resolve(dir, filename).slice(rootDir.length + 1);
+            const change: FileChange = { filename: emittedFilename, type: type!, timestamp: Date.now() };
+            for (const cb of this._onChangeCallbacks) cb(change);
+        }, 100));
     }
 
     stop(): void {

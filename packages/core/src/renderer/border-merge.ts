@@ -158,6 +158,14 @@ function getJunctions(): Record<string, string> {
 
 // ── Public API ────────────────────────────────────────
 
+/**
+ * Merge adjacent box-drawing characters on a screen into correct junctions.
+ *
+ * Inspects each cell's neighbours and, when they form a continuous border,
+ * replaces the placeholder with the appropriate corner/tee/cross glyph for
+ * the detected border weight. Uses ASCII fallbacks when `caps.unicode` is off.
+ * Only spaces and existing border characters are overwritten.
+ */
 export function mergeBorders(screen: Screen): void {
   const grid = screen.back;
   const asciiJunctions = ASCII_JUNCTIONS;

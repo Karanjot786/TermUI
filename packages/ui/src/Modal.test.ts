@@ -1414,5 +1414,13 @@ describe('Modal', () => {
             expect(t1).toBe(t2);
         });
     });
+
+    describe('zIndex stacking defaults', () => {
+        it('assigns a default zIndex of 1000', () => {
+            const modal = new Modal();
+            expect(modal.zIndex).toBe(1000);
+        });
+    });
 });
+
 
