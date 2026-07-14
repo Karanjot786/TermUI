@@ -753,22 +753,28 @@ export function useAsync<T>(
 
     // Track a version counter to ignore stale responses
     const versionRef = useRef(0);
+    // Track the current AbortController for cancellation
+    const controllerRef = useRef<AbortController | null>(null);
 
     const refetch = useCallback(() => {
+        // Cancel any previous in-flight request
+        controllerRef.current?.abort();
+        const controller = new AbortController();
+        controllerRef.current = controller;
         const version = ++versionRef.current;
         setLoading(true);
         setError(null);
 
         asyncFn()
             .then((result) => {
-                // Only update if this is still the latest request
-                if (versionRef.current === version) {
+                // Only update if this is still the latest request and not aborted
+                if (!controller.signal.aborted && versionRef.current === version) {
                     setData(result);
                     setLoading(false);
                 }
             })
             .catch((err) => {
-                if (versionRef.current === version) {
+                if (!controller.signal.aborted && versionRef.current === version) {
                     setError(err instanceof Error ? err : new Error(String(err)));
                     setLoading(false);
                 }
@@ -777,6 +783,10 @@ export function useAsync<T>(
 
     useEffect(() => {
         refetch();
+        return () => {
+            controllerRef.current?.abort();
+            controllerRef.current = null;
+        };
     }, deps);
 
     return { data, loading, error, refetch };
