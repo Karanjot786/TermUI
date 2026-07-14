@@ -124,7 +124,7 @@ export class SurveyPrompt extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        const { x, y, width, height } = this._rect;
+        const { x, y, width, height } = this._getContentRect();
 
         if (width <= 0 || height <= 0) return;
 
