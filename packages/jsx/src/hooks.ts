@@ -590,14 +590,45 @@ export function runEffects(fiber: Fiber): void {
     for (const record of fiber.effects) {
         if (!record.ran) {
             // Run cleanup from previous effect
-            record.cleanup?.();
-            const cleanup = record.effect();
-            if (typeof cleanup === 'function') {
-                record.cleanup = cleanup;
+            try { record.cleanup?.(); } catch (err) {
+                propagateEffectError(fiber, err);
+            }
+            try {
+                const cleanup = record.effect();
+                if (typeof cleanup === 'function') {
+                    record.cleanup = cleanup;
+                }
+                // If result is a Promise, catch async rejections
+                if (cleanup instanceof Promise || (cleanup && typeof (cleanup as any).catch === 'function')) {
+                    (cleanup as Promise<any>).catch((err: any) => {
+                        propagateEffectError(fiber, err);
+                    });
+                }
+            } catch (err) {
+                propagateEffectError(fiber, err);
             }
             record.ran = true;
         }
     }
+}
+
+/**
+ * Propagate an error from an effect to the nearest error boundary in the
+ * fiber tree. If no boundary is found, re-throw to crash the app (existing
+ * behavior for uncaught render errors).
+ */
+function propagateEffectError(fiber: Fiber, error: unknown): void {
+    let current: Fiber | undefined = fiber;
+    while (current) {
+        if ((current as any).errorBoundary) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            (current as any).errorBoundary.handleError(err);
+            return;
+        }
+        current = current.parent;
+    }
+    // No error boundary found — log and re-throw to top-level handler
+    throw error;
 }
 
 export function runLayoutEffects(fiber: Fiber): void {
