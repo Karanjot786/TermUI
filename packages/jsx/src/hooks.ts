@@ -617,13 +617,13 @@ export function runLayoutEffects(fiber: Fiber): void {
 /** Clean up all effects and intervals for a fiber, including child fibers */
 export function destroyFiber(fiber: Fiber): void {
     for (const record of fiber.effects) {
-        record.cleanup?.();
+        try { record.cleanup?.(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const record of fiber.layoutEffects) {
-        record.cleanup?.();
+        try { record.cleanup?.(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const cleanup of fiber.cleanups) {
-        cleanup();
+        try { cleanup(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const timer of fiber.intervals) {
         clearInterval(timer);
