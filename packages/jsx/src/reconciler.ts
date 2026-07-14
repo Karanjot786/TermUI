@@ -533,18 +533,15 @@ function renderComponent(
 
 /**
  * Recursively remove stale instanceMap entries for a widget and all its
- * descendants. Destroys associated fibers and unmounts widgets to prevent
- * orphaned listeners and context subscriptions.
+ * descendants. Unmounts widgets to release event listeners and animations,
+ * and prunes portal children. Does NOT call destroyFiber — the fiber may
+ * be reused by the current render pass via renderComponent's fiber reuse.
  */
 /** @internal exposed for testing */
 export function _pruneInstancesForWidget(widget: Widget): void {
     const inst = instanceMap.get(widget);
     if (inst) {
-        // Destroy the fiber and its component subtree (effects, intervals, context)
-        destroyFiber(inst.fiber);
-        // Clean up the widget's own resources (animations, event listeners)
-        widget.unmount();
-        // Recursively clean up portal children registered on the fiber
+        // Recursively clean up portal children first
         if (inst.fiber?.portalChildren) {
             for (const entry of inst.fiber.portalChildren) {
                 for (const portalWidget of entry.widgets) {
@@ -552,6 +549,12 @@ export function _pruneInstancesForWidget(widget: Widget): void {
                 }
             }
         }
+        // Remove from tracking maps — fiberToWidgetMap may have been
+        // reassigned to a newer widget if the fiber was reused.
+        instanceMap.delete(widget);
+        fiberToWidgetMap.delete(inst.fiber);
+        // Clean up the widget's own resources (animations, event listeners)
+        widget.unmount();
     }
 
     const children = widget.children;

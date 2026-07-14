@@ -54,6 +54,8 @@ export interface Fiber {
     // ── Keymap collision tracking (dev-mode, reset each render) ──
     /** All keymap binding keys registered in the current render pass, for cross-call duplicate detection */
     _keymapKeys?: Map<string, KeyBinding>;
+    /** Set by destroyFiber to make it idempotent */
+    _destroyed?: boolean;
 }
 
 interface HookState {
@@ -616,6 +618,8 @@ export function runLayoutEffects(fiber: Fiber): void {
 
 /** Clean up all effects and intervals for a fiber, including child fibers */
 export function destroyFiber(fiber: Fiber): void {
+    if (fiber._destroyed) return;
+    fiber._destroyed = true;
     for (const record of fiber.effects) {
         record.cleanup?.();
     }
