@@ -82,9 +82,9 @@ export const endSyncUpdate = `${CSI}?2026l`;
 // ── Mouse Tracking ──────────────────────────────────
 
 /** Enable SGR mouse tracking (most compatible modern mode) */
-export const enableMouse = `${CSI}?1000h${CSI}?1002h${CSI}?1006h`;
+export const enableMouse = `${CSI}?1000h${CSI}?1003h${CSI}?1015h${CSI}?1006h`;
 /** Disable mouse tracking */
-export const disableMouse = `${CSI}?1000l${CSI}?1002l${CSI}?1006l`;
+export const disableMouse = `${CSI}?1000l${CSI}?1003l${CSI}?1015l${CSI}?1006l`;
 
 // ── Bracketed Paste ─────────────────────────────────
 

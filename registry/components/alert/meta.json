@@ -1,7 +1,7 @@
 {
   "name": "alert",
   "category": "feedback",
-  "description": "Notification badge with count display positioned at corner locations.",
+  "description": "Inline alert message for status, warning, error, and success feedback.",
   "files": [
     "registry/components/alert/index.ts"
   ],

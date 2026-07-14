@@ -91,6 +91,8 @@ export { shouldUseFallback, renderFallback } from './app/Fallback.js';
 export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.js';
 
 // ── Utilities ─────────────────────────────────────────
+export { defineConfig } from './config.js';
+export type { TermUIConfig } from './config.js';
 export { stringWidth, truncate, stripAnsi, wordWrap } from './utils/unicode.js';
 export * as ansi from './utils/ansi.js';
 export { stripAnsiEscapes, hasAnsiEscapes, sanitizeForDisplay } from './terminal/sanitize.js';

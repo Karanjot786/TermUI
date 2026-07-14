@@ -59,10 +59,12 @@ export function parallel(
   }
 
   let remaining = runners.length
+  let cancelled = false
   const cancellers: Array<() => void> = []
 
   for (const runner of runners) {
     const cancel = runner(() => {
+      if (cancelled) return
       remaining--
       if (remaining === 0) onComplete?.()
     })
@@ -70,6 +72,7 @@ export function parallel(
   }
 
   return () => {
+    cancelled = true
     cancellers.forEach(c => c())
   }
 }

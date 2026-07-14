@@ -41,7 +41,7 @@ describe('generateProject', () => {
         const files = generateProject({
             ...baseConfig,
             template: 'dashboard',
-            features: { ...baseConfig.features, dataProviders: true },
+            features: { ...baseConfig.features, dataProviders: false },
         })
         const pkg = files.find((f) => f.path === 'package.json')!
         const parsed = JSON.parse(pkg.content)
@@ -50,6 +50,7 @@ describe('generateProject', () => {
             ...parsed.devDependencies,
         }
         expect('@termuijs/core' in deps).toBe(true)
+        expect(parsed.dependencies['@termuijs/data']).toBe('latest')
     })
 
     it('dashboard template copies static template files', () => {
@@ -201,5 +202,18 @@ it('cli-tool template generates a minimal entry under 15 source lines', () => {
         expect(starterTest).toBeDefined()
         expect(starterTest?.content).toContain('@termuijs/testing')
         expect(starterTest?.content).toContain('describe(')
+    })
+
+    it('generates a starter screen when router support is selected', () => {
+        const files = generateProject({
+            ...baseConfig,
+            features: { ...baseConfig.features, router: true },
+        })
+
+        const paths = files.map((f) => f.path)
+        expect(paths).toContain('screens/index.tsx')
+
+        const config = files.find((f) => f.path === 'termui.config.ts')!
+        expect(config.content).toContain("router: { dir: './screens' }")
     })
 })

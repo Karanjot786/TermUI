@@ -3,7 +3,7 @@
  */
 export interface CliArgs {
     /** Subcommand to run. Unknown/empty values default to `help`. */
-    command: 'add' | 'list' | 'help';
+    command: 'add' | 'list' | 'init' | 'help';
     /** Component names passed as positional arguments. */
     components: string[];
     /** Target directory for `--dir`. */
@@ -23,7 +23,7 @@ export interface CliArgs {
 export function parseArgs(argv: string[]): CliArgs {
     const [cmd, ...rest] = argv;
     const command: CliArgs['command'] =
-        cmd === 'add' ? 'add' : cmd === 'list' ? 'list' : 'help';
+        cmd === 'add' ? 'add' : cmd === 'list' ? 'list' : cmd === 'init' ? 'init' : 'help';
 
     const components: string[] = [];
     let dir: string | undefined;
