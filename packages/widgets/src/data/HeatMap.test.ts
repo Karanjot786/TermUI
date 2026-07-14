@@ -244,10 +244,50 @@ describe('HeatMap', () => {
 
             await expect(renderHeatMap([[], []], {}, 20, 5)).resolves.not.toThrow();
         });
+
+        it('renders without throwing when rect width is zero', async () => {
+            vi.stubEnv('NO_UNICODE', '');
+            vi.stubEnv('TERM', '');
+            vi.resetModules();
+
+            const { Screen } = await import('@termuijs/core');
+            const { HeatMap } = await import('./HeatMap.js');
+            const widget = new HeatMap([[0, 100]], {});
+            const screen = new Screen(20, 5);
+            widget.updateRect({ x: 0, y: 0, width: 0, height: 5 });
+            expect(() => widget.render(screen)).not.toThrow();
+        });
+
+        it('renders without throwing when rect height is zero', async () => {
+            vi.stubEnv('NO_UNICODE', '');
+            vi.stubEnv('TERM', '');
+            vi.resetModules();
+
+            const { Screen } = await import('@termuijs/core');
+            const { HeatMap } = await import('./HeatMap.js');
+            const widget = new HeatMap([[0, 100]], {});
+            const screen = new Screen(20, 5);
+            widget.updateRect({ x: 0, y: 0, width: 20, height: 0 });
+            expect(() => widget.render(screen)).not.toThrow();
+        });
     });
 
 
     describe('setMatrix()', () => {
+        it('marks widget dirty when called on a clean widget', async () => {
+            vi.stubEnv('NO_UNICODE', '');
+            vi.stubEnv('TERM', '');
+            vi.resetModules();
+
+            const { HeatMap } = await import('./HeatMap.js');
+            const widget = new HeatMap([[0, 100]], {});
+            widget.clearDirty();
+
+            widget.setMatrix([[50, 50]]);
+
+            expect(widget.isDirty).toBe(true);
+        });
+
         it('replaces matrix data and marks widget dirty', async () => {
             vi.stubEnv('NO_UNICODE', '');
             vi.stubEnv('TERM', '');

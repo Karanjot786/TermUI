@@ -38,6 +38,20 @@ describe('ScatterPlot Widget', () => {
         expect(spy).toHaveBeenCalled();
     });
 
+    it('renders inside the content rect when padding is set', () => {
+        const screen = new Screen(12, 6);
+        const plot = new ScatterPlot({ padding: { left: 2, top: 1, right: 0, bottom: 0 } });
+        plot.updateRect({ x: 0, y: 0, width: 12, height: 6 });
+        plot.setData([{ x: 1, y: 1 }]);
+
+        plot.render(screen);
+
+        expect(screen.back[0].map(c => c.char).join('').trim()).toBe('');
+        expect(screen.back[1][0].char).toBe(' ');
+        expect(screen.back[1][1].char).toBe(' ');
+        expect(screen.back[1][2].char).not.toBe(' ');
+    });
+
     it('ASCII fallback renders "." when caps.unicode is false', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         

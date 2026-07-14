@@ -86,8 +86,14 @@ const container = new Box({
 })
 
 container.addChild(new Text({ content: 'Downloads', bold: true }))
-container.addChild(new ProgressBar({ value: 0.73, width: 30 }))
+const progress = new ProgressBar({ value: 0.73, width: 30 })
+container.addChild(progress)
 container.addChild(new StreamingText({ text: 'Processing...', speed: 40 }))
+
+// Later, reuse the same ProgressBar instance
+progress.setValue(0.8)
+progress.clear()
+
 ```
 
 ## VirtualList

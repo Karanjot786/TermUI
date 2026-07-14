@@ -161,4 +161,9 @@ describe('TaskList', () => {
         expect(rows[2]).toContain('...');  // done
         expect(rows[3]).toContain('...');  // error
     });
+
+    it('returns task list via getTasks getter', () => {
+        const tl = new TaskList({}, {}, TASKS);
+        expect(tl.getTasks()).toBe(TASKS);
+    });
 });

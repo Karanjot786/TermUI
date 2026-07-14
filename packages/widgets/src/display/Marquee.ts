@@ -15,6 +15,8 @@ export class Marquee extends Widget {
     private _speed: number;
     private _gap: number;
     private _offset: number = 0;
+    private _gapSpaces = '';
+    private _cachedGap = -1;
 
     constructor(text: string, style: Partial<Style> = {}, opts: MarqueeOptions = {}) {
         super(style);
@@ -22,6 +24,8 @@ export class Marquee extends Widget {
         this._direction = opts.direction ?? 'left';
         this._speed = opts.speed ?? 1;
         this._gap = opts.gap ?? 4;
+        this._gapSpaces = ' '.repeat(this._gap); 
+        this._cachedGap = this._gap;
     }
 
     tick(): void {
@@ -47,14 +51,17 @@ export class Marquee extends Widget {
         const textW = stringWidth(this._text);
         if (textW === 0) return;
 
-        const gapSpaces = ' '.repeat(this._gap);
+        if (this._cachedGap !== this._gap) {
+            this._gapSpaces = ' '.repeat(this._gap);
+            this._cachedGap = this._gap;
+        }
         const repeatLen = textW + this._gap;
 
         const totalNeeded = width + repeatLen;
         const repeats = Math.ceil(totalNeeded / repeatLen);
         let full = '';
         for (let i = 0; i < repeats; i++) {
-            full += this._text + gapSpaces;
+            full += this._text + this._gapSpaces;
         }
 
         const effectiveOffset = this._direction === 'left'

@@ -40,6 +40,10 @@ export { PerformanceOverlay } from './display/PerformanceOverlay.js';
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
 export type { ScrollRange } from './input/virtual-scroll.js';
 
+// ── Spring Scroll Helper ─────────────────────────────
+export { calculateSpringScroll } from './scroll.js';
+export type { ScrollSpringState } from './scroll.js';
+
 // ─────────────────────────────────────────────────────
 
 
@@ -217,6 +221,7 @@ export type { TooltipOptions } from './display/Tooltip.js';
 
 
 export { Panel } from './layout/Panel.js';
+export type { PanelOptions } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 

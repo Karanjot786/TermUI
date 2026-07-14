@@ -30,6 +30,7 @@ const segmenter = new Intl.Segmenter();
  */
 export class StreamingText extends Widget {
     private _text: string;
+    private _segments: Intl.SegmentData[];
     private _cursor: string;
     private _speed: number;
     private _blinkInterval: number;
@@ -41,6 +42,7 @@ export class StreamingText extends Widget {
     constructor(options: StreamingTextOptions, style: Partial<Style> = {}) {
         super(style);
         this._text = options.text;
+        this._segments = Array.from(segmenter.segment(this._text));
         this._cursor = options.cursor ?? (caps.unicode ? '▋' : '_');
         this._speed = options.speed ?? 0;
         this._blinkInterval = options.blinkInterval ?? 530;
@@ -52,6 +54,7 @@ export class StreamingText extends Widget {
     setText(text: string): void {
         if (text === this._text) return;
         this._text = text;
+        this._segments = Array.from(segmenter.segment(text));
         this._revealed = 0;
         this.markDirty();
     }
@@ -62,7 +65,7 @@ export class StreamingText extends Widget {
      */
     tick(): void {
         if (this._speed <= 0 || this.isComplete()) return;
-        const len = Array.from(segmenter.segment(this._text)).length;
+        const len = this._segments.length;
         this._revealed = Math.min(this._revealed + this._speed, len);
         this.markDirty();
     }
@@ -70,7 +73,7 @@ export class StreamingText extends Widget {
     /** Returns true when all text has been revealed. */
     isComplete(): boolean {
         if (this._speed === 0) return true;
-        const len = Array.from(segmenter.segment(this._text)).length;
+        const len = this._segments.length;
         return this._revealed >= len;
     }
 
@@ -102,7 +105,7 @@ export class StreamingText extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         // Determine how much text to display
-        const segments = Array.from(segmenter.segment(this._text));
+        const segments = this._segments;
         const displayText = this._speed > 0
             ? segments.slice(0, this._revealed).map(s => s.segment).join('')
             : this._text;

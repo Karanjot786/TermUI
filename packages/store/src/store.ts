@@ -421,6 +421,8 @@ export function createStore<T extends object>(
                     } else {
                         Object.assign(existing.changes, finalPartial);
                         existing.nextState = nextState;
+                        existing.commit = () => { state = { ...state, ...existing.changes } as T; persistState(); return state; };
+                        existing.rollback = () => { state = existing.prevState; };
                     }
                 } else {
                     state = nextState; 

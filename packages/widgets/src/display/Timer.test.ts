@@ -197,3 +197,34 @@ describe('Timer – reset() optimization', () => {
         expect(timer.isDirty).toBe(false);
     });
 });
+
+// ── 6. unmount and lifecycle ──────────────────────────────────────────────────
+describe('Timer – unmount and lifecycle', () => {
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('unmount() pauses the timer, stops it from running, and preserves remaining time', () => {
+        const timer = new Timer({ duration: 5_000, interval: 1_000 });
+        timer.start();
+        vi.advanceTimersByTime(2_000);
+        expect(timer.getRemaining()).toBe(3_000);
+        
+        // Unmount
+        timer.unmount();
+        expect((timer as any)._running).toBe(false);
+        
+        // Time passes while unmounted - remaining should not change
+        vi.advanceTimersByTime(2_000);
+        expect(timer.getRemaining()).toBe(3_000);
+        
+        // Remount and resume
+        timer.mount();
+        timer.start();
+        expect((timer as any)._running).toBe(true);
+        
+        vi.advanceTimersByTime(1_000);
+        expect(timer.getRemaining()).toBe(2_000);
+        
+        timer.destroy();
+    });
+});
