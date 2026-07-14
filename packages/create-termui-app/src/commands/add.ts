@@ -112,7 +112,7 @@ async function fetchComponentEntry(componentSlug: string): Promise<RegistryCompo
         return undefined;
     }
 
-    return await response.json();
+    return await response.json() as RegistryComponent;
 }
 
 function findComponentEntry(
