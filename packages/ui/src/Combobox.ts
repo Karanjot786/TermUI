@@ -9,7 +9,8 @@ import {
     styleToCellAttrs,
     caps,
     stringWidth,
-    truncate
+    truncate,
+    splitGraphemes
 } from '@termuijs/core';
 import { nextEnabledIndex, previousEnabledIndex } from './navigation.js';
 
@@ -111,7 +112,7 @@ export class Combobox extends Widget {
                 return;
             }
         
-            this._inputValue = this._inputValue.slice(0, -1);
+            this._inputValue = splitGraphemes(this._inputValue).slice(0, -1).join('');
             this._isOpen = true;
             this._selectedIndex = -1;
             this.markDirty();
