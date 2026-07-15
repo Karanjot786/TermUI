@@ -6,6 +6,23 @@ import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, par
 import { Widget } from '../base/Widget.js';
 import { BrailleCanvas } from './BrailleCanvas.js';
 
+const THEME_COLORS: Record<string, Color[]> = {
+    dark: [
+        { type: 'named', name: 'cyan' },
+        { type: 'named', name: 'magenta' },
+        { type: 'named', name: 'yellow' },
+        { type: 'named', name: 'green' },
+        { type: 'named', name: 'blue' },
+    ],
+    light: [
+        { type: 'named', name: 'blue' },
+        { type: 'named', name: 'magenta' },
+        { type: 'named', name: 'red' },
+        { type: 'named', name: 'green' },
+        { type: 'named', name: 'cyan' },
+    ],
+};
+
 export interface ChartSeries {
     label: string;
     color: Color | string;
@@ -16,6 +33,10 @@ export interface ChartOptions {
     type?: 'line' | 'bar' | 'scatter';
     series: ChartSeries[];
     showAxes?: boolean;
+    /** Enable dynamic updates via pushValue. Default: false */
+    dynamic?: boolean;
+    /** Maximum number of data points to keep in dynamic mode. Default: 50 */
+    maxDataPoints?: number;
 }
 
 /**
@@ -25,16 +46,40 @@ export class Chart extends Widget {
     private _type: 'line' | 'bar' | 'scatter';
     private _series: ChartSeries[];
     private _showAxes: boolean;
+    private _dynamic: boolean;
+    private _maxDataPoints: number;
 
     constructor(opts: ChartOptions, style: Partial<Style> = {}) {
         super(style);
         this._type = opts.type ?? 'line';
         this._series = opts.series || [];
         this._showAxes = opts.showAxes ?? false;
+        this._dynamic = opts.dynamic ?? false;
+        this._maxDataPoints = opts.maxDataPoints ?? 50;
     }
 
     setSeries(series: ChartSeries[]): void {
         this._series = series;
+        this.markDirty();
+    }
+
+    /** Push a new value to the first series (dynamic mode) */
+    pushValue(value: number): void {
+        if (!this._dynamic || this._series.length === 0) return;
+        const series = this._series[0];
+        series.data.push(Number.isFinite(value) ? value : 0);
+        if (series.data.length > this._maxDataPoints) {
+            series.data.shift();
+        }
+        this.markDirty();
+    }
+
+    /** Apply a theme to the chart series colors */
+    applyTheme(theme: 'dark' | 'light'): void {
+        const colors = THEME_COLORS[theme] ?? THEME_COLORS.dark;
+        this._series.forEach((series, i) => {
+            series.color = colors[i % colors.length];
+        });
         this.markDirty();
     }
 
