@@ -70,6 +70,10 @@ export class Toast extends Widget {
   }
 
   protected _renderSelf(screen: Screen): void {
+    if (this._animationTimer !== undefined) {
+      clearTimeout(this._animationTimer);
+      this._animationTimer = undefined;
+    }
     const now = Date.now();
     this._messages = this._messages.filter(m => m.expireAt > now);
     if (this._messages.length === 0) return;
@@ -95,7 +99,12 @@ export class Toast extends Widget {
       const remaining = m.expireAt - now;
       return elapsed < this._animationMs || remaining < this._animationMs;
     });
-    if (anyAnimating) this._animationTimer = setTimeout(() => this.markDirty(), 16);
+    const nextExitStart = Math.min(...visible.map(m => m.expireAt - this._animationMs));
+    const delay = anyAnimating ? 16 : Math.max(0, nextExitStart - now);
+    this._animationTimer = setTimeout(() => {
+      this._animationTimer = undefined;
+      this.markDirty();
+    }, delay);
   }
 
   /** Lifecycle: stop the pending animation re-render timer. */
