@@ -35,6 +35,8 @@ export type { FPSCounterOptions } from './display/FPSCounter.js';
 export { Pty } from './display/Pty.js';
 export type { PtyOptions } from './display/Pty.js';
 export { PerformanceOverlay } from './display/PerformanceOverlay.js';
+export { Image } from './display/Image.js';
+export type { ImageOptions } from './display/Image.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
@@ -95,6 +97,8 @@ export type { BrailleCanvasOptions } from './data/BrailleCanvas.js';
 export { Calendar } from './data/Calendar.js';
 export type { CalendarOptions } from './data/Calendar.js';
 export { Sparkline } from './data/Sparkline.js';
+export { Chart } from './data/Chart.js';
+export type { ChartOptions, ChartSeries } from './data/Chart.js';
 export type { SparklineOptions } from './data/Sparkline.js';
 export { StatusIndicator } from './data/StatusIndicator.js';
 export type { StatusIndicatorOptions } from './data/StatusIndicator.js';
@@ -306,3 +310,5 @@ export { UnorderedList } from './display/UnorderedList.js';
 export type { UnorderedListOptions } from './display/UnorderedList.js';
 export { Rule } from './display/Rule.js';
 export type { RuleOrientation, RuleOptions } from './display/Rule.js';
+export { WorldMap } from './data/WorldMap.js';
+export type { WorldMapOptions, MapMarker } from './data/WorldMap.js';

@@ -1,6 +1,7 @@
 // Select — single-item dropdown selector
 import { Widget } from '@termuijs/widgets';
 import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { firstEnabledIndex, nextEnabledIndex, previousEnabledIndex } from './navigation.js';
 
 export interface SelectOption { label: string; value: string; disabled?: boolean; }
 export interface SelectOptions {
@@ -26,7 +27,7 @@ export class Select extends Widget {
         super(mergeStyles(mergeStyles(defaultStyle(), { height: 1 }), style ?? {}));
         this._closedHeight = typeof this._style.height === 'number' ? this._style.height : 1;
         this._options = options;
-        this._selectedIndex = options.findIndex(option => !option.disabled);
+        this._selectedIndex = firstEnabledIndex(options, option => Boolean(option.disabled));
         this._placeholder = config.placeholder ?? 'Select...';
         this._activeColor = config.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSelect = config.onSelect;
@@ -52,14 +53,18 @@ export class Select extends Widget {
     }
 
     selectNext(): void {
-        let n = this._selectedIndex + 1;
-        while (n < this._options.length && this._options[n].disabled) n++;
-        if (n < this._options.length) { this._selectedIndex = n; this.markDirty(); }
+        const next = nextEnabledIndex(this._options, this._selectedIndex, option => Boolean(option.disabled));
+        if (next !== this._selectedIndex) {
+            this._selectedIndex = next;
+            this.markDirty();
+        }
     }
     selectPrev(): void {
-        let n = this._selectedIndex - 1;
-        while (n >= 0 && this._options[n].disabled) n--;
-        if (n >= 0) { this._selectedIndex = n; this.markDirty(); }
+        const prev = previousEnabledIndex(this._options, this._selectedIndex, option => Boolean(option.disabled));
+        if (prev !== this._selectedIndex) {
+            this._selectedIndex = prev;
+            this.markDirty();
+        }
     }
     confirm(): void {
         const opt = this._options[this._selectedIndex];

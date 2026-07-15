@@ -1,5 +1,5 @@
 import { Widget } from "@termuijs/widgets";
-import { type Style, type KeyEvent, Screen, caps } from "@termuijs/core";
+import { type Style, type KeyEvent, Screen, caps, truncate } from "@termuijs/core";
 
 export interface BasicAuthCredentials {
     username: string;
@@ -81,9 +81,9 @@ export class BasicAuthPrompt extends Widget {
         const username = `${this._opts.usernameLabel} ${this._username}`;
         const masked = this._maskChar.repeat(this._password.length);
         const password = `${this._opts.passwordLabel} ${masked}`;
-        screen.writeString(x, y, username);
+        screen.writeString(x, y, truncate(username, width));
         if (height > 1) {
-            screen.writeString(x, y + 1, password);
+            screen.writeString(x, y + 1, truncate(password, width));
         }
     }
 }
