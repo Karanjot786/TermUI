@@ -40,6 +40,10 @@ export { PerformanceOverlay } from './display/PerformanceOverlay.js';
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
 export type { ScrollRange } from './input/virtual-scroll.js';
 
+// ── Spring Scroll Helper ─────────────────────────────
+export { calculateSpringScroll } from './scroll.js';
+export type { ScrollSpringState } from './scroll.js';
+
 // ─────────────────────────────────────────────────────
 
 
@@ -91,6 +95,8 @@ export type { BrailleCanvasOptions } from './data/BrailleCanvas.js';
 export { Calendar } from './data/Calendar.js';
 export type { CalendarOptions } from './data/Calendar.js';
 export { Sparkline } from './data/Sparkline.js';
+export { Chart } from './data/Chart.js';
+export type { ChartOptions, ChartSeries } from './data/Chart.js';
 export type { SparklineOptions } from './data/Sparkline.js';
 export { StatusIndicator } from './data/StatusIndicator.js';
 export type { StatusIndicatorOptions } from './data/StatusIndicator.js';
@@ -217,6 +223,7 @@ export type { TooltipOptions } from './display/Tooltip.js';
 
 
 export { Panel } from './layout/Panel.js';
+export type { PanelOptions } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 

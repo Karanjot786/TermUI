@@ -246,6 +246,24 @@ export class Table extends Widget {
             );
         }
 
+        if (event.key === 'pageup') {
+            const pageSize = Math.max(1, this._getContentRect().height - (this._showHeader ? 2 : 0));
+            this._selectedRow = Math.max(minRow, this._selectedRow - pageSize);
+        }
+
+        if (event.key === 'pagedown') {
+            const pageSize = Math.max(1, this._getContentRect().height - (this._showHeader ? 2 : 0));
+            this._selectedRow = Math.min(this._rows.length - 1, this._selectedRow + pageSize);
+        }
+        
+        if (event.key === 'home') {
+            this._selectedRow = minRow;
+        }
+        
+        if (event.key === 'end') {
+            this._selectedRow = Math.max(minRow, this._rows.length - 1);
+        }
+
         // Header Navigation Mode
         if (this._selectedRow === -1) {
             if (event.key === 'left') {

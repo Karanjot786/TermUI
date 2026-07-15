@@ -9,7 +9,8 @@ import {
     stringWidth,
     truncate,
     type KeyEvent,
-    splitGraphemes
+    splitGraphemes,
+    stripAnsiEscapes,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type VimMode } from './vim.js';
@@ -60,6 +61,11 @@ export interface TextInputProps {
      * Optional AbortSignal to cancel the input prompt programmatically.
      */
     signal?: AbortSignal;
+    
+    /** 
+     * If true, ANSI escape sequences in the input value are preserved. 
+     */
+    raw?: boolean;
 }
 
 /**
@@ -80,6 +86,8 @@ export class TextInput extends Widget {
     private _onComplete?: (value: string) => void;
     public signal?: AbortSignal;
 
+    private _raw: boolean;
+
     constructor(
         style: Partial<Style> = {},
         options: TextInputProps = {},
@@ -93,6 +101,7 @@ export class TextInput extends Widget {
         this._onSubmit = options.onSubmit;
         this._suggestions = options.suggestions ?? [];
         this.signal = options.signal;
+        this._raw = options.raw ?? false;
 
         const initialVal = options.value ?? '';
         const graphemes = splitGraphemes(initialVal);
@@ -436,7 +445,8 @@ export class TextInput extends Widget {
         const attrs = styleToCellAttrs(this._style);
 
         if (this._value.length === 0 && !this.isFocused) {
-            screen.writeString(x, y, truncate(this._placeholder, width), { ...attrs, dim: true });
+            const placeholderText = this._raw ? this._placeholder : stripAnsiEscapes(this._placeholder);
+            screen.writeString(x, y, truncate(placeholderText, width), { ...attrs, dim: true });
             return;
         }
 
@@ -485,7 +495,8 @@ export class TextInput extends Widget {
 
         const visibleGraphemes = displayGraphemes.slice(scrollGraphemeIndex, endGraphemeIndex);
         const visibleText = visibleGraphemes.join('');
-        screen.writeString(x, y, visibleText, attrs);
+        const displayText = this._raw ? visibleText : stripAnsiEscapes(visibleText);
+        screen.writeString(x, y, displayText, attrs);
 
         if (this.isFocused) {
             const cursorOffset = prefixWidths[this._cursorPos] - prefixWidths[scrollGraphemeIndex];
