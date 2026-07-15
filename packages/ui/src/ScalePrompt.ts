@@ -22,7 +22,8 @@ export class ScalePrompt extends Widget {
     constructor(style?: Partial<Style>, opts: ScalePromptOptions = {}) {
         super(mergeStyles(defaultStyle(), { height: 3, flexGrow: 1, ...style }));
 
-        this._max = Math.max(1, Math.floor(opts.max ?? 5));
+        const rawMax = opts.max ?? 5;
+        this._max = Number.isFinite(rawMax) ? Math.max(1, Math.floor(rawMax)) : 5;
         this._value = 1;
         this._question = opts.question;
         this._endLabels = opts.endLabels;
