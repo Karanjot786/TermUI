@@ -6,7 +6,7 @@
 
 import { Widget } from '@termuijs/widgets';
 import { useState, useEffect, registerCleanup } from '@termuijs/jsx';
-import { caps, type Screen } from '@termuijs/core';
+import { caps, type Screen, type KeyEvent } from '@termuijs/core';
 import type { Color } from '@termuijs/core';
 
 // Auto-register cleanup for test isolation
@@ -117,6 +117,10 @@ export interface NotificationCenterOptions {
     position?: 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left';
     maxVisible?: number;
     width?: number;
+    /** Default auto-dismiss timeout in ms. Default: 5000 */
+    defaultTimeout?: number;
+    /** Enable keyboard navigation. Default: true */
+    keyboardNav?: boolean;
 }
 
 const TYPE_ICONS: Record<Notification['type'], { unicode: string; ascii: string }> = {
@@ -137,19 +141,26 @@ export class NotificationCenter extends Widget {
     private _position: NonNullable<NotificationCenterOptions['position']>;
     private _maxVisible: number;
     private _notifWidth: number;
+    private _defaultTimeout: number;
+    private _keyboardNav: boolean;
     private _unsub?: () => void;
     private _current: Notification[] = [];
+    private _selectedIndex = -1;
+    focusable = true;
 
     constructor(options: NotificationCenterOptions = {}) {
         super();
         this._position = options.position ?? 'top-right';
         this._maxVisible = options.maxVisible ?? 5;
         this._notifWidth = options.width ?? 40;
+        this._defaultTimeout = options.defaultTimeout ?? 5000;
+        this._keyboardNav = options.keyboardNav ?? true;
 
         const store = NotificationStore.getInstance();
         this._current = store.notifications;
         this._unsub = store.subscribe((ns) => {
             this._current = ns;
+            this._clampSelection();
             this.markDirty();
         });
     }
@@ -170,6 +181,63 @@ export class NotificationCenter extends Widget {
             this._unsub = undefined;
         }
         this._current = [];
+    }
+
+    /** Dismiss the currently selected notification */
+    dismissSelected(): void {
+        if (this._selectedIndex >= 0 && this._selectedIndex < this._current.length) {
+            const store = NotificationStore.getInstance();
+            store.dismiss(this._current[this._selectedIndex].id);
+        }
+    }
+
+    /** Dismiss all notifications */
+    dismissAll(): void {
+        const store = NotificationStore.getInstance();
+        store.dismissAll();
+        this._selectedIndex = -1;
+    }
+
+    /** Push a notification with default timeout */
+    push(message: string, type: Notification['type'] = 'info'): string {
+        const store = NotificationStore.getInstance();
+        return store.push(message, type, this._defaultTimeout);
+    }
+
+    private _clampSelection(): void {
+        if (this._selectedIndex >= this._current.length) {
+            this._selectedIndex = this._current.length - 1;
+        }
+    }
+
+    handleKey(event: KeyEvent): void {
+        if (!this._keyboardNav || this._current.length === 0) return;
+
+        switch (event.key) {
+            case 'up':
+                event.stopPropagation();
+                if (this._selectedIndex > 0) {
+                    this._selectedIndex--;
+                    this.markDirty();
+                }
+                break;
+            case 'down':
+                event.stopPropagation();
+                if (this._selectedIndex < this._current.length - 1) {
+                    this._selectedIndex++;
+                    this.markDirty();
+                }
+                break;
+            case 'enter':
+            case 'return':
+                event.stopPropagation();
+                this.dismissSelected();
+                break;
+            case 'escape':
+                event.stopPropagation();
+                this.dismissAll();
+                break;
+        }
     }
 
     protected override _renderSelf(screen: Screen): void {
@@ -198,10 +266,12 @@ export class NotificationCenter extends Widget {
 
             const raw = `${icon} ${notif.message}`;
             const label = ` ${raw} `.slice(0, tw).padEnd(tw);
+            const isSelected = i === this._selectedIndex;
 
             screen.writeString(sx, sy + i, label, {
                 fg: TYPE_COLORS[notif.type],
-                bold: true,
+                bold: isSelected,
+                dim: !isSelected,
             });
         }
     }
