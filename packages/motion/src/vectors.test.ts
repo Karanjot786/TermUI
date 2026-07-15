@@ -15,6 +15,7 @@ import {
 } from './vectors.js';
 import { easings } from './transitions.js';
 import { unsubscribeAll as timerPoolUnsubscribeAll } from './timer-pool.js';
+import { caps } from '@termuijs/core';
 
 async function advanceTime(ms: number) {
     const steps = Math.ceil(ms / 16);
@@ -132,6 +133,7 @@ describe('pathAnimation', () => {
     beforeEach(() => {
         vi.unstubAllEnvs();
         vi.resetModules();
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
     });
 
     afterEach(() => {
@@ -162,6 +164,7 @@ describe('pathAnimation', () => {
     });
 
     it('respects NO_MOTION by jumping to the end immediately without loops', async () => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
         vi.stubEnv('NO_MOTION', '1');
         vi.stubEnv('CI', '');
         vi.resetModules();
