@@ -47,12 +47,29 @@ export class ConfirmDialog extends Widget {
 
     private handleKey(event: KeyEvent): void {
         if (!this._visible) return;
-        if (event.key === 'escape') {
-            this.selectCancel();
-            this.confirm();
-            event.preventDefault();
-            event.stopPropagation();
+        switch (event.key) {
+            case 'escape':
+                this.selectCancel();
+                this.confirm();
+                break;
+            case 'left':
+                this.selectConfirm();
+                break;
+            case 'right':
+                this.selectCancel();
+                break;
+            case 'tab':
+                this.toggleSelection();
+                break;
+            case 'enter':
+            case 'return':
+                this.confirm();
+                break;
+            default:
+                return;
         }
+        event.preventDefault();
+        event.stopPropagation();
     }
 
     protected _renderSelf(screen: Screen): void {
