@@ -297,17 +297,47 @@ export class FocusManager {
         }
     }
 
-    /** Whether a focus trap is currently active */
-    get isTrapped(): boolean {
-        return this._trapStack.length > 0;
-    }
+    /**
+      * Whether a focus trap is currently active
+      */
+     get isTrapped(): boolean {
+         return this._trapStack.length > 0;
+     }
 
-    /** ID of the current trap container, or null */
-    get currentTrapId(): string | null {
-        return this._trapStack.length > 0
-            ? this._trapStack[this._trapStack.length - 1]
-            : null;
-    }
+     /** ID of the current trap container, or null */
+     get currentTrapId(): string | null {
+         return this._trapStack.length > 0
+             ? this._trapStack[this._trapStack.length - 1]
+             : null;
+     }
+
+     /** Get the current group ID for the focused widget, or null */
+     getCurrentGroupId(): string | null {
+         const currentId = this.currentId;
+         if (!currentId) return null;
+         for (const [groupId, ids] of this._groups) {
+             if (ids.includes(currentId)) return groupId;
+         }
+         return null;
+     }
+
+     /** Get all registered group IDs */
+     getGroupIds(): string[] {
+         return Array.from(this._groups.keys());
+     }
+
+     /** Get widget IDs in a specific group */
+     getGroup(groupId: string): string[] {
+         return this._groups.get(groupId) ?? [];
+     }
+
+     /** Focus indicator style configuration */
+     getFocusIndicatorStyle(): { border: string; char: string } {
+         return {
+             border: 'single',
+             char: caps.unicode ? '▸' : '>'
+         };
+     }
 
     // ── Focus Groups ────────────────────────────────────
 
