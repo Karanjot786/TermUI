@@ -27,6 +27,8 @@ import {
 export interface ColorPickerOptions {
     value?: string | Color;
     onChange?: (color: Color) => void;
+    /** Show theme preview samples (text, background, border) */
+    showThemePreview?: boolean;
 }
 
 const DEFAULT_PALETTE: NamedColor[] = [
@@ -41,6 +43,7 @@ export class ColorPicker extends Widget {
     private _hexValue = 'ffffff'; // hex digits without '#'
     private _paletteIndex: number | null = null;
     private _onChange?: (color: Color) => void;
+    private _showThemePreview: boolean;
     focusable = true;
 
     constructor(options: ColorPickerOptions = {}) {
@@ -56,6 +59,7 @@ export class ColorPicker extends Widget {
 
         this._hexValue = this._colorToHexStr(this._selectedColor);
         this._onChange = options.onChange;
+        this._showThemePreview = options.showThemePreview ?? false;
 
         // Determine if initial color is in the palette
         const matchIdx = PALETTE_COLORS.findIndex(c => this._colorsEqual(c, this._selectedColor));
@@ -244,6 +248,50 @@ export class ColorPicker extends Widget {
                     ...attrs,
                     fg: this._selectedColor,
                     bg: this._selectedColor
+                });
+            }
+        }
+
+        // 3. Theme Preview (Row 4-6)
+        if (this._showThemePreview && height >= 7) {
+            const previewY = y + 4;
+            const label = 'Preview: ';
+            screen.writeString(x, previewY, label, attrs);
+            
+            const previewTextX = x + label.length;
+            if (previewTextX < x + width) {
+                const previewText = 'Sample Text';
+                screen.writeString(previewTextX, previewY, previewText, {
+                    ...attrs,
+                    fg: this._selectedColor,
+                    bold: true
+                });
+            }
+
+            const bgPreviewY = y + 5;
+            const bgLabel = 'BG:     ';
+            screen.writeString(x, bgPreviewY, bgLabel, attrs);
+            
+            const bgPreviewX = x + bgLabel.length;
+            if (bgPreviewX < x + width) {
+                const bgText = '    ';
+                screen.writeString(bgPreviewX, bgPreviewY, bgText, {
+                    ...attrs,
+                    fg: { type: 'named', name: 'black' },
+                    bg: this._selectedColor
+                });
+            }
+
+            const borderPreviewY = y + 6;
+            const borderLabel = 'Border: ';
+            screen.writeString(x, borderPreviewY, borderLabel, attrs);
+            
+            const borderPreviewX = x + borderLabel.length;
+            if (borderPreviewX < x + width) {
+                const borderText = '──────';
+                screen.writeString(borderPreviewX, borderPreviewY, borderText, {
+                    ...attrs,
+                    fg: this._selectedColor
                 });
             }
         }
