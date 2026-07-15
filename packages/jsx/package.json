@@ -5,8 +5,8 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.7",
-  "description": "JSX runtime for TermUI with useState, useEffect, useContext, useAsync, and memo()",
+  "version": "0.2.0",
+  "description": "JSX runtime for TermUI with Virtual DOM, Fiber reconciliation, useState, useEffect, useContext, useAsync, memo(), and performance optimizations",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -26,28 +26,148 @@
       "types": "./dist/jsx-runtime.d.ts",
       "import": "./dist/jsx-runtime.js",
       "require": "./dist/jsx-runtime.cjs"
+    },
+    "./vdom": {
+      "types": "./dist/vdom/index.d.ts",
+      "import": "./dist/vdom/index.js",
+      "require": "./dist/vdom/index.cjs"
+    },
+    "./fiber": {
+      "types": "./dist/fiber/index.d.ts",
+      "import": "./dist/fiber/index.js",
+      "require": "./dist/fiber/index.cjs"
+    },
+    "./reconciler": {
+      "types": "./dist/reconciler/index.d.ts",
+      "import": "./dist/reconciler/index.js",
+      "require": "./dist/reconciler/index.cjs"
+    },
+    "./hooks": {
+      "types": "./dist/hooks/index.d.ts",
+      "import": "./dist/hooks/index.js",
+      "require": "./dist/hooks/index.cjs"
+    },
+    "./hooks/useMemo": {
+      "types": "./dist/hooks/useMemo.d.ts",
+      "import": "./dist/hooks/useMemo.js",
+      "require": "./dist/hooks/useMemo.cjs"
+    },
+    "./hooks/useCallback": {
+      "types": "./dist/hooks/useCallback.d.ts",
+      "import": "./dist/hooks/useCallback.js",
+      "require": "./dist/hooks/useCallback.cjs"
+    },
+    "./hooks/useRef": {
+      "types": "./dist/hooks/useRef.d.ts",
+      "import": "./dist/hooks/useRef.js",
+      "require": "./dist/hooks/useRef.cjs"
+    },
+    "./hooks/useState": {
+      "types": "./dist/hooks/useState.d.ts",
+      "import": "./dist/hooks/useState.js",
+      "require": "./dist/hooks/useState.cjs"
+    },
+    "./hooks/useEffect": {
+      "types": "./dist/hooks/useEffect.d.ts",
+      "import": "./dist/hooks/useEffect.js",
+      "require": "./dist/hooks/useEffect.cjs"
+    },
+    "./hooks/useContext": {
+      "types": "./dist/hooks/useContext.d.ts",
+      "import": "./dist/hooks/useContext.js",
+      "require": "./dist/hooks/useContext.cjs"
+    },
+    "./hooks/useReducer": {
+      "types": "./dist/hooks/useReducer.d.ts",
+      "import": "./dist/hooks/useReducer.js",
+      "require": "./dist/hooks/useReducer.cjs"
+    },
+    "./hooks/useAsync": {
+      "types": "./dist/hooks/useAsync.d.ts",
+      "import": "./dist/hooks/useAsync.js",
+      "require": "./dist/hooks/useAsync.cjs"
+    },
+    "./hooks/useKeymap": {
+      "types": "./dist/hooks/useKeymap.d.ts",
+      "import": "./dist/hooks/useKeymap.js",
+      "require": "./dist/hooks/useKeymap.cjs"
+    },
+    "./hooks/useFocus": {
+      "types": "./dist/hooks/useFocus.d.ts",
+      "import": "./dist/hooks/useFocus.js",
+      "require": "./dist/hooks/useFocus.cjs"
+    },
+    "./hooks/useMotion": {
+      "types": "./dist/hooks/useMotion.d.ts",
+      "import": "./dist/hooks/useMotion.js",
+      "require": "./dist/hooks/useMotion.cjs"
+    },
+    "./components/ErrorBoundary": {
+      "types": "./dist/components/ErrorBoundary.d.ts",
+      "import": "./dist/components/ErrorBoundary.js",
+      "require": "./dist/components/ErrorBoundary.cjs"
+    },
+    "./components/FocusContext": {
+      "types": "./dist/components/FocusContext.d.ts",
+      "import": "./dist/components/FocusContext.js",
+      "require": "./dist/components/FocusContext.cjs"
+    },
+    "./components/Profiler": {
+      "types": "./dist/components/Profiler.d.ts",
+      "import": "./dist/components/Profiler.js",
+      "require": "./dist/components/Profiler.cjs"
+    },
+    "./components/Suspense": {
+      "types": "./dist/components/Suspense.d.ts",
+      "import": "./dist/components/Suspense.js",
+      "require": "./dist/components/Suspense.cjs"
+    },
+    "./render": {
+      "types": "./dist/render.d.ts",
+      "import": "./dist/render.js",
+      "require": "./dist/render.cjs"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup --config tsup.config.ts",
+    "build:types": "tsc -p tsconfig.typecheck.json --emitDeclarationOnly --declaration",
     "dev": "tsup --watch",
     "test": "vitest run --config ../../vitest.config.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
+    "test:watch": "vitest --config ../../vitest.config.ts",
+    "test:coverage": "vitest run --coverage --config ../../vitest.config.ts",
+    "test:bench": "vitest bench --config ../../vitest.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "lint": "eslint src/**/*.ts src/**/*.tsx",
+    "clean": "rm -rf dist node_modules",
+    "prepublishOnly": "bun run build",
+    "profile": "node --prof dist/index.js",
+    "analyze": "bun run build -- --analyze"
   },
   "dependencies": {
     "@termuijs/core": "workspace:*",
     "@termuijs/motion": "workspace:*",
-    "@termuijs/widgets": "workspace:*"
+    "@termuijs/widgets": "workspace:*",
+    "@termuijs/store": "workspace:*"
   },
   "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@vitest/coverage-v8": "^1.3.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-import": "^2.29.1",
     "tsup": "^8.0.0",
-    "typescript": "^5.4.0"
+    "typescript": "^5.4.0",
+    "vitest": "^1.3.0"
   },
   "keywords": [
     "terminal",
@@ -56,11 +176,33 @@
     "jsx",
     "tsx",
     "react",
-    "hooks"
+    "hooks",
+    "virtual-dom",
+    "fiber",
+    "reconciliation",
+    "performance",
+    "concurrent",
+    "time-slicing"
   ],
   "license": "MIT",
   "engines": {
     "bun": ">=1.3.0",
     "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
+  "bugs": {
+    "url": "https://github.com/Karanjot786/TermUI/issues"
+  },
+  "author": "Karanjot786",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/Karanjot786"
   }
 }
