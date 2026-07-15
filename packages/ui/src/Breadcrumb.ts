@@ -21,6 +21,7 @@ import {
 
 export interface BreadcrumbItem {
     label: string;
+    icon?: string;
     onSelect?: () => void;
 }
 
@@ -90,10 +91,11 @@ export class Breadcrumb extends Widget {
             const isLast = i === this._items.length - 1;
             const isFocused = i === this._focusedIndex;
 
-            const itemWidth = stringWidth(item.label);
+            const iconPrefix = item.icon ? `${item.icon} ` : '';
+            const itemWidth = stringWidth(iconPrefix + item.label);
             if (cx + itemWidth > x + width) {
                 const remaining = x + width - cx;
-                screen.writeString(cx, y, truncate(item.label, remaining), attrs);
+                screen.writeString(cx, y, truncate(iconPrefix + item.label, remaining), attrs);
                 return;
             }
 
@@ -103,7 +105,7 @@ export class Breadcrumb extends Widget {
                     ? { ...attrs, fg: this._currentColor, underline: true }
                     : { ...attrs, fg: this._inactiveColor };
 
-            screen.writeString(cx, y, item.label, itemAttrs);
+            screen.writeString(cx, y, iconPrefix + item.label, itemAttrs);
             cx += itemWidth;
 
             if (!isLast) {

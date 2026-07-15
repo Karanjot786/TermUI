@@ -10,6 +10,8 @@ export interface BreadcrumbsOptions {
     separator?: string;
     /** Color of the last (current) segment. Default: cyan */
     activeColor?: Color;
+    /** Icon prefix for each segment (array same length as segments, or single string for all) */
+    icons?: string | string[];
 }
 
 /**
@@ -22,12 +24,14 @@ export class Breadcrumbs extends Widget {
     private _segments: string[];
     private _separator?: string;
     private _activeColor?: Color;
+    private _icons?: string | string[];
 
     constructor(segments: string[], style: Partial<Style> = {}, opts: BreadcrumbsOptions = {}) {
         super(style);
         this._segments = segments;
         this._separator = opts.separator;
         this._activeColor = opts.activeColor;
+        this._icons = opts.icons;
     }
 
     /** Update the trail of segments. */
@@ -56,14 +60,23 @@ export class Breadcrumbs extends Widget {
         const ellipsis = caps.unicode ? '…' : '...';
         const sep = ` ${separatorChar} `;
 
+        const getIcon = (index: number): string => {
+            if (!this._icons) return '';
+            if (Array.isArray(this._icons)) {
+                return this._icons[index] ?? '';
+            }
+            return this._icons;
+        };
+
         let visibleSegments = [...this._segments];
-        let text = visibleSegments.join(sep);
+        let text = visibleSegments.map((s, i) => `${getIcon(i)}${s}`).join(sep);
         let tw = stringWidth(text);
 
         // Truncate from the left if it exceeds width
         while (tw > width && visibleSegments.length > 1) {
             visibleSegments.shift();
-            text = ellipsis + sep + visibleSegments.join(sep);
+            const startIndex = this._segments.length - visibleSegments.length;
+            text = ellipsis + sep + visibleSegments.map((s, i) => `${getIcon(startIndex + i)}${s}`).join(sep);
             tw = stringWidth(text);
         }
 
@@ -90,9 +103,11 @@ export class Breadcrumbs extends Widget {
                 renderList.push({ type: 'separator', text: sep });
             }
             const isLast = i === visibleSegments.length - 1;
+            const originalIndex = this._segments.length - visibleSegments.length + i;
+            const segmentText = `${getIcon(originalIndex)}${visibleSegments[i]}`;
             renderList.push({ 
                 type: isLast ? 'active' : 'normal', 
-                text: visibleSegments[i] 
+                text: segmentText 
             });
         }
 
