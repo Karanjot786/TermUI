@@ -201,4 +201,112 @@ describe('Table', () => {
         });
     });
 
+    describe('filtering', () => {
+        const rows = [
+            { name: 'Alice', age: 30 },
+            { name: 'Bob', age: 25 },
+            { name: 'Charlie', age: 35 },
+            { name: 'David', age: 28 },
+        ];
+
+        it('filters by text across all columns', () => {
+            const table = new Table(COLUMNS, rows);
+            table.setFilter('ali');
+            expect((table as any)._rows).toHaveLength(1);
+            expect((table as any)._rows[0].name).toBe('Alice');
+        });
+
+        it('filters by specific column', () => {
+            const table = new Table(COLUMNS, rows);
+            table.setFilter('30', 'age');
+            expect((table as any)._rows).toHaveLength(1);
+            expect((table as any)._rows[0].name).toBe('Alice');
+        });
+
+        it('returns all rows when filter is empty', () => {
+            const table = new Table(COLUMNS, rows);
+            table.setFilter('');
+            expect((table as any)._rows).toHaveLength(rows.length);
+        });
+
+        it('resetFilters restores all rows', () => {
+            const table = new Table(COLUMNS, rows);
+            table.setFilter('ali');
+            expect((table as any)._rows).toHaveLength(1);
+            table.resetFilters();
+            expect((table as any)._rows).toHaveLength(rows.length);
+        });
+
+        it('combined sort and filter', () => {
+            const table = new Table(COLUMNS, rows);
+            table.setFilter('a'); // Alice, Charlie, David
+            table.sortByColumn('name', 'asc');
+            expect((table as any)._rows).toHaveLength(3);
+            expect((table as any)._rows[0].name).toBe('Alice');
+            expect((table as any)._rows[1].name).toBe('Charlie');
+            expect((table as any)._rows[2].name).toBe('David');
+        });
+
+        it('state sync with external TableState', async () => {
+            const { useTableState } = await import('./TableState.js');
+            const state = useTableState({ rows });
+            const table = new Table(
+                COLUMNS,
+                rows,
+                {},
+                { state }
+            );
+            table.setFilter('bob');
+            expect(state.filterText).toBe('bob');
+            expect(state.rows).toHaveLength(1);
+            expect(state.rows[0].name).toBe('Bob');
+        });
+
+        it('filters are case-insensitive', () => {
+            const table = new Table(COLUMNS, rows);
+            table.setFilter('ALICE');
+            expect((table as any)._rows).toHaveLength(1);
+            expect((table as any)._rows[0].name).toBe('Alice');
+        });
+
+        it('setFilter updates allRows if not already set', () => {
+            const table = new Table(COLUMNS, rows);
+            expect((table as any)._allRows).toHaveLength(0);
+            table.setFilter('ali');
+            expect((table as any)._allRows).toHaveLength(rows.length);
+        });
+    });
+
+    describe('filter keyboard shortcut', () => {
+        it('enters filter mode with / when header is focused', () => {
+            const table = new Table(COLUMNS, [
+                { name: 'Alice', age: 30 },
+                { name: 'Bob', age: 25 },
+            ]);
+            table.handleKey({ key: 'up' } as any);
+            expect(table.selectedRow).toBe(-1);
+            table.handleKey({ key: '/' } as any);
+            expect((table as any)._filterOpen).toBe(true);
+        });
+
+        it('enters filter mode with Ctrl+F when header is focused', () => {
+            const table = new Table(COLUMNS, [
+                { name: 'Alice', age: 30 },
+                { name: 'Bob', age: 25 },
+            ]);
+            table.handleKey({ key: 'up' } as any);
+            table.handleKey({ key: 'f' } as any);
+            expect((table as any)._filterOpen).toBe(true);
+        });
+
+        it('does not enter filter mode when row is selected', () => {
+            const table = new Table(COLUMNS, [
+                { name: 'Alice', age: 30 },
+                { name: 'Bob', age: 25 },
+            ]);
+            table.handleKey({ key: '/' } as any);
+            expect((table as any)._filterOpen).toBe(false);
+        });
+    });
+
 });
