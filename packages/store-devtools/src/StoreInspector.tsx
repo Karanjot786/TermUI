@@ -1,21 +1,23 @@
 import { useState, useEffect, useInput } from '@termuijs/jsx';
+import type { UseStore } from '@termuijs/store';
+import type { DevToolsAPI } from './devtools.js';
 
-export interface StoreInspectorProps {
+export interface StoreInspectorProps<T extends object = any> {
     storeName: string;
-    storeHook: any; // The useStore hook
+    storeHook: UseStore<T> & Partial<DevToolsAPI<T>>;
 }
 
-export function StoreInspector({ storeName, storeHook }: StoreInspectorProps) {
-    const devtoolsAPI = (storeHook as any).history ? storeHook as any : null;
-    const [historyInfo, setHistoryInfo] = useState<any>(devtoolsAPI);
+export function StoreInspector<T extends object>({ storeName, storeHook }: StoreInspectorProps<T>) {
+    const devtoolsAPI = storeHook.history ? { history: storeHook.history, goTo: storeHook.goTo! } : null;
+    const [historyInfo, setHistoryInfo] = useState<DevToolsAPI<T> | null>(devtoolsAPI);
     const [selectedIndex, setSelectedIndex] = useState(-1);
     
     // Subscribe to store updates to refresh devtools view
     useEffect(() => {
         const unsub = storeHook.subscribe(() => {
-            if ((storeHook as any).history) {
+            if (storeHook.history && storeHook.goTo) {
                 // clone to trigger re-render
-                setHistoryInfo({ history: (storeHook as any).history, goTo: (storeHook as any).goTo });
+                setHistoryInfo({ history: { ...storeHook.history }, goTo: storeHook.goTo });
             }
         });
         
@@ -25,17 +27,17 @@ export function StoreInspector({ storeName, storeHook }: StoreInspectorProps) {
     useInput((key) => {
         if (!historyInfo) return;
         const { history, goTo } = historyInfo;
-        const total = history.past.length + 1 + history.future.length;
+        const total = history.past.length + (history.present !== null ? 1 : 0) + history.future.length;
         const current = selectedIndex === -1 ? history.past.length : selectedIndex;
         
         if (key === 'up') {
             const nextIdx = Math.max(0, current - 1);
             setSelectedIndex(nextIdx);
-            goTo(nextIdx, (storeHook as any).setState);
+            goTo(nextIdx, storeHook.setState);
         } else if (key === 'down') {
             const nextIdx = Math.min(total - 1, current + 1);
             setSelectedIndex(nextIdx);
-            goTo(nextIdx, (storeHook as any).setState);
+            goTo(nextIdx, storeHook.setState);
         }
     });
 
@@ -43,8 +45,12 @@ export function StoreInspector({ storeName, storeHook }: StoreInspectorProps) {
         return <text>Waiting for store '{storeName}'...</text>;
     }
 
-    const { history, goTo } = historyInfo;
-    const allActions = [...history.past, { action: { type: 'PRESENT' }, state: history.present }, ...history.future];
+    const { history } = historyInfo;
+    const allActions = [
+        ...history.past,
+        ...(history.present !== null ? [{ action: { type: 'PRESENT', payload: {}, timestamp: Date.now() }, state: history.present }] : []),
+        ...history.future
+    ];
     
     // Auto-select latest if unselected
     const currentIndex = selectedIndex === -1 ? history.past.length : selectedIndex;

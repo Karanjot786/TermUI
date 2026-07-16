@@ -1,4 +1,4 @@
-import type { Middleware } from '@termuijs/store';
+import type { Middleware, SetState } from '@termuijs/store';
 
 export interface DevToolsAction<T> {
     type: string;
@@ -8,7 +8,7 @@ export interface DevToolsAction<T> {
 
 export interface DevToolsState<T> {
     past: { state: T; action: DevToolsAction<T> }[];
-    present: T;
+    present: T | null;
     future: { state: T; action: DevToolsAction<T> }[];
 }
 
@@ -17,29 +17,54 @@ export interface DevToolsOptions {
     maxHistory?: number;
 }
 
-export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> & { api: any } {
+export interface DevToolsAPI<T> {
+    history: DevToolsState<T>;
+    goTo: (index: number, setState: SetState<T>) => void;
+}
+
+// DevTools Global Registry using Symbol to avoid collision and leaks
+const DEVTOOLS_KEY = Symbol.for('__TERMUIJS_DEVTOOLS__');
+
+interface DevToolsRegistry {
+    stores: Map<string, DevToolsAPI<any>>;
+}
+
+export function getDevToolsRegistry(): DevToolsRegistry {
+    const g = globalThis as any;
+    if (!g[DEVTOOLS_KEY]) {
+        g[DEVTOOLS_KEY] = { stores: new Map() };
+    }
+    return g[DEVTOOLS_KEY];
+}
+
+export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> & { api: DevToolsAPI<T> } {
     const { name = 'store', maxHistory = 50 } = options;
     
     let isTimeTraveling = false;
-    let history: DevToolsState<T> = { past: [], present: null as any, future: [] };
+    const history: DevToolsState<T> = { past: [], present: null, future: [] };
 
-    const api = {
+    const api: DevToolsAPI<T> = {
         history,
-        goTo: (index: number, setState: (state: T) => void) => {
+        goTo: (index: number, setState: SetState<T>) => {
+            if (history.present === null) return;
             const allStates = [...history.past, { state: history.present, action: null as any }, ...history.future];
             if (index >= 0 && index < allStates.length) {
                 isTimeTraveling = true;
                 const target = allStates[index];
-                setState(target.state);
-                
-                history.past = allStates.slice(0, index) as any;
-                history.present = target.state;
-                history.future = allStates.slice(index + 1) as any;
-                
+                if (target && target.state !== null) {
+                    setState(target.state);
+                    
+                    history.past = allStates.slice(0, index) as any;
+                    history.present = target.state;
+                    history.future = allStates.slice(index + 1) as any;
+                }
                 isTimeTraveling = false;
             }
         }
     };
+
+    // Register store in the global registry
+    getDevToolsRegistry().stores.set(name, api);
 
     const mw = ((prevState: T, update: Partial<T>, next: (update: Partial<T>, actionName?: string) => T, actionName?: string) => {
         if (isTimeTraveling) {
@@ -51,6 +76,7 @@ export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> & { ap
             history.present = prevState;
         }
 
+        // Capture nextState correctly returned by next()
         const nextState = next(update, actionName);
         
         const action: DevToolsAction<T> = {
@@ -69,7 +95,7 @@ export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> & { ap
         // Update the API reference to the mutated history
         api.history = history;
 
-    }) as Middleware<T> & { api: typeof api };
+    }) as Middleware<T> & { api: DevToolsAPI<T> };
     
     mw.api = api;
 

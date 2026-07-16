@@ -654,7 +654,9 @@ export function createStore<T extends object>(
     // Attach middleware APIs to the store instance (e.g. store.devtools)
     if (options?.middleware) {
         for (const mw of options.middleware) {
+            // mw as any: middleware functions may carry optional custom API attachments at runtime
             if ((mw as any).api) {
+                // Object.assign: merge custom middleware APIs onto the useStore hook for direct access
                 Object.assign(useStore, (mw as any).api);
             }
         }

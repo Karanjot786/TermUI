@@ -25,7 +25,6 @@
   },
   "dependencies": {
     "@termuijs/jsx": "workspace:*",
-    "@termuijs/ui": "workspace:*",
     "@termuijs/store": "workspace:*"
   },
   "devDependencies": {
