@@ -50,4 +50,18 @@ describe('Toast', () => {
         vi.advanceTimersByTime(1);
         expect(markDirty).toHaveBeenCalledTimes(1);
     });
+
+    it('skips rendering when the rect is too narrow for a toast body', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(0);
+        const toast = new Toast({ durationMs: 1000 });
+        const screen = new Screen(1, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        toast.updateRect({ x: 0, y: 0, width: 1, height: 3 });
+        toast.info('Saved');
+        toast.render(screen);
+
+        expect(writeSpy).not.toHaveBeenCalled();
+    });
 });
