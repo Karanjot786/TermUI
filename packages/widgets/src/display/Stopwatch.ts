@@ -36,7 +36,7 @@ export class Stopwatch extends Widget {
 
     constructor(options: StopwatchOptions = {}, style: Partial<Style> = {}) {
         super({ height: 1, ...style });
-        this._interval = options.interval ?? 10;
+        this._interval = Stopwatch._validateInterval(options.interval ?? 10);
     }
 
     // ── Public API ──────────────────────────────────────────────────────
@@ -152,6 +152,8 @@ export class Stopwatch extends Widget {
     }
 
     setInterval(interval: number): void {
+        interval = Stopwatch._validateInterval(interval);
+
         if (interval === this._interval) return;
     
         this._interval = interval;
@@ -166,6 +168,14 @@ export class Stopwatch extends Widget {
     
     getInterval(): number {
         return this._interval;
+    }
+
+    private static _validateInterval(interval: number): number {
+        if (!Number.isFinite(interval) || interval <= 0) {
+            throw new Error('Stopwatch interval must be a finite positive number');
+        }
+
+        return interval;
     }
 
 }

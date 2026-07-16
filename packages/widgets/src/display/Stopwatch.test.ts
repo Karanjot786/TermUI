@@ -175,6 +175,22 @@ describe('Stopwatch – destroy()', () => {
 
 // ── 7. setInterval() mutation behavior ───────────────────────────────────
 describe('Stopwatch – setInterval()', () => {
+    it('rejects invalid constructor intervals', () => {
+        expect(() => new Stopwatch({ interval: 0 })).toThrow(/interval/);
+        expect(() => new Stopwatch({ interval: -1 })).toThrow(/interval/);
+        expect(() => new Stopwatch({ interval: Number.NaN })).toThrow(/interval/);
+        expect(() => new Stopwatch({ interval: Infinity })).toThrow(/interval/);
+    });
+
+    it('rejects invalid setInterval values', () => {
+        const sw = new Stopwatch({ interval: 10 });
+
+        expect(() => sw.setInterval(0)).toThrow(/interval/);
+        expect(() => sw.setInterval(-1)).toThrow(/interval/);
+        expect(() => sw.setInterval(Number.NaN)).toThrow(/interval/);
+        expect(() => sw.setInterval(Infinity)).toThrow(/interval/);
+    });
+
     it('setInterval marks widget dirty', () => {
         const sw = new Stopwatch({ interval: 10 });
 
