@@ -48,3 +48,18 @@ export function hasWidgetRenderError(widget: Widget): Error | null {
     }
     return null;
 }
+
+/**
+ * Clear a render error from a widget and all its descendants.
+ * This is useful when attempting to recover from a boundary via a "Retry" button.
+ */
+export function clearWidgetRenderError(widget: Widget): void {
+    if ((widget as any)._renderError) {
+        (widget as any)._renderError = null;
+    }
+    const children: Widget[] = (widget as any)._children ?? [];
+    for (const child of children) {
+        clearWidgetRenderError(child);
+    }
+}
+

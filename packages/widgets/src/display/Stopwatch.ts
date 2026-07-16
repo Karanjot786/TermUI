@@ -97,7 +97,7 @@ export class Stopwatch extends Widget {
 
     /** Stop the interval when the widget is unmounted. */
     unmount(): void {
-        this._clearInterval();
+        this.stop();
         super.unmount();
     }
 

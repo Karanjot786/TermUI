@@ -98,4 +98,31 @@ describe('ScalePrompt', () => {
         expect(onSelect).toHaveBeenCalledTimes(1);
         expect(onSelect).toHaveBeenCalledWith(3);
     });
+
+    it('falls back to a finite max when max is NaN', () => {
+        const prompt = new ScalePrompt(undefined, { max: NaN });
+
+        prompt.handleKey(createKeyEvent({
+            key: 'right',
+            ctrl: false,
+            alt: false,
+            shift: false,
+            raw: Buffer.from('right'),
+        }));
+
+        expect(prompt.getValue()).toBe(2);
+        const screen = renderScalePrompt(prompt);
+        const rendered = screen.back[0].map((cell) => cell.char).join('');
+        expect(rendered).toContain('5');
+    });
+
+    it('falls back to a finite max when max is infinite', () => {
+        const prompt = new ScalePrompt(undefined, { max: Infinity });
+        const screen = renderScalePrompt(prompt);
+        const rendered = screen.back[0].map((cell) => cell.char).join('');
+
+        expect(prompt.getValue()).toBe(1);
+        expect(rendered).toContain('[1]');
+        expect(rendered).toContain('5');
+    });
 });

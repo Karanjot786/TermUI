@@ -1,17 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FileWatcher } from './watcher.js';
-import { watch, existsSync } from 'node:fs';
+import { watch, existsSync, readdirSync, statSync } from 'node:fs';
 import { EventEmitter } from 'node:events';
 
-const { watch: mockWatch, existsSync: mockExistsSync } = vi.hoisted(() => ({
+const { watch: mockWatch, existsSync: mockExistsSync, readdirSync: mockReaddirSync, statSync: mockStatSync } = vi.hoisted(() => ({
     watch: vi.fn(),
     existsSync: vi.fn(() => true),
+    readdirSync: vi.fn(() => []),
+    statSync: vi.fn(() => ({ isDirectory: () => false })),
 }));
 
 
 vi.mock('node:fs', () => ({
     watch: mockWatch,
     existsSync: mockExistsSync,
+    readdirSync: mockReaddirSync,
+    statSync: mockStatSync,
 }));
 
 describe('FileWatcher', () => {
@@ -22,6 +26,8 @@ describe('FileWatcher', () => {
         mockWatcherEmitter = new EventEmitter();
         vi.mocked(watch).mockReturnValue(mockWatcherEmitter as any);
         vi.mocked(existsSync).mockReturnValue(true);
+        vi.mocked(readdirSync).mockReturnValue([]);
+        vi.mocked(statSync).mockReturnValue({ isDirectory: () => false } as any);
     });
 
     afterEach(() => {
@@ -357,6 +363,34 @@ describe('FileWatcher', () => {
 
         // Only one call for the existing directory
         expect(vi.mocked(watch)).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to explicit directory watchers when recursive watch is unavailable', () => {
+        const rootEmitter = new EventEmitter();
+        const childEmitter = new EventEmitter();
+        vi.mocked(watch)
+            .mockImplementationOnce(() => {
+                throw new Error('recursive watch unavailable');
+            })
+            .mockImplementationOnce(() => rootEmitter as any)
+            .mockImplementationOnce(() => childEmitter as any);
+        vi.mocked(readdirSync).mockImplementation((dir) => {
+            if (String(dir).endsWith('src')) return ['components'] as any;
+            return [] as any;
+        });
+        vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as any);
+
+        const watcher = new FileWatcher(['./src']);
+        const changeSpy = vi.fn();
+
+        watcher.onChange(changeSpy);
+        watcher.start();
+
+        childEmitter.emit('change', 'change', 'Button.tsx');
+        vi.advanceTimersByTime(100);
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(3);
+        expect(changeSpy).toHaveBeenCalledTimes(1);
     });
 
     // ─── 13. Timestamp generation ─────────────────────────────────────────────

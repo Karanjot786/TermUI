@@ -8,6 +8,7 @@ import {
     type KeyEvent,
     styleToCellAttrs,
     wordWrap,
+    truncate,
     caps,
     prefersReducedMotion,
 } from '@termuijs/core';
@@ -28,6 +29,14 @@ export class ThinkingBlock extends Widget {
     private _dots = '';
     private _timerUnsub?: () => void;
 
+    private _wrappedLines: string[] = [];
+    private _cachedWrapWidth = -1;
+
+    private _topBorder = '';
+    private _bottomBorder = '';
+    private _cachedBorderWidth = -1;
+    private _cachedUnicode = caps.unicode;
+
     constructor(
         options: ThinkingBlockOptions = {},
         style: Partial<Style> = {},
@@ -40,11 +49,17 @@ export class ThinkingBlock extends Widget {
 
     appendText(chunk: string): void {
         this._text += chunk;
+        this._wrappedLines = [];
+        this._cachedWrapWidth = -1;
         this.markDirty();
     }
 
     setStreaming(streaming: boolean): void {
+        if (this._streaming === streaming) return;
+    
         this._streaming = streaming;
+        this._wrappedLines = [];
+        this._cachedWrapWidth = -1;
         this.markDirty();
     }
 
@@ -69,7 +84,10 @@ export class ThinkingBlock extends Widget {
                 this._dots.length >= 3
                     ? ''
                     : this._dots + '.';
-
+            
+            this._wrappedLines = [];
+            this._cachedWrapWidth = -1;
+            
             this.markDirty();
         });
     }
@@ -82,15 +100,20 @@ export class ThinkingBlock extends Widget {
 
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
+
+        if (rect.width <= 0 || rect.height <= 0) {
+            return;
+        }
+
         const attrs = styleToCellAttrs(this._style);
 
         if (!this._expanded) {
             const text = `[thinking${this._streaming ? this._dots : ''}]`;
-            screen.writeString(rect.x, rect.y, text, attrs);
+            screen.writeString(rect.x, rect.y, truncate(text, rect.width, ''), attrs);
             return;
         }
 
-        const boxWidth = Math.max(4, rect.width);
+        const boxWidth = rect.width;
 
         const tl = caps.unicode ? '┌' : '+';
         const tr = caps.unicode ? '┐' : '+';
@@ -99,20 +122,47 @@ export class ThinkingBlock extends Widget {
         const h = caps.unicode ? '─' : '-';
         const v = caps.unicode ? '│' : '|';
 
+        if (boxWidth === 1) {
+            screen.writeString(rect.x, rect.y, tl, attrs);
+            return;
+        }
+
+        if (
+            this._cachedBorderWidth !== boxWidth ||
+            this._cachedUnicode !== caps.unicode
+        ) {
+            this._topBorder =
+                tl + h.repeat(Math.max(0, boxWidth - 2)) + tr;
+        
+            this._bottomBorder =
+                bl + h.repeat(Math.max(0, boxWidth - 2)) + br;
+        
+            this._cachedBorderWidth = boxWidth;
+            this._cachedUnicode = caps.unicode;
+        }
+        
         screen.writeString(
             rect.x,
             rect.y,
-            tl + h.repeat(Math.max(0, boxWidth - 2)) + tr,
+            this._topBorder,
             attrs,
         );
 
-        const wrapped = wordWrap(
-            this._text +
-                (this._streaming ? `\n\nthinking${this._dots}` : ''),
-            Math.max(1, boxWidth - 4),
-        );
+        const contentWidth = Math.max(0, boxWidth - 4);
+        const wrapWidth = Math.max(1, contentWidth);
 
-        const lines = wrapped.split('\n');
+        if (this._cachedWrapWidth !== wrapWidth || this._wrappedLines.length === 0) {
+            const wrapped = wordWrap(
+                this._text +
+                    (this._streaming ? `\n\nthinking${this._dots}` : ''),
+                wrapWidth,
+            );
+        
+            this._wrappedLines = wrapped.split('\n');
+            this._cachedWrapWidth = wrapWidth;
+        }
+        
+        const lines = this._wrappedLines;
 
         const availableHeight = Math.max(0, rect.height - 2);
         const limit = Math.min(lines.length, availableHeight);
@@ -130,7 +180,7 @@ export class ThinkingBlock extends Widget {
             screen.writeString(
                 rect.x + 2,
                 rect.y + i + 1,
-                line,
+                truncate(line, contentWidth, ''),
                 attrs,
             );
 
@@ -142,11 +192,13 @@ export class ThinkingBlock extends Widget {
             );
         }
 
-        screen.writeString(
-            rect.x,
-            rect.y + limit + 1,
-            bl + h.repeat(Math.max(0, boxWidth - 2)) + br,
-            attrs,
-        );
+        if (limit + 1 < rect.height) {
+            screen.writeString(
+                rect.x,
+                rect.y + limit + 1,
+                this._bottomBorder,
+                attrs,
+            );
+        }
     }
 }
