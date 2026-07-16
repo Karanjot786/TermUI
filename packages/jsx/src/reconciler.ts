@@ -135,7 +135,7 @@ function createIntrinsicWidget(tag: string, props: Record<string, any>, children
             return new Grid({ ...style }, {
                 columns: props.columns ?? 12,
                 gap: props.gap,
-                rows: (props as any).rows,
+                rows: props.rows,
             });
         }
 
