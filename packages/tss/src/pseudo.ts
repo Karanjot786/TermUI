@@ -8,20 +8,6 @@
  */
 export type PseudoClass = 'hover' | 'focus' | 'disabled';
 
-// Typed as ReadonlySet<string> so .has(value) works without assertion
-export const SUPPORTED_PSEUDO_CLASSES: ReadonlySet<string> = new Set<string>([
-  'hover',
-  'focus',
-  'disabled',
-]);
-
-/**
- * Returns true if the given string is a valid pseudo-class.
- */
-export function isSupportedPseudo(value: string): value is PseudoClass {
-  return SUPPORTED_PSEUDO_CLASSES.has(value);
-}
-
 /**
  * Matches a selector's pseudo-class against the current widget state.
  *

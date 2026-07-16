@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { DevTools } from './devtools.js';
+import { DevTools, renderDebugRect, handleDevToolsHover, type WidgetNode } from './devtools.js';
+import { Screen } from '@termuijs/core';
 
 describe('DevTools frame capture', () => {
     it('setFrame stores the frame rows', () => {
@@ -292,3 +293,95 @@ describe('DevTools filename stability', () => {
         }
     });
 });
+
+describe('DevTools Hover State', () => {
+    it('does not save duplicate corner cells during debug rect rendering', () => {
+        const screen = new Screen(20, 20);
+        const cells = renderDebugRect(screen, { x: 0, y: 0, width: 10, height: 10 });
+        // Perimeter of 10x10 is 4 * 10 - 4 = 36
+        expect(cells.length).toBe(36);
+        
+        const coords = new Set(cells.map(c => `${c.x},${c.y}`));
+        expect(coords.size).toBe(36);
+    });
+
+    it('clears hover state on recordRender to prevent restoring stale cells', () => {
+        const devtools = new DevTools();
+        devtools.lastHoverCells = [{ x: 1, y: 1, cell: { char: 'A' } as any }];
+        devtools.recordRender(10, 100);
+        expect(devtools.lastHoverCells.length).toBe(0);
+    });
+
+    it('saves and restores properly across hover events', () => {
+        const devtools = new DevTools();
+        const screen = new Screen(20, 20);
+        const widgetTree: WidgetNode = {
+            type: 'Box', id: 'box1', rect: { x: 1, y: 1, width: 2, height: 2 }, children: []
+        };
+        devtools.updateTree(widgetTree);
+        
+        screen.setCell(1, 1, { char: 'A', fg: { type: 'none' }, bg: { type: 'none' } });
+        screen.getCell(1, 1)!.debugWidgetId = 'box1';
+        
+        handleDevToolsHover(1, 1, screen, devtools);
+        expect(devtools.lastHoverWidgetId).toBe('box1');
+        expect(devtools.lastHoverCells.length).toBe(4); // 2x2 box has 4 corners
+        expect(screen.getCell(1, 1)!.char).toBe('┌'); // corner was drawn
+        
+        handleDevToolsHover(5, 5, screen, devtools);
+        expect(devtools.lastHoverWidgetId).toBeNull();
+        expect(screen.getCell(1, 1)!.char).toBe('A'); // old cell restored
+    });
+});
+
+describe('DevTools — log buffer', () => {
+    it('appendLog buffers a line with default stdout stream', () => {
+        const dt = new DevTools();
+        dt.appendLog('hello');
+        expect(dt.logs).toHaveLength(1);
+        expect(dt.logs[0]).toEqual({ line: 'hello', stream: 'stdout' });
+    });
+
+    it('appendLog records an explicit stderr stream', () => {
+        const dt = new DevTools();
+        dt.appendLog('boom', 'stderr');
+        expect(dt.logs[0]).toEqual({ line: 'boom', stream: 'stderr' });
+    });
+
+    it('buffer cap drops oldest lines', () => {
+        const dt = new DevTools();
+        for (let i = 0; i < 105; i++) dt.appendLog(`line ${i}`);
+        expect(dt.logs.length).toBe(100);
+        expect(dt.logs[0].line).toBe('line 5');
+    });
+
+    it('getPanel on logs tab renders buffered lines', () => {
+        const dt = new DevTools();
+        dt.appendLog('first line');
+        dt.appendLog('second line');
+        dt.setTab('logs');
+        const panel = dt.getPanel(40, 10);
+        const joined = panel.join('\n');
+        expect(joined).toContain('first line');
+        expect(joined).toContain('second line');
+    });
+
+    it('getPanel respects scroll offset', () => {
+        const dt = new DevTools();
+        for (let i = 0; i < 20; i++) dt.appendLog(`line ${i}`);
+        dt.setTab('logs');
+        dt.scrollLog(-5);
+        const panel = dt.getPanel(40, 10);
+        expect(panel.join('\n')).toContain('line 0');
+    });
+
+    it('scrollLog clamps to valid range', () => {
+        const dt = new DevTools();
+        dt.appendLog('only line');
+        dt.setTab('logs');
+        dt.scrollLog(-999);
+        const panel = dt.getPanel(40, 10);
+        expect(panel.join('\n')).toContain('only line');
+    });
+});
+

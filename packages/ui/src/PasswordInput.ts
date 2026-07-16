@@ -1,6 +1,6 @@
 import { Widget } from '@termuijs/widgets';
 import { type Style, type Screen, type KeyEvent, styleToCellAttrs, truncate, caps, splitGraphemes, stringWidth } from '@termuijs/core';
-import { type VimMode } from './vim_modes.js';
+import type { VimMode } from '@termuijs/widgets';
 
 export interface PasswordInputOptions {
     placeholder?: string;
@@ -19,6 +19,7 @@ export class PasswordInput extends Widget {
     private _onSubmit?: (value: string) => void;
     private _vimMode: VimMode = process.env.TERMUI_KEYBINDINGS === 'vim' ? 'normal' : 'insert';
     focusable = true;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
 
     // '●' in unicode terminals, '*' in ASCII fallback
     private get _maskChar(): string {
@@ -35,7 +36,13 @@ export class PasswordInput extends Widget {
         this._onChange = options.onChange;
         this._onSubmit = options.onSubmit;
 
-        this.events.on('key', (event: KeyEvent) => this.handleKey(event));
+        this.events.on('key', this._keyHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
     }
 
     /** The actual (unmasked) value. */

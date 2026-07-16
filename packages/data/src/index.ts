@@ -15,7 +15,7 @@ export { tail } from './tail.js';
 export type { TailOptions, TailStream } from './tail.js';
 export { http } from './http.js';
 export type { HealthResult, Endpoint } from './http.js';
-export { invalidate } from './cache.js';
+export { invalidate, setCacheMaxSize, getCache, setCache, isFresh, clearCache, fetchShared } from './cache.js';
 
 
 // ── Reactive hooks ────────────────────────────────────
@@ -75,6 +75,6 @@ export type { DatabaseConfig, DatabaseHealth } from './database.js';
 export { useDatabaseHealth } from './hooks/useDatabaseHealth.js';
 export type { UseDatabaseHealthResult } from './hooks/useDatabaseHealth.js';
 export { docker } from './docker.js';
-export type { DockerContainer, DockerContainerStats } from './docker.js';
+export type { DockerContainer } from './docker.js';
 export { useDocker } from './hooks/useDocker.js';
 export type { UseDockerResult } from './hooks/useDocker.js';

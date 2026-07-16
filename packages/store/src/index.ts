@@ -4,9 +4,7 @@
 
 export {
     createStore,
-    createPersistentStore,
     batch,
-    compose,
 } from './store.js';
 export type {
     Store,
@@ -32,9 +30,6 @@ export type { UndoRedoOptions, UndoRedoMiddleware } from './middleware/history.j
 export { logger } from './middleware/logger.js';
 export type { LoggerOptions } from './middleware/logger.js';
 
-export { persist } from './middleware/persist.js';
-export type { PersistMiddlewareOptions } from './middleware/persist.js';
-
 export { throttle } from './middleware/throttle.js';
 export type { ThrottleOptions } from './middleware/throttle.js';
 
@@ -43,6 +38,8 @@ export type { ValidatorOptions } from './middleware/validator.js';
 
 export { signal, mutate } from './mutate.js';
 export type { Signal } from './mutate.js';
+
 export type { EqualityFn } from './shallow.js';
 export { shallow } from './shallow.js';
 
+export { setIn, updateIn, deleteIn } from './immutable.js';

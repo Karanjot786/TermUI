@@ -35,6 +35,11 @@ describe('TextInput', () => {
         expect(input.style.height).toBe(3);
     });
 
+    it('initializes with custom initial value option and clamps it to maxLength', () => {
+        const input = new TextInput({}, { value: 'initial content', maxLength: 10 });
+        expect(input.value).toBe('initial co'); // truncated to maxLength 10
+    });
+
     it('sets and gets value correctly', () => {
         const input = new TextInput({}, { maxLength: 5 });
         input.value = 'hello world';

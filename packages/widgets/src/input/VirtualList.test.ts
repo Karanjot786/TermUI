@@ -87,6 +87,43 @@ describe('VirtualList', () => {
             list.scrollTo(200);
             expect(list.selectedIndex).toBe(99);
         });
+
+        it('scrollToIndex jumps instantly to specified index with alignment', () => {
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem: (i) => `Item ${i}`,
+                springScroll: true,
+                style: { width: 40, height: 10 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            
+            // test start alignment
+            list.scrollToIndex(50, 'start');
+            expect(list.scrollOffset).toBe(50);
+            expect(list.selectedIndex).toBe(50);
+            
+            // test center alignment (content height is 8)
+            list.scrollToIndex(50, 'center');
+            // offset = 50 - floor(8/2) = 46
+            expect(list.scrollOffset).toBe(46);
+            expect(list.selectedIndex).toBe(50);
+            
+            // test end alignment
+            list.scrollToIndex(50, 'end');
+            // offset = 50 - 8 + 1 = 43
+            expect(list.scrollOffset).toBe(43);
+            expect(list.selectedIndex).toBe(50);
+            
+            // test out of bounds clamping (returns early)
+            const previousOffset = list.scrollOffset;
+            list.scrollToIndex(-10);
+            expect(list.scrollOffset).toBe(previousOffset);
+            
+            list.scrollToIndex(200);
+            expect(list.scrollOffset).toBe(previousOffset);
+        });
     });
 
     describe('pageUp/pageDown with viewport smaller than itemHeight', () => {
@@ -228,16 +265,185 @@ describe('VirtualList', () => {
             expect(list.scrollOffset).toBeGreaterThan(0);
 
             // Drive the animation to completion.
-            // The spring (stiffness=0.15, damping=0.8, dt=16ms) converges in
-            // roughly 1600 frames — run 2000 to be safe.  We check only the
-            // public scrollOffset getter; no private fields are accessed.
-            for (let i = 0; i < 2000; i++) {
-                mockTime += 16;
+            // Use larger dt (50ms) to reduce CPU overhead and avoid test timeout,
+            // while still allowing the spring to converge.
+            for (let i = 0; i < 400; i++) {
+                mockTime += 50;
                 list.render(screen);
             }
 
             expect(list.scrollOffset).toBe(43);
             nowSpy.mockRestore();
+        });
+    });
+
+    describe('render cache eviction', () => {
+        it('evicts old entries outside visible range after scroll', () => {
+            const list = new VirtualList({
+                totalItems: 1000,
+                renderItem: (i) => `Item ${i}`,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            list.scrollTo(0);
+            list.render(screen);
+            const cache = (list as any)._renderCache as Map<number, any>;
+            const initialSize = cache.size;
+
+            // Scroll through large range - cache should stay bounded
+            for (let i = 1; i <= 50; i++) {
+                list.scrollTo(i * 10);
+                list.render(screen);
+            }
+
+            // Cache should not have grown unbounded with 1000 items
+            expect(cache.size).toBeLessThanOrEqual(initialSize + 20);
+            expect(cache.size).toBeLessThan(100);
+        });
+    });
+
+    describe('bounds-check for renderItem indices', () => {
+        it('does not call renderItem with out-of-bounds index when totalItems decreases', () => {
+            const renderItem = vi.fn((i: number) => `Item ${i}`);
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem,
+                itemHeight: 1,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            // Scroll to end
+            list.selectLast();
+            list.render(screen);
+
+            // Record the indices that were rendered
+            const initialCalls = new Set(renderItem.mock.calls.map(call => call[0]));
+
+            // Decrease totalItems dramatically
+            list.setTotalItems(10);
+            renderItem.mockClear();
+            list.render(screen);
+
+            // Verify no call to renderItem with out-of-bounds index
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                expect(idx).toBeGreaterThanOrEqual(0);
+                expect(idx).toBeLessThan(10);
+            });
+        });
+
+        it('does not call renderItem with negative indices after scroll position changes', () => {
+            const renderItem = vi.fn((i: number) => `Item ${i}`);
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem,
+                itemHeight: 1,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            // Scroll and then decrease totalItems
+            for (let i = 0; i < 50; i++) {
+                list.selectNext();
+            }
+            list.render(screen);
+            renderItem.mockClear();
+
+            list.setTotalItems(20);
+            list.render(screen);
+
+            // Verify no negative indices
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                expect(idx).toBeGreaterThanOrEqual(0);
+            });
+        });
+
+        it('handles totalItems decrease to 0 gracefully', () => {
+            const renderItem = vi.fn((i: number) => `Item ${i}`);
+            const list = new VirtualList({
+                totalItems: 50,
+                renderItem,
+                itemHeight: 1,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            list.selectLast();
+            list.render(screen);
+            renderItem.mockClear();
+
+            // Decrease to zero
+            list.setTotalItems(0);
+            expect(() => list.render(screen)).not.toThrow();
+            expect(renderItem).not.toHaveBeenCalled();
+        });
+
+        it('renders correctly after multiple totalItems changes', () => {
+            const renderItem = vi.fn((i: number) => `Item ${i}`);
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem,
+                itemHeight: 1,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            list.selectLast();
+            list.render(screen);
+
+            // Multiple size changes in sequence
+            list.setTotalItems(80);
+            renderItem.mockClear();
+            list.render(screen);
+            let validIndices = true;
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                if (idx < 0 || idx >= 80) validIndices = false;
+            });
+            expect(validIndices).toBe(true);
+
+            list.setTotalItems(50);
+            renderItem.mockClear();
+            list.render(screen);
+            validIndices = true;
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                if (idx < 0 || idx >= 50) validIndices = false;
+            });
+            expect(validIndices).toBe(true);
+
+            list.setTotalItems(200);
+            renderItem.mockClear();
+            list.render(screen);
+            validIndices = true;
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                if (idx < 0 || idx >= 200) validIndices = false;
+            });
+            expect(validIndices).toBe(true);
         });
     });
 

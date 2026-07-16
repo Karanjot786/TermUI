@@ -188,6 +188,20 @@ describe('App', () => {
             const code = await mountPromise;
             expect(code).toBe(0);
         });
+
+        it('removes the resize subscription on unmount', async () => {
+            const cleanup = vi.fn();
+            const app = new App(createMockRootWidget(), createInteractiveTestOptions());
+            const onResizeSpy = vi.spyOn(app.terminal, 'onResize').mockImplementation(() => cleanup);
+            const mountPromise = app.mount();
+
+            expect(onResizeSpy).toHaveBeenCalledTimes(1);
+
+            app.unmount();
+            await mountPromise;
+
+            expect(cleanup).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('exit()', () => {
@@ -528,6 +542,143 @@ describe('App', () => {
 
             app.exit(0);
             await mountPromise.catch(() => {});
+        });
+    });
+
+    describe('runtime hit-grid population', () => {
+        it('populates the layer hit-grid from the mounted widget tree', async () => {
+            const { root, first } = createFocusTestRoot();
+            const app = new App(root, createInteractiveTestOptions());
+
+            const mountPromise = app.mount();
+            await new Promise(r => setImmediate(r));
+
+            expect(app.layers.hitTest(0, 0)).toBe(first.id);
+
+            app.unmount();
+            await mountPromise.catch(() => {});
+        });
+
+        it('rebuilds the hit-grid when geometry changes without a full widget render pass', async () => {
+            const widget = {
+                id: 'moved',
+                rect: { x: 0, y: 0, width: 4, height: 4 },
+                style: { visible: true, zIndex: 0 },
+                parent: null,
+                events: { emit() {} },
+            };
+            const root = {
+                id: 'root',
+                rect: { x: 0, y: 0, width: 0, height: 0 },
+                style: { visible: true, zIndex: 0 },
+                children: [widget],
+                _children: [widget],
+                isDirty: false,
+                getLayoutNode() {
+                    return {
+                        id: 'root',
+                        style: {},
+                        children: [],
+                        computed: { x: 0, y: 0, width: 20, height: 20 },
+                    };
+                },
+                syncLayout() {},
+                render() {},
+                mount() {},
+                unmount() {},
+                clearDirty() { this.isDirty = false; },
+                markDirty() { this.isDirty = true; },
+            };
+            const app = new App(root as any, createInteractiveTestOptions());
+
+            const mountPromise = app.mount();
+            await new Promise(r => setImmediate(r));
+
+            (app as any)._hitGridDirty = true;
+            (app as any).requestRender();
+            await new Promise(r => setImmediate(r));
+
+            expect(app.layers.hitTest(1, 1)).toBe(widget.id);
+
+            widget.rect = { x: 10, y: 10, width: 4, height: 4 };
+            (app as any)._hitGridDirty = true;
+            (app as any).requestRender();
+            await new Promise(r => setImmediate(r));
+
+            expect(app.layers.hitTest(1, 1)).toBeNull();
+
+            app.unmount();
+            await mountPromise.catch(() => {});
+        });
+    });
+
+    describe('_findWidgetAt z-order hit-testing', () => {
+        function createHitWidget(id: string, rect: { x: number; y: number; width: number; height: number }, style?: { zIndex?: number; visible?: boolean }, parent?: any): any {
+            return { id, rect, style, parent, events: { emit() {} } };
+        }
+
+        it('returns highest z-index widget at the hit point', () => {
+            const root = createMockRootWidget();
+            const app = new App(root, { forceFallback: true });
+
+            const low = createHitWidget('low', { x: 0, y: 0, width: 10, height: 10 }, { zIndex: 1 });
+            const high = createHitWidget('high', { x: 0, y: 0, width: 10, height: 10 }, { zIndex: 10 });
+
+            (app as any)._widgetById.set('low', low);
+            (app as any)._widgetById.set('high', high);
+
+            const result = (app as any)._findWidgetAt(5, 5);
+            expect(result.id).toBe('high');
+        });
+
+        it('returns widget with no zIndex (default 0) when it is the only match', () => {
+            const root = createMockRootWidget();
+            const app = new App(root, { forceFallback: true });
+
+            const widget = createHitWidget('only', { x: 0, y: 0, width: 10, height: 10 });
+            (app as any)._widgetById.set('only', widget);
+
+            const result = (app as any)._findWidgetAt(5, 5);
+            expect(result.id).toBe('only');
+        });
+
+        it('returns null when no widget contains the point', () => {
+            const root = createMockRootWidget();
+            const app = new App(root, { forceFallback: true });
+
+            const widget = createHitWidget('w', { x: 0, y: 0, width: 5, height: 5 });
+            (app as any)._widgetById.set('w', widget);
+
+            const result = (app as any)._findWidgetAt(10, 10);
+            expect(result).toBeNull();
+        });
+
+        it('skips hidden (visible=false) widgets during hit-test', () => {
+            const root = createMockRootWidget();
+            const app = new App(root, { forceFallback: true });
+
+            const visible = createHitWidget('visible', { x: 0, y: 0, width: 10, height: 10 }, { zIndex: 1 });
+            const hidden = createHitWidget('hidden', { x: 0, y: 0, width: 10, height: 10 }, { zIndex: 5, visible: false });
+
+            (app as any)._widgetById.set('visible', visible);
+            (app as any)._widgetById.set('hidden', hidden);
+
+            const result = (app as any)._findWidgetAt(5, 5);
+            expect(result.id).toBe('visible');
+        });
+
+        it('prefers deepest child among same z-index widgets', () => {
+            const root = createMockRootWidget();
+            const app = new App(root, { forceFallback: true });
+
+            const parent = createHitWidget('parent', { x: 0, y: 0, width: 10, height: 10 }, { zIndex: 1 });
+            const child = createHitWidget('child', { x: 0, y: 0, width: 10, height: 10 }, { zIndex: 1 }, parent);
+
+            (app as any)._widgetById.set('parent', parent);
+            (app as any)._widgetById.set('child', child);
+
+            const result = (app as any)._findWidgetAt(5, 5);
+            expect(result.id).toBe('child');
         });
     });
 });

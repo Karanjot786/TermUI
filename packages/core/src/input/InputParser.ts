@@ -11,9 +11,42 @@ import { parseMouseEvent, isMouseSequence } from './MouseParser.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import { splitGraphemes } from './grapheme.js';
 
+const ESCAPE_TIMEOUT_MS = 500;
+const DEFAULT_MAX_ESCAPE_SEQUENCE_LENGTH = 4096;
+const DEFAULT_MAX_PASTE_BUFFER_SIZE = 1024 * 1024; // 1 MB
+const DEFAULT_MAX_GRAPHENE_BUFFER_SIZE = 4096;
+const DEFAULT_MAX_KEY_EVENTS_PER_CHUNK = 1000;
+
 export interface CursorPosition {
     row: number;
     col: number;
+}
+
+export interface InputParserOptions {
+    /**
+     * Maximum byte length for an escape sequence buffer.
+     * Sequences exceeding this are discarded to prevent memory exhaustion.
+     * Default: 4096
+     */
+    maxEscapeSequenceLength?: number;
+    /**
+     * Maximum byte length for the paste buffer.
+     * Paste content exceeding this is truncated.
+     * Default: 1,048,576 (1 MB)
+     */
+    maxPasteBufferSize?: number;
+    /**
+     * Maximum byte length for the grapheme buffer.
+     * Grapheme content exceeding this is discarded.
+     * Default: 4096
+     */
+    maxGraphemeBufferSize?: number;
+    /**
+     * Maximum number of key events to emit from a single _processInput call.
+     * Prevents event loop starvation from a flood of input data.
+     * Default: 1000
+     */
+    maxKeyEventsPerChunk?: number;
 }
 
 interface InputEvents {
@@ -44,9 +77,17 @@ export class InputParser {
         reject: (error: Error) => void;
         timeout: ReturnType<typeof setTimeout>;
     }> = [];
+    private _maxEscapeSequenceLength: number;
+    private _maxPasteBufferSize: number;
+    private _maxGraphemeBufferSize: number;
+    private _maxKeyEventsPerChunk: number;
 
-    constructor(stdin: NodeJS.ReadStream) {
+    constructor(stdin: NodeJS.ReadStream, options: InputParserOptions = {}) {
         this._stdin = stdin;
+        this._maxEscapeSequenceLength = options.maxEscapeSequenceLength ?? DEFAULT_MAX_ESCAPE_SEQUENCE_LENGTH;
+        this._maxPasteBufferSize = options.maxPasteBufferSize ?? DEFAULT_MAX_PASTE_BUFFER_SIZE;
+        this._maxGraphemeBufferSize = options.maxGraphemeBufferSize ?? DEFAULT_MAX_GRAPHENE_BUFFER_SIZE;
+        this._maxKeyEventsPerChunk = options.maxKeyEventsPerChunk ?? DEFAULT_MAX_KEY_EVENTS_PER_CHUNK;
     }
 
     /** Subscribe to key events */
@@ -113,6 +154,8 @@ export class InputParser {
         }
         this._escapeBuffer = Buffer.alloc(0);
         this._graphemeBuffer = '';
+        this._isPasting = false;
+        this._pasteBuffer = '';
         this._decoder.end();
         for (const req of this._cursorRequests) {
             clearTimeout(req.timeout);
@@ -125,51 +168,90 @@ export class InputParser {
      * Process a chunk of raw input bytes.
      */
     private _processInput(data: Buffer): void {
-        // If we are currently collecting an escape sequence, continue collecting it
-        if (this._escapeBuffer.length > 0) {
-            this._escapeBuffer = Buffer.concat([this._escapeBuffer, data]);
-            if (this._escapeTimeout) {
-                clearTimeout(this._escapeTimeout);
-                this._escapeTimeout = null;
-            }
-            this._tryParseEscape();
-            return;
-        }
-
-        const str = data.toString('utf8');
         const PASTE_START = '\x1b[200~';
         const PASTE_END = '\x1b[201~';
 
-        // ── Multi-chunk bracketed paste handling ──
-
-        // Check if this chunk contains the paste-start marker
-        if (!this._isPasting && str.includes(PASTE_START)) {
-            this._isPasting = true;
-            this._pasteBuffer = str.slice(str.indexOf(PASTE_START) + PASTE_START.length);
-            this._startPasteTimeout();
-
-            // Check if paste-end is also in this same chunk
-            if (this._pasteBuffer.includes(PASTE_END)) {
-                const pastedText = this._pasteBuffer.slice(0, this._pasteBuffer.indexOf(PASTE_END));
-                this._isPasting = false;
-                this._pasteBuffer = '';
-                this._clearPasteTimeout();
-                this._events.emit('paste', pastedText);
-            }
-            return;
-        }
-
-        // If we are inside a paste, accumulate content
         if (this._isPasting) {
-            if (str.includes(PASTE_END)) {
-                this._pasteBuffer += str.slice(0, str.indexOf(PASTE_END));
+            const str = this._decoder.write(data);
+            const endIdx = str.indexOf(PASTE_END);
+            if (endIdx !== -1) {
+                const chunk = str.substring(0, endIdx);
+                const newLen = this._pasteBuffer.length + chunk.length;
+                if (newLen > this._maxPasteBufferSize) {
+                    const excess = newLen - this._maxPasteBufferSize;
+                    this._pasteBuffer = this._pasteBuffer.slice(excess) + chunk;
+                    this._pasteBuffer = this._pasteBuffer.slice(-this._maxPasteBufferSize);
+                } else {
+                    this._pasteBuffer += chunk;
+                }
                 const pastedText = this._pasteBuffer;
                 this._isPasting = false;
                 this._pasteBuffer = '';
                 this._clearPasteTimeout();
                 this._events.emit('paste', pastedText);
+
+                const remaining = str.substring(endIdx + PASTE_END.length);
+                if (remaining.length > 0) {
+                    this._processInput(Buffer.from(remaining, 'utf8'));
+                }
             } else {
-                this._pasteBuffer += str;
+                const newLen = this._pasteBuffer.length + str.length;
+                if (newLen > this._maxPasteBufferSize) {
+                    const excess = newLen - this._maxPasteBufferSize;
+                    this._pasteBuffer = this._pasteBuffer.slice(excess) + str;
+                    if (this._pasteBuffer.length > this._maxPasteBufferSize) {
+                        this._pasteBuffer = this._pasteBuffer.slice(-this._maxPasteBufferSize);
+                    }
+                } else {
+                    this._pasteBuffer += str;
+                }
+                this._startPasteTimeout();
+            }
+            return;
+        }
+
+        // If we are currently collecting an escape sequence, continue collecting it
+        if (this._escapeBuffer.length > 0) {
+            const newBuf = Buffer.concat([this._escapeBuffer, data]);
+            this._escapeBuffer = newBuf.length > this._maxEscapeSequenceLength
+                ? newBuf.slice(0, this._maxEscapeSequenceLength)
+                : newBuf;
+            if (this._escapeTimeout) {
+                clearTimeout(this._escapeTimeout);
+                this._escapeTimeout = null;
+            }
+            this._tryParseEscape();
+            // If the sequence is still incomplete, restart the timeout
+            // so fragmented TCP chunks won't trigger a false standalone ESC.
+            if (this._escapeBuffer.length > 0) {
+                this._startEscapeTimeout();
+            }
+            return;
+        }
+
+        const str = data.toString('utf8');
+        
+        const startIdx = str.indexOf(PASTE_START);
+        if (startIdx !== -1) {
+            if (startIdx > 0) {
+                const before = str.substring(0, startIdx);
+                this._processInput(Buffer.from(before, 'utf8'));
+            }
+
+            const afterStart = str.substring(startIdx + PASTE_START.length);
+            const endIdx = afterStart.indexOf(PASTE_END);
+            
+            if (endIdx !== -1) {
+                this._events.emit('paste', afterStart.substring(0, endIdx));
+                const remaining = afterStart.substring(endIdx + PASTE_END.length);
+                if (remaining.length > 0) {
+                    this._processInput(Buffer.from(remaining, 'utf8'));
+                }
+            } else {
+                this._isPasting = true;
+                this._pasteBuffer = afterStart.length > this._maxPasteBufferSize
+                    ? afterStart.slice(-this._maxPasteBufferSize)
+                    : afterStart;
                 this._startPasteTimeout();
             }
             return;
@@ -177,32 +259,33 @@ export class InputParser {
 
         // Check if this starts an escape sequence
         if (str.startsWith('\x1b') && str.length === 1) {
-            // Lone ESC — wait a bit to see if more bytes follow
+            // Lone ESC — wait for more bytes
             this._escapeBuffer = data;
-            this._escapeTimeout = setTimeout(() => {
-                // Timeout — it was a standalone Escape key
-                this._events.emit('key', createKeyEvent({
-                    key: 'escape',
-                    raw: this._escapeBuffer,
-                    ctrl: false,
-                    alt: false,
-                    shift: false,
-                }));
-                this._escapeBuffer = Buffer.alloc(0);
-                this._escapeTimeout = null;
-            }, 50); // 50ms debounce for escape sequences
+            this._startEscapeTimeout();
             return;
         }
 
         if (str.startsWith('\x1b')) {
             this._escapeBuffer = data;
             this._tryParseEscape();
+            if (this._escapeBuffer.length > 0) {
+                this._startEscapeTimeout();
+            }
             return;
         }
 
         // Decode input and append to grapheme buffer
         const decoded = this._decoder.write(data);
-        this._graphemeBuffer += decoded;
+        const newLen = this._graphemeBuffer.length + decoded.length;
+        if (newLen > this._maxGraphemeBufferSize) {
+            const excess = newLen - this._maxGraphemeBufferSize;
+            this._graphemeBuffer = this._graphemeBuffer.slice(excess) + decoded;
+            if (this._graphemeBuffer.length > this._maxGraphemeBufferSize) {
+                this._graphemeBuffer = this._graphemeBuffer.slice(-this._maxGraphemeBufferSize);
+            }
+        } else {
+            this._graphemeBuffer += decoded;
+        }
 
         if (this._graphemeTimeout) {
             clearTimeout(this._graphemeTimeout);
@@ -222,11 +305,11 @@ export class InputParser {
         const graphemes = splitGraphemes(this._graphemeBuffer);
         if (graphemes.length === 0) return;
 
-        let processCount = graphemes.length;
+        let processCount = Math.min(graphemes.length, this._maxKeyEventsPerChunk);
         // Check if the last grapheme is potentially incomplete
-        const lastGrapheme = graphemes[graphemes.length - 1];
-        if (this._isPossiblyIncompleteGrapheme(lastGrapheme)) {
-            processCount = graphemes.length - 1;
+        const lastGrapheme = graphemes[processCount - 1];
+        if (processCount > 0 && this._isPossiblyIncompleteGrapheme(lastGrapheme)) {
+            processCount = processCount - 1;
         }
 
         for (let i = 0; i < processCount; i++) {
@@ -306,6 +389,29 @@ export class InputParser {
     }
 
     /**
+     * Start or restart the escape sequence timeout.
+     * Fires when no additional bytes arrive within the window,
+     * treating the buffered bytes as a standalone Escape key.
+     */
+    private _startEscapeTimeout(): void {
+        if (this._escapeTimeout) {
+            clearTimeout(this._escapeTimeout);
+        }
+        this._escapeTimeout = setTimeout(() => {
+            const remained = this._escapeBuffer;
+            this._escapeBuffer = Buffer.alloc(0);
+            this._escapeTimeout = null;
+            this._events.emit('key', createKeyEvent({
+                key: 'escape',
+                raw: remained,
+                ctrl: false,
+                alt: false,
+                shift: false,
+            }));
+        }, ESCAPE_TIMEOUT_MS);
+    }
+
+    /**
      * Start or restart the paste inactivity timeout.
      * If no additional paste data arrives within the timeout,
      * the paste state is aborted to prevent stale state.
@@ -332,6 +438,28 @@ export class InputParser {
     private _tryParseEscape(): void {
         const seq = this._escapeBuffer.toString('utf8');
 
+        const PASTE_START = '\x1b[200~';
+        const PASTE_END = '\x1b[201~';
+        const pasteStartIdx = seq.indexOf(PASTE_START);
+        if (pasteStartIdx !== -1) {
+            this._escapeBuffer = Buffer.alloc(0);
+            if (pasteStartIdx > 0) {
+                queueMicrotask(() => this._processInput(Buffer.from(seq.substring(0, pasteStartIdx), 'utf8')));
+            }
+            const after = seq.substring(pasteStartIdx + PASTE_START.length);
+            const endIdx = after.indexOf(PASTE_END);
+            if (endIdx !== -1) {
+                this._events.emit('paste', after.substring(0, endIdx));
+                const remaining = after.substring(endIdx + PASTE_END.length);
+                if (remaining.length > 0) {
+                    this._processInput(Buffer.from(remaining, 'utf8'));
+                }
+            } else {
+                queueMicrotask(() => this._processInput(Buffer.from(after, 'utf8')));
+            }
+            return;
+        }
+
         // Check for mouse event first
         if (isMouseSequence(seq)) {
             const mouseEvt = parseMouseEvent(seq);
@@ -340,16 +468,8 @@ export class InputParser {
                 this._escapeBuffer = Buffer.alloc(0);
                 return;
             }
-            // Might be incomplete mouse sequence — wait for more data
-            if (seq.length < 20) { // safety cap
-                if (this._escapeTimeout) {
-                    clearTimeout(this._escapeTimeout);
-                    this._escapeTimeout = null;
-                }
-                this._escapeTimeout = setTimeout(() => {
-                    this._escapeBuffer = Buffer.alloc(0);
-                    this._escapeTimeout = null;
-                }, 100);
+            // Might be incomplete mouse sequence — wait for more data (no timeout, FSM handles via _escapeBuffer)
+            if (seq.length < 20) {
                 return;
             }
         }
@@ -421,21 +541,13 @@ export class InputParser {
             return;
         }
 
-        // If the sequence is getting too long, give up
-        if (seq.length > 20) {
+        // If the sequence is at or over the limit, discard it
+        if (seq.length >= this._maxEscapeSequenceLength) {
             this._escapeBuffer = Buffer.alloc(0);
             return;
         }
 
-        // Wait for more bytes (might be an incomplete sequence)
-        if (this._escapeTimeout) {
-            clearTimeout(this._escapeTimeout);
-            this._escapeTimeout = null;
-        }
-        this._escapeTimeout = setTimeout(() => {
-            // Timeout — emit as unknown escape and clear
-            this._escapeBuffer = Buffer.alloc(0);
-            this._escapeTimeout = null;
-        }, 100);
+        // Wait for more bytes (might be an incomplete sequence; FSM handles via _escapeBuffer)
+        return;
     }
 }

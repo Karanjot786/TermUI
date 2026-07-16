@@ -3,6 +3,7 @@ export interface CliArgs {
     template?: string;
     theme?: string;
     yes: boolean;
+    version?: boolean;
     dir?: string;
 
     command?: string;
@@ -10,7 +11,7 @@ export interface CliArgs {
     dryRun?: boolean;
 }
 
-const TEMPLATE_KEYS = [
+export const TEMPLATE_KEYS = [
     "empty",
     "dashboard",
     "interactive-tool",
@@ -32,10 +33,39 @@ function getValue(
     const value = argv[index];
 
     if (value.includes("=")) {
-        return value.split("=")[1];
+        const inlineValue = value.split("=")[1];
+        if (!inlineValue || inlineValue.startsWith("-")) {
+            throw new Error(`${key} requires a value`);
+        }
+        return inlineValue;
     }
 
-    return argv[index + 1];
+    const next = argv[index + 1];
+    if (!next || next.startsWith("-")) {
+        throw new Error(`${key} requires a value`);
+    }
+    return next;
+}
+
+function getFirstPositional(argv: string[]): string | undefined {
+    for (let index = 0; index < argv.length; index++) {
+        const value = argv[index];
+
+        if (value === "--template" || value === "--theme") {
+            index++;
+            continue;
+        }
+
+        if (value.startsWith("--template=") || value.startsWith("--theme=")) {
+            continue;
+        }
+
+        if (!value.startsWith("-")) {
+            return value;
+        }
+    }
+
+    return undefined;
 }
 
 export function parseArgs(argv: string[]): CliArgs {
@@ -43,7 +73,12 @@ export function parseArgs(argv: string[]): CliArgs {
         yes: false,
         dryRun: false,
     };
-
+       
+    if (argv.includes('--version') || argv.includes('-v')) {
+        args.version = true;
+        return args;
+    }
+    
     if (argv[0] === "add") {
         const positional: string[] = [];
 
@@ -74,7 +109,7 @@ export function parseArgs(argv: string[]): CliArgs {
     }
 
     // positional (first non-flag)
-    const positional = argv.find(a => !a.startsWith("-"));
+    const positional = getFirstPositional(argv);
     if (positional) {
         args.name = positional;
     }

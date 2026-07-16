@@ -64,8 +64,8 @@ describe('ANSI Escape Constants', () => {
     });
 
     it('should define mouse tracking constants', () => {
-        expect(enableMouse).toBe('\x1b[?1000h\x1b[?1002h\x1b[?1006h');
-        expect(disableMouse).toBe('\x1b[?1000l\x1b[?1002l\x1b[?1006l');
+        expect(enableMouse).toBe('\x1b[?1000h\x1b[?1003h\x1b[?1015h\x1b[?1006h');
+        expect(disableMouse).toBe('\x1b[?1000l\x1b[?1003l\x1b[?1015l\x1b[?1006l');
     });
 
     it('should define bracketed paste constants', () => {
@@ -138,6 +138,14 @@ describe('ANSI Title Functions', () => {
     it('should format setTitle correctly', () => {
         expect(setTitle('My App')).toBe('\x1b]0;My App\x07');
         expect(setTitle('')).toBe('\x1b]0;\x07');
+    });
+
+    it('strips control/escape chars to prevent OSC injection', () => {
+        // BEL terminates OSC, ESC opens new sequences — neither may survive in the payload.
+        const out = setTitle('a\x07evil\x1b]0;pwn');
+        const payload = out.slice(4, -1); // between the `\x1b]0;` prefix and the trailing \x07
+        expect(out.endsWith('\x07')).toBe(true);
+        expect(payload).not.toMatch(/[\x00-\x1f\x7f-\x9f]/); // no control/escape chars remain
     });
 });
 

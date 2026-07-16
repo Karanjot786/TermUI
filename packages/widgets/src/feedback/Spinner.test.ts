@@ -148,3 +148,72 @@ describe('Spinner — Presets and ASCII fallback', () => {
         expect(frames).toEqual(SPINNER_FRAMES.pulse.frames);
     });
 });
+
+describe('Spinner — Pulse animation', () => {
+    beforeEach(() => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('renders pulse char with dim when progress < 0.5 and bold when >= 0.5', () => {
+        const spinner = new Spinner({}, { animation: 'pulse' });
+        spinner.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+
+        // Force animProgress to dim range
+        (spinner as unknown as { _animProgress: number })._animProgress = 0.3;
+        let screen = new Screen(20, 1);
+        spinner.render(screen);
+        expect(screen.back[0][0].char).toBe('█');
+        expect(screen.back[0][0].dim).toBe(true);
+        expect(screen.back[0][0].bold).toBe(false);
+
+        // Force animProgress to bold range
+        (spinner as unknown as { _animProgress: number })._animProgress = 0.7;
+        screen = new Screen(20, 1);
+        spinner.render(screen);
+        expect(screen.back[0][0].char).toBe('█');
+        expect(screen.back[0][0].dim).toBe(false);
+        expect(screen.back[0][0].bold).toBe(true);
+    });
+
+    it('renders static pulse char when motion is disabled', () => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
+        const spinner = new Spinner({}, { animation: 'pulse' });
+        spinner.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        const screen = new Screen(20, 1);
+        spinner.render(screen);
+        expect(screen.back[0][0].char).toBe('█');
+        expect(screen.back[0][0].dim).toBe(false);
+        expect(screen.back[0][0].bold).toBe(false);
+    });
+
+    it('tick is a no-op in pulse mode', () => {
+        const spinner = new Spinner({}, { animation: 'pulse' });
+        (spinner as unknown as { _frameIndex: number })._frameIndex = 0;
+        spinner.tick(1000);
+        expect((spinner as unknown as { _frameIndex: number })._frameIndex).toBe(0);
+    });
+
+    it('uses ASCII pulse char when unicode is not available', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const spinner = new Spinner({}, { animation: 'pulse' });
+        const pulseChar = (spinner as unknown as { _pulseChar: string })._pulseChar;
+        expect(pulseChar).toBe('#');
+    });
+
+    it('accepts custom pulseChar', () => {
+        const spinner = new Spinner({}, { animation: 'pulse', pulseChar: '●' });
+        const pulseChar = (spinner as unknown as { _pulseChar: string })._pulseChar;
+        expect(pulseChar).toBe('●');
+    });
+
+    it('spins frames by default when animation is not set', () => {
+        const spinner = new Spinner({}, { preset: 'line' });
+        const animation = (spinner as unknown as { _animation: string })._animation;
+        expect(animation).toBe('spin');
+    });
+});

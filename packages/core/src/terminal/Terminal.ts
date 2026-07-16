@@ -217,14 +217,24 @@ export class Terminal {
      * Writes data to stdout synchronously, bypassing the write queue.
      * Used by the renderer during frame flush to avoid races with the
      * async queue lifecycle. Only use for render-path output.
+     *
+     * Drains any pending queue items first so that ordering is preserved
+     * between async queued writes and synchronous render output.
      */
     writeSync(data: string): void {
         if (!data) return;
+        while (this._writeQueue.length > 0) {
+            const chunk = this._writeQueue.shift()!;
+            this.stdout.write(chunk);
+        }
+        this._isWriting = false;
         this.stdout.write(data);
     }
 
     /**
      * Sequentially unshifts and drains string frames to stdout safely.
+     * Yields to the event loop via setImmediate when the queue is large
+     * to prevent stack overflow from unbounded synchronous recursion.
      */
     private _processWriteQueue(): void {
         if (this._writeQueue.length === 0) {
@@ -243,9 +253,12 @@ export class Terminal {
             this.stdout.once('drain', () => {
                 this._processWriteQueue();
             });
+        } else if (this._writeQueue.length > 0) {
+            // Yield to the event loop to prevent stack overflow when
+            // many widgets emit multiple ANSI sequences per frame.
+            setImmediate(() => { this._processWriteQueue(); });
         } else {
-            // Proceed instantly via synchronous event-loop cycle
-            this._processWriteQueue();
+            this._isWriting = false;
         }
     }
 

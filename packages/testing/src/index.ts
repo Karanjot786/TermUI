@@ -15,6 +15,3 @@ export { getByRole, getByLabel, queryByText } from "./queries.js";
 // ── Screen Recorder ──
 export { ScreenRecorder } from './recorder.js';
 export type { FrameData } from './recorder.js';
-
-// ── Snapshots ──
-export { SnapshotReporter, diffSnapshots } from './diff.js';

@@ -11,6 +11,9 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
     private _onceHandlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
     private _emitting: Set<keyof TEventMap> = new Set();
 
+    /** Optional error handler for event handler errors. Called when a handler throws. */
+    onError?: (event: keyof TEventMap, error: unknown) => void;
+
     /**
      * Subscribe to an event.
      * @returns Unsubscribe function.
@@ -76,14 +79,14 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
             this._onceHandlers.delete(event);
         }
 
-        // Regular handlers — skip if re-entrant for the same event
+        // Regular handlers — iterate over a snapshot to prevent concurrent modification issues
         if (!this._emitting.has(event)) {
             this._emitting.add(event);
             const handlers = this._handlers.get(event);
             if (handlers) {
-                for (const handler of handlers) {
-                    try { handler(data); } catch (_err) {
-                        // handler errors are silently ignored to prevent crash during rendering
+                for (const handler of [...handlers]) {
+                    try { handler(data); } catch (err) {
+                        this.onError?.(event, err);
                     }
                 }
             }
@@ -92,8 +95,8 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
 
         // Once handlers — fire removed handlers
         for (const handler of onceSnapshot) {
-            try { handler(data); } catch (_err) {
-                // handler errors are silently ignored to prevent crash during rendering
+            try { handler(data); } catch (err) {
+                this.onError?.(event, err);
             }
         }
     }

@@ -83,12 +83,12 @@ export function batch<T>(fn: () => T): T {
         return (res as Promise<any>).then(
             (val) => {
                 _batchDepth--;
-                if (_batchDepth === 0) flushBatch(false);
+                if (_batchDepth === 0) flushBatch(false, true);
                 return val;
             },
             (err) => {
                 _batchDepth--;
-                if (_batchDepth === 0) flushBatch(true);
+                if (_batchDepth === 0) flushBatch(true, true);
                 throw err;
             }
         ) as T;
@@ -101,7 +101,7 @@ export function batch<T>(fn: () => T): T {
     }
 }
 
-function flushBatch(threw: boolean) {
+function flushBatch(threw: boolean, immediate = false) {
     if (threw) {
         for (const [, { rollback }] of _batchStores) {
             rollback();
@@ -112,18 +112,34 @@ function flushBatch(threw: boolean) {
         // Snapshot the current epoch so the microtask can bail out if a new
         // batch has started before it runs.
         const epochAtFlush = _batchEpoch;
-        queueMicrotask(() => {
-            // A new batch started between the flush and this microtask — skip.
+        const notify = () => {
+            // A new batch started between flush and notify — skip.
             if (_batchEpoch !== epochAtFlush) return;
             const stores = Array.from(_batchStores.entries());
             _batchStores.clear();
-            for (const [listeners, { prevState, commit }] of stores) {
-                const newState = commit();
-                for (const listener of listeners) {
-                    listener(newState, prevState);
+            const newStates = new Map<Set<any>, any>();
+            for (const [listeners, { commit }] of stores) {
+                newStates.set(listeners, commit());
+            }
+            for (const [listeners, { prevState }] of stores) {
+                const newState = newStates.get(listeners);
+                try {
+                    for (const listener of listeners) {
+                        listener(newState, prevState);
+                    }
+                } catch (e) {
+                    for (const [, entry] of stores) {
+                        entry.rollback();
+                    }
+                    throw e;
                 }
             }
-        });
+        };
+        if (immediate) {
+            notify();
+        } else {
+            queueMicrotask(notify);
+        }
     }
 }
 
@@ -236,6 +252,58 @@ export interface Store<T> {
     /** Read the state captured at creation */
     getInitialState(): T;
 }
+
+// ── Safe Deep Clone Helper ──
+function safeDeepClone<T>(obj: T, seen = new WeakMap()): T {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (seen.has(obj as any)) return seen.get(obj as any);
+
+    if (obj instanceof Date) return new Date(obj.getTime()) as any;
+    if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags) as any;
+    
+    if (obj instanceof Map) {
+        const m = new Map();
+        seen.set(obj as any, m);
+        for (const [k, v] of obj) m.set(k, safeDeepClone(v, seen));
+        return m as any;
+    }
+    if (obj instanceof Set) {
+        const s = new Set();
+        seen.set(obj as any, s);
+        for (const v of obj) s.add(safeDeepClone(v, seen));
+        return s as any;
+    }
+    if (obj instanceof ArrayBuffer) {
+        const buf = new ArrayBuffer(obj.byteLength);
+        new Uint8Array(buf).set(new Uint8Array(obj));
+        return buf as any;
+    }
+    if (Array.isArray(obj)) {
+        const arr = [] as any[];
+        seen.set(obj as any, arr);
+        for (let i = 0; i < obj.length; i++) {
+            arr[i] = safeDeepClone(obj[i], seen);
+        }
+        return arr as any;
+    }
+
+    const cloned = {} as Record<string | symbol, any>;
+    seen.set(obj as any, cloned);
+
+    const keys = Reflect.ownKeys(obj as any);
+    for (const key of keys) {
+        const value = (obj as any)[key];
+        // Filter out functions from initial state capture
+        if (typeof value === 'function') continue; 
+        try {
+            cloned[key] = safeDeepClone(value, seen);
+        } catch (e) {
+            cloned[key] = value;
+        }
+    }
+    return cloned as T;
+}
+
 // ── Store Implementation ──
 
 /**
@@ -296,12 +364,44 @@ export function createStore<T extends object>(
     let persistFilePath = '';
     if (options?.persist) {
         const persistOpt = options.persist;
+        const persistDir = path.join(getAppConfigDir(), 'termuijs-stores');
         if (persistOpt.file) {
             persistFilePath = path.isAbsolute(persistOpt.file)
                 ? persistOpt.file
-                : path.join(getAppConfigDir(), persistOpt.file);
+                : path.join(persistDir, persistOpt.file);
+            const resolvedPath = path.resolve(persistFilePath);
+            // Use path.relative for containment: startsWith() is bypassable by a
+            // sibling dir sharing the prefix (e.g. `${persistDir}-evil/x.json`).
+            const rel = path.relative(path.resolve(persistDir), resolvedPath);
+            if (rel.startsWith('..') || path.isAbsolute(rel)) {
+                throw new Error(`Persist file path must be within ${persistDir}`);
+            }
+            persistFilePath = resolvedPath;
         } else if (persistOpt.key) {
-            persistFilePath = path.join(getAppConfigDir(), `${persistOpt.key}.json`);
+            if (!/^[a-zA-Z0-9._-]+$/.test(persistOpt.key)) {
+                throw new Error('Persist key must contain only alphanumeric characters, hyphens, underscores, and dots.');
+            }
+            persistFilePath = path.join(persistDir, `${persistOpt.key}.json`);
+        }
+        // Resolve symlinks in the persist directory to prevent writes through
+        // symlink targets (e.g., ~/.config or ~/AppData/Roaming being a symlink).
+        // Walk up from the file to find the first existing ancestor, resolve it,
+        // and reconstruct the remainder.
+        try {
+            const dir = path.dirname(persistFilePath);
+            if (fs.existsSync(dir)) {
+                persistFilePath = path.join(fs.realpathSync(dir), path.basename(persistFilePath));
+            } else {
+                const segments: string[] = [];
+                let current = dir;
+                while (!fs.existsSync(current)) {
+                    segments.unshift(path.basename(current));
+                    current = path.dirname(current);
+                }
+                persistFilePath = path.join(fs.realpathSync(current), ...segments, path.basename(persistFilePath));
+            }
+        } catch {
+            // If realpath fails (permissions, etc.), use the unresolved path
         }
     }
 
@@ -370,6 +470,8 @@ export function createStore<T extends object>(
                     } else {
                         Object.assign(existing.changes, finalPartial);
                         existing.nextState = nextState;
+                        existing.commit = () => { state = { ...state, ...existing.changes } as T; persistState(); return state; };
+                        existing.rollback = () => { state = existing.prevState; };
                     }
                 } else {
                     state = nextState; 
@@ -520,20 +622,14 @@ export function createStore<T extends object>(
         : { ...(creator as any) } as T;
     
     // Capture initial state BEFORE persist rehydration
-    const initialState = structuredClone(
-        Object.fromEntries(
-            Object.entries(state).filter(
-                ([, value]) => typeof value !== 'function',
-            ),
-        ),
-    ) as Partial<T>;
+    const initialState = safeDeepClone(state) as Partial<T>;
     
     const getInitialState = (): T => {
-        return structuredClone(initialState) as T;
+        return safeDeepClone(initialState) as T;
     };
     
     const reset = (): void => {
-        setState(structuredClone(initialState) as Partial<T>);
+        setState(safeDeepClone(initialState) as Partial<T>);
     };
 
     // Rehydrate saved state if persist file exists
@@ -633,7 +729,7 @@ export function createStore<T extends object>(
 
 export interface UseStore<T> {
     (): T;
-    <U>(selector: Selector<T, U>): U;
+    <U>(selector: Selector<T, U>, equalityFn?: EqualityFn<U>): U;
     getState: GetState<T>;
     setState: SetState<T>;
     mutate(recipe: (draft: T) => void): void;
@@ -645,14 +741,3 @@ export interface UseStore<T> {
     getInitialState(): T;
 }
 
-// Persistent Store Helper
-export function createPersistentStore<T extends object>(
-    creator: StateCreator<T>,
-    key: string
-): UseStore<T> {
-    return createStore(creator, {
-        persist: {
-            key,
-        },
-    });
-}

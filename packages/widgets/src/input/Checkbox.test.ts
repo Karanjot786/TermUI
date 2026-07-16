@@ -261,4 +261,50 @@ describe('Checkbox', () => {
             expect(checkbox.focusable).toBe(true);
         });
     });
+
+    // ── 9. State consistency under mixed operations ───────────────────────
+    describe('9. State consistency', () => {
+        it('isChecked() always reflects actual state after mixed operations', () => {
+            const { checkbox } = renderCheckbox('Test', { checked: false });
+
+            // Start: false
+            expect(checkbox.isChecked()).toBe(false);
+
+            checkbox.toggle(); // → true
+            expect(checkbox.isChecked()).toBe(true);
+
+            checkbox.setChecked(true); // no-op
+            expect(checkbox.isChecked()).toBe(true);
+
+            checkbox.handleKey(makeKeyEvent('space')); // → false
+            expect(checkbox.isChecked()).toBe(false);
+
+            checkbox.setChecked(false); // no-op
+            expect(checkbox.isChecked()).toBe(false);
+
+            checkbox.toggle(); // → true
+            expect(checkbox.isChecked()).toBe(true);
+
+            checkbox.handleKey(makeKeyEvent('space')); // → false
+            expect(checkbox.isChecked()).toBe(false);
+        });
+    });
+
+    describe('10. Truncation rendering styling consistency', () => {
+        it('preserves focused colors and checkmark state when label is truncated', () => {
+            const checkbox = new Checkbox('Very long notification label description', {}, { checked: true });
+            checkbox.isFocused = true;
+            checkbox.updateRect({ x: 0, y: 0, width: 8, height: 1 });
+            const screen = new Screen(8, 1);
+            checkbox.render(screen);
+
+            // Left and right brackets of box should have focusColor (cyan)
+            expect(screen.back[0][0].fg).toEqual({ type: 'named', name: 'cyan' });
+            expect(screen.back[0][2].fg).toEqual({ type: 'named', name: 'cyan' });
+
+            // Checkmark should be colored green
+            expect(screen.back[0][1].char).toBe(caps.unicode ? '✓' : '+');
+            expect(screen.back[0][1].fg).toEqual({ type: 'named', name: 'green' });
+        });
+    });
 });

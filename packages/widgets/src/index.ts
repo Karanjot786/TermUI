@@ -13,8 +13,6 @@ export { Text } from './display/Text.js';
 export type { TextProps } from './display/Text.js';
 export { LogView } from './display/LogView.js';
 export type { LogViewOptions } from './display/LogView.js';
-export { ProgressString } from './ProgressBar/ProgressBar.js';
-export type { ProgressStringProps, ProgressBarStyle } from './ProgressBar/ProgressBar.js';
 export { Tree } from './display/Tree.js';
 export type { TreeNode, TreeOptions } from './display/Tree.js';
 export { JSONView, jsonToTree } from './display/JSONView.js';
@@ -27,20 +25,26 @@ export { ChatMessage } from './display/ChatMessage.js';
 export type { ChatMessageOptions, MessageRole } from './display/ChatMessage.js';
 export { ChatThread } from './display/ChatThread.js';
 export type { ThreadMessage } from './display/ChatThread.js';
+export { TypingIndicator } from './display/TypingIndicator.js';
+export type { TypingIndicatorOptions } from './display/TypingIndicator.js';
 export { ToolCall, ToolApproval } from './display/ToolCall.js';
 export type { ToolCallOptions, ToolApprovalOptions, ToolCallStatus } from './display/ToolCall.js';
 export { Canvas } from './display/Canvas.js';
-export { Rating } from './display/Rating.js';
-export type { RatingOptions } from './display/Rating.js';
 export { FPSCounter } from './display/FPSCounter.js';
 export type { FPSCounterOptions } from './display/FPSCounter.js';
 export { Pty } from './display/Pty.js';
 export type { PtyOptions } from './display/Pty.js';
 export { PerformanceOverlay } from './display/PerformanceOverlay.js';
+export { Image } from './display/Image.js';
+export type { ImageOptions } from './display/Image.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
 export type { ScrollRange } from './input/virtual-scroll.js';
+
+// ── Spring Scroll Helper ─────────────────────────────
+export { calculateSpringScroll } from './scroll.js';
+export type { ScrollSpringState } from './scroll.js';
 
 // ─────────────────────────────────────────────────────
 
@@ -65,8 +69,7 @@ export type { SliderOptions } from "./input/Slider.js";
 export { RangeInput } from "./input/RangeInput.js";
 export type { RangeInputOptions } from "./input/RangeInput.js";
 export { TextInput } from './input/TextInput.js';
-export { DatePicker } from "./input/DatePicker.js";
-export type { DatePickerOptions } from "./input/DatePicker.js";
+export type { VimMode } from './input/vim.js';
 export { Knob } from "./input/Knob.js";
 export type { KnobOptions } from "./input/Knob.js";
 export { PinInput } from "./input/PinInput.js";
@@ -87,9 +90,15 @@ export { Gauge } from './data/Gauge.js';
 export type { GaugeOptions } from './data/Gauge.js';
 export { LineGauge } from './data/LineGauge.js';
 export type { LineGaugeOptions } from './data/LineGauge.js';
+export { Meter } from './data/Meter.js';
+export type { MeterOptions } from './data/Meter.js';
+export { BrailleCanvas } from './data/BrailleCanvas.js';
+export type { BrailleCanvasOptions } from './data/BrailleCanvas.js';
 export { Calendar } from './data/Calendar.js';
 export type { CalendarOptions } from './data/Calendar.js';
 export { Sparkline } from './data/Sparkline.js';
+export { Chart } from './data/Chart.js';
+export type { ChartOptions, ChartSeries } from './data/Chart.js';
 export type { SparklineOptions } from './data/Sparkline.js';
 export { StatusIndicator } from './data/StatusIndicator.js';
 export type { StatusIndicatorOptions } from './data/StatusIndicator.js';
@@ -129,13 +138,13 @@ export type { DraggableOptions, DroppableOptions } from './layout/DragAndDrop.js
 export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { SplitPane } from './layout/SplitPane.js';
-export { NotificationQueue } from "./feedback/NotificationQueue.js";
-export type { Notification, NotificationPriority } from "./feedback/NotificationQueue.js";
 export type { SplitPaneOptions, SplitDirection } from './layout/SplitPane.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
 export type { ProgressBarOptions } from './feedback/ProgressBar.js';
+export { ProgressCircle } from './display/ProgressCircle.js';
+export type { ProgressCircleOptions, ProgressCircleSize } from './display/ProgressCircle.js';
 export { MultiProgress } from './feedback/MultiProgress.js';
 export type { ProgressItem, MultiProgressOptions } from './feedback/MultiProgress.js';
 export { Spinner, SPINNER_FRAMES } from './feedback/Spinner.js';
@@ -214,10 +223,9 @@ export type { CarouselOptions } from './display/Carousel.js';
 export { Tooltip } from './display/Tooltip.js';
 export type { TooltipOptions } from './display/Tooltip.js';
 
-export { ContextMenu as FloatingContextMenu } from './display/ContextMenu.js';
-export type { ContextMenuOptions as FloatingContextMenuOptions } from './display/ContextMenu.js';
 
 export { Panel } from './layout/Panel.js';
+export type { PanelOptions } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
@@ -263,15 +271,10 @@ export type { TimelineItem, TimelineStatus } from './display/Timeline.js';
 export { Marquee } from './display/Marquee.js';
 export type { MarqueeDirection, MarqueeOptions } from './display/Marquee.js';
 export { DataGrid } from './data/DataGrid.js';
-export { DataGrid as DataGridView } from './data/DataGrid.js';
 export type { DataGridColumn, DataGridRow, DataGridOptions, SortDirection } from './data/DataGrid.js';
 export { ScrollAcceleration } from './layout/scroll-acceleration.js';
 export { PieChart } from './data/PieChart.js';
 export type { PieSlice, PieChartOptions } from './data/PieChart.js';
-
-export * from './data/BrailleCanvas.js';
-export * from './data/Sparkline.js';
-export * from './data/LineChart.js';
 
 export {
     BarColumn,
@@ -287,13 +290,6 @@ export type {
 } from './feedback/ProgressColumn.js';
 export { Progress } from './feedback/Progress.js';
 
-export { ProgressDashboard } from "./feedback/ProgressDashboard.js";
-
-export type {
-    ProgressTask as DashboardProgressTask,
-    TaskStatus as DashboardTaskStatus,
-    ProgressDashboardOptions
-} from "./feedback/ProgressDashboard.js";
 
 export type {
     ProgressProps,
@@ -314,3 +310,5 @@ export { UnorderedList } from './display/UnorderedList.js';
 export type { UnorderedListOptions } from './display/UnorderedList.js';
 export { Rule } from './display/Rule.js';
 export type { RuleOrientation, RuleOptions } from './display/Rule.js';
+export { WorldMap } from './data/WorldMap.js';
+export type { WorldMapOptions, MapMarker } from './data/WorldMap.js';
