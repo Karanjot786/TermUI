@@ -192,48 +192,6 @@ export interface Computed<U> {
     dispose(): void;
 }
 
-/**
- * Compose multiple middlewares into a single middleware.
- */
-export function compose<T>(...middlewares: Middleware<T>[]): Middleware<T> {
-    return (prevState, update, next, actionName, abort, set) => {
-        let index = -1;
-        const dispatch = (i: number, currentPartial: Partial<T>, currentActionName?: string): T | Promise<T> => {
-            if (i <= index) throw new Error('next() called multiple times in compose');
-            index = i;
-            if (i === middlewares.length) {
-                return next(currentPartial, currentActionName);
-            }
-            
-            let res: T | Promise<T> = prevState;
-            const mw = middlewares[i];
-            
-            const nextFn = (transformed: Partial<T>, nextActionName?: string): T | Promise<T> => {
-                res = dispatch(i + 1, transformed, nextActionName ?? currentActionName);
-                return res;
-            };
-
-            const mwResult = mw(prevState, currentPartial, nextFn, currentActionName, abort, set);
-            
-            if (mwResult && typeof (mwResult as any).then === 'function') {
-                return (mwResult as Promise<any>).then((v) => {
-                    if (v === false) return prevState;
-                    return res;
-                });
-            }
-            
-            if (mwResult === false) return prevState;
-            
-            return res;
-        };
-        
-        const finalRes = dispatch(0, update, actionName);
-        if (finalRes && typeof (finalRes as any).then === 'function') {
-            return (finalRes as Promise<T>).then(() => true) as any;
-        }
-        return true;
-    };
-}
 
 export interface Store<T> {
     getState(): T;
@@ -514,6 +472,12 @@ export function createStore<T extends object>(
                     return (mwResult as Promise<any>).then((v) => {
                         if (v === false || isAborted) return state;
                         return res;
+                    }).catch((err: unknown) => {
+                        // Swallow async middleware errors to avoid unhandled promise rejections;
+                        // route through stderr since console.* is not allowed in source.
+                        isAborted = true;
+                        process.stderr.write(`[store] async middleware error: ${String(err)}\n`);
+                        return state;
                     });
                 }
                 
@@ -524,7 +488,9 @@ export function createStore<T extends object>(
             
             const finalRes = dispatch(0, nextPartial, actionName);
             if (finalRes && typeof (finalRes as any).then === 'function') {
-                return (finalRes as Promise<T>).then(() => {}) as any;
+                return (finalRes as Promise<T>).then(() => {}).catch((err: unknown) => {
+                    process.stderr.write(`[store] unhandled middleware rejection: ${String(err)}\n`);
+                }) as any;
             }
             return;
         } else {

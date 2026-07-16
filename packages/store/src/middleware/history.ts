@@ -1,4 +1,4 @@
-import type { Middleware } from '../store.js';
+import type { Middleware, NextMiddleware, SetState } from '../store.js';
 
 export interface UndoRedoOptions {
     /** Maximum number of states to keep in history */
@@ -15,35 +15,28 @@ export interface UndoRedoMiddleware<T> extends Middleware<T> {
 /**
  * Undo/Redo middleware.
  * Maintains a state history stack. Attach methods to the middleware itself.
- * 
+ *
  * ```ts
  * const history = undoRedo({ limit: 50 });
  * const store = createStore(..., { middleware: [history] });
- * 
+ *
  * history.undo();
  * ```
  */
 export function undoRedo<T>(options?: UndoRedoOptions): UndoRedoMiddleware<T> {
     const limit = options?.limit ?? 50;
-    
+
     let past: T[] = [];
     let present: T | undefined = undefined;
     let future: T[] = [];
-    
-    // We need a way to trigger an update without the user calling set().
-    // However, middleware only intercepts updates, it cannot INITIATE updates on its own
-    // unless it captures the `next` function or we pass an updater.
-    // Wait, the middleware gets `next` on EVERY dispatch. 
-    // We can capture the most recent `next`! But `next` might only apply the given partial.
-    // Actually, `next` applies a partial to the base state. 
-    // If we pass the FULL state as the partial, it will overwrite everything.
-    
-    let globalSet: any = null;
 
-    const mw = ((prevState: T, update: Partial<T>, next: any, actionName: string | undefined, abort: () => void, set: any) => {
+    // Capture the store's `set` function so undo()/redo() can trigger time-travel updates.
+    let globalSet: SetState<T> | null = null;
+
+    const mw = ((prevState: T, update: Partial<T>, next: NextMiddleware<T>, actionName: string | undefined, abort: () => void, set: SetState<T>) => {
         globalSet = set;
 
-        // Ignore internal temporal actions
+        // Ignore internal temporal actions to avoid infinite history loops
         if (actionName === '@@UNDO' || actionName === '@@REDO' || actionName === '@@CLEAR') {
             return next(update, actionName);
         }
@@ -52,10 +45,12 @@ export function undoRedo<T>(options?: UndoRedoOptions): UndoRedoMiddleware<T> {
             present = prevState;
         }
 
-        // Apply update
+        // Apply the update downstream
         const res = next(update, actionName);
 
         const recordState = (newState: T) => {
+            // Guard: only record if state actually changed (skips no-op aborted updates)
+            if (newState === present) return;
             if (present !== undefined) {
                 past.push(present);
                 if (past.length > limit) {
@@ -66,7 +61,7 @@ export function undoRedo<T>(options?: UndoRedoOptions): UndoRedoMiddleware<T> {
             future = [];
         };
 
-        if (res && typeof (res as any).then === 'function') {
+        if (res && typeof (res as Promise<T>).then === 'function') {
             (res as Promise<T>).then(recordState);
         } else {
             recordState(res as T);
