@@ -175,4 +175,25 @@ describe('Text – dangerouslySetRawAnsi mode', () => {
         const text = screen.back[0].map(c => c.char).join('').trimEnd();
         expect(text).toBe('redclear');
     });
+});
+
+describe('Text – Layout Boundary Protection', () => {
+    it('default rendering of Text sanitizes content to prevent layout injection', () => {
+        const maliciousContent = 'safe\x1b[2J\x1b[5;5Hhidden';
+        const { screen } = renderText(maliciousContent, {}, { wrap: false });
+
+        const cells = screen.back[0];
+        const renderedString = cells.map(c => c.char).join('').trimEnd();
+        expect(renderedString).toBe('safehidden');
+    });
+
+    it('dangerouslySetRawAnsi property state check', () => {
+        class TestText extends Text {
+            public testSanitize(t: string) {
+                return this.sanitize(t);
+            }
+        }
+        const testText = new TestText('test', {}, { dangerouslySetRawAnsi: true });
+        expect(testText.testSanitize('\x1b[2Jhello')).toBe('\x1b[2Jhello');
+    });
 });
