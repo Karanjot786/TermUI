@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, expect, it } from 'vitest';
-import { ErrorBoundary, hasWidgetRenderError } from './error-boundary.js';
+import { ErrorBoundary, clearWidgetRenderError, hasWidgetRenderError } from './error-boundary.js';
 import { Fragment } from './vnode.js';
 import { Widget } from '@termuijs/widgets';
 
@@ -73,5 +73,47 @@ describe('hasWidgetRenderError utility', () => {
         const root = new MockWidget(null, [child1, child2]);
 
         expect(hasWidgetRenderError(root)).toBe(err);
+    });
+});
+
+describe('clearWidgetRenderError utility', () => {
+    class MockWidget extends Widget {
+        _renderError: Error | null = null;
+        _children: MockWidget[] = [];
+
+        constructor(renderError: Error | null = null, children: MockWidget[] = []) {
+            super();
+            this._renderError = renderError;
+            this._children = children;
+        }
+    }
+
+    it('clears the render error on a single widget', () => {
+        const err = new Error('Root error');
+        const root = new MockWidget(err);
+
+        clearWidgetRenderError(root);
+
+        expect(root._renderError).toBeNull();
+        expect(hasWidgetRenderError(root)).toBeNull();
+    });
+
+    it('recursively clears render errors on nested children', () => {
+        const leafErr = new Error('Leaf error');
+        const childErr = new Error('Child error');
+        const rootErr = new Error('Root error');
+
+        const leaf = new MockWidget(leafErr);
+        const child1 = new MockWidget(childErr, [leaf]);
+        const child2 = new MockWidget(null);
+        const root = new MockWidget(rootErr, [child1, child2]);
+
+        clearWidgetRenderError(root);
+
+        expect(root._renderError).toBeNull();
+        expect(child1._renderError).toBeNull();
+        expect(child2._renderError).toBeNull();
+        expect(leaf._renderError).toBeNull();
+        expect(hasWidgetRenderError(root)).toBeNull();
     });
 });

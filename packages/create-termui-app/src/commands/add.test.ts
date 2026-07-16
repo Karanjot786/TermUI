@@ -138,6 +138,9 @@ describe("runAddCommand", () => {
         expect(logSpy).toHaveBeenCalledWith(
             expect.stringContaining("added successfully"),
         );
+        expect(logSpy).toHaveBeenCalledWith(
+            "    import { Badge } from './components/badge';",
+        );
     });
 
     it("uses bun when bun.lock is present", async () => {
@@ -249,5 +252,51 @@ describe("runAddCommand", () => {
             "index.ts",
         );
         expect(readFileSync(destination, "utf-8")).toContain("legacy");
+    });
+
+    it("uses the registry slug to normalize fetched component file paths", async () => {
+        const index = [
+            {
+                name: "Chat Thread",
+                slug: "chat-thread",
+                files: [],
+            },
+        ];
+
+        globalThis.fetch = vi.fn(async (url: string) => {
+            if (url.endsWith("/r/registry.json")) {
+                return { ok: true, json: async () => index } as any;
+            }
+            if (url.endsWith("/r/chat-thread.json")) {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        name: "Chat Thread",
+                        files: [
+                            {
+                                path: "registry/components/chat-thread/index.ts",
+                                content: "export const ChatThread = true;",
+                            },
+                        ],
+                        deps: [],
+                        peerDeps: [],
+                    }),
+                } as any;
+            }
+            return { ok: false, status: 404, statusText: "Not Found" } as any;
+        }) as any;
+
+        vi.spyOn(childProcess, "execFileSync");
+
+        await runAddCommand({ component: "chat-thread", yes: true });
+
+        const destination = join(
+            tempDir,
+            "src",
+            "components",
+            "chat-thread",
+            "index.ts",
+        );
+        expect(readFileSync(destination, "utf-8")).toContain("ChatThread");
     });
 });

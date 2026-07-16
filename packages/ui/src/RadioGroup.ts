@@ -15,6 +15,7 @@ import {
     styleToCellAttrs,
     caps,
 } from '@termuijs/core';
+import { firstEnabledIndex, lastEnabledIndex, nextEnabledIndex, previousEnabledIndex } from './navigation.js';
 
 export interface RadioGroupOption {
     label: string;
@@ -67,7 +68,7 @@ export class RadioGroup extends Widget {
             this._selectedValue = config.options[defaultIndex]!.value;
             this._focusedIndex = defaultIndex;
         } else {
-            const firstEnabled = config.options.findIndex((o) => !o.disabled);
+            const firstEnabled = firstEnabledIndex(config.options, (option) => Boolean(option.disabled));
             this._focusedIndex = firstEnabled >= 0 ? firstEnabled : 0;
             this._selectedValue = config.options[this._focusedIndex]?.value ?? '';
         }
@@ -89,20 +90,18 @@ export class RadioGroup extends Widget {
 
     /** Move cursor to the next enabled option. */
     selectNext(): void {
-        let n = this._focusedIndex + 1;
-        while (n < this._options.length && this._options[n]?.disabled) n++;
-        if (n < this._options.length) {
-            this._focusedIndex = n;
+        const next = nextEnabledIndex(this._options, this._focusedIndex, (option) => Boolean(option.disabled));
+        if (next !== this._focusedIndex) {
+            this._focusedIndex = next;
             this.markDirty();
         }
     }
 
     /** Move cursor to the previous enabled option. */
     selectPrev(): void {
-        let n = this._focusedIndex - 1;
-        while (n >= 0 && this._options[n]?.disabled) n--;
-        if (n >= 0) {
-            this._focusedIndex = n;
+        const prev = previousEnabledIndex(this._options, this._focusedIndex, (option) => Boolean(option.disabled));
+        if (prev !== this._focusedIndex) {
+            this._focusedIndex = prev;
             this.markDirty();
         }
     }
@@ -129,20 +128,18 @@ export class RadioGroup extends Widget {
                 break;
             case 'home': {
                 // Move focus to first enabled option (no-op if already there)
-                let n = 0;
-                while (n < this._options.length && this._options[n]?.disabled) n++;
-                if (n < this._options.length && n !== this._focusedIndex) {
-                    this._focusedIndex = n;
+                const first = firstEnabledIndex(this._options, (option) => Boolean(option.disabled));
+                if (first >= 0 && first !== this._focusedIndex) {
+                    this._focusedIndex = first;
                     this.markDirty();
                 }
                 break;
             }
             case 'end': {
                 // Move focus to last enabled option (no-op if already there)
-                let m = this._options.length - 1;
-                while (m >= 0 && this._options[m]?.disabled) m--;
-                if (m >= 0 && m !== this._focusedIndex) {
-                    this._focusedIndex = m;
+                const last = lastEnabledIndex(this._options, (option) => Boolean(option.disabled));
+                if (last >= 0 && last !== this._focusedIndex) {
+                    this._focusedIndex = last;
                     this.markDirty();
                 }
                 break;

@@ -9,8 +9,10 @@ import {
     styleToCellAttrs,
     caps,
     stringWidth,
-    truncate
+    truncate,
+    splitGraphemes
 } from '@termuijs/core';
+import { nextEnabledIndex, previousEnabledIndex } from './navigation.js';
 
 export interface ComboboxOption {
     label: string;
@@ -61,7 +63,8 @@ export class Combobox extends Widget {
         if (key === 'down') {
             this._isOpen = true;
             if (filtered.length > 0) {
-                this._selectedIndex = (this._selectedIndex + 1) % filtered.length;
+                const next = nextEnabledIndex(filtered, this._selectedIndex, () => false, true);
+                this._selectedIndex = next;
             }
             this.markDirty();
             return;
@@ -70,11 +73,8 @@ export class Combobox extends Widget {
         if (key === 'up') {
             this._isOpen = true;
             if (filtered.length > 0) {
-                if (this._selectedIndex <= 0) {
-                    this._selectedIndex = filtered.length - 1;
-                } else {
-                    this._selectedIndex--;
-                }
+                const prev = previousEnabledIndex(filtered, this._selectedIndex, () => false, true);
+                this._selectedIndex = prev;
             }
             this.markDirty();
             return;
@@ -112,7 +112,7 @@ export class Combobox extends Widget {
                 return;
             }
         
-            this._inputValue = this._inputValue.slice(0, -1);
+            this._inputValue = splitGraphemes(this._inputValue).slice(0, -1).join('');
             this._isOpen = true;
             this._selectedIndex = -1;
             this.markDirty();

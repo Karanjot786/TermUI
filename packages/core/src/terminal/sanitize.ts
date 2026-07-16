@@ -32,6 +32,11 @@ const CONTROL_CHAR_RE = /[\x00-\x08\x0b-\x1f\x7f-\x9f]/g;
 // when formatting is allowed so that ESC in preserved SGR sequences is not stripped.
 const CONTROL_NO_ESC_RE = /[\x00-\x08\x0b-\x1a\x1c-\x1f\x7f-\x9f]/g;
 
+// Non-global variants for test() calls — avoids lastIndex state leak
+const ANSI_ESCAPE_TEST_RE =
+    /\x1b(?:\[[0-9;<=>?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[PX^_][^\x1b]*\x1b\\|[@-Z\\-_]|.)/;
+const CONTROL_CHAR_TEST_RE = /[\x00-\x08\x0b-\x1f\x7f-\x9f]/;
+
 // Matches only cursor-movement, screen-clear, and other non-SGR CSI sequences,
 // while allowing SGR (Select Graphic Rendition — ESC [ <params> m) through.
 // CSI sequences ending in `m` are SGR — everything else is non-SGR.
@@ -60,7 +65,7 @@ export function stripAnsiEscapes(text: string): string {
  */
 export function hasAnsiEscapes(text: string): boolean {
     if (typeof text !== 'string') return false;
-    return ANSI_ESCAPE_RE.test(text) || CONTROL_CHAR_RE.test(text);
+    return ANSI_ESCAPE_TEST_RE.test(text) || CONTROL_CHAR_TEST_RE.test(text);
 }
 
 /**

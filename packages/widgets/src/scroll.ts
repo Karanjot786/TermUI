@@ -1,9 +1,19 @@
-// Spring scroll helper
+/**
+ * State of a spring-driven scroll animation.
+ */
 export interface ScrollSpringState {
+    /** Current scroll offset. */
     position: number;
+    /** Current scroll velocity. */
     velocity: number;
 }
 
+/**
+ * Advance a scroll spring by `dt` seconds toward `target`.
+ *
+ * Uses a damped-spring model (stiffness 0.15, damping 0.8) so scrolling eases
+ * into place instead of snapping. Pure and allocation-light.
+ */
 export const calculateSpringScroll = (
     current: ScrollSpringState,
     target: number,

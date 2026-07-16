@@ -47,6 +47,27 @@ function getValue(
     return next;
 }
 
+function getFirstPositional(argv: string[]): string | undefined {
+    for (let index = 0; index < argv.length; index++) {
+        const value = argv[index];
+
+        if (value === "--template" || value === "--theme") {
+            index++;
+            continue;
+        }
+
+        if (value.startsWith("--template=") || value.startsWith("--theme=")) {
+            continue;
+        }
+
+        if (!value.startsWith("-")) {
+            return value;
+        }
+    }
+
+    return undefined;
+}
+
 export function parseArgs(argv: string[]): CliArgs {
     const args: CliArgs = {
         yes: false,
@@ -88,7 +109,7 @@ export function parseArgs(argv: string[]): CliArgs {
     }
 
     // positional (first non-flag)
-    const positional = argv.find(a => !a.startsWith("-"));
+    const positional = getFirstPositional(argv);
     if (positional) {
         args.name = positional;
     }
