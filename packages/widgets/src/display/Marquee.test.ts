@@ -145,4 +145,8 @@ describe('Marquee', () => {
         expect(line.trim()).not.toBe('');
     });
     
+    it("should return the correct text using getText()", () =>{
+        const { mq } = renderMarquee("Hello World", {}, 5, 1);
+        expect(mq.getText()).toBe("Hello World");
+    });
 });

@@ -439,15 +439,24 @@ export class InputParser {
         const seq = this._escapeBuffer.toString('utf8');
 
         const PASTE_START = '\x1b[200~';
+        const PASTE_END = '\x1b[201~';
         const pasteStartIdx = seq.indexOf(PASTE_START);
         if (pasteStartIdx !== -1) {
             this._escapeBuffer = Buffer.alloc(0);
             if (pasteStartIdx > 0) {
-                const before = seq.substring(0, pasteStartIdx);
-                this._processInput(Buffer.from(before, 'utf8'));
+                queueMicrotask(() => this._processInput(Buffer.from(seq.substring(0, pasteStartIdx), 'utf8')));
             }
-            const after = seq.substring(pasteStartIdx);
-            this._processInput(Buffer.from(after, 'utf8'));
+            const after = seq.substring(pasteStartIdx + PASTE_START.length);
+            const endIdx = after.indexOf(PASTE_END);
+            if (endIdx !== -1) {
+                this._events.emit('paste', after.substring(0, endIdx));
+                const remaining = after.substring(endIdx + PASTE_END.length);
+                if (remaining.length > 0) {
+                    this._processInput(Buffer.from(remaining, 'utf8'));
+                }
+            } else {
+                queueMicrotask(() => this._processInput(Buffer.from(after, 'utf8')));
+            }
             return;
         }
 

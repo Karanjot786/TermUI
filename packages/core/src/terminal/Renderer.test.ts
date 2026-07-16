@@ -263,6 +263,19 @@ describe('Renderer profiling hooks', () => {
         expect(resetCount).toBeGreaterThanOrEqual(2);
     });
 
+    it('reuses the current style state for identical adjacent cells', () => {
+        const screen = new Screen(5, 1);
+        const renderer = new Renderer(terminal, screen);
+
+        screen.setCell(0, 0, { char: 'A', bold: true, fg: { type: 'named', name: 'red' } });
+        screen.setCell(1, 0, { char: 'B', bold: true, fg: { type: 'named', name: 'red' } });
+        renderer.renderNow();
+
+        const output = fakeStdout.writes;
+        const resetCount = (output.match(/\x1b\[0m/g) || []).length;
+        expect(resetCount).toBeGreaterThanOrEqual(1);
+    });
+
     it('correctly adjusts span start backwards and renders from adjustedStart', () => {
         const narrowScreen = new Screen(10, 2);
         const renderer = new Renderer(terminal, narrowScreen);

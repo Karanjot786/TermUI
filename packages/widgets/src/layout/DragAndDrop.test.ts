@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { KeyEvent, MouseEvent as TermMouseEvent } from '@termuijs/core';
+import { Screen, type KeyEvent, type MouseEvent as TermMouseEvent } from '@termuijs/core';
 import { DragState, DraggableWidget, DroppableWidget } from './DragAndDrop.js';
 
 function keyEvent(key: string): KeyEvent {
@@ -105,6 +105,37 @@ describe('DraggableWidget', () => {
         expect(DragState.isDragging).toBe(false);
         expect(DragState.activeDragId).toBeNull();
     });
+
+    it('onDragEnd callback is called when drag is cancelled via escape', () => {
+        const onDragEnd = vi.fn();
+        const widget = new DraggableWidget({ id: 'a', onDragEnd });
+        widget.handleKey(keyEvent('space'));
+        widget.handleKey(keyEvent('escape'));
+
+        expect(onDragEnd).toHaveBeenCalledOnce();
+    });
+
+    it('onDragEnd callback is called when drag is cancelled via a second space press', () => {
+        const onDragEnd = vi.fn();
+        const widget = new DraggableWidget({ id: 'a', onDragEnd });
+        widget.handleKey(keyEvent('space'));
+        widget.handleKey(keyEvent('space'));
+
+        expect(onDragEnd).toHaveBeenCalledOnce();
+    });
+
+    it('renders transparently and does not modify the screen output', () => {
+        const drag = new DraggableWidget({ id: 'drag-5' });
+        const screen = new Screen(10, 10);
+        drag.updateRect({ x: 0, y: 0, width: 5, height: 5 });
+        drag.render(screen);
+
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                expect(screen.back[r][c].char).toBe(' ');
+            }
+        }
+    });
 });
 
 describe('DroppableWidget', () => {
@@ -190,5 +221,87 @@ describe('DroppableWidget', () => {
         widget.handleKey(keyEvent('enter'));
 
         expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('onDragEnd on the dragged widget fires after a successful drop', () => {
+        const onDragEnd = vi.fn();
+        const draggable = new DraggableWidget({ id: 'dragged', onDragEnd });
+        draggable.handleKey(keyEvent('space'));
+
+        const droppable = new DroppableWidget({ id: 'target' });
+        droppable.handleKey(keyEvent('enter'));
+
+        expect(onDragEnd).toHaveBeenCalledOnce();
+    });
+
+    it('onDragEnd on the dragged widget fires after a mouseup drop', () => {
+        const onDragEnd = vi.fn();
+        const draggable = new DraggableWidget({ id: 'dragged', onDragEnd });
+        draggable.handleMouse(mouseEvent('mousedown'));
+
+        const droppable = new DroppableWidget({ id: 'target' });
+        droppable.handleMouse(mouseEvent('mouseup'));
+
+        expect(onDragEnd).toHaveBeenCalledOnce();
+    });
+
+    it('onDragEnd is not called on drop when the dragged id has no registered draggable', () => {
+        DragState.isDragging = true;
+        DragState.activeDragId = 'unregistered';
+
+        const widget = new DroppableWidget({ id: 'target' });
+        expect(() => widget.handleKey(keyEvent('enter'))).not.toThrow();
+        expect(DragState.isDragging).toBe(false);
+    });
+
+    it('onDragEnter fires with the dragged id when a drag is hovering', () => {
+        const onDragEnter = vi.fn();
+        DragState.isDragging = true;
+        DragState.activeDragId = 'dragged';
+
+        const widget = new DroppableWidget({ id: 'target', onDragEnter });
+        widget.handleMouse(mouseEvent('mouseenter'));
+
+        expect(onDragEnter).toHaveBeenCalledWith('dragged');
+    });
+
+    it('onDragEnter is not called when no drag is active', () => {
+        const onDragEnter = vi.fn();
+        const widget = new DroppableWidget({ id: 'target', onDragEnter });
+        widget.handleMouse(mouseEvent('mouseenter'));
+
+        expect(onDragEnter).not.toHaveBeenCalled();
+    });
+
+    it('onDragLeave fires with the dragged id when a drag stops hovering', () => {
+        const onDragLeave = vi.fn();
+        DragState.isDragging = true;
+        DragState.activeDragId = 'dragged';
+
+        const widget = new DroppableWidget({ id: 'target', onDragLeave });
+        widget.handleMouse(mouseEvent('mouseleave'));
+
+        expect(onDragLeave).toHaveBeenCalledWith('dragged');
+    });
+
+    it('onDragLeave is not called when no drag is active', () => {
+        const onDragLeave = vi.fn();
+        const widget = new DroppableWidget({ id: 'target', onDragLeave });
+        widget.handleMouse(mouseEvent('mouseleave'));
+
+        expect(onDragLeave).not.toHaveBeenCalled();
+    });
+
+    it('renders transparently and does not modify the screen output', () => {
+        const drop = new DroppableWidget({ id: 'drop-3' });
+        const screen = new Screen(10, 10);
+        drop.updateRect({ x: 0, y: 0, width: 5, height: 5 });
+        drop.render(screen);
+
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                expect(screen.back[r][c].char).toBe(' ');
+            }
+        }
     });
 });

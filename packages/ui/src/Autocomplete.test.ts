@@ -70,6 +70,17 @@ describe('Autocomplete', () => {
         expect(onChange).toHaveBeenCalledWith('ap');
     });
 
+    it('backspace removes one grapheme from the query', () => {
+        const onChange = vi.fn();
+        const widget = new Autocomplete({}, { items: [], onChange });
+
+        widget.query = 'Cafe\u0301';
+        widget.handleKey(makeKey('backspace'));
+
+        expect(widget.query).toBe('Caf');
+        expect(onChange).toHaveBeenCalledWith('Caf');
+    });
+
     it('arrow keys and tab navigate suggestions list', () => {
         const widget = new Autocomplete({}, {
             items: ['apple', 'apricot', 'banana'],
