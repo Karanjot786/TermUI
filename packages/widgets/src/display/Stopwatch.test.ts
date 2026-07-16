@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 import { Stopwatch } from './Stopwatch.js';
 
 /** Helper: create a Stopwatch, give it a rect, render to a screen, return both. */
@@ -48,6 +48,19 @@ describe('Stopwatch – rendering', () => {
 
     it('renders nothing when the content rect has zero width', () => {
         expect(() => renderStopwatch(0, {}, 0, 1)).not.toThrow();
+    });
+
+    it('clips the formatted label to narrow widths', () => {
+        const sw = new Stopwatch();
+        const screen = new Screen(3, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        sw.updateRect({ x: 0, y: 0, width: 3, height: 1 });
+        sw.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(3);
+        }
     });
 });
 

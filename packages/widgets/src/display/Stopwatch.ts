@@ -2,7 +2,7 @@
 // @termuijs/widgets — Stopwatch widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface StopwatchOptions {
@@ -148,7 +148,7 @@ export class Stopwatch extends Widget {
         const attrs = styleToCellAttrs(this._style);
         const label = this._format(this.getElapsed());
 
-        screen.writeString(x, y, label, attrs);
+        screen.writeString(x, y, truncate(label, width, ''), attrs);
     }
 
     setInterval(interval: number): void {
