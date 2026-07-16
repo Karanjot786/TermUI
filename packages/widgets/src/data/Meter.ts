@@ -4,6 +4,7 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { validateFinite } from './utils.js';
 
 export interface MeterOptions {
     /** Value below this fraction renders the low color. Default: 0.25 */
@@ -41,7 +42,7 @@ export class Meter extends Widget {
     }
 
     setValue(value: number): void {
-        this._value = Math.max(0, Math.min(1, value));
+        this._value = validateFinite(value, 0, 0, 1);
         this.markDirty();
     }
 

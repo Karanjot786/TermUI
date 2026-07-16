@@ -333,3 +333,55 @@ describe('DevTools Hover State', () => {
         expect(screen.getCell(1, 1)!.char).toBe('A'); // old cell restored
     });
 });
+
+describe('DevTools — log buffer', () => {
+    it('appendLog buffers a line with default stdout stream', () => {
+        const dt = new DevTools();
+        dt.appendLog('hello');
+        expect(dt.logs).toHaveLength(1);
+        expect(dt.logs[0]).toEqual({ line: 'hello', stream: 'stdout' });
+    });
+
+    it('appendLog records an explicit stderr stream', () => {
+        const dt = new DevTools();
+        dt.appendLog('boom', 'stderr');
+        expect(dt.logs[0]).toEqual({ line: 'boom', stream: 'stderr' });
+    });
+
+    it('buffer cap drops oldest lines', () => {
+        const dt = new DevTools();
+        for (let i = 0; i < 105; i++) dt.appendLog(`line ${i}`);
+        expect(dt.logs.length).toBe(100);
+        expect(dt.logs[0].line).toBe('line 5');
+    });
+
+    it('getPanel on logs tab renders buffered lines', () => {
+        const dt = new DevTools();
+        dt.appendLog('first line');
+        dt.appendLog('second line');
+        dt.setTab('logs');
+        const panel = dt.getPanel(40, 10);
+        const joined = panel.join('\n');
+        expect(joined).toContain('first line');
+        expect(joined).toContain('second line');
+    });
+
+    it('getPanel respects scroll offset', () => {
+        const dt = new DevTools();
+        for (let i = 0; i < 20; i++) dt.appendLog(`line ${i}`);
+        dt.setTab('logs');
+        dt.scrollLog(-5);
+        const panel = dt.getPanel(40, 10);
+        expect(panel.join('\n')).toContain('line 0');
+    });
+
+    it('scrollLog clamps to valid range', () => {
+        const dt = new DevTools();
+        dt.appendLog('only line');
+        dt.setTab('logs');
+        dt.scrollLog(-999);
+        const panel = dt.getPanel(40, 10);
+        expect(panel.join('\n')).toContain('only line');
+    });
+});
+

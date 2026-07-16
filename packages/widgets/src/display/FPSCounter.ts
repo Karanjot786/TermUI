@@ -39,6 +39,15 @@ export class FPSCounter extends Widget {
         this.markDirty();
     }
 
+    reset(): void {
+        this._fps = 0;
+        this._minFps = Infinity;
+        this._maxFps = 0;
+        this._totalFps = 0;
+        this._samples = 0;
+        this.markDirty();
+    }
+
     getFPS(): number {
         return this._fps;
     }

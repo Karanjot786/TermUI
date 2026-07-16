@@ -379,17 +379,20 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
     const staleTime = options?.staleTime ?? 0;
     const retry = options?.retry ?? 0;
     const retryDelay = options?.retryDelay ?? 300;
+    const cacheKey = options?.key === undefined
+        ? url
+        : `${url}::${JSON.stringify(options.key)}`;
     const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [data, setData] = useState<T | null>(() => {
-        if (isFresh(url)) {
-            return getCache<T>(url)?.data ?? null;
+        if (isFresh(cacheKey)) {
+            return getCache<T>(cacheKey)?.data ?? null;
         }
         return null;
     });
 
     const [error, setError] = useState<Error | null>(null);
-    const [loading, setLoading] = useState<boolean>(() => !isFresh(url));
+    const [loading, setLoading] = useState<boolean>(() => !isFresh(cacheKey));
 
     useEffect(() => {
         let isMounted = true;
@@ -406,8 +409,8 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
             }
         };
 
-        if (isFresh(url)) {
-            const entry = getCache<T>(url);
+        if (isFresh(cacheKey)) {
+            const entry = getCache<T>(cacheKey);
             if (entry) {
                 if (isMounted) {
                     clearRetryTimer();
@@ -430,7 +433,7 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
          * backoff multiplier `retryDelay * 2 ** attempt`.
          */
         const fetchWithRetry = (attempt: number) => {
-            fetchShared<T>(url, () => fetch(url)
+            fetchShared<T>(cacheKey, () => fetch(url)
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
                     return res.json() as Promise<T>;
@@ -439,7 +442,7 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
             .then(json => {
                 if (!isMounted) return;
                 clearRetryTimer();
-                setCache(url, json, staleTime);
+                setCache(cacheKey, json, staleTime);
                 setData(json);
                 setError(null);
                 setLoading(false);
@@ -471,7 +474,7 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
             isMounted = false;
             clearRetryTimer();
         };
-    }, [url, staleTime, retry, retryDelay, options?.key]);
+    }, [url, staleTime, retry, retryDelay, cacheKey]);
 
     return { data, error, loading };
 }

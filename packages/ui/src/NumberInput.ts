@@ -41,8 +41,21 @@ export class NumberInput extends Widget {
         options: NumberInputOptions = {},
     ) {
         super({ border: 'single', height: 3, ...style });
+        const step = options.step ?? 1;
+        if (!Number.isFinite(step) || step <= 0) {
+            throw new RangeError('NumberInput step must be a finite positive number');
+        }
+        if (options.min !== undefined && !Number.isFinite(options.min)) {
+            throw new RangeError('NumberInput min must be a finite number');
+        }
+        if (options.max !== undefined && !Number.isFinite(options.max)) {
+            throw new RangeError('NumberInput max must be a finite number');
+        }
+        if (options.min !== undefined && options.max !== undefined && options.min > options.max) {
+            throw new RangeError('NumberInput min must be less than or equal to max');
+        }
         this._placeholder = options.placeholder ?? '';
-        this._step = options.step ?? 1;
+        this._step = step;
         this._min = options.min ?? -Infinity;
         this._max = options.max ?? Infinity;
         this._allowDecimal = options.allowDecimal ?? true;

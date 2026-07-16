@@ -462,6 +462,13 @@ export class FocusManager {
         return this._focusables.filter(f => members.has(f.id));
     }
 
+    /**
+     * Clear the currently focused widget, dispatching a blur event if necessary.
+     */
+    clearFocus(): void {
+        this._changeFocus(-1);
+    }
+
     private _changeFocus(newIndex: number): void {
         const oldId = this.currentId;
         const events: Array<{ type: 'focus' | 'blur'; data: FocusEvent }> = [];
@@ -470,14 +477,16 @@ export class FocusManager {
             events.push({ type: 'blur', data: { targetId: oldId, type: 'blur', epoch: this._epoch++ } });
         }
         this._currentIndex = newIndex;
-        events.push({
-            type: 'focus',
-            data: {
-                targetId: this._focusables[newIndex].id,
+        if (newIndex >= 0) {
+            events.push({
                 type: 'focus',
-                epoch: this._epoch++,
-            },
-        });
+                data: {
+                    targetId: this._focusables[newIndex].id,
+                    type: 'focus',
+                    epoch: this._epoch++,
+                },
+            });
+        }
 
         // Flush events after state is fully updated so that any re-entrant calls
         // (e.g., handlers that call unregister()) see the finalized _currentIndex.

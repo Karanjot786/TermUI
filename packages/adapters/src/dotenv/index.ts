@@ -16,7 +16,9 @@ interface DotenvModule {
 
 let _dotenv: DotenvModule | undefined
 
-const _require = createRequire(import.meta.url)
+const _require = createRequire(
+  typeof __filename !== 'undefined' ? __filename : import.meta.url
+)
 
 // Lazily loads dotenv. Uses a cached reference after first load.
 function resolveDotenv(): DotenvModule {

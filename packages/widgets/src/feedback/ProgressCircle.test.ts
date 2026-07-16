@@ -221,4 +221,20 @@ describe('ProgressCircle — accessibility regression tests', () => {
 
         expect(() => c.render(screen)).not.toThrow();
     });
+
+    it('clears all rows to prevent ghosting when height is larger than 1', () => {
+        const c = new ProgressCircle({}, { value: 0 });
+        c.updateRect({ x: 0, y: 0, width: 5, height: 3 });
+        const screen = new Screen(5, 3);
+        
+        // Put some stale/ghost characters on row 0 and row 2
+        screen.setCell(0, 0, { char: 'x' });
+        screen.setCell(0, 2, { char: 'y' });
+        
+        c.render(screen);
+
+        // Row 0 and row 2 should have been cleared to spaces
+        expect(screen.back[0][0].char).toBe(' ');
+        expect(screen.back[2][0].char).toBe(' ');
+    });
 });
