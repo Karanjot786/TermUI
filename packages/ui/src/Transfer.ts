@@ -8,6 +8,7 @@ import {
     defaultStyle,
     styleToCellAttrs,
     caps,
+    truncate,
 } from '@termuijs/core';
 
 export interface TransferItem {
@@ -193,7 +194,7 @@ export class Transfer extends Widget {
                 const o = this._sourceItems[i];
                 const active = this._activePane === 'source' && i === this._sourceCursorIndex;
                 const text = (active ? indicator : noIndicator) + o.label;
-                const truncatedText = text.slice(0, leftPaneWidth).padEnd(leftPaneWidth, ' ');
+                const truncatedText = truncate(text, leftPaneWidth, '').padEnd(leftPaneWidth, ' ');
                 screen.writeString(x, y + i, truncatedText, {
                     ...attrs,
                     fg: o.disabled ? { type: 'named' as const, name: 'brightBlack' as const } : active ? this._activeColor : attrs.fg,
@@ -215,7 +216,7 @@ export class Transfer extends Widget {
                 const o = this._targetItems[i];
                 const active = this._activePane === 'target' && i === this._targetCursorIndex;
                 const text = (active ? indicator : noIndicator) + o.label;
-                const truncatedText = text.slice(0, rightPaneWidth).padEnd(rightPaneWidth, ' ');
+                const truncatedText = truncate(text, rightPaneWidth, '').padEnd(rightPaneWidth, ' ');
                 screen.writeString(dividerX + 1, y + i, truncatedText, {
                     ...attrs,
                     fg: o.disabled ? { type: 'named' as const, name: 'brightBlack' as const } : active ? this._activeColor : attrs.fg,
