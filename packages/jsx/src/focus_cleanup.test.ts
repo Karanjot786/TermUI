@@ -14,10 +14,8 @@ describe('focus cleanup & autoBlurNode integration', () => {
         blur: ReturnType<typeof vi.fn>;
     };
 
-    let originalInstances: any;
 
     beforeEach(() => {
-        originalInstances = getInstanceMap();
         mockContextValue = {
             focused: null,
             focus: vi.fn((id: string) => {
@@ -27,20 +25,15 @@ describe('focus cleanup & autoBlurNode integration', () => {
                 mockContextValue.focused = null;
             }),
         };
-        // Global instance map used by reconciler
-        // Accessing global mapping for test assertions on widgets
-        const instances = getInstanceMap();
-        if (instances instanceof Map) {
-            instances.clear();
-        }
+        // Clear the real instance map to prevent cross-test pollution
+        getInstanceMap().clear();
     });
 
     afterEach(() => {
         unmountAll();
         vi.restoreAllMocks();
-        // Restore global instances after test to prevent pollution
-        // Accessing global mapping for test assertions on widgets
-        (globalThis as any).__termuijs_instances = originalInstances;
+        // Clear the real instance map to prevent test pollution
+        getInstanceMap().clear();
     });
 
     it('clears focus on unmount if the unmounted node was focused', () => {
