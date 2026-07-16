@@ -13,6 +13,13 @@ export interface TextProps {
     scrollY?: number;
     /** Horizontal scroll offset (columns to skip from left). Default: 0. */
     scrollX?: number;
+    /**
+     * If true, ANSI escape sequences in content are rendered as-is.
+     * Only SGR formatting is preserved — cursor movement, screen clears,
+     * and OSC sequences are still stripped for safety.
+     * Use only for trusted formatted content (e.g., log output).
+     */
+    raw?: boolean;
 }
 
 /**
@@ -24,6 +31,7 @@ export class Text extends Widget {
     private _align: 'left' | 'center' | 'right';
     private _scrollY: number;
     private _scrollX: number;
+    private _raw: boolean;
 
     constructor(content: string, style: Partial<Style> = {}, props: Partial<TextProps> = {}) {
         super(style);
@@ -32,6 +40,9 @@ export class Text extends Widget {
         this._align = props.align ?? 'left';
         this._scrollY = props.scrollY ?? 0;
         this._scrollX = props.scrollX ?? 0;
+        this._raw = props.raw ?? false;
+        // When raw mode is enabled, bypass sanitization (trusted formatted content)
+        this.sanitizeContent = !this._raw;
     }
 
     /** Update the text content */
@@ -86,12 +97,15 @@ export class Text extends Widget {
 
         const attrs = styleToCellAttrs(this._style);
 
+        // Sanitize content to prevent ANSI escape injection
+        const content = this.sanitize(this._content);
+
         // Word-wrap if enabled
-        let text = this._wrap ? wordWrap(this._content, width) : this._content;
+        let text = this._wrap ? wordWrap(content, width) : content;
         const allLines = text.split('\n');
 
         // Apply vertical scroll
-        const startLine = Math.min(this._scrollY, allLines.length);
+        const startLine = Math.min(this._scrollY, Math.max(0, allLines.length - 1));
         const visibleLines = allLines.slice(startLine, startLine + height);
 
         for (let i = 0; i < Math.min(visibleLines.length, height); i++) {
@@ -109,10 +123,13 @@ export class Text extends Widget {
                     if (skipped + charWidth > this._scrollX) {
                         // scrollX lands in the middle of this character
                         // For wide characters, we need to handle the partial column
-                        if (charWidth === 2 && skipped < this._scrollX) {
-                            // We're at the second column of a wide character
-                            // Add a placeholder for the remaining column and skip the character
-                            line = ' ' + line.slice(charIndex + ch.length);
+                        if (charWidth > 1 && skipped < this._scrollX) {
+                            // We're in the middle of a wide character
+                            // Calculate how many columns of this character are visible
+                            const visibleColumns = this._scrollX - skipped;
+                            const remainingColumns = charWidth - visibleColumns;
+                            // Add placeholders for the visible columns that were skipped
+                            line = ' '.repeat(visibleColumns) + line.slice(charIndex + ch.length);
                             lineRebuilt = true;
                         }
                         break;

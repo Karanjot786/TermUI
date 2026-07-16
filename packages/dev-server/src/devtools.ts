@@ -22,14 +22,17 @@ export interface PerfMetrics {
 
 export class DevTools {
     private _visible = false;
-    private _tab: 'tree' | 'perf' | 'events' = 'tree';
+    private _tab: 'tree' | 'perf' | 'events' | 'logs' = 'tree';
     private _widgetTree: WidgetNode | null = null;
     private _metrics: PerfMetrics = { renderTimeMs: 0, widgetCount: 0, lastRenderAt: 0, fps: 0, memoryMB: 0 };
     private _eventLog: Array<{ time: number; type: string; detail: string }> = [];
     private _maxEvents = 100;
     private _renderTimes: number[] = [];
     private _frameRows: string[] = [];
-    
+    private _logBuffer: Array<{ line: string; stream: 'stdout' | 'stderr' }> = [];
+    private _maxLogs = 100;
+    private _logScrollOffset = 0;
+
     public lastHoverWidgetId: string | null = null;
     public lastHoverCells: { x: number; y: number; cell: Cell }[] = [];
 
@@ -39,7 +42,22 @@ export class DevTools {
     hide(): void { this._visible = false; }
 
     get activeTab(): string { return this._tab; }
-    setTab(tab: 'tree' | 'perf' | 'events'): void { this._tab = tab; }
+    setTab(tab: 'tree' | 'perf' | 'events' | 'logs'): void { this._tab = tab; }
+
+    /** Current log buffer, oldest first */
+    get logs(): ReadonlyArray<{ line: string; stream: 'stdout' | 'stderr' }> { return this._logBuffer; }
+
+    /** Append a child output line. stream marks origin. Buffer is capped. */
+    appendLog(line: string, stream: 'stdout' | 'stderr' = 'stdout'): void {
+        this._logBuffer.push({ line, stream });
+        while (this._logBuffer.length > this._maxLogs) this._logBuffer.shift();
+    }
+
+    /** Scroll the log view by delta lines (negative scrolls up) */
+    scrollLog(delta: number): void {
+        const maxOffset = Math.max(0, this._logBuffer.length - 1);
+        this._logScrollOffset = Math.max(0, Math.min(maxOffset, this._logScrollOffset + delta));
+    }
 
     /** Update widget tree snapshot */
     updateTree(root: WidgetNode): void { this._widgetTree = root; }
@@ -47,10 +65,9 @@ export class DevTools {
 
     /** Record a render cycle */
     recordRender(timeMs: number, widgetCount: number): void {
-        this.lastHoverCells = []; // Clear saved cells so they aren't restored over fresh screen content
+        this.lastHoverCells = [];
         const now = Date.now();
         this._renderTimes.push(now);
-        // Keep last 60 render timestamps for FPS calculation
         while (this._renderTimes.length > 60) this._renderTimes.shift();
         const elapsed = this._renderTimes.length > 1
             ? (this._renderTimes[this._renderTimes.length - 1] - this._renderTimes[0]) / 1000
@@ -72,36 +89,32 @@ export class DevTools {
         while (this._eventLog.length > this._maxEvents) this._eventLog.shift();
     }
 
-    /** Store the latest rendered frame rows (a defensive copy is taken so
-     *  subsequent mutations of the caller's array do not affect the stored frame). */
+    /** Store the latest rendered frame rows */
     setFrame(rows: string[]): void {
         this._frameRows = rows.slice();
     }
 
-    /** Capture the stored frame, trimmed and joined with newlines. Returns empty string if no frame has been stored. */
+    /** Capture the stored frame, trimmed and joined with newlines. */
     captureFrame(): string {
         if (this._frameRows.length === 0) return '';
-        
-        // Trim trailing blank rows
         let endIndex = this._frameRows.length;
         while (endIndex > 0 && this._frameRows[endIndex - 1].trim() === '') {
             endIndex--;
         }
-        
         const trimmedRows = this._frameRows.slice(0, endIndex);
         return trimmedRows.join('\n');
     }
 
-    /** Generate a deterministic screenshot filename containing 'termui-frame' and '.txt' */
+    /** Generate a deterministic screenshot filename */
     screenshotFilename(now?: number): string {
         const timestamp = now ?? Date.now();
         return `termui-frame-${timestamp}.txt`;
     }
 
-    /** Get displayable panel content (plain text for rendering) */
+    /** Get displayable panel content */
     getPanel(width: number, height: number): string[] {
         const lines: string[] = [];
-        const tabBar = `  [${this._tab === 'tree' ? '▸' : ' '}Tree]  [${this._tab === 'perf' ? '▸' : ' '}Perf]  [${this._tab === 'events' ? '▸' : ' '}Events]`;
+        const tabBar = `  [${this._tab === 'tree' ? '▸' : ' '}Tree]  [${this._tab === 'perf' ? '▸' : ' '}Perf]  [${this._tab === 'events' ? '▸' : ' '}Events]  [${this._tab === 'logs' ? '▸' : ' '}Logs]`;
         lines.push('─'.repeat(width));
         lines.push('  🔧 DevTools (F12 to close)');
         lines.push(tabBar);
@@ -118,7 +131,7 @@ export class DevTools {
                 lines.push(`  Widgets: ${this._metrics.widgetCount}`);
                 lines.push(`  Memory: ${this._metrics.memoryMB} MB`);
                 break;
-            case 'events':
+            case 'events': {
                 const recent = this._eventLog.slice(-Math.max(0, height - 6));
                 for (const evt of recent) {
                     const time = new Date(evt.time).toISOString().slice(11, 23);
@@ -126,6 +139,18 @@ export class DevTools {
                 }
                 if (recent.length === 0) lines.push('  No events logged yet');
                 break;
+            }
+            case 'logs': {
+                const visibleHeight = Math.max(0, height - 5);
+                const start = this._logScrollOffset;
+                const visible = this._logBuffer.slice(start, start + visibleHeight);
+                for (const entry of visible) {
+                    const prefix = entry.stream === 'stderr' ? '[err] ' : '[out] ';
+                    lines.push(`  ${prefix}${entry.line}`.slice(0, width));
+                }
+                if (this._logBuffer.length === 0) lines.push('  No logs yet');
+                break;
+            }
         }
 
         return lines.slice(0, height);
@@ -142,11 +167,6 @@ export class DevTools {
         }
     }
 
-    /**
-     * Return extra inspector info for known widget types.
-     * The node's `type` field matches the widget constructor name.
-     * `style` may carry widget-specific metadata forwarded via IPC.
-     */
     private _widgetTypeInfo(node: WidgetNode): string {
         const s = node.style ?? {};
         switch (node.type) {
@@ -220,22 +240,19 @@ export function renderDebugRect(screen: Screen, rect: { x: number; y: number; wi
     const bl = caps.unicode ? '└' : '+';
     const br = caps.unicode ? '┘' : '+';
 
-    // Draw top & bottom borders safely
     for (let x = rect.x; x < rect.x + rect.width; x++) {
         saveCell(x, rect.y);
         screen.setCell(x, rect.y, { char: hBar, fg: color, bg });
         saveCell(x, rect.y + rect.height - 1);
         screen.setCell(x, rect.y + rect.height - 1, { char: hBar, fg: color, bg });
     }
-    // Draw left & right borders safely
     for (let y = rect.y; y < rect.y + rect.height; y++) {
         saveCell(rect.x, y);
         screen.setCell(rect.x, y, { char: vBar, fg: color, bg });
         saveCell(rect.x + rect.width - 1, y);
         screen.setCell(rect.x + rect.width - 1, y, { char: vBar, fg: color, bg });
     }
-    
-    // Draw corners
+
     saveCell(rect.x, rect.y);
     screen.setCell(rect.x, rect.y, { char: tl, fg: color, bg });
     saveCell(rect.x + rect.width - 1, rect.y);
@@ -254,7 +271,6 @@ export function handleDevToolsHover(x: number, y: number, screen: Screen, devtoo
 
     if (newId === devtools.lastHoverWidgetId) return;
 
-    // Restore old cells
     for (const saved of devtools.lastHoverCells) {
         screen.setCell(saved.x, saved.y, saved.cell);
     }

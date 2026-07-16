@@ -148,4 +148,13 @@ describe('LoadingDots', () => {
         expect(second).toBe(first);
     });
 
+    it('truncates the label and dots when they exceed the width', () => {
+        const screen = new Screen(6, 1);
+        const ld = new LoadingDots({}, { label: 'Thinking', maxDots: 3 });
+        ld.updateRect({ x: 0, y: 0, width: 6, height: 1 });
+        ld.render(screen);
+        const row = screen.back[0].map(c => c.char).join('');
+        expect(row).toBe('Thinki');
+    });
+
 });

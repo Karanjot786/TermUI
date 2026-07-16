@@ -289,4 +289,22 @@ describe('Checkbox', () => {
             expect(checkbox.isChecked()).toBe(false);
         });
     });
+
+    describe('10. Truncation rendering styling consistency', () => {
+        it('preserves focused colors and checkmark state when label is truncated', () => {
+            const checkbox = new Checkbox('Very long notification label description', {}, { checked: true });
+            checkbox.isFocused = true;
+            checkbox.updateRect({ x: 0, y: 0, width: 8, height: 1 });
+            const screen = new Screen(8, 1);
+            checkbox.render(screen);
+
+            // Left and right brackets of box should have focusColor (cyan)
+            expect(screen.back[0][0].fg).toEqual({ type: 'named', name: 'cyan' });
+            expect(screen.back[0][2].fg).toEqual({ type: 'named', name: 'cyan' });
+
+            // Checkmark should be colored green
+            expect(screen.back[0][1].char).toBe(caps.unicode ? '✓' : '+');
+            expect(screen.back[0][1].fg).toEqual({ type: 'named', name: 'green' });
+        });
+    });
 });

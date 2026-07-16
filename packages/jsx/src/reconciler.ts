@@ -307,7 +307,13 @@ export function reconcile(vnode: VNode, parentWidget?: Widget): Widget {
         }
 
         // Intrinsic element (string tag)
-        const widget = createIntrinsicWidget(type, props, children);
+        const { ref: refProp, ...restProps } = (props || {}) as Record<string, any>;
+        const widget = createIntrinsicWidget(type, restProps, children);
+
+        // Handle ref prop — set ref.current to the created widget
+        if (refProp && typeof refProp === 'object' && 'current' in refProp) {
+            refProp.current = widget;
+        }
 
         // Add children (except for self-contained widgets that handle content via props/internal render)
         const SELF_CONTAINED = new Set(['text', 'statusmessage', 'banner', 'keyvalue', 'sidebar', 'divider', 'spinner']);
@@ -479,9 +485,12 @@ function renderComponent(
         const boundary = findErrorBoundary(fiber);
         if (boundary?.errorFallback) {
             destroyFiber(fiber);
+            const savedParent = _parentFiber;
             _parentFiber = boundary;
             const fallbackVNode = boundary.errorFallback(error);
-            return reconcile(fallbackVNode);
+            const widget = reconcile(fallbackVNode);
+            _parentFiber = savedParent;
+            return widget;
         }
         // No boundary found — destroy fiber and show default error widget
         destroyFiber(fiber);
@@ -513,6 +522,12 @@ function renderComponent(
 
     // Reconcile the returned VNode into a real widget
     const widget = reconcile(vnode);
+
+    // Handle ref from component props — set ref.current to the rendered widget
+    const refFromProps = (props as Record<string, any>)?.ref;
+    if (refFromProps && typeof refFromProps === 'object' && 'current' in refFromProps) {
+        refFromProps.current = widget;
+    }
 
     // Restore parent fiber
     _parentFiber = prevParent;
@@ -603,8 +618,11 @@ export function reRenderComponent(instance: ComponentInstance): Widget {
             destroyFiber(fiber);
             _pruneInstancesForWidget(instance.widget);
             invalidateLayout(instance.widget.getLayoutNode());
+            const savedParent = _parentFiber;
             _parentFiber = boundary;
-            return reconcile(boundary.errorFallback(err));
+            const widget = reconcile(boundary.errorFallback(err));
+            _parentFiber = savedParent;
+            return widget;
         }
         // No error boundary found — destroy fiber and prune old widget
         destroyFiber(fiber);

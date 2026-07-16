@@ -13,6 +13,16 @@ describe("Slider", () => {
     expect(slider.getValue()).toBe(0);
   });
 
+  it("constructs with custom initial value and clamps it", async () => {
+    const { Slider } = await import("./Slider.js");
+
+    const slider = new Slider("Volume", {}, { min: 10, max: 90, value: 50 });
+    expect(slider.getValue()).toBe(50);
+
+    const clampedSlider = new Slider("Volume", {}, { min: 10, max: 90, value: 5 });
+    expect(clampedSlider.getValue()).toBe(10);
+  });
+
   it("setValue updates value", async () => {
     const { Slider } = await import("./Slider.js");
 

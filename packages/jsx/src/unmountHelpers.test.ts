@@ -7,7 +7,7 @@ describe('unmountApps', () => {
         const throwing = { unmount: vi.fn(() => { throw err; }) };
         const called = { unmount: vi.fn(() => { /* ok */ }) };
 
-        const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const spy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
 
         try {
             // Should not throw
@@ -18,7 +18,7 @@ describe('unmountApps', () => {
 
             // Ensure we logged the error exactly once with the expected message
             expect(spy).toHaveBeenCalledTimes(1);
-            expect(spy).toHaveBeenCalledWith('[jsx] Error during unmount():', err);
+            expect(spy).toHaveBeenCalledWith('[jsx] Error during unmount(): ' + String(err) + '\n');
         } finally {
             spy.mockRestore();
         }
