@@ -12,7 +12,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, styleToCellAttrs, truncate, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, styleToCellAttrs, truncate, caps, splitGraphemes, stringWidth } from '@termuijs/core';
 
 export interface PathInputOptions {
     placeholder?: string;
@@ -229,14 +229,33 @@ export class PathInput extends Widget {
             if (this._cursorPos > visibleWidth) {
                 scrollX = this._cursorPos - visibleWidth;
             }
-            const visibleText = this._value.slice(scrollX, scrollX + visibleWidth);
+            const graphemes = splitGraphemes(this._value);
+            let codeUnitPos = 0;
+            let cursorIndex = 0;
+            for (const grapheme of graphemes) {
+                if (codeUnitPos + grapheme.length > this._cursorPos) break;
+                codeUnitPos += grapheme.length;
+                cursorIndex++;
+            }
+
+            const scrollIndex = Math.min(scrollX, graphemes.length);
+            let visibleText = '';
+            let renderedWidth = 0;
+            for (let i = scrollIndex; i < graphemes.length; i++) {
+                const grapheme = graphemes[i]!;
+                const graphemeWidth = stringWidth(grapheme);
+                if (renderedWidth + graphemeWidth > visibleWidth) break;
+                visibleText += grapheme;
+                renderedWidth += graphemeWidth;
+            }
             screen.writeString(x, y, visibleText, attrs);
 
             if (this.isFocused) {
-                const cursorScreenPos = x + this._cursorPos - scrollX;
+                const beforeCursor = graphemes.slice(scrollIndex, cursorIndex).join('');
+                const cursorScreenPos = x + stringWidth(beforeCursor);
                 if (cursorScreenPos >= x && cursorScreenPos < x + width) {
-                    const cursorChar = this._cursorPos < this._value.length
-                        ? this._value[this._cursorPos]
+                    const cursorChar = cursorIndex < graphemes.length
+                        ? graphemes[cursorIndex]
                         : ' ';
                     screen.setCell(cursorScreenPos, y, {
                         char: cursorChar,
