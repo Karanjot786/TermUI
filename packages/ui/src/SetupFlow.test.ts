@@ -117,4 +117,22 @@ describe('SetupFlow', () => {
     const out = render(flow);
     expect(out).toContain('SuperApp');
   });
+
+  it('does not write the completion message outside short layouts', () => {
+    const flow = new SetupFlow({
+      appName: 'MyApp',
+      steps: [makeStep('Only Step')],
+      onComplete: () => {},
+    });
+    const screen = new Screen(10, 2);
+    const writeSpy = vi.spyOn(screen, 'writeString');
+
+    flow.next();
+    flow.updateRect({ x: 0, y: 0, width: 10, height: 2 });
+    flow.render(screen);
+
+    for (const call of writeSpy.mock.calls) {
+      expect(call[1]).toBeLessThan(2);
+    }
+  });
 });
