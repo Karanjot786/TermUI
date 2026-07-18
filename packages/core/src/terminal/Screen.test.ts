@@ -70,6 +70,28 @@ describe('Screen', () => {
         expect(screen.front[0][0].char).toBe('\0');
     });
 
+    it('resize resets all ancillary state', () => {
+        const screen = new Screen(10, 5);
+
+        // Set up some state
+        screen.pushClip({ x: 0, y: 0, width: 5, height: 3 });
+        screen.pushTranslateY(2);
+        screen.writeAnsi('\x1b[31m');
+        screen.applyBackdropFilter({ x: 0, y: 0, width: 3, height: 3 });
+
+        // Resize
+        screen.resize(20, 10);
+
+        expect(screen.cols).toBe(20);
+        expect(screen.rows).toBe(10);
+        expect(screen.activeClip).toBeNull();
+        expect(screen.drainAnsiQueue()).toBe('');
+        expect(screen.getPreviousLine(0)).toBe('');
+        // Write after resize and verify it lands correctly (no stale clip/translate)
+        screen.setCell(15, 8, { char: 'Z' });
+        expect(screen.back[8][15].char).toBe('Z');
+    });
+
     it('writeString applies style attributes (bold, fg)', () => {
         const screen = new Screen(10, 5);
         screen.writeString(0, 0, 'Hi', { bold: true, fg: { type: 'named', name: 'red' } });
@@ -289,6 +311,43 @@ describe('Screen and Cell Hyperlink Support', () => {
             screen.writeString(0, 0, 'Hello, World!');
             const text = screen.back[0].slice(0, 13).map(c => c.char).join('');
             expect(text).toBe('Hello, World!');
+        });
+    });
+
+    describe('writeFormattedString', () => {
+        it('strips ANSI sequences like writeString', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, '\x1b[31mred\x1b[0m');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('red');
+        });
+
+        it('strips cursor movement sequences but keeps text', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, '\x1b[2Jclear\x1b[5B');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('clear');
+        });
+
+        it('strips OSC sequences', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, '\x1b]0;title\x07text');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('text');
+        });
+
+        it('preserves normal text unchanged', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, 'Hello, World!');
+            const text = screen.back[0].slice(0, 13).map(c => c.char).join('');
+            expect(text).toBe('Hello, World!');
+        });
+
+        it('preserves Unicode and emoji', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, '你好 🌍');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('你好 🌍');
         });
     });
 

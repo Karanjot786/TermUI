@@ -1,6 +1,6 @@
 // CommandPalette — fuzzy-search command launcher
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars, caps, splitGraphemes } from '@termuijs/core';
 
 export interface Command { id: string; label: string; shortcut?: string; action: () => void; category?: string; }
 export interface CommandPaletteOptions { placeholder?: string; borderColor?: Style['fg']; activeColor?: Style['fg']; maxVisible?: number; }
@@ -32,8 +32,24 @@ export class CommandPalette extends Widget {
     show(): void { this._visible = true; this._query = ''; this._cursorPos = 0; this._selectedIndex = 0; this._filtered = [...this._commands]; this.markDirty(); }
     hide(): void { this._visible = false; this.markDirty(); }
     toggle(): void { this._visible ? this.hide() : this.show(); }
-    insertChar(ch: string): void { this._query = this._query.slice(0, this._cursorPos) + ch + this._query.slice(this._cursorPos); this._cursorPos++; this._filter(); this.markDirty(); }
-    deleteBack(): void { if (this._cursorPos > 0) { this._query = this._query.slice(0, this._cursorPos - 1) + this._query.slice(this._cursorPos); this._cursorPos--; this._filter(); this.markDirty(); } }
+    insertChar(ch: string): void {
+        const query = splitGraphemes(this._query);
+        const inserted = splitGraphemes(ch);
+        query.splice(this._cursorPos, 0, ...inserted);
+        this._query = query.join('');
+        this._cursorPos += inserted.length;
+        this._filter();
+        this.markDirty();
+    }
+    deleteBack(): void {
+        if (this._cursorPos === 0) return;
+        const query = splitGraphemes(this._query);
+        query.splice(this._cursorPos - 1, 1);
+        this._query = query.join('');
+        this._cursorPos--;
+        this._filter();
+        this.markDirty();
+    }
     selectNext(): void { if (this._selectedIndex < this._filtered.length - 1) { this._selectedIndex++; this.markDirty(); } }
     selectPrev(): void { if (this._selectedIndex > 0) { this._selectedIndex--; this.markDirty(); } }
     confirm(): void { const c = this._filtered[this._selectedIndex]; if (c) { this.hide(); c.action(); } }
