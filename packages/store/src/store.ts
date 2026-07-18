@@ -117,10 +117,21 @@ function flushBatch(threw: boolean, immediate = false) {
             if (_batchEpoch !== epochAtFlush) return;
             const stores = Array.from(_batchStores.entries());
             _batchStores.clear();
-            for (const [listeners, { prevState, commit }] of stores) {
-                const newState = commit();
-                for (const listener of listeners) {
-                    listener(newState, prevState);
+            const newStates = new Map<Set<any>, any>();
+            for (const [listeners, { commit }] of stores) {
+                newStates.set(listeners, commit());
+            }
+            for (const [listeners, { prevState }] of stores) {
+                const newState = newStates.get(listeners);
+                try {
+                    for (const listener of listeners) {
+                        listener(newState, prevState);
+                    }
+                } catch (e) {
+                    for (const [, entry] of stores) {
+                        entry.rollback();
+                    }
+                    throw e;
                 }
             }
         };
@@ -323,6 +334,26 @@ export function createStore<T extends object>(
             }
             persistFilePath = path.join(persistDir, `${persistOpt.key}.json`);
         }
+        // Resolve symlinks in the persist directory to prevent writes through
+        // symlink targets (e.g., ~/.config or ~/AppData/Roaming being a symlink).
+        // Walk up from the file to find the first existing ancestor, resolve it,
+        // and reconstruct the remainder.
+        try {
+            const dir = path.dirname(persistFilePath);
+            if (fs.existsSync(dir)) {
+                persistFilePath = path.join(fs.realpathSync(dir), path.basename(persistFilePath));
+            } else {
+                const segments: string[] = [];
+                let current = dir;
+                while (!fs.existsSync(current)) {
+                    segments.unshift(path.basename(current));
+                    current = path.dirname(current);
+                }
+                persistFilePath = path.join(fs.realpathSync(current), ...segments, path.basename(persistFilePath));
+            }
+        } catch {
+            // If realpath fails (permissions, etc.), use the unresolved path
+        }
     }
 
     const persistState = () => {
@@ -390,6 +421,8 @@ export function createStore<T extends object>(
                     } else {
                         Object.assign(existing.changes, finalPartial);
                         existing.nextState = nextState;
+                        existing.commit = () => { state = { ...state, ...existing.changes } as T; persistState(); return state; };
+                        existing.rollback = () => { state = existing.prevState; };
                     }
                 } else {
                     state = nextState; 

@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
+import { Screen, stringWidth } from '@termuijs/core';
 import { Select } from './Select.js';
 
 const OPTIONS = [
@@ -16,6 +17,25 @@ describe('Select', () => {
         const sel = new Select(OPTIONS);
         expect(sel.selectedIndex).toBe(0);
         expect(sel.isOpen).toBe(false);
+    });
+
+    it('initializes on the first enabled option', () => {
+        const sel = new Select([
+            { label: 'Unavailable', value: 'unavailable', disabled: true },
+            { label: 'Available', value: 'available' },
+        ]);
+
+        expect(sel.selectedIndex).toBe(1);
+        expect(sel.selectedOption?.value).toBe('available');
+    });
+
+    it('uses no selected option when every option is disabled', () => {
+        const sel = new Select([
+            { label: 'Unavailable', value: 'unavailable', disabled: true },
+        ]);
+
+        expect(sel.selectedIndex).toBe(-1);
+        expect(sel.selectedOption).toBeUndefined();
     });
 
     it('open() sets isOpen to true', () => {
@@ -65,5 +85,30 @@ describe('Select', () => {
         sel.selectNext(); // index 1 = banana
         sel.confirm();
         expect(onSelect).toHaveBeenCalledWith(OPTIONS[1], 1);
+    });
+
+    it('clips the closed label to narrow widths', () => {
+        const sel = new Select([{ label: 'Watermelon', value: 'watermelon' }]);
+        const screen = new Screen(1, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        sel.updateRect({ x: 0, y: 0, width: 1, height: 1 });
+        sel.render(screen);
+
+        expect(stringWidth(String(writeSpy.mock.calls[0][2]))).toBeLessThanOrEqual(1);
+    });
+
+    it('clips open option rows to narrow widths', () => {
+        const sel = new Select([{ label: 'Watermelon', value: 'watermelon' }]);
+        const screen = new Screen(1, 2);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        sel.updateRect({ x: 0, y: 0, width: 1, height: 2 });
+        sel.open();
+        sel.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(stringWidth(String(call[2]))).toBeLessThanOrEqual(1);
+        }
     });
 });

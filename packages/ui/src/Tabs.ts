@@ -14,6 +14,7 @@ export class Tabs extends Widget {
     private _activeIndex = 0;
     private _activeColor: Style['fg'];
     private _inactiveColor: Style['fg'];
+    private _contentMounted = false;
     focusable = true;
 
     constructor(tabs: Tab[], options: TabsOptions = {}) {
@@ -25,19 +26,44 @@ export class Tabs extends Widget {
 
     get activeIndex(): number { return this._activeIndex; }
     selectTab(i: number): void {
-        if (i >= 0 && i < this._tabs.length) { this._activeIndex = i; this.markDirty(); }
+        if (i < 0 || i >= this._tabs.length || i === this._activeIndex) return;
+        const previous = this.activeContent;
+        if (this._contentMounted) previous?.unmount();
+        this._activeIndex = i;
+        if (this._contentMounted) this.activeContent?.mount();
+        this.markDirty();
     }
     nextTab(): void {
         if (this._tabs.length === 0) return;
-        this._activeIndex = (this._activeIndex + 1) % this._tabs.length;
-        this.markDirty();
+        this.selectTab((this._activeIndex + 1) % this._tabs.length);
     }
     prevTab(): void {
         if (this._tabs.length === 0) return;
-        this._activeIndex = (this._activeIndex - 1 + this._tabs.length) % this._tabs.length;
-        this.markDirty();
+        this.selectTab((this._activeIndex - 1 + this._tabs.length) % this._tabs.length);
     }
     get activeContent(): Widget | undefined { return this._tabs[this._activeIndex]?.content; }
+
+    override mount(): void {
+        super.mount();
+        if (!this._contentMounted) {
+            this.activeContent?.mount();
+            this._contentMounted = true;
+        }
+    }
+
+    override unmount(): void {
+        if (this._contentMounted) {
+            this.activeContent?.unmount();
+            this._contentMounted = false;
+        }
+        super.unmount();
+    }
+
+    override destroy(): void {
+        super.destroy();
+        for (const tab of this._tabs) tab.content.destroy();
+        this._tabs = [];
+    }
 
     protected _renderSelf(screen: Screen): void {
         const { x, y, width, height } = this._rect;

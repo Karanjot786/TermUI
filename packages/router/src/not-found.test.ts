@@ -94,4 +94,59 @@ describe('Router notFound', () => {
         expect(router.currentPath).toBe('/');
         expect(router.historyLength).toBe(0);
     });
+
+    it('back() navigates between consecutive notFound history entries', () => {
+        const router = new Router({ notFound });
+        const back = vi.fn();
+        const error = vi.fn();
+        router.events.on('back', back);
+        router.events.on('error', error);
+
+        router.push('/missing-a');
+        router.push('/missing-b');
+
+        router.back();
+
+        expect(error).not.toHaveBeenCalled();
+        expect(back).toHaveBeenCalledOnce();
+        expect(router.currentPath).toBe('/missing-a');
+        expect(router.historyLength).toBe(1);
+
+        const event = back.mock.calls[0][0];
+        expect(event.match.route.path).toBe('/missing-a');
+        expect(event.direction).toBe('back');
+
+        rendered = render(event.screen);
+        expect(rendered.getByText('404 /missing-a')).not.toBeNull();
+    });
+
+    it('forward() restores a notFound entry from the forward stack', () => {
+        const router = new Router({ notFound });
+        const navigate = vi.fn();
+        const error = vi.fn();
+        router.events.on('navigate', navigate);
+        router.events.on('error', error);
+        router.addRoute('/home', () => 'Home');
+
+        router.push('/home');
+        router.push('/missing');
+        router.back();
+
+        navigate.mockClear();
+        error.mockClear();
+
+        router.forward();
+
+        expect(error).not.toHaveBeenCalled();
+        expect(navigate).toHaveBeenCalledOnce();
+        expect(router.currentPath).toBe('/missing');
+        expect(router.historyLength).toBe(2);
+
+        const event = navigate.mock.calls[0][0];
+        expect(event.match.route.path).toBe('/missing');
+        expect(event.direction).toBe('forward');
+
+        rendered = render(event.screen);
+        expect(rendered.getByText('404 /missing')).not.toBeNull();
+    });
 });
