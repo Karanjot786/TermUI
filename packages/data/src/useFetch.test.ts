@@ -169,4 +169,24 @@ describe("useFetch caching", () => {
 
     unmount();
   });
+
+  it("refetches when the key changes while URL cache is fresh", async () => {
+    const { rerender, unmount } = renderFetch("test-url-key-fresh", {
+      key: "initial",
+      staleTime: 5000,
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    await flushPromises();
+    expect(isFresh('test-url-key-fresh::"initial"')).toBe(true);
+
+    rerender("test-url-key-fresh", {
+      key: "changed",
+      staleTime: 5000,
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+
+    unmount();
+  });
 });

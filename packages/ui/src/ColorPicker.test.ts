@@ -659,6 +659,22 @@ describe('ColorPicker', () => {
             // Should not throw (screen internally guards bounds)
             expect(() => picker.render(screen)).not.toThrow();
         });
+
+        it('truncates the hex input row to the content width', () => {
+            const width = 10;
+            const height = 7;
+            const screen = new Screen(width, height);
+            const picker = new ColorPicker({ value: '#123456' });
+            const writeSpy = vi.spyOn(screen, 'writeString');
+            picker.mount();
+            picker.updateRect({ x: 0, y: 0, width, height });
+
+            picker.render(screen);
+
+            const hexCall = writeSpy.mock.calls.find((call) => String(call[2]).startsWith('Hex'));
+            expect(hexCall).toBeDefined();
+            expect(String(hexCall![2]).length).toBeLessThanOrEqual(width - 2);
+        });
     });
 
     // ── 19. Rendering with small height (< 4) ───────────────────────────────

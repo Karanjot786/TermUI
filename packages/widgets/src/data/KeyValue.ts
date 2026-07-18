@@ -2,7 +2,7 @@
 // @termuijs/widgets — KeyValue widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, stringWidth, caps, type KeyEvent } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface KeyValuePair {
@@ -126,13 +126,13 @@ export class KeyValue extends Widget {
         }
     }
 
-    handleKey(key: string): void {
-        const lowerKey = key.toLowerCase();
-        if (lowerKey === 'up' || lowerKey === 'k') {
+    handleKey(event: KeyEvent | string): void {
+        const keyName = typeof event === 'string' ? event.toLowerCase() : event.key.toLowerCase();
+        if (keyName === 'up' || keyName === 'k' || keyName === 'arrowup') {
             this.moveUp();
-        } else if (lowerKey === 'down' || lowerKey === 'j') {
+        } else if (keyName === 'down' || keyName === 'j' || keyName === 'arrowdown') {
             this.moveDown();
-        } else if (lowerKey === 'enter' || lowerKey === ' ' || lowerKey === 'space') {
+        } else if (keyName === 'enter' || keyName === ' ' || keyName === 'space') {
             this.toggleSelected();
         }
     }
