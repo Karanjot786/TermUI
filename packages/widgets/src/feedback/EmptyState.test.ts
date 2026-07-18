@@ -174,4 +174,55 @@ describe('EmptyState', () => {
         expect(row(screen, 1).trim()).toBe('📦');
     });
 
+    it('sets a11y role and label on construction', () => {
+        const es = new EmptyState('No items', {}, { description: 'Try again', hint: 'Press F5' });
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'No items. Try again. Press F5',
+        });
+    });
+
+    it('sets a11y label from title alone when no description/hint given', () => {
+        const es = new EmptyState('No items');
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'No items',
+        });
+    });
+
+    it('refreshes a11y label when setTitle is called', () => {
+        const es = new EmptyState('Old title');
+
+        es.setTitle('New title');
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'New title',
+        });
+    });
+
+    it('refreshes a11y label when setDescription is called', () => {
+        const es = new EmptyState('Title');
+
+        es.setDescription('New description');
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'Title. New description',
+        });
+    });
+
+    it('refreshes a11y label when setHint is called', () => {
+        const es = new EmptyState('Title');
+
+        es.setHint('New hint');
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'Title. New hint',
+        });
+    });
+
 });

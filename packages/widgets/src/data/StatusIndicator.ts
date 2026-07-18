@@ -2,7 +2,7 @@
 // @termuijs/widgets — StatusIndicator widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface StatusIndicatorOptions {
@@ -58,9 +58,14 @@ export class StatusIndicator extends Widget {
         const color = this._isUp ? this._upColor : this._downColor;
 
         screen.setCell(x, y, { char: dot, fg: color });
-        screen.writeString(x + 2, y, `${this._label} — ${statusText}`, {
-            ...attrs,
-            fg: color,
-        });
+        
+        const labelText = `${this._label} — ${statusText}`;
+        const avail = width - 2;
+        if (avail > 0) {
+            screen.writeString(x + 2, y, truncate(labelText, avail), {
+                ...attrs,
+                fg: color,
+            });
+        }
     }
 }

@@ -67,7 +67,7 @@ describe('useViewMeta', () => {
 
         useViewMeta({ mouseMode: 'none' });
         runEffects(fiber);
-        expect(writeSpy).toHaveBeenLastCalledWith('\x1b[?1000l\x1b[?1002l\x1b[?1006l');
+        expect(writeSpy).toHaveBeenLastCalledWith('\x1b[?1000l\x1b[?1003l\x1b[?1015l\x1b[?1006l');
 
         fiber.hookIndex = 0;
         useViewMeta({ mouseMode: 'click' });
@@ -94,7 +94,7 @@ describe('useViewMeta', () => {
 
         expect(writeSpy).toHaveBeenNthCalledWith(1, '\x1b]0;\x07');
         expect(writeSpy).toHaveBeenNthCalledWith(2, '\x1b[0 q');
-        expect(writeSpy).toHaveBeenNthCalledWith(3, '\x1b[?1000l\x1b[?1002l\x1b[?1006l');
+        expect(writeSpy).toHaveBeenNthCalledWith(3, '\x1b[?1000l\x1b[?1003l\x1b[?1015l\x1b[?1006l');
     });
 
     it('restores only metadata fields that were set', () => {

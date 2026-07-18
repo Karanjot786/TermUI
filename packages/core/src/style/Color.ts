@@ -125,6 +125,8 @@ export function colorToRgb(color: Color): [number, number, number] {
     }
 }
 
+const CUBE_LEVELS = [0, 95, 135, 175, 215, 255];
+
 /**
  * Convert an ANSI 256 code to approximate RGB.
  */
@@ -137,9 +139,9 @@ function ansi256ToRgb(code: number): [number, number, number] {
     // Extended 216-color cube (16-231)
     if (code < 232) {
         const idx = code - 16;
-        const b = (idx % 6) * 51;
-        const g = (Math.floor(idx / 6) % 6) * 51;
-        const r = Math.floor(idx / 36) * 51;
+        const b = CUBE_LEVELS[idx % 6];
+        const g = CUBE_LEVELS[Math.floor(idx / 6) % 6];
+        const r = CUBE_LEVELS[Math.floor(idx / 36)];
         return [r, g, b];
     }
     // Grayscale ramp (232-255)
@@ -147,21 +149,85 @@ function ansi256ToRgb(code: number): [number, number, number] {
     return [gray, gray, gray];
 }
 
+/** Pre-computed array mapping a channel value 0..255 to its nearest xterm cube level index (0..5) */
+const CHANNEL_TO_CUBE_IDX = new Uint8Array(256);
+/** Pre-computed array mapping an ansi256 code 0..255 to its RGB values */
+const ANSI256_RGB = new Int32Array(256 * 3);
+
+// Initialize lookups
+for (let i = 0; i < 256; i++) {
+    // 1. Channel nearest cube level index
+    let min = Infinity;
+    let idx = 0;
+    for (let j = 0; j < CUBE_LEVELS.length; j++) {
+        const d = Math.abs(i - CUBE_LEVELS[j]);
+        if (d < min) {
+            min = d;
+            idx = j;
+        }
+    }
+    CHANNEL_TO_CUBE_IDX[i] = idx;
+
+    // 2. Ansi code to RGB values
+    const [r, g, b] = ansi256ToRgb(i);
+    ANSI256_RGB[i * 3] = r;
+    ANSI256_RGB[i * 3 + 1] = g;
+    ANSI256_RGB[i * 3 + 2] = b;
+}
+
+const rgbCache = new Map<number, number>();
+
 /**
  * Find the nearest ANSI 256 color code for a given RGB.
  */
 function rgbToAnsi256(r: number, g: number, b: number): number {
-    // Check if it's a grayscale
-    if (r === g && g === b) {
-        if (r < 8) return 16;
-        if (r > 248) return 231;
-        return Math.round((r - 8) / 247 * 24) + 232;
+    const key = (r << 16) | (g << 8) | b;
+    const cached = rgbCache.get(key);
+    if (cached !== undefined) return cached;
+
+    // 1. Find closest in 216-color cube
+    const rIdx = CHANNEL_TO_CUBE_IDX[r];
+    const gIdx = CHANNEL_TO_CUBE_IDX[g];
+    const bIdx = CHANNEL_TO_CUBE_IDX[b];
+    const cubeColor = 16 + 36 * rIdx + 6 * gIdx + bIdx;
+
+    let bestColor = cubeColor;
+    let r_c = ANSI256_RGB[cubeColor * 3];
+    let g_c = ANSI256_RGB[cubeColor * 3 + 1];
+    let b_c = ANSI256_RGB[cubeColor * 3 + 2];
+    let bestDist = (r - r_c)**2 + (g - g_c)**2 + (b - b_c)**2;
+
+    // 2. Check 24 grayscales (indices 232-255)
+    const avg = Math.round((r + g + b) / 3);
+    // Gray levels are 8 + 10 * i, where i is 0..23
+    let grayIdx = Math.round((avg - 8) / 10);
+    if (grayIdx < 0) grayIdx = 0;
+    if (grayIdx > 23) grayIdx = 23;
+    const grayColor = 232 + grayIdx;
+    r_c = ANSI256_RGB[grayColor * 3];
+    const distGray = (r - r_c)**2 + (g - r_c)**2 + (b - r_c)**2;
+    if (distGray < bestDist) {
+        bestDist = distGray;
+        bestColor = grayColor;
     }
-    return 16
-        + 36 * Math.round(r / 255 * 5)
-        + 6 * Math.round(g / 255 * 5)
-        + Math.round(b / 255 * 5);
+
+    // 3. Check 16 standard colors (indices 0-15)
+    for (let i = 0; i < 16; i++) {
+        r_c = ANSI256_RGB[i * 3];
+        g_c = ANSI256_RGB[i * 3 + 1];
+        b_c = ANSI256_RGB[i * 3 + 2];
+        const dist = (r - r_c)**2 + (g - g_c)**2 + (b - b_c)**2;
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestColor = i;
+        }
+    }
+
+    rgbCache.set(key, bestColor);
+    return bestColor;
 }
+
+const BASIC_COLORS: [number, number, number][] = Object.values(NAMED_TO_RGB);
 
 /**
  * Find the nearest ANSI 4-bit basic color for a given RGB.
@@ -169,9 +235,8 @@ function rgbToAnsi256(r: number, g: number, b: number): number {
 function rgbToBasic(r: number, g: number, b: number): number {
     let minDist = Infinity;
     let best = 0;
-    const names = Object.keys(NAMED_TO_RGB) as NamedColor[];
-    for (let i = 0; i < names.length; i++) {
-        const [cr, cg, cb] = NAMED_TO_RGB[names[i]];
+    for (let i = 0; i < 16; i++) {
+        const [cr, cg, cb] = BASIC_COLORS[i];
         const dist = (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2;
         if (dist < minDist) {
             minDist = dist;

@@ -33,6 +33,16 @@ export function useCountdown(
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const startValueRef = useRef(startValue);
 
+    // Sync startValueRef and count whenever startValue changes between renders.
+    // Without this, reset() always restores the mount-time value and start()
+    // cannot restart after the countdown finishes if the caller updates startValue.
+    useEffect(() => {
+        startValueRef.current = startValue;
+        if (!isRunning) {
+            setCount(startValue);
+        }
+    }, [startValue]);
+
     useEffect(() => {
         if (isRunning) {
             intervalRef.current = setInterval(() => {

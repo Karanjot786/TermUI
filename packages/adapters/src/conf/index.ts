@@ -28,11 +28,17 @@ function isMissingConfError(error: unknown): error is NodeJS.ErrnoException {
     && error.message.includes('conf')
 }
 
+let customLoader: (() => any) | null = null
+
+export function _setCustomLoader(loader: (() => any) | null): void {
+  customLoader = loader
+}
+
 function resolveConfConstructor(): ConfConstructor {
   try {
-    const require = createRequire(import.meta.url)
-    // conf@10 ships a CommonJS default export, so the lazy loader must handle both interop shapes.
-    const loaded = require('conf') as ConfConstructor | { default: ConfConstructor }
+    const loaded = customLoader
+      ? customLoader()
+      : createRequire(import.meta.url)('conf') as ConfConstructor | { default: ConfConstructor }
     return 'default' in loaded ? loaded.default : loaded
   } catch (error) {
     if (isMissingConfError(error)) {
@@ -93,4 +99,8 @@ export function useConf<T extends Record<string, unknown>>(appName: string, defa
   }
 
   return [store.value, store.setValue]
+}
+
+export function _clearConfigStoresCache(): void {
+  configStores.clear()
 }

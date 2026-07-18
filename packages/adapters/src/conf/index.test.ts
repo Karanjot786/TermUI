@@ -1,42 +1,16 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useConf, _setCustomLoader, _clearConfigStoresCache } from './index.js'
 
-let shouldThrowMissingConf = false
+let mockHomeDirectory = ''
 
-function createMissingConfRequire(): NodeJS.Require {
-  // The real NodeJS.Require type has extra properties, so the test stub mirrors them.
-  const missingRequire = Object.assign(
-    (specifier: string) => {
-      const error = new Error(`Cannot find module '${specifier}'`) as NodeJS.ErrnoException
-      error.code = 'MODULE_NOT_FOUND'
-      throw error
-    },
-    {
-      resolve: (specifier: string) => specifier,
-      cache: {},
-      extensions: {},
-      main: undefined,
-    }
-  )
-
-  return missingRequire as NodeJS.Require
-}
-
-async function loadUseConf() {
-  vi.resetModules()
-  return (await import('./index.js')).useConf
-}
-
-vi.mock('node:module', async (importActual) => {
-  const actual = await importActual<typeof import('node:module')>()
-
+vi.mock('node:os', async (importActual) => {
+  const actual = await importActual<typeof import('node:os')>()
   return {
     ...actual,
-    createRequire: (...args: Parameters<typeof actual.createRequire>) => {
-      return shouldThrowMissingConf ? createMissingConfRequire() : actual.createRequire(...args)
-    },
+    homedir: () => mockHomeDirectory || actual.homedir(),
   }
 })
 
@@ -48,15 +22,22 @@ describe('useConf', () => {
   const previousHomePath = process.env.HOMEPATH
 
   function setHomeDirectory(directory: string) {
+    mockHomeDirectory = directory
     process.env.HOME = directory
     process.env.USERPROFILE = directory
     delete process.env.HOMEDRIVE
     delete process.env.HOMEPATH
   }
 
+  beforeEach(() => {
+    _clearConfigStoresCache()
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
-    shouldThrowMissingConf = false
+    _setCustomLoader(null)
+    _clearConfigStoresCache()
+    mockHomeDirectory = ''
     process.env.HOME = previousHome
     process.env.USERPROFILE = previousUserProfile
 
@@ -78,19 +59,17 @@ describe('useConf', () => {
     }
   })
 
-  it('returns defaults when no config file exists yet', async () => {
+  it('returns defaults when no config file exists yet', () => {
     tempHomeDirectory = mkdtempSync(join(tmpdir(), 'termui-conf-'))
     setHomeDirectory(tempHomeDirectory)
 
-    const useConf = await loadUseConf()
     const defaults = { theme: 'dark', fontSize: 14 }
-
     const [config] = useConf('my-app', defaults)
 
     expect(config).toEqual(defaults)
   })
 
-  it('reads an existing config file from disk', async () => {
+  it('reads an existing config file from disk', () => {
     tempHomeDirectory = mkdtempSync(join(tmpdir(), 'termui-conf-'))
     setHomeDirectory(tempHomeDirectory)
 
@@ -99,17 +78,15 @@ describe('useConf', () => {
     mkdirSync(configDirectory, { recursive: true })
     writeFileSync(configPath, JSON.stringify({ theme: 'light', fontSize: 16 }), 'utf8')
 
-    const useConf = await loadUseConf()
     const [config] = useConf('my-app', { theme: 'dark', fontSize: 14 })
 
     expect(config).toEqual({ theme: 'light', fontSize: 16 })
   })
 
-  it('updates in-memory state and writes the new config file', async () => {
+  it('updates in-memory state and writes the new config file', () => {
     tempHomeDirectory = mkdtempSync(join(tmpdir(), 'termui-conf-'))
     setHomeDirectory(tempHomeDirectory)
 
-    const useConf = await loadUseConf()
     const [config, setConfig] = useConf('my-app', { theme: 'dark', fontSize: 14 })
 
     const updated = setConfig({ ...config, theme: 'light' })
@@ -123,12 +100,15 @@ describe('useConf', () => {
     expect(cachedConfig).toEqual({ theme: 'light', fontSize: 14 })
   })
 
-  it('throws a helpful error when conf is not installed', async () => {
+  it('throws a helpful error when conf is not installed', () => {
     tempHomeDirectory = mkdtempSync(join(tmpdir(), 'termui-conf-'))
     setHomeDirectory(tempHomeDirectory)
-    shouldThrowMissingConf = true
-
-    const useConf = await loadUseConf()
+    
+    _setCustomLoader(() => {
+      const error = new Error("Cannot find module 'conf'") as NodeJS.ErrnoException
+      error.code = 'MODULE_NOT_FOUND'
+      throw error
+    })
 
     expect(() => useConf('my-app', { theme: 'dark' })).toThrow(
       'useConf() requires the optional peer dependency `conf`.'

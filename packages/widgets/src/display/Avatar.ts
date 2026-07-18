@@ -66,9 +66,11 @@ export class Avatar extends Widget {
         if (parts.length === 0 || parts[0] === '') return '';
         let init = '';
         if (parts.length === 1) {
-            init = parts[0].substring(0, 2).toUpperCase();
+            init = Array.from(parts[0]).slice(0, 2).join('').toUpperCase();
         } else {
-            init = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            const firstChar = Array.from(parts[0])[0] || '';
+            const lastChar = Array.from(parts[parts.length - 1])[0] || '';
+            init = (firstChar + lastChar).toUpperCase();
         }
         if (!caps.unicode) {
             init = init.replace(/[^\x00-\x7F]/g, '?');
