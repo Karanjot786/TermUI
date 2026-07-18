@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from '@termuijs/testing';
 import { createElement, useRef } from '@termuijs/jsx';
 import { NumberInput } from './NumberInput.js';
@@ -66,5 +66,44 @@ describe('NumberInput', () => {
         expect(screen.lastFrame().join('\n')).toContain('0');
 
         screen.unmount();
+    });
+
+    it('notifies and marks dirty when rawValue is assigned', () => {
+        const onChange = vi.fn();
+        const input = new NumberInput({}, { onChange });
+        const markDirty = vi.spyOn(input, 'markDirty');
+
+        input.rawValue = '42';
+
+        expect(input.rawValue).toBe('42');
+        expect(onChange).toHaveBeenCalledWith(42);
+        expect(markDirty).toHaveBeenCalled();
+    });
+
+    it('clamps typed values exposed through numericValue and submit', () => {
+        const onChange = vi.fn();
+        const onSubmit = vi.fn();
+        const input = new NumberInput({}, { min: 0, max: 10, onChange, onSubmit });
+
+        input.insertChar('9');
+        input.insertChar('9');
+        input.submit();
+
+        expect(input.rawValue).toBe('99');
+        expect(input.numericValue).toBe(10);
+        expect(onChange).toHaveBeenLastCalledWith(10);
+        expect(onSubmit).toHaveBeenCalledWith(10);
+    });
+
+    it('rejects invalid step options', () => {
+        expect(() => new NumberInput({}, { step: 0 })).toThrow(RangeError);
+        expect(() => new NumberInput({}, { step: -1 })).toThrow(RangeError);
+        expect(() => new NumberInput({}, { step: NaN })).toThrow(RangeError);
+    });
+
+    it('rejects invalid range options', () => {
+        expect(() => new NumberInput({}, { min: NaN })).toThrow(RangeError);
+        expect(() => new NumberInput({}, { max: NaN })).toThrow(RangeError);
+        expect(() => new NumberInput({}, { min: 10, max: 0 })).toThrow(RangeError);
     });
 });

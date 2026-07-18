@@ -39,6 +39,13 @@ describe('TSS Tokenizer', () => {
         expect(num!.value).toBe('42');
     });
 
+    it('tokenizes negative numbers', () => {
+        const tokens = tokenize('margin: -2;');
+        const num = tokens.find(t => t.type === TokenType.Number);
+        expect(num).toBeDefined();
+        expect(num!.value).toBe('-2');
+    });
+
     it('tokenizes CSS variables --name', () => {
         const tokens = tokenize('--primary: cyan;');
         const variable = tokens.find(t => t.type === TokenType.Variable);
@@ -51,6 +58,13 @@ describe('TSS Tokenizer', () => {
         const v = tokens.find(t => t.type === TokenType.Var);
         expect(v).toBeDefined();
         expect(v!.value).toBe('--primary');
+    });
+
+    it('tokenizes calc() expressions as a single value', () => {
+        const tokens = tokenize('width: calc(10 - 2);');
+        const calc = tokens.find(t => t.type === TokenType.Calc);
+        expect(calc).toBeDefined();
+        expect(calc!.value).toBe('calc(10 - 2)');
     });
 
     it('tokenizes pseudo-classes', () => {

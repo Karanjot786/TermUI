@@ -4,6 +4,7 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, caps, stringWidth, BRAILLE_DOTS, BRAILLE_OFFSET } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { filterFinite } from './utils.js';
 
 export interface AreaChartOptions {
     xLabel?: string;
@@ -128,7 +129,7 @@ export class AreaChart extends Widget {
     }
 
     setData(values: number[]): void {
-        this._data = values;
+        this._data = filterFinite(values);
         this.markDirty();
     }
 

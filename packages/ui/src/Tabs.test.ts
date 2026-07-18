@@ -4,7 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { Tabs } from './Tabs.js';
-import { Box, Text } from '@termuijs/widgets';
+import { Box, Text, Widget } from '@termuijs/widgets';
 import { Screen } from '@termuijs/core';
 
 const makeTabs = () => new Tabs([
@@ -12,6 +12,29 @@ const makeTabs = () => new Tabs([
     { label: 'Settings', content: new Box() },
     { label: 'About', content: new Box() },
 ]);
+
+class TrackedContent extends Widget {
+    mounts = 0;
+    unmounts = 0;
+    destroys = 0;
+
+    override mount(): void {
+        this.mounts++;
+        super.mount();
+    }
+
+    override unmount(): void {
+        this.unmounts++;
+        super.unmount();
+    }
+
+    override destroy(): void {
+        this.destroys++;
+        super.destroy();
+    }
+
+    protected override _renderSelf(): void {}
+}
 
 describe('Tabs', () => {
     it('starts at tab 0', () => {
@@ -104,5 +127,44 @@ describe('Tabs', () => {
         tabs.render(screen);
         const all = screen.back.map(r => r.map(c => c.char).join('')).join('');
         expect(all).not.toContain('Should Not Appear');
+    });
+
+    it('mounts and unmounts the active content with the container', () => {
+        const content = new TrackedContent();
+        const tabs = new Tabs([{ label: 'One', content }]);
+
+        tabs.mount();
+        expect(content.mounts).toBe(1);
+        tabs.unmount();
+        expect(content.unmounts).toBe(1);
+    });
+
+    it('transfers lifecycle ownership when selecting another tab', () => {
+        const first = new TrackedContent();
+        const second = new TrackedContent();
+        const tabs = new Tabs([
+            { label: 'One', content: first },
+            { label: 'Two', content: second },
+        ]);
+
+        tabs.mount();
+        tabs.selectTab(1);
+
+        expect(first.unmounts).toBe(1);
+        expect(second.mounts).toBe(1);
+    });
+
+    it('destroys every tab content widget', () => {
+        const first = new TrackedContent();
+        const second = new TrackedContent();
+        const tabs = new Tabs([
+            { label: 'One', content: first },
+            { label: 'Two', content: second },
+        ]);
+
+        tabs.destroy();
+
+        expect(first.destroys).toBe(1);
+        expect(second.destroys).toBe(1);
     });
 });
