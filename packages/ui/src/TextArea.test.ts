@@ -91,4 +91,31 @@ describe('TextArea', () => {
 
         expect(submitted).toBe('test');
     });
+
+    it('deletes emoji as a single grapheme', async () => {
+        const { TextArea } = await import('./TextArea.js');
+        const textarea = new TextArea();
+        textarea.isFocused = true;
+
+        textarea.insertChar('a');
+        textarea.insertChar('👋');
+        textarea.insertChar('b');
+        textarea.handleKey({ key: 'left' } as KeyEvent);
+        textarea.handleKey({ key: 'backspace' } as KeyEvent);
+
+        expect(textarea.value).toBe('ab');
+    });
+
+    it('inserts text around wide characters using grapheme cursor positions', async () => {
+        const { TextArea } = await import('./TextArea.js');
+        const textarea = new TextArea();
+        textarea.isFocused = true;
+
+        textarea.insertChar('中');
+        textarea.insertChar('a');
+        textarea.handleKey({ key: 'left' } as KeyEvent);
+        textarea.insertChar('b');
+
+        expect(textarea.value).toBe('中ba');
+    });
 });

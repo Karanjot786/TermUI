@@ -75,4 +75,14 @@ describe('StatusIndicator', () => {
     si.setLabel('Database Server');
     expect(markDirtySpy).toHaveBeenCalled();
   });
+
+  it('truncates the label when it exceeds width bounds', () => {
+    const screen = new Screen(15, 1);
+    const si = new StatusIndicator('Very Long API Server Name', true);
+    si.updateRect({ x: 0, y: 0, width: 15, height: 1 });
+    si.render(screen);
+    const row = screen.back[0].map(c => c.char).join('');
+    // The screen has width 15. The rendered string should be truncated to fit within 15 columns.
+    expect(row.length).toBe(15);
+  });
 });

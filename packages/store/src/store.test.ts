@@ -574,6 +574,41 @@ describe('middleware', () => {
     })
 
 
+    it('middleware that does not call next() suppresses the update', () => {
+        const blockAll = (_prev: any, _update: any, _next: any) => { // any: middleware receives heterogeneous state; no shared interface at this level
+            // deliberately never calls next() — the update is swallowed
+        }
+
+        const useStore = createStore(() => ({ count: 0 }), { middleware: [blockAll] })
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        useStore.setState({ count: 99 })
+
+        expect(useStore.getState().count).toBe(0)
+        expect(spy).not.toHaveBeenCalled()
+    })
+
+    it('middleware receives the correct prevState and update arguments', () => {
+        const calls: Array<{ prev: Record<string, unknown>; update: Record<string, unknown> }> = []
+
+        const recorder = (prev: any, update: any, next: any) => { // any: middleware receives heterogeneous state; no shared interface at this level
+            calls.push({ prev: { ...prev }, update: { ...update } })
+            next(update)
+        }
+
+        const useStore = createStore(() => ({ count: 0, label: 'initial' }), { middleware: [recorder] })
+
+        useStore.setState({ count: 7 })
+        useStore.setState({ label: 'updated' })
+
+        expect(calls[0]?.prev).toEqual({ count: 0, label: 'initial' })
+        expect(calls[0]?.update).toEqual({ count: 7 })
+
+        expect(calls[1]?.prev).toEqual({ count: 7, label: 'initial' })
+        expect(calls[1]?.update).toEqual({ label: 'updated' })
+    })
+
     it('functional updaters chain correctly inside a batch', async () => {
         const useStore = createStore((set) => ({
             a: 0,
@@ -644,6 +679,54 @@ describe('middleware', () => {
             // Inside the batch, getState should see the pending value
             expect(useStore.getState().count).toBe(1)
         })
+    })
+
+    it('setState after mutate inside batch does not lose intermediate state', async () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            name: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            // mutate creates the batch entry (commit captures nextState const)
+            useStore.mutate((draft) => {
+                draft.count = 1
+            })
+            // setState updates the existing entry but must also update the commit closure
+            useStore.setState({ name: 'test' })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ count: 1, name: 'test' })
+    })
+
+    it('nested batch with mutate and setState does not lose state', async () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            name: '',
+            label: '',
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.setState({ count: 1 })
+            batch(() => {
+                useStore.mutate((draft) => {
+                    draft.name = 'inner'
+                })
+                useStore.setState({ label: 'nested' })
+            })
+        })
+
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState()).toEqual({ count: 1, name: 'inner', label: 'nested' })
     })
 })
 
@@ -865,5 +948,59 @@ describe('useStore selector memoization', () => {
         expect(calls).toHaveLength(2)
         expect(calls[1]).toBe(20)
     })
+})
+
+describe('persist – symlink resolution', () => {
+    const testRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'termuijs-symtest-')));
+    const storeDir = path.join(testRoot, 'termuijs-stores');
+    const realDir = path.join(storeDir, 'real');
+    const linkDir = path.join(storeDir, 'link');
+
+    afterAll(() => {
+        try { fs.rmSync(storeDir, { recursive: true }); } catch { /* ok */ }
+        try { fs.rmdirSync(testRoot); } catch { /* ok */ }
+    });
+
+    const origAppData = process.env.APPDATA;
+    const origXdgConfig = process.env.XDG_CONFIG_HOME;
+    const symlinkType: any = process.platform === 'win32' ? 'junction' : 'dir';
+
+    beforeEach(() => {
+        process.env.APPDATA = testRoot;
+        process.env.XDG_CONFIG_HOME = testRoot;
+        fs.mkdirSync(realDir, { recursive: true });
+        try { fs.rmdirSync(linkDir); } catch { /* ok */ }
+        if (!fs.existsSync(linkDir)) {
+            fs.symlinkSync(realDir, linkDir, symlinkType);
+        }
+    });
+
+    afterEach(() => {
+        process.env.APPDATA = origAppData;
+        process.env.XDG_CONFIG_HOME = origXdgConfig;
+        vi.useRealTimers();
+        try { fs.rmSync(storeDir, { recursive: true }); } catch { /* ok */ }
+    });
+
+    it('resolves symlinks in persist path and writes to real directory', () => {
+        vi.useFakeTimers();
+        const useStore = createStore({ count: 0 }, {
+            persist: { file: path.join(linkDir, 'symtest.json') },
+        });
+        useStore.setState({ count: 42 });
+        vi.advanceTimersByTime(200);
+        const realFilePath = path.join(realDir, 'symtest.json');
+        expect(fs.existsSync(realFilePath)).toBe(true);
+        const content = JSON.parse(fs.readFileSync(realFilePath, 'utf8'));
+        expect(content.count).toBe(42);
+    });
+
+    it('rehydrates from the resolved real path on restart', () => {
+        fs.writeFileSync(path.join(realDir, 'symtest.json'), JSON.stringify({ count: 99 }));
+        const useStore = createStore({ count: 0 }, {
+            persist: { file: path.join(linkDir, 'symtest.json') },
+        });
+        expect(useStore.getState().count).toBe(99);
+    });
 })
 

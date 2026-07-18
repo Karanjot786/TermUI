@@ -169,4 +169,13 @@ describe('Alert — Setters and Getters', () => {
         expect(alert.isDirty).toBe(true);
     });
 
+    describe('Alert — Custom padding overrides', () => {
+        it('respects custom padding styling overrides', () => {
+            const { screen } = renderAlert({ variant: 'info', message: 'Hello' }, { padding: 0 }, 30, 3);
+            // With padding = 0, row 1 (inside 1 border height) is the content row.
+            // Check content is rendered on row 1 (x + border(1) + padding(0) = cx = 1)
+            const rowChars = screen.back[1].map(c => c.char).join('');
+            expect(rowChars).toContain('● Hello');
+        });
+    });
 });
