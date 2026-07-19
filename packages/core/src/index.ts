@@ -29,6 +29,7 @@ export type { MouseGesturesOptions } from './input/MouseGestures.js';
 export { ChordMatcher } from './input/ChordMatcher.js';
 export type { ChordMatcherOptions, Chord } from './input/ChordMatcher.js';
 export { LiveRender } from './renderer/live-render.js';
+
 // ── Layout ────────────────────────────────────────────
 export { computeLayout, createLayoutNode, invalidateLayout } from './layout/LayoutEngine.js';
 export type { LayoutNode } from './layout/LayoutEngine.js';
@@ -108,3 +109,67 @@ export * from './errors.js';
 
 // ── Accessibility ─────────────────────────────────────
 export * from './a11y/index.js';
+
+// ─────────────────────────────────────────────────────
+// ── Parallel Processing ──────────────────────────────
+// ─────────────────────────────────────────────────────
+
+// ── Parallel Core ─────────────────────────────────────
+export {
+    ParallelRenderer,
+    type ParallelRendererConfig,
+    type ParallelRenderOptions,
+    type RenderMetrics,
+    type ScreenSection,
+    type WorkerTask,
+    type WorkerResult
+} from './parallel/index.js';
+
+// ── Worker Pool ──────────────────────────────────────
+export {
+    WorkerPool,
+    type WorkerInfo,
+    type WorkerStats
+} from './parallel/workers/index.js';
+
+// ── Scheduler ─────────────────────────────────────────
+export {
+    RenderScheduler,
+    type ScheduledTask
+} from './parallel/scheduler/index.js';
+
+// ── Screen Partition ──────────────────────────────────
+export {
+    ScreenPartitioner,
+    type PartitionStrategy
+} from './parallel/partition/index.js';
+
+// ── Performance Monitor ──────────────────────────────
+export {
+    PerformanceMonitor,
+    type PerformanceReport
+} from './parallel/monitor/index.js';
+
+// ── Parallel Utils ────────────────────────────────────
+export {
+    createRenderTask,
+    mergeSections,
+    isSectionOverlapping,
+    calculateSectionArea,
+    getOptimalWorkerCount,
+    type RenderTaskOptions
+} from './parallel/utils.js';
+
+// ─────────────────────────────────────────────────────
+// ── Re-export Types ──────────────────────────────────
+// ─────────────────────────────────────────────────────
+
+// All parallel types are re-exported from ./parallel/index.js
+// For convenience, also export commonly used types directly
+export type {
+    ParallelRenderer as ParallelRendererType,
+    WorkerPool as WorkerPoolType,
+    RenderScheduler as RenderSchedulerType,
+    ScreenPartitioner as ScreenPartitionerType,
+    PerformanceMonitor as PerformanceMonitorType
+} from './parallel/index.js';

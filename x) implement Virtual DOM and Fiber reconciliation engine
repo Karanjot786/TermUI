@@ -1,0 +1,979 @@
+[1mdiff --git a/packages/jsx/package.json b/packages/jsx/package.json[m
+[1mindex e9dcf2b..b267a16 100644[m
+[1m--- a/packages/jsx/package.json[m
+[1m+++ b/packages/jsx/package.json[m
+[36m@@ -5,8 +5,8 @@[m
+     "type": "git",[m
+     "url": "https://github.com/Karanjot786/TermUI"[m
+   },[m
+[31m-  "version": "0.1.7",[m
+[31m-  "description": "JSX runtime for TermUI with useState, useEffect, useContext, useAsync, and memo()",[m
+[32m+[m[32m  "version": "0.2.0",[m
+[32m+[m[32m  "description": "JSX runtime for TermUI with Virtual DOM, Fiber reconciliation, useState, useEffect, useContext, useAsync, memo(), and performance optimizations",[m
+   "type": "module",[m
+   "main": "./dist/index.cjs",[m
+   "module": "./dist/index.js",[m
+[36m@@ -26,28 +26,148 @@[m
+       "types": "./dist/jsx-runtime.d.ts",[m
+       "import": "./dist/jsx-runtime.js",[m
+       "require": "./dist/jsx-runtime.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./vdom": {[m
+[32m+[m[32m      "types": "./dist/vdom/index.d.ts",[m
+[32m+[m[32m      "import": "./dist/vdom/index.js",[m
+[32m+[m[32m      "require": "./dist/vdom/index.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./fiber": {[m
+[32m+[m[32m      "types": "./dist/fiber/index.d.ts",[m
+[32m+[m[32m      "import": "./dist/fiber/index.js",[m
+[32m+[m[32m      "require": "./dist/fiber/index.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./reconciler": {[m
+[32m+[m[32m      "types": "./dist/reconciler/index.d.ts",[m
+[32m+[m[32m      "import": "./dist/reconciler/index.js",[m
+[32m+[m[32m      "require": "./dist/reconciler/index.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks": {[m
+[32m+[m[32m      "types": "./dist/hooks/index.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/index.js",[m
+[32m+[m[32m      "require": "./dist/hooks/index.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useMemo": {[m
+[32m+[m[32m      "types": "./dist/hooks/useMemo.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useMemo.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useMemo.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useCallback": {[m
+[32m+[m[32m      "types": "./dist/hooks/useCallback.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useCallback.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useCallback.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useRef": {[m
+[32m+[m[32m      "types": "./dist/hooks/useRef.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useRef.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useRef.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useState": {[m
+[32m+[m[32m      "types": "./dist/hooks/useState.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useState.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useState.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useEffect": {[m
+[32m+[m[32m      "types": "./dist/hooks/useEffect.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useEffect.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useEffect.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useContext": {[m
+[32m+[m[32m      "types": "./dist/hooks/useContext.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useContext.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useContext.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useReducer": {[m
+[32m+[m[32m      "types": "./dist/hooks/useReducer.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useReducer.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useReducer.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useAsync": {[m
+[32m+[m[32m      "types": "./dist/hooks/useAsync.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useAsync.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useAsync.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useKeymap": {[m
+[32m+[m[32m      "types": "./dist/hooks/useKeymap.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useKeymap.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useKeymap.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useFocus": {[m
+[32m+[m[32m      "types": "./dist/hooks/useFocus.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useFocus.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useFocus.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./hooks/useMotion": {[m
+[32m+[m[32m      "types": "./dist/hooks/useMotion.d.ts",[m
+[32m+[m[32m      "import": "./dist/hooks/useMotion.js",[m
+[32m+[m[32m      "require": "./dist/hooks/useMotion.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./components/ErrorBoundary": {[m
+[32m+[m[32m      "types": "./dist/components/ErrorBoundary.d.ts",[m
+[32m+[m[32m      "import": "./dist/components/ErrorBoundary.js",[m
+[32m+[m[32m      "require": "./dist/components/ErrorBoundary.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./components/FocusContext": {[m
+[32m+[m[32m      "types": "./dist/components/FocusContext.d.ts",[m
+[32m+[m[32m      "import": "./dist/components/FocusContext.js",[m
+[32m+[m[32m      "require": "./dist/components/FocusContext.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./components/Profiler": {[m
+[32m+[m[32m      "types": "./dist/components/Profiler.d.ts",[m
+[32m+[m[32m      "import": "./dist/components/Profiler.js",[m
+[32m+[m[32m      "require": "./dist/components/Profiler.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./components/Suspense": {[m
+[32m+[m[32m      "types": "./dist/components/Suspense.d.ts",[m
+[32m+[m[32m      "import": "./dist/components/Suspense.js",[m
+[32m+[m[32m      "require": "./dist/components/Suspense.cjs"[m
+[32m+[m[32m    },[m
+[32m+[m[32m    "./render": {[m
+[32m+[m[32m      "types": "./dist/render.d.ts",[m
+[32m+[m[32m      "import": "./dist/render.js",[m
+[32m+[m[32m      "require": "./dist/render.cjs"[m
+     }[m
+   },[m
+   "files": [[m
+[31m-    "dist"[m
+[32m+[m[32m    "dist",[m
+[32m+[m[32m    "src",[m
+[32m+[m[32m    "README.md",[m
+[32m+[m[32m    "LICENSE"[m
+   ],[m
+   "publishConfig": {[m
+     "access": "public"[m
+   },[m
+   "scripts": {[m
+[31m-    "build": "tsup",[m
+[32m+[m[32m    "build": "tsup --config tsup.config.ts",[m
+[32m+[m[32m    "build:types": "tsc -p tsconfig.typecheck.json --emitDeclarationOnly --declaration",[m
+     "dev": "tsup --watch",[m
+     "test": "vitest run --config ../../vitest.config.ts",[m
+[31m-    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"[m
+[32m+[m[32m    "test:watch": "vitest --config ../../vitest.config.ts",[m
+[32m+[m[32m    "test:coverage": "vitest run --coverage --config ../../vitest.config.ts",[m
+[32m+[m[32m    "test:bench": "vitest bench --config ../../vitest.config.ts",[m
+[32m+[m[32m    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",[m
+[32m+[m[32m    "lint": "eslint src/**/*.ts src/**/*.tsx",[m
+[32m+[m[32m    "clean": "rm -rf dist node_modules",[m
+[32m+[m[32m    "prepublishOnly": "bun run build",[m
+[32m+[m[32m    "profile": "node --prof dist/index.js",[m
+[32m+[m[32m    "analyze": "bun run build -- --analyze"[m
+   },[m
+   "dependencies": {[m
+     "@termuijs/core": "workspace:*",[m
+     "@termuijs/motion": "workspace:*",[m
+[31m-    "@termuijs/widgets": "workspace:*"[m
+[32m+[m[32m    "@termuijs/widgets": "workspace:*",[m
+[32m+[m[32m    "@termuijs/store": "workspace:*"[m
+   },[m
+   "devDependencies": {[m
+[32m+[m[32m    "@types/node": "^20.11.0",[m
+[32m+[m[32m    "@types/react": "^18.2.0",[m
+[32m+[m[32m    "@vitest/coverage-v8": "^1.3.0",[m
+[32m+[m[32m    "esbuild": "^0.20.0",[m
+[32m+[m[32m    "eslint": "^8.56.0",[m
+[32m+[m[32m    "eslint-plugin-import": "^2.29.1",[m
+     "tsup": "^8.0.0",[m
+[31m-    "typescript": "^5.4.0"[m
+[32m+[m[32m    "typescript": "^5.4.0",[m
+[32m+[m[32m    "vitest": "^1.3.0"[m
+   },[m
+   "keywords": [[m
+     "terminal",[m
+[36m@@ -56,11 +176,33 @@[m
+     "jsx",[m
+     "tsx",[m
+     "react",[m
+[31m-    "hooks"[m
+[32m+[m[32m    "hooks",[m
+[32m+[m[32m    "virtual-dom",[m
+[32m+[m[32m    "fiber",[m
+[32m+[m[32m    "reconciliation",[m
+[32m+[m[32m    "performance",[m
+[32m+[m[32m    "concurrent",[m
+[32m+[m[32m    "time-slicing"[m
+   ],[m
+   "license": "MIT",[m
+   "engines": {[m
+     "bun": ">=1.3.0",[m
+     "node": ">=18.0.0"[m
+[32m+[m[32m  },[m
+[32m+[m[32m  "peerDependencies": {[m
+[32m+[m[32m    "typescript": ">=5.0.0"[m
+[32m+[m[32m  },[m
+[32m+[m[32m  "peerDependenciesMeta": {[m
+[32m+[m[32m    "typescript": {[m
+[32m+[m[32m      "optional": true[m
+[32m+[m[32m    }[m
+[32m+[m[32m  },[m
+[32m+[m[32m  "bugs": {[m
+[32m+[m[32m    "url": "https://github.com/Karanjot786/TermUI/issues"[m
+[32m+[m[32m  },[m
+[32m+[m[32m  "author": "Karanjot786",[m
+[32m+[m[32m  "funding": {[m
+[32m+[m[32m    "type": "github",[m
+[32m+[m[32m    "url": "https://github.com/sponsors/Karanjot786"[m
+   }[m
+[31m-}[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/packages/jsx/src/fiber/FiberNode.ts b/packages/jsx/src/fiber/FiberNode.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..faf6239[m
+[1m--- /dev/null[m
+[1m+++ b/packages/jsx/src/fiber/FiberNode.ts[m
+[36m@@ -0,0 +1,91 @@[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Fiber Node implementation for incremental rendering[m
+[32m+[m[32m * Based on React Fiber architecture[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32mimport { VNode } from '../vdom/VNode';[m
+[32m+[m
+[32m+[m[32mexport enum FiberPriority {[m
+[32m+[m[32m  IMMEDIATE = 1,[m
+[32m+[m[32m  HIGH = 2,[m
+[32m+[m[32m  NORMAL = 3,[m
+[32m+[m[32m  LOW = 4,[m
+[32m+[m[32m  IDLE = 5[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport interface FiberNode {[m
+[32m+[m[32m  /** Type of fiber */[m
+[32m+[m[32m  type: any;[m
+[32m+[m[32m  /** Virtual DOM node reference */[m
+[32m+[m[32m  vnode: VNode | null;[m
+[32m+[m[32m  /** DOM node reference */[m
+[32m+[m[32m  dom: any;[m
+[32m+[m[32m  /** Parent fiber */[m
+[32m+[m[32m  parent: FiberNode | null;[m
+[32m+[m[32m  /** Child fiber */[m
+[32m+[m[32m  child: FiberNode | null;[m
+[32m+[m[32m  /** Sibling fiber */[m
+[32m+[m[32m  sibling: FiberNode | null;[m
+[32m+[m[32m  /** Work in progress alternative */[m
+[32m+[m[32m  alternate: FiberNode | null;[m
+[32m+[m[32m  /** Effect list for commits */[m
+[32m+[m[32m  effectTag?: EffectTag;[m
+[32m+[m[32m  /** Priority of this fiber */[m
+[32m+[m[32m  priority: FiberPriority;[m
+[32m+[m[32m  /** State for hooks */[m
+[32m+[m[32m  memoizedState: any;[m
+[32m+[m[32m  /** Props for this fiber */[m
+[32m+[m[32m  memoizedProps: any;[m
+[32m+[m[32m  /** Pending work */[m
+[32m+[m[32m  pendingProps: any;[m
+[32m+[m[32m  /** Flags for side effects */[m
+[32m+[m[32m  flags: FiberFlags;[m
+[32m+[m[32m  /** Index in parent's children */[m
+[32m+[m[32m  index: number;[m
+[32m+[m[32m  /** Key for reconciliation */[m
+[32m+[m[32m  key: string | number | null;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport enum EffectTag {[m
+[32m+[m[32m  CREATE = 'CREATE',[m
+[32m+[m[32m  UPDATE = 'UPDATE',[m
+[32m+[m[32m  DELETE = 'DELETE',[m
+[32m+[m[32m  PLACEMENT = 'PLACEMENT',[m
+[32m+[m[32m  UPDATE_PROPS = 'UPDATE_PROPS',[m
+[32m+[m[32m  UPDATE_STATE = 'UPDATE_STATE'[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport enum FiberFlags {[m
+[32m+[m[32m  NONE = 0,[m
+[32m+[m[32m  UPDATE = 1 << 0,[m
+[32m+[m[32m  DELETE = 1 << 1,[m
+[32m+[m[32m  CREATE = 1 << 2,[m
+[32m+[m[32m  PLACEMENT = 1 << 3,[m
+[32m+[m[32m  PROP_UPDATE = 1 << 4[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Create a new Fiber node[m
+[32m+[m[32m */[m
+[32m+[m[32mexport function createFiberNode([m
+[32m+[m[32m  vnode: VNode | null,[m
+[32m+[m[32m  parent: FiberNode | null = null[m
+[32m+[m[32m): FiberNode {[m
+[32m+[m[32m  return {[m
+[32m+[m[32m    type: vnode?.type ?? null,[m
+[32m+[m[32m    vnode,[m
+[32m+[m[32m    dom: null,[m
+[32m+[m[32m    parent,[m
+[32m+[m[32m    child: null,[m
+[32m+[m[32m    sibling: null,[m
+[32m+[m[32m    alternate: null,[m
+[32m+[m[32m    effectTag: undefined,[m
+[32m+[m[32m    priority: FiberPriority.NORMAL,[m
+[32m+[m[32m    memoizedState: null,[m
+[32m+[m[32m    memoizedProps: vnode?.props ?? {},[m
+[32m+[m[32m    pendingProps: vnode?.props ?? {},[m
+[32m+[m[32m    flags: FiberFlags.NONE,[m
+[32m+[m[32m    index: 0,[m
+[32m+[m[32m    key: vnode?.key ?? null[m
+[32m+[m[32m  };[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/packages/jsx/src/fiber/scheduler.ts b/packages/jsx/src/fiber/scheduler.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..1240727[m
+[1m--- /dev/null[m
+[1m+++ b/packages/jsx/src/fiber/scheduler.ts[m
+[36m@@ -0,0 +1,69 @@[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Fiber Scheduler with time-slicing[m
+[32m+[m[32m * Breaks work into 16ms chunks (60fps)[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32mimport { FiberNode, FiberPriority } from './FiberNode';[m
+[32m+[m
+[32m+[m[32mtype WorkCallback = (deadline: IdleDeadline) => boolean;[m
+[32m+[m
+[32m+[m[32mclass FiberScheduler {[m
+[32m+[m[32m  private workQueue: { callback: WorkCallback; priority: FiberPriority }[] = [];[m
+[32m+[m[32m  private isWorkScheduled = false;[m
+[32m+[m[32m  private currentPriority: FiberPriority = FiberPriority.NORMAL;[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Schedule work with priority[m
+[32m+[m[32m   */[m
+[32m+[m[32m  scheduleWork(callback: WorkCallback, priority: FiberPriority = FiberPriority.NORMAL): void {[m
+[32m+[m[32m    this.workQueue.push({ callback, priority });[m
+[32m+[m[32m    this.workQueue.sort((a, b) => a.priority - b.priority);[m
+[32m+[m[41m    [m
+[32m+[m[32m    if (!this.isWorkScheduled) {[m
+[32m+[m[32m      this.isWorkScheduled = true;[m
+[32m+[m[32m      requestIdleCallback(this.performWork.bind(this));[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Perform work in chunks[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private performWork(deadline: IdleDeadline): void {[m
+[32m+[m[32m    while (this.workQueue.length > 0 && deadline.timeRemaining() > 1) {[m
+[32m+[m[32m      const work = this.workQueue.shift()!;[m
+[32m+[m[32m      this.currentPriority = work.priority;[m
+[32m+[m[41m      [m
+[32m+[m[32m      const shouldContinue = work.callback(deadline);[m
+[32m+[m[41m      [m
+[32m+[m[32m      if (shouldContinue) {[m
+[32m+[m[32m        // Re-queue work that needs more time[m
+[32m+[m[32m        this.workQueue.unshift(work);[m
+[32m+[m[32m        break;[m
+[32m+[m[32m      }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    if (this.workQueue.length > 0) {[m
+[32m+[m[32m      // More work to do, schedule another frame[m
+[32m+[m[32m      requestIdleCallback(this.performWork.bind(this));[m
+[32m+[m[32m    } else {[m
+[32m+[m[32m      this.isWorkScheduled = false;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Get current priority[m
+[32m+[m[32m   */[m
+[32m+[m[32m  getPriority(): FiberPriority {[m
+[32m+[m[32m    return this.currentPriority;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Cancel all scheduled work[m
+[32m+[m[32m   */[m
+[32m+[m[32m  cancelWork(): void {[m
+[32m+[m[32m    this.workQueue = [];[m
+[32m+[m[32m    this.isWorkScheduled = false;[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport const scheduler = new FiberScheduler();[m
+\ No newline at end of file[m
+[1mdiff --git a/packages/jsx/src/hooks/useMemo.ts b/packages/jsx/src/hooks/useMemo.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..f1d2e46[m
+[1m--- /dev/null[m
+[1m+++ b/packages/jsx/src/hooks/useMemo.ts[m
+[36m@@ -0,0 +1,107 @@[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Memoization hooks[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32mimport { useRef, useState } from '../index';[m
+[32m+[m
+[32m+[m[32minterface MemoizedValue<T> {[m
+[32m+[m[32m  value: T;[m
+[32m+[m[32m  dependencies: any[];[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * useMemo - Memoize expensive computations[m
+[32m+[m[32m */[m
+[32m+[m[32mexport function useMemo<T>([m
+[32m+[m[32m  factory: () => T,[m
+[32m+[m[32m  dependencies: any[][m
+[32m+[m[32m): T {[m
+[32m+[m[32m  const memoizedRef = useRef<MemoizedValue<T> | null>(null);[m
+[32m+[m[41m  [m
+[32m+[m[32m  if (!memoizedRef.current) {[m
+[32m+[m[32m    // First render - compute value[m
+[32m+[m[32m    const value = factory();[m
+[32m+[m[32m    memoizedRef.current = {[m
+[32m+[m[32m      value,[m
+[32m+[m[32m      dependencies: [...dependencies][m
+[32m+[m[32m    };[m
+[32m+[m[32m    return value;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Check dependencies[m
+[32m+[m[32m  const hasChanged = dependencies.some([m
+[32m+[m[32m    (dep, index) => dep !== memoizedRef.current!.dependencies[index][m
+[32m+[m[32m  );[m
+[32m+[m
+[32m+[m[32m  if (hasChanged) {[m
+[32m+[m[32m    // Recompute[m
+[32m+[m[32m    const value = factory();[m
+[32m+[m[32m    memoizedRef.current = {[m
+[32m+[m[32m      value,[m
+[32m+[m[32m      dependencies: [...dependencies][m
+[32m+[m[32m    };[m
+[32m+[m[32m    return value;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return memoizedRef.current.value;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * useCallback - Memoize functions[m
+[32m+[m[32m */[m
+[32m+[m[32mexport function useCallback<T extends (...args: any[]) => any>([m
+[32m+[m[32m  callback: T,[m
+[32m+[m[32m  dependencies: any[][m
+[32m+[m[32m): T {[m
+[32m+[m[32m  return useMemo(() => callback, dependencies);[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * React.memo equivalent - Memoize component[m
+[32m+[m[32m */[m
+[32m+[m[32mexport function memo<P extends object>([m
+[32m+[m[32m  Component: (props: P) => any,[m
+[32m+[m[32m  areEqual?: (prevProps: P, nextProps: P) => boolean[m
+[32m+[m[32m): (props: P) => any {[m
+[32m+[m[32m  let prevProps: P | null = null;[m
+[32m+[m[32m  let prevResult: any = null;[m
+[32m+[m
+[32m+[m[32m  return (props: P) => {[m
+[32m+[m[32m    if (prevProps === null) {[m
+[32m+[m[32m      prevProps = props;[m
+[32m+[m[32m      prevResult = Component(props);[m
+[32m+[m[32m      return prevResult;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Check if props are equal[m
+[32m+[m[32m    const areEqualFn = areEqual ?? defaultAreEqual;[m
+[32m+[m[32m    if (areEqualFn(prevProps, props)) {[m
+[32m+[m[32m      return prevResult;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Update[m
+[32m+[m[32m    prevProps = props;[m
+[32m+[m[32m    prevResult = Component(props);[m
+[32m+[m[32m    return prevResult;[m
+[32m+[m[32m  };[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Default equality check[m
+[32m+[m[32m */[m
+[32m+[m[32mfunction defaultAreEqual(prevProps: any, nextProps: any): boolean {[m
+[32m+[m[32m  const keys1 = Object.keys(prevProps);[m
+[32m+[m[32m  const keys2 = Object.keys(nextProps);[m
+[32m+[m
+[32m+[m[32m  if (keys1.length !== keys2.length) {[m
+[32m+[m[32m    return false;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  for (const key of keys1) {[m
+[32m+[m[32m    if (prevProps[key] !== nextProps[key]) {[m
+[32m+[m[32m      return false;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return true;[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/packages/jsx/src/reconciler/index.ts b/packages/jsx/src/reconciler/index.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..5658061[m
+[1m--- /dev/null[m
+[1m+++ b/packages/jsx/src/reconciler/index.ts[m
+[36m@@ -0,0 +1,215 @@[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Fiber Reconciler[m
+[32m+[m[32m * Handles mounting, updating, and unmounting[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32mimport { VNode, createVNode } from '../vdom/VNode';[m
+[32m+[m[32mimport { diff, PatchType, Patch } from '../vdom/diff';[m
+[32m+[m[32mimport { FiberNode, createFiberNode, EffectTag, FiberFlags } from '../fiber/FiberNode';[m
+[32m+[m[32mimport { scheduler } from '../fiber/scheduler';[m
+[32m+[m[32mimport { render } from '../render';[m
+[32m+[m
+[32m+[m[32mclass FiberReconciler {[m
+[32m+[m[32m  private root: FiberNode | null = null;[m
+[32m+[m[32m  private currentRoot: FiberNode | null = null;[m
+[32m+[m[32m  private workInProgress: FiberNode | null = null;[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Mount a VNode to the DOM[m
+[32m+[m[32m   */[m
+[32m+[m[32m  mount(vnode: VNode, container: any): void {[m
+[32m+[m[32m    // Create root fiber[m
+[32m+[m[32m    this.root = createFiberNode(vnode);[m
+[32m+[m[32m    this.currentRoot = this.root;[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Schedule mount work[m
+[32m+[m[32m    scheduler.scheduleWork((deadline) => {[m
+[32m+[m[32m      this.mountFiber(this.root!, deadline);[m
+[32m+[m[32m      return false;[m
+[32m+[m[32m    }, FiberPriority.IMMEDIATE);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Update the tree with new VNode[m
+[32m+[m[32m   */[m
+[32m+[m[32m  update(vnode: VNode): void {[m
+[32m+[m[32m    if (!this.currentRoot) {[m
+[32m+[m[32m      throw new Error('No root to update');[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Create work in progress tree[m
+[32m+[m[32m    this.workInProgress = this.cloneFiber(this.currentRoot);[m
+[32m+[m[32m    this.workInProgress.vnode = vnode;[m
+[32m+[m
+[32m+[m[32m    // Diff and schedule updates[m
+[32m+[m[32m    scheduler.scheduleWork((deadline) => {[m
+[32m+[m[32m      this.reconcile(this.currentRoot!, this.workInProgress!);[m
+[32m+[m[32m      return false;[m
+[32m+[m[32m    }, FiberPriority.HIGH);[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Mount a fiber tree[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private mountFiber(fiber: FiberNode, deadline: IdleDeadline): void {[m
+[32m+[m[32m    if (!fiber.vnode) return;[m
+[32m+[m
+[32m+[m[32m    // Create DOM element[m
+[32m+[m[32m    const dom = render(fiber.vnode);[m
+[32m+[m[32m    fiber.dom = dom;[m
+[32m+[m
+[32m+[m[32m    // Mount children[m
+[32m+[m[32m    if (fiber.vnode.children) {[m
+[32m+[m[32m      let prevChild: FiberNode | null = null;[m
+[32m+[m[32m      for (let i = 0; i < fiber.vnode.children.length; i++) {[m
+[32m+[m[32m        const childVNode = fiber.vnode.children[i];[m
+[32m+[m[32m        const childFiber = createFiberNode(childVNode, fiber);[m
+[32m+[m[32m        childFiber.index = i;[m
+[32m+[m
+[32m+[m[32m        if (i === 0) {[m
+[32m+[m[32m          fiber.child = childFiber;[m
+[32m+[m[32m        } else if (prevChild) {[m
+[32m+[m[32m          prevChild.sibling = childFiber;[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        prevChild = childFiber;[m
+[32m+[m[32m        this.mountFiber(childFiber, deadline);[m
+[32m+[m[32m      }[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Reconcile two fiber trees[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private reconcile(current: FiberNode, workInProgress: FiberNode): void {[m
+[32m+[m[32m    // Diff virtual DOM[m
+[32m+[m[32m    const patches = diff(current.vnode, workInProgress.vnode);[m
+[32m+[m
+[32m+[m[32m    // Apply patches[m
+[32m+[m[32m    for (const patch of patches) {[m
+[32m+[m[32m      this.applyPatch(current, patch);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Reconcile children[m
+[32m+[m[32m    let childA = current.child;[m
+[32m+[m[32m    let childB = workInProgress.child;[m
+[32m+[m
+[32m+[m[32m    while (childA && childB) {[m
+[32m+[m[32m      this.reconcile(childA, childB);[m
+[32m+[m[32m      childA = childA.sibling;[m
+[32m+[m[32m      childB = childB.sibling;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Apply a patch to the tree[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private applyPatch(fiber: FiberNode, patch: Patch): void {[m
+[32m+[m[32m    switch (patch.type) {[m
+[32m+[m[32m      case PatchType.CREATE:[m
+[32m+[m[32m        this.createNode(patch.node, fiber);[m
+[32m+[m[32m        break;[m
+[32m+[m[41m      [m
+[32m+[m[32m      case PatchType.UPDATE:[m
+[32m+[m[32m        this.updateNode(patch.node, fiber);[m
+[32m+[m[32m        break;[m
+[32m+[m[41m      [m
+[32m+[m[32m      case PatchType.DELETE:[m
+[32m+[m[32m        this.deleteNode(patch.node);[m
+[32m+[m[32m        break;[m
+[32m+[m[41m      [m
+[32m+[m[32m      case PatchType.REPLACE:[m
+[32m+[m[32m        this.replaceNode(patch.oldNode!, patch.node, fiber);[m
+[32m+[m[32m        break;[m
+[32m+[m[41m      [m
+[32m+[m[32m      case PatchType.MOVE:[m
+[32m+[m[32m        this.moveNode(patch.oldNode!, patch.node, fiber);[m
+[32m+[m[32m        break;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Create a new node[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private createNode(vnode: VNode, parent: FiberNode): void {[m
+[32m+[m[32m    const dom = render(vnode);[m
+[32m+[m[32m    const fiber = createFiberNode(vnode, parent);[m
+[32m+[m[32m    fiber.dom = dom;[m
+[32m+[m[32m    fiber.flags |= FiberFlags.CREATE;[m
+[32m+[m[41m    [m
+[32m+[m[32m    // Append to parent[m
+[32m+[m[32m    if (parent.dom) {[m
+[32m+[m[32m      parent.dom.appendChild(dom);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Update an existing node[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private updateNode(vnode: VNode, parent: FiberNode): void {[m
+[32m+[m[32m    // Find existing fiber[m
+[32m+[m[32m    let child = parent.child;[m
+[32m+[m[32m    while (child) {[m
+[32m+[m[32m      if (child.vnode?.key === vnode.key) {[m
+[32m+[m[32m        // Update props[m
+[32m+[m[32m        if (child.vnode) {[m
+[32m+[m[32m          child.vnode.props = vnode.props;[m
+[32m+[m[32m        }[m
+[32m+[m[32m        child.flags |= FiberFlags.UPDATE;[m
+[32m+[m[32m        break;[m
+[32m+[m[32m      }[m
+[32m+[m[32m      child = child.sibling;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Delete a node[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private deleteNode(vnode: VNode): void {[m
+[32m+[m[32m    // Find and remove from DOM[m
+[32m+[m[32m    // Implementation depends on DOM structure[m
+[32m+[m[32m    if (vnode.dom) {[m
+[32m+[m[32m      vnode.dom.remove();[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Replace a node[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private replaceNode(oldVNode: VNode, newVNode: VNode, parent: FiberNode): void {[m
+[32m+[m[32m    const newDom = render(newVNode);[m
+[32m+[m[41m    [m
+[32m+[m[32m    if (oldVNode.dom && parent.dom) {[m
+[32m+[m[32m      parent.dom.replaceChild(newDom, oldVNode.dom);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Move a node[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private moveNode(oldVNode: VNode, newVNode: VNode, parent: FiberNode): void {[m
+[32m+[m[32m    // Remove from old position, insert at new position[m
+[32m+[m[32m    // Implementation depends on DOM structure[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * Clone a fiber tree[m
+[32m+[m[32m   */[m
+[32m+[m[32m  private cloneFiber(fiber: FiberNode): FiberNode {[m
+[32m+[m[32m    const clone = createFiberNode(fiber.vnode, fiber.parent);[m
+[32m+[m[32m    clone.dom = fiber.dom;[m
+[32m+[m[32m    clone.flags = fiber.flags;[m
+[32m+[m[32m    clone.effectTag = fiber.effectTag;[m
+[32m+[m[32m    clone.memoizedState = fiber.memoizedState;[m
+[32m+[m[32m    clone.memoizedProps = fiber.memoizedProps;[m
+[32m+[m
+[32m+[m[32m    // Clone children[m
+[32m+[m[32m    if (fiber.child) {[m
+[32m+[m[32m      clone.child = this.cloneFiber(fiber.child);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    return clone;[m
+[32m+[m[32m  }[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport const reconciler = new FiberReconciler();[m
+\ No newline at end of file[m
+[1mdiff --git a/packages/jsx/src/vdom/VNode.ts b/packages/jsx/src/vdom/VNode.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..3898400[m
+[1m--- /dev/null[m
+[1m+++ b/packages/jsx/src/vdom/VNode.ts[m
+[36m@@ -0,0 +1,107 @@[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Virtual DOM Node representation[m
+[32m+[m[32m * @package @termuijs/jsx[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32mexport type VNodeType = string | Function | symbol;[m
+[32m+[m[32mexport type Key = string | number | null;[m
+[32m+[m
+[32m+[m[32mexport interface VNode {[m
+[32m+[m[32m  /** Type of the node (component, element, fragment) */[m
+[32m+[m[32m  type: VNodeType;[m
+[32m+[m[32m  /** Props passed to the node */[m
+[32m+[m[32m  props: Record<string, any>;[m
+[32m+[m[32m  /** Child nodes */[m
+[32m+[m[32m  children: VNode[];[m
+[32m+[m[32m  /** Unique key for list reconciliation */[m
+[32m+[m[32m  key: Key;[m
+[32m+[m[32m  /** Reference to the DOM node */[m
+[32m+[m[32m  dom: any;[m
+[32m+[m[32m  /** Component instance for class components */[m
+[32m+[m[32m  instance?: any;[m
+[32m+[m[32m  /** Flag for text nodes */[m
+[32m+[m[32m  isText?: boolean;[m
+[32m+[m[32m  /** Flag for fragment nodes */[m
+[32m+[m[32m  isFragment?: boolean;[m
+[32m+[m[32m  /** Parent VNode */[m
+[32m+[m[32m  parent?: VNode | null;[m
+[32m+[m[32m  /** Depth in the tree */[m
+[32m+[m[32m  depth?: number;[m
+[32m+[m[32m  /** Index in parent's children */[m
+[32m+[m[32m  index?: number;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport interface VNodeProps {[m
+[32m+[m[32m  key?: Key;[m
+[32m+[m[32m  children?: VNode | VNode[] | string | number;[m
+[32m+[m[32m  [key: string]: any;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Create a VNode[m
+[32m+[m[32m */[m
+[32m+[m[32mexport function createVNode([m
+[32m+[m[32m  type: VNodeType,[m
+[32m+[m[32m  props: VNodeProps = {},[m
+[32m+[m[32m  children?: VNode | VNode[] | string | number[m
+[32m+[m[32m): VNode {[m
+[32m+[m[32m  const normalizedChildren = normalizeChildren(children);[m
+[32m+[m[32m  const key = props.key ?? null;[m
+[32m+[m
+[32m+[m[32m  return {[m
+[32m+[m[32m    type,[m
+[32m+[m[32m    props: { ...props, key: undefined },[m
+[32m+[m[32m    children: normalizedChildren,[m
+[32m+[m[32m    key,[m
+[32m+[m[32m    dom: null,[m
+[32m+[m[32m    isText: typeof type === 'string' && type === '#text',[m
+[32m+[m[32m    isFragment: typeof type === 'symbol' && type === Fragment,[m
+[32m+[m[32m    parent: null,[m
+[32m+[m[32m    depth: 0,[m
+[32m+[m[32m    index: 0[m
+[32m+[m[32m  };[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Normalize children to array of VNodes[m
+[32m+[m[32m */[m
+[32m+[m[32mfunction normalizeChildren([m
+[32m+[m[32m  children?: VNode | VNode[] | string | number[m
+[32m+[m[32m): VNode[] {[m
+[32m+[m[32m  if (children === undefined || children === null) {[m
+[32m+[m[32m    return [];[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  if (Array.isArray(children)) {[m
+[32m+[m[32m    return children.flat().filter(Boolean) as VNode[];[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  if (typeof children === 'string' || typeof children === 'number') {[m
+[32m+[m[32m    return [createTextVNode(String(children))];[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return [children];[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Create text VNode[m
+[32m+[m[32m */[m
+[32m+[m[32mexport function createTextVNode(text: string): VNode {[m
+[32m+[m[32m  return {[m
+[32m+[m[32m    type: '#text',[m
+[32m+[m[32m    props: { textContent: text },[m
+[32m+[m[32m    children: [],[m
+[32m+[m[32m    key: null,[m
+[32m+[m[32m    dom: null,[m
+[32m+[m[32m    isText: true,[m
+[32m+[m[32m    isFragment: false,[m
+[32m+[m[32m    parent: null,[m
+[32m+[m[32m    depth: 0,[m
+[32m+[m[32m    index: 0[m
+[32m+[m[32m  };[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Fragment symbol for multiple roots[m
+[32m+[m[32m */[m
+[32m+[m[32mexport const Fragment = Symbol('Fragment');[m
+\ No newline at end of file[m
+[1mdiff --git a/packages/jsx/src/vdom/diff.ts b/packages/jsx/src/vdom/diff.ts[m
+[1mnew file mode 100644[m
+[1mindex 0000000..834bc3a[m
+[1m--- /dev/null[m
+[1m+++ b/packages/jsx/src/vdom/diff.ts[m
+[36m@@ -0,0 +1,142 @@[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Diffing algorithm with O(n) complexity[m
+[32m+[m[32m * Uses key-based reconciliation similar to React[m
+[32m+[m[32m */[m
+[32m+[m
+[32m+[m[32mimport { VNode, Key } from './VNode';[m
+[32m+[m
+[32m+[m[32mexport interface Patch {[m
+[32m+[m[32m  type: PatchType;[m
+[32m+[m[32m  node: VNode;[m
+[32m+[m[32m  index?: number;[m
+[32m+[m[32m  oldNode?: VNode;[m
+[32m+[m[32m  newChildren?: VNode[];[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mexport enum PatchType {[m
+[32m+[m[32m  CREATE = 'CREATE',[m
+[32m+[m[32m  UPDATE = 'UPDATE',[m
+[32m+[m[32m  DELETE = 'DELETE',[m
+[32m+[m[32m  MOVE = 'MOVE',[m
+[32m+[m[32m  REPLACE = 'REPLACE'[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Diff two VDOM trees and return patches[m
+[32m+[m[32m */[m
+[32m+[m[32mexport function diff(oldVNode: VNode | null, newVNode: VNode | null): Patch[] {[m
+[32m+[m[32m  const patches: Patch[] = [];[m
+[32m+[m
+[32m+[m[32m  if (oldVNode === null && newVNode !== null) {[m
+[32m+[m[32m    // Create new node[m
+[32m+[m[32m    patches.push({ type: PatchType.CREATE, node: newVNode });[m
+[32m+[m[32m    return patches;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  if (oldVNode !== null && newVNode === null) {[m
+[32m+[m[32m    // Delete old node[m
+[32m+[m[32m    patches.push({ type: PatchType.DELETE, node: oldVNode });[m
+[32m+[m[32m    return patches;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  if (oldVNode === null && newVNode === null) {[m
+[32m+[m[32m    return patches;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Check if types are different[m
+[32m+[m[32m  if (oldVNode!.type !== newVNode!.type) {[m
+[32m+[m[32m    // Replace node[m
+[32m+[m[32m    patches.push({ type: PatchType.REPLACE, node: newVNode!, oldNode: oldVNode! });[m
+[32m+[m[32m    return patches;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Update props if they changed[m
+[32m+[m[32m  if (propsChanged(oldVNode!.props, newVNode!.props)) {[m
+[32m+[m[32m    patches.push({ type: PatchType.UPDATE, node: newVNode! });[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Diff children recursively[m
+[32m+[m[32m  const childPatches = diffChildren(oldVNode!.children, newVNode!.children);[m
+[32m+[m[32m  patches.push(...childPatches);[m
+[32m+[m
+[32m+[m[32m  return patches;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Diff children using key-based reconciliation[m
+[32m+[m[32m */[m
+[32m+[m[32mfunction diffChildren(oldChildren: VNode[], newChildren: VNode[]): Patch[] {[m
+[32m+[m[32m  const patches: Patch[] = [];[m
+[32m+[m[32m  const oldKeys = new Map<Key, VNode>();[m
+[32m+[m[32m  const newKeys = new Map<Key, VNode>();[m
+[32m+[m[32m  const usedKeys = new Set<Key>();[m
+[32m+[m
+[32m+[m[32m  // Build key maps[m
+[32m+[m[32m  oldChildren.forEach(child => {[m
+[32m+[m[32m    if (child.key !== null) {[m
+[32m+[m[32m      oldKeys.set(child.key, child);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  newChildren.forEach(child => {[m
+[32m+[m[32m    if (child.key !== null) {[m
+[32m+[m[32m      newKeys.set(child.key, child);[m
+[32m+[m[32m    }[m
+[32m+[m[32m  });[m
+[32m+[m
+[32m+[m[32m  // Handle keyed children[m
+[32m+[m[32m  for (let i = 0; i < newChildren.length; i++) {[m
+[32m+[m[32m    const newChild = newChildren[i];[m
+[32m+[m[41m    [m
+[32m+[m[32m    if (newChild.key !== null && oldKeys.has(newChild.key)) {[m
+[32m+[m[32m      // Key exists, update in place[m
+[32m+[m[32m      const oldChild = oldKeys.get(newChild.key)!;[m
+[32m+[m[32m      usedKeys.add(newChild.key);[m
+[32m+[m[41m      [m
+[32m+[m[32m      // Find old index[m
+[32m+[m[32m      const oldIndex = oldChildren.indexOf(oldChild);[m
+[32m+[m[32m      if (oldIndex !== i) {[m
+[32m+[m[32m        patches.push({[m
+[32m+[m[32m          type: PatchType.MOVE,[m
+[32m+[m[32m          node: newChild,[m
+[32m+[m[32m          index: i,[m
+[32m+[m[32m          oldNode: oldChild[m
+[32m+[m[32m        });[m
+[32m+[m[32m      }[m
+[32m+[m[41m      [m
+[32m+[m[32m      patches.push(...diff(oldChild, newChild));[m
+[32m+[m[32m    } else {[m
+[32m+[m[32m      // New key or keyless - create[m
+[32m+[m[32m      patches.push({ type: PatchType.CREATE, node: newChild, index: i });[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  // Delete old children not in new tree[m
+[32m+[m[32m  for (const child of oldChildren) {[m
+[32m+[m[32m    if (child.key !== null && !usedKeys.has(child.key)) {[m
+[32m+[m[32m      patches.push({ type: PatchType.DELETE, node: child });[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return patches;[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32m/**[m
+[32m+[m[32m * Check if props have changed[m
+[32m+[m[32m */[m
+[32m+[m[32mfunction propsChanged(oldProps: any, newProps: any): boolean {[m
+[32m+[m[32m  const oldKeys = Object.keys(oldProps);[m
+[32m+[m[32m  const newKeys = Object.keys(newProps);[m
+[32m+[m
+[32m+[m[32m  if (oldKeys.length !== newKeys.length) {[m
+[32m+[m[32m    return true;[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  for (const key of oldKeys) {[m
+[32m+[m[32m    if (oldProps[key] !== newProps[key]) {[m
+[32m+[m[32m      return true;[m
+[32m+[m[32m    }[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  return false;[m
+[32m+[m[32m}[m
+\ No newline at end of file[m

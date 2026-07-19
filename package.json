@@ -1,48 +1,172 @@
 {
-  "name": "termui",
-  "version": "0.0.5",
-  "private": true,
-  "description": "A TypeScript-first framework for building beautiful, interactive terminal user interfaces",
-  "workspaces": [
-    "packages/*",
-    "examples/*"
-  ],
-  "scripts": {
-    "build": "turbo run build",
-    "test": "bun vitest run",
-    "test:watch": "bun vitest",
-    "coverage": "bun vitest run --coverage --coverage.reportOnFailure",
-    "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint",
-    "bench": "bun packages/core/src/benchmark/run-all.ts",
-    "clean": "turbo run clean && node scripts/clean-root.mjs",
-    "format": "prettier --write \".\"",
-    "registry:build": "bun scripts/build-registry.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^25.2.3",
-    "@vitest/coverage-v8": "^4.1.8",
-    "source-map": "^0.7.6",
-    "tsup": "^8.3.0",
-    "turbo": "^2.9.12",
-    "typescript": "^5.7.0",
-    "vitest": "^4.1.8"
-  },
-  "packageManager": "bun@1.3.14",
-  "engines": {
-    "bun": ">=1.3.0",
-    "node": ">=18.0.0"
-  },
-  "homepage": "https://www.termui.io",
+  "name": "@termuijs/compiler",
+  "homepage": "https://www.termui.io/docs/compiler",
   "repository": {
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "license": "MIT",
+  "version": "0.1.0",
+  "description": "Native TUI Compiler - Bundle TermUI apps to standalone binaries with no external dependencies",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "termui-compile": "./dist/cli/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./compiler": {
+      "types": "./dist/compiler/index.d.ts",
+      "import": "./dist/compiler/index.js",
+      "require": "./dist/compiler/index.cjs"
+    },
+    "./analyzer": {
+      "types": "./dist/analyzer/index.d.ts",
+      "import": "./dist/analyzer/index.js",
+      "require": "./dist/analyzer/index.cjs"
+    },
+    "./bundler": {
+      "types": "./dist/bundler/index.d.ts",
+      "import": "./dist/bundler/index.js",
+      "require": "./dist/bundler/index.cjs"
+    },
+    "./generator": {
+      "types": "./dist/generator/index.d.ts",
+      "import": "./dist/generator/index.js",
+      "require": "./dist/generator/index.cjs"
+    },
+    "./optimizer": {
+      "types": "./dist/optimizer/index.d.ts",
+      "import": "./dist/optimizer/index.js",
+      "require": "./dist/optimizer/index.cjs"
+    },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "import": "./dist/cli/index.js",
+      "require": "./dist/cli/index.cjs"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js",
+      "require": "./dist/types.cjs"
+    },
+    "./templates/*": {
+      "import": "./templates/*",
+      "require": "./templates/*"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "templates",
+    "README.md",
+    "LICENSE",
+    "bin"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "bin": {
+      "termui-compile": "./dist/cli/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup --config tsup.config.ts",
+    "build:types": "tsc -p tsconfig.typecheck.json --emitDeclarationOnly --declaration",
+    "dev": "tsup --watch",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "test:watch": "vitest --config ../../vitest.config.ts",
+    "test:coverage": "vitest run --coverage --config ../../vitest.config.ts",
+    "test:examples": "bun run test:examples",
+    "test:binaries": "bun run test:binaries",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "lint": "eslint src/**/*.ts",
+    "clean": "rm -rf dist node_modules",
+    "prepublishOnly": "bun run build",
+    "cli": "node dist/cli/index.js",
+    "cli:build": "node dist/cli/index.js build",
+    "cli:analyze": "node dist/cli/index.js analyze",
+    "cli:init": "node dist/cli/index.js init"
+  },
   "dependencies": {
-    "commander": "^15.0.0",
-    "dotenv": "^16.0.0"
-  }
+    "@babel/parser": "^7.23.0",
+    "@babel/traverse": "^7.23.0",
+    "@babel/types": "^7.23.0",
+    "@termuijs/core": "workspace:*",
+    "@termuijs/jsx": "workspace:*",
+    "@termuijs/widgets": "workspace:*",
+    "@termuijs/store": "workspace:*",
+    "@termuijs/ui": "workspace:*",
+    "chokidar": "^3.5.3",
+    "commander": "^12.0.0",
+    "esbuild": "^0.20.0",
+    "fs-extra": "^11.2.0",
+    "glob": "^10.3.0",
+    "typescript": "^5.4.0"
+  },
+  "devDependencies": {
+    "@types/babel__traverse": "^7.20.0",
+    "@types/fs-extra": "^11.0.0",
+    "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^1.3.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-import": "^2.29.1",
+    "tsup": "^8.0.0",
+    "vitest": "^1.3.0"
+  },
+  "keywords": [
+    "termui",
+    "compiler",
+    "bundler",
+    "standalone",
+    "binary",
+    "executable",
+    "tui",
+    "cli",
+    "native",
+    "cross-platform",
+    "typescript",
+    "jsx",
+    "terminal"
+  ],
+  "license": "MIT",
+  "engines": {
+    "bun": ">=1.3.0",
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": true
+    }
+  },
+  "bugs": {
+    "url": "https://github.com/Karanjot786/TermUI/issues"
+  },
+  "author": "Karanjot786",
+  "contributors": [
+    {
+      "name": "BhakktiGautam",
+      "email": "your-email@example.com"
+    }
+  ],
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/Karanjot786"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
 }
-

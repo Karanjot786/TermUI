@@ -5,8 +5,8 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.7",
-  "description": "Screen buffer, layout engine, input parser, and event system for TermUI",
+  "version": "0.2.0",
+  "description": "Screen buffer, layout engine, input parser, event system, parallel rendering, and performance monitoring for TermUI",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -16,24 +16,111 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./parallel": {
+      "types": "./dist/parallel/index.d.ts",
+      "import": "./dist/parallel/index.js",
+      "require": "./dist/parallel/index.cjs"
+    },
+    "./parallel/workers": {
+      "types": "./dist/parallel/workers/index.d.ts",
+      "import": "./dist/parallel/workers/index.js",
+      "require": "./dist/parallel/workers/index.cjs"
+    },
+    "./parallel/scheduler": {
+      "types": "./dist/parallel/scheduler/index.d.ts",
+      "import": "./dist/parallel/scheduler/index.js",
+      "require": "./dist/parallel/scheduler/index.cjs"
+    },
+    "./parallel/partition": {
+      "types": "./dist/parallel/partition/index.d.ts",
+      "import": "./dist/parallel/partition/index.js",
+      "require": "./dist/parallel/partition/index.cjs"
+    },
+    "./parallel/monitor": {
+      "types": "./dist/parallel/monitor/index.d.ts",
+      "import": "./dist/parallel/monitor/index.js",
+      "require": "./dist/parallel/monitor/index.cjs"
+    },
+    "./screen": {
+      "types": "./dist/screen/index.d.ts",
+      "import": "./dist/screen/index.js",
+      "require": "./dist/screen/index.cjs"
+    },
+    "./input": {
+      "types": "./dist/input/index.d.ts",
+      "import": "./dist/input/index.js",
+      "require": "./dist/input/index.cjs"
+    },
+    "./events": {
+      "types": "./dist/events/index.d.ts",
+      "import": "./dist/events/index.js",
+      "require": "./dist/events/index.cjs"
+    },
+    "./layout": {
+      "types": "./dist/layout/index.d.ts",
+      "import": "./dist/layout/index.js",
+      "require": "./dist/layout/index.cjs"
+    },
+    "./caps": {
+      "types": "./dist/caps/index.d.ts",
+      "import": "./dist/caps/index.js",
+      "require": "./dist/caps/index.cjs"
+    },
+    "./utils": {
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js",
+      "require": "./dist/utils/index.cjs"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsup",
-    "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist",
-    "test": "vitest run --config ../../vitest.config.ts"
+    "build": "tsup --config tsup.config.ts",
+    "build:types": "tsc -p tsconfig.typecheck.json --emitDeclarationOnly --declaration",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "clean": "rm -rf dist node_modules",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "test:watch": "vitest --config ../../vitest.config.ts",
+    "test:coverage": "vitest run --coverage --config ../../vitest.config.ts",
+    "test:bench": "vitest bench --config ../../vitest.config.ts",
+    "test:parallel": "vitest run --config ../../vitest.config.ts --testNamePattern=parallel",
+    "test:stress": "vitest run --config ../../vitest.config.ts --testNamePattern=stress",
+    "lint": "eslint src/**/*.ts",
+    "prepublishOnly": "bun run build",
+    "profile": "node --prof dist/index.js",
+    "analyze": "bun run build -- --analyze",
+    "test:parallel": "vitest run __tests__/parallel/**/*.test.ts",
+    "test:bench": "vitest bench __tests__/parallel/**/*.bench.ts"
+  },
+  "dependencies": {
+    "@termuijs/motion": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.19.20",
+    "@vitest/coverage-v8": "^1.3.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-import": "^2.29.1",
     "tsup": "^8.3.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^1.3.0"
+  },
+  "peerDependencies": {
+    "bun": ">=1.3.0"
+  },
+  "peerDependenciesMeta": {
+    "bun": {
+      "optional": false
+    }
   },
   "keywords": [
     "terminal",
@@ -42,11 +129,33 @@
     "terminal-ui",
     "rendering",
     "layout",
-    "events"
+    "events",
+    "parallel",
+    "multithreading",
+    "workers",
+    "performance",
+    "monitoring",
+    "screen",
+    "input",
+    "buffer"
   ],
   "license": "MIT",
   "engines": {
     "bun": ">=1.3.0",
     "node": ">=18.0.0"
+  },
+  "author": "Karanjot786",
+  "contributors": [
+    {
+      "name": "BhakktiGautam",
+      "email": "your-email@example.com"
+    }
+  ],
+  "bugs": {
+    "url": "https://github.com/Karanjot786/TermUI/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/Karanjot786"
   }
 }

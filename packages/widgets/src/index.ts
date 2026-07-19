@@ -46,8 +46,6 @@ export type { ScrollSpringState } from './scroll.js';
 
 // ─────────────────────────────────────────────────────
 
-
-
 // ── Input Widgets ─────────────────────────────────────
 export { List } from './input/List.js';
 export type { ListItem, ListProps } from './input/List.js';
@@ -308,3 +306,44 @@ export { UnorderedList } from './display/UnorderedList.js';
 export type { UnorderedListOptions } from './display/UnorderedList.js';
 export { Rule } from './display/Rule.js';
 export type { RuleOrientation, RuleOptions } from './display/Rule.js';
+
+// ─────────────────────────────────────────────────────
+// ── Parallel Processing Components ──────────────────
+// ─────────────────────────────────────────────────────
+
+// ── Parallel Layout ───────────────────────────────────
+export { ParallelRoot } from './parallel/ParallelRoot.jsx';
+export type { ParallelRootProps } from './parallel/ParallelRoot.jsx';
+export { Quadrant } from './parallel/Quadrant.jsx';
+export type { QuadrantProps, QuadrantPosition } from './parallel/Quadrant.jsx';
+export { ParallelContainer } from './parallel/ParallelContainer.jsx';
+export type { ParallelContainerProps } from './parallel/ParallelContainer.jsx';
+
+// ── Parallel Utilities ────────────────────────────────
+export {
+    useParallelRenderer,
+    useParallelMetrics,
+    useWorkerStatus,
+    type UseParallelRendererOptions,
+    type WorkerStatus
+} from './parallel/hooks.js';
+
+// ── Parallel Types ────────────────────────────────────
+export type {
+    ParallelLayoutStrategy,
+    ParallelPartitionStrategy,
+    ParallelRenderOptions
+} from './parallel/types.js';
+
+// ─────────────────────────────────────────────────────
+// ── Re-export Parallel Types from Core ──────────────
+// ─────────────────────────────────────────────────────
+
+// Re-export core parallel types for convenience
+export type {
+    ParallelRendererConfig,
+    RenderMetrics,
+    ScreenSection,
+    WorkerTask,
+    WorkerResult
+} from '@termuijs/core/parallel';
