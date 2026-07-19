@@ -138,11 +138,12 @@ export class MultiProgress extends Widget {
             let colX = x;
 
             // 1. Render label (left-aligned, truncated/padded to labelWidth)
-            const label = item.label.length > this._labelWidth
-                ? item.label.substring(0, this._labelWidth)
-                : item.label.padEnd(this._labelWidth);
+            const labelWidth = Math.min(this._labelWidth, width);
+            const label = item.label.length > labelWidth
+                ? item.label.substring(0, labelWidth)
+                : item.label.padEnd(labelWidth);
             screen.writeString(colX, rowY, label, attrs);
-            colX += this._labelWidth;
+            colX += labelWidth;
 
             // 2. Space after label
             if (colX < x + width) {

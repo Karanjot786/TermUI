@@ -191,6 +191,20 @@ describe('MultiProgress — edge cases', () => {
         expect(rows.some(r => r.trim().length > 0)).toBe(true);
     });
 
+    it('clips the label column to the widget width', () => {
+        const mp = new MultiProgress({
+            items: [{ label: 'VeryLongLabel', value: 0.5 }],
+            labelWidth: 12,
+            showValues: false,
+        });
+        const screen = new Screen(5, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        mp.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+        mp.render(screen);
+
+        expect(writeSpy.mock.calls[0]?.[2]).toHaveLength(5);
+    });
+
     it('setItems() clamps all values in new items', () => {
         const mp = new MultiProgress({ items: [{ label: 'A', value: 0.5 }] });
         const newItems: ProgressItem[] = [
