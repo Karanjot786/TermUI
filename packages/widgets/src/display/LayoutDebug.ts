@@ -10,6 +10,7 @@ import {
     caps,
     defaultStyle,
     mergeStyles,
+    truncate,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
@@ -223,7 +224,7 @@ export class LayoutDebug extends Widget {
 
         // Draw label
         if (this._opts.showLabels && widget.label) {
-            const label = widget.label.slice(0, widget.width - 2);
+            const label = truncate(widget.label, widget.width - 2);
             screen.writeString(widget.x + 1, widget.y + 1, label, labelColor);
         }
     }
