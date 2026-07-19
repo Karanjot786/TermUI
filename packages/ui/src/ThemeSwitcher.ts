@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────
 
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps, truncate } from '@termuijs/core';
 
 export interface ThemeSwitcherOptions {
     themes?: string[];
@@ -138,7 +138,7 @@ export class ThemeSwitcher extends Widget {
             const formattedName = themeName.charAt(0).toUpperCase() + themeName.slice(1);
             const lineText = `${prefix} ${formattedName}`;
 
-            screen.writeString(x, y + i, lineText.slice(0, width), {
+            screen.writeString(x, y + i, truncate(lineText, width, ''), {
                 ...attrs,
                 fg: isSelected ? this._activeColor : attrs.fg,
                 bold: isSelected || isActive,

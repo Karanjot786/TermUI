@@ -86,7 +86,7 @@ export class SetupFlow extends Widget {
         let row = y;
 
         // ── Header ────────────────────────────────────
-        const header = ` Setup: ${this._appName} `;
+        const header = truncate(` Setup: ${this._appName} `, width, '');
         const headerX = x + Math.max(0, Math.floor((width - stringWidth(header)) / 2));
         screen.writeString(headerX, row, header, { ...attrs, bold: true });
         row++;
