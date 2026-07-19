@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { caps, Screen } from '@termuijs/core';
+import { caps, Screen, stringWidth } from '@termuijs/core';
 import { AreaChart } from './AreaChart.js';
 
 afterEach(() => {
@@ -119,5 +119,21 @@ describe('AreaChart', () => {
         expect(countCharInGrid(withLine, '#')).toBeGreaterThanOrEqual(
             countCharInGrid(withoutLine, '#'),
         );
+    });
+
+    it('clips wide labels by cell width', () => {
+        const widget = new AreaChart({}, {
+            xLabel: '你好你好',
+            yLabel: '你好你好',
+        });
+        widget.setData([]);
+        const screen = new Screen(5, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        widget.updateRect({ x: 0, y: 0, width: 5, height: 3 });
+        widget.render(screen);
+
+        for (const [x, , text] of writeSpy.mock.calls) {
+            expect(x + stringWidth(text)).toBeLessThanOrEqual(5);
+        }
     });
 });

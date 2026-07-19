@@ -226,22 +226,25 @@ export class Wizard extends Widget {
             { ...attrs, bold: true }
         );
 
-        // Write validation error if present on row 1 of the content area
-        if (this._error) {
-            screen.writeString(
-                x + border,
-                y + border + 1,
-                truncate(this._error, contentWidth),
-                { ...attrs, fg: { type: 'named', name: 'red' } }
-            );
-        } else {
-            // Write blank line to clear any old error
-            screen.writeString(
-                x + border,
-                y + border + 1,
-                ' '.repeat(contentWidth),
-                attrs
-            );
+        const errorRow = y + border + 1;
+        if (errorRow < y + height) {
+            // Write validation error if present on row 1 of the content area
+            if (this._error) {
+                screen.writeString(
+                    x + border,
+                    errorRow,
+                    truncate(this._error, contentWidth),
+                    { ...attrs, fg: { type: 'named', name: 'red' } }
+                );
+            } else {
+                // Write blank line to clear any old error
+                screen.writeString(
+                    x + border,
+                    errorRow,
+                    ' '.repeat(contentWidth),
+                    attrs
+                );
+            }
         }
     }
 }

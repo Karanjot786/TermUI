@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth, caps } from '@termuijs/core';
 import { EmptyState } from './EmptyState.js';
 
 afterEach(() => {
@@ -12,6 +12,7 @@ function row(screen: Screen, y: number): string {
 
 describe('EmptyState', () => {
     it('renders icon + title centered', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const es = new EmptyState('No items');
         es.updateRect({ x: 0, y: 0, width: 30, height: 5 });
         const screen = new Screen(30, 5);
@@ -163,6 +164,7 @@ describe('EmptyState', () => {
     });
     
     it('setIcon updates rendered icon', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const es = new EmptyState('No data');
     
         es.setIcon('📦');
@@ -225,4 +227,20 @@ describe('EmptyState', () => {
         });
     });
 
+    it('keeps long content writes inside the widget rect', () => {
+        const es = new EmptyState('Very long empty state title', {}, {
+            description: 'A description that is also too long',
+            hint: 'Press something eventually',
+        });
+        const screen = new Screen(6, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        es.updateRect({ x: 0, y: 0, width: 6, height: 1 });
+        es.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(6);
+            expect(call[1]).toBeLessThan(1);
+        }
+    });
 });

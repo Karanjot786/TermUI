@@ -218,4 +218,19 @@ describe('Transfer', () => {
             expect(stringWidth(String(call[2]))).toBeLessThanOrEqual(3);
         }
     });
+
+    it('does not write pane content outside a width-one rect', () => {
+        const screen = new Screen(1, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        const setCellSpy = vi.spyOn(screen, 'setCell');
+        const transfer = new Transfer(ITEMS);
+
+        transfer.updateRect({ x: 0, y: 0, width: 1, height: 1 });
+        transfer.render(screen);
+
+        expect(writeSpy).not.toHaveBeenCalled();
+        for (const call of setCellSpy.mock.calls) {
+            expect(call[0]).toBeLessThan(1);
+        }
+    });
 });
