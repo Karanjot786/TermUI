@@ -2,10 +2,10 @@
 // @termuijs/ui — Tests for Tabs component
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Tabs } from './Tabs.js';
 import { Box, Text, Widget } from '@termuijs/widgets';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 
 const makeTabs = () => new Tabs([
     { label: 'Home', content: new Box() },
@@ -166,5 +166,23 @@ describe('Tabs', () => {
 
         expect(first.destroys).toBe(1);
         expect(second.destroys).toBe(1);
+    });
+
+    it('clips tab labels and separators to the widget width', () => {
+        const tabs = new Tabs([
+            { label: 'VeryLongHomeLabel', content: new Box() },
+            { label: 'Settings', content: new Box() },
+        ], { border: 'none' });
+        const screen = new Screen(8, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        tabs.updateRect({ x: 0, y: 0, width: 8, height: 3 });
+        tabs.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            if (call[1] === 0) {
+                expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(8);
+            }
+        }
     });
 });

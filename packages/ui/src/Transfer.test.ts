@@ -189,6 +189,7 @@ describe('Transfer', () => {
     });
 
     it('overwrites unused lines with blank spaces', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const screen = new Screen(21, 5);
         const transfer = new Transfer(ITEMS); // 3 items
         transfer.updateRect({ x: 0, y: 0, width: 21, height: 5 }); // 5 height viewport
@@ -199,5 +200,20 @@ describe('Transfer', () => {
 
         const row4 = screen.back[4].map(c => c.char).join('');
         expect(row4).toBe('          │          ');
+    });
+
+    it('does not write pane content outside a width-one rect', () => {
+        const screen = new Screen(1, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        const setCellSpy = vi.spyOn(screen, 'setCell');
+        const transfer = new Transfer(ITEMS);
+
+        transfer.updateRect({ x: 0, y: 0, width: 1, height: 1 });
+        transfer.render(screen);
+
+        expect(writeSpy).not.toHaveBeenCalled();
+        for (const call of setCellSpy.mock.calls) {
+            expect(call[0]).toBeLessThan(1);
+        }
     });
 });

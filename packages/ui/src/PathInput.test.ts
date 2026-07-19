@@ -314,6 +314,18 @@ describe('PathInput — backspace', () => {
         input.deleteBack();
         expect(input.value).toBe('abc');
     });
+
+    it('removes one grapheme cluster at a time', () => {
+        const input = new PathInput();
+        input.value = 'e\u0301👍🏽';
+        input.moveCursorEnd();
+
+        input.deleteBack();
+        expect(input.value).toBe('e\u0301');
+
+        input.deleteBack();
+        expect(input.value).toBe('');
+    });
 });
 
 // ─────────────────────────────────────────────────────
@@ -345,6 +357,17 @@ describe('PathInput — delete key', () => {
         input.moveCursorEnd();
         input.deleteForward();
         expect(input.value).toBe('abc');
+    });
+
+    it('deletes the grapheme cluster under the cursor', () => {
+        const input = new PathInput();
+        input.value = 'a👍🏽b';
+        input.moveCursorHome();
+        input.moveCursorRight();
+
+        input.deleteForward();
+
+        expect(input.value).toBe('ab');
     });
 });
 

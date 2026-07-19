@@ -189,7 +189,7 @@ export class Transfer extends Widget {
 
         for (let i = 0; i < height; i++) {
             // 1. Left pane (source)
-            if (i < this._sourceItems.length) {
+            if (leftPaneWidth > 0 && i < this._sourceItems.length) {
                 const o = this._sourceItems[i];
                 const active = this._activePane === 'source' && i === this._sourceCursorIndex;
                 const text = (active ? indicator : noIndicator) + o.label;
@@ -200,7 +200,7 @@ export class Transfer extends Widget {
                     bold: active,
                     dim: o.disabled,
                 });
-            } else {
+            } else if (leftPaneWidth > 0) {
                 screen.writeString(x, y + i, ' '.repeat(leftPaneWidth), attrs);
             }
 
@@ -211,7 +211,7 @@ export class Transfer extends Widget {
             });
 
             // 3. Right pane (target)
-            if (i < this._targetItems.length) {
+            if (rightPaneWidth > 0 && dividerX + 1 < x + width && i < this._targetItems.length) {
                 const o = this._targetItems[i];
                 const active = this._activePane === 'target' && i === this._targetCursorIndex;
                 const text = (active ? indicator : noIndicator) + o.label;
@@ -222,7 +222,7 @@ export class Transfer extends Widget {
                     bold: active,
                     dim: o.disabled,
                 });
-            } else {
+            } else if (rightPaneWidth > 0 && dividerX + 1 < x + width) {
                 screen.writeString(dividerX + 1, y + i, ' '.repeat(rightPaneWidth), attrs);
             }
         }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 import { Box } from '@termuijs/widgets';
 import { SetupFlow } from './SetupFlow.js';
 
@@ -116,5 +116,22 @@ describe('SetupFlow', () => {
     });
     const out = render(flow);
     expect(out).toContain('SuperApp');
+  });
+
+  it('clips long app names in the header', () => {
+    const flow = new SetupFlow({
+      appName: 'SuperLongApplicationName',
+      steps: [makeStep('Step 1')],
+      onComplete: () => {},
+    });
+    const screen = new Screen(8, 5);
+    const writeSpy = vi.spyOn(screen, 'writeString');
+
+    flow.updateRect({ x: 0, y: 0, width: 8, height: 5 });
+    flow.render(screen);
+
+    const headerWrite = writeSpy.mock.calls.find(call => call[1] === 0);
+    expect(headerWrite).toBeDefined();
+    expect(Number(headerWrite?.[0]) + stringWidth(String(headerWrite?.[2]))).toBeLessThanOrEqual(8);
   });
 });

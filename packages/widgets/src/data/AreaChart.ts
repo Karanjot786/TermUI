@@ -2,7 +2,7 @@
 // @termuijs/widgets — AreaChart widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, caps, stringWidth, BRAILLE_DOTS, BRAILLE_OFFSET } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, caps, stringWidth, truncate, BRAILLE_DOTS, BRAILLE_OFFSET } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { filterFinite } from './utils.js';
 
@@ -146,13 +146,14 @@ export class AreaChart extends Widget {
         const plotHeight = height - topLabelRows - bottomLabelRows;
 
         if (this._yLabel) {
-            screen.writeString(x, y, this._yLabel.slice(0, width), attrs);
+            screen.writeString(x, y, truncate(this._yLabel, width, ''), attrs);
         }
 
         if (this._xLabel) {
-            const labelWidth = stringWidth(this._xLabel);
+            const xLabel = truncate(this._xLabel, width, '');
+            const labelWidth = stringWidth(xLabel);
             const labelX = x + Math.max(0, width - labelWidth);
-            screen.writeString(labelX, y + height - 1, this._xLabel.slice(0, width), attrs);
+            screen.writeString(labelX, y + height - 1, xLabel, attrs);
         }
 
         if (plotHeight <= 0 || this._data.length === 0) return;
