@@ -191,6 +191,28 @@ describe('MultiProgress — edge cases', () => {
         expect(rows.some(r => r.trim().length > 0)).toBe(true);
     });
 
+    it('does not render rows past the assigned height', () => {
+        const mp = new MultiProgress({
+            items: [
+                { label: 'One', value: 0.2 },
+                { label: 'Two', value: 0.4 },
+                { label: 'Three', value: 0.6 },
+            ],
+        });
+        const screen = new Screen(30, 4);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        const setCellSpy = vi.spyOn(screen, 'setCell');
+        mp.updateRect({ x: 0, y: 1, width: 30, height: 1 });
+        mp.render(screen);
+
+        for (const [, row] of writeSpy.mock.calls) {
+            expect(row).toBeLessThan(2);
+        }
+        for (const [, row] of setCellSpy.mock.calls) {
+            expect(row).toBeLessThan(2);
+        }
+    });
+
     it('setItems() clamps all values in new items', () => {
         const mp = new MultiProgress({ items: [{ label: 'A', value: 0.5 }] });
         const newItems: ProgressItem[] = [
