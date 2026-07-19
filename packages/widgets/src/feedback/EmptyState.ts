@@ -1,4 +1,4 @@
-import { type Screen, type Style, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, stringWidth, caps, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface EmptyStateOptions {
@@ -80,23 +80,33 @@ export class EmptyState extends Widget {
         const contentLines = 1 + 1 + (hasDesc ? 1 : 0);
         const startRow = y + Math.max(0, Math.floor((mainHeight - contentLines) / 2));
 
-        const iconX = x + Math.max(0, Math.floor((width - stringWidth(this._icon)) / 2));
-        screen.writeString(iconX, startRow, this._icon, attrs);
+        const renderLine = (
+            row: number,
+            text: string,
+            lineAttrs = attrs,
+        ): void => {
+            if (row < y || row >= y + height) return;
+
+            const visible = truncate(text, width, '');
+            if (visible.length === 0) return;
+
+            const lineX = x + Math.max(0, Math.floor((width - stringWidth(visible)) / 2));
+            screen.writeString(lineX, row, visible, lineAttrs);
+        };
+
+        renderLine(startRow, this._icon, attrs);
 
         const titleStr = this._title;
-        const titleX = x + Math.max(0, Math.floor((width - stringWidth(titleStr)) / 2));
-        screen.writeString(titleX, startRow + 1, titleStr, { ...attrs, bold: true });
+        renderLine(startRow + 1, titleStr, { ...attrs, bold: true });
 
         if (hasDesc) {
             const descStr = this._description;
-            const descX = x + Math.max(0, Math.floor((width - stringWidth(descStr)) / 2));
-            screen.writeString(descX, startRow + 2, descStr, { ...attrs, dim: true });
+            renderLine(startRow + 2, descStr, { ...attrs, dim: true });
         }
 
         if (hasHint) {
             const hintStr = this._hint;
-            const hintX = x + Math.max(0, Math.floor((width - stringWidth(hintStr)) / 2));
-            screen.writeString(hintX, hintRow, hintStr, { ...attrs, dim: true });
+            renderLine(hintRow, hintStr, { ...attrs, dim: true });
         }
     }
 }
