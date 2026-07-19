@@ -1,6 +1,6 @@
 // LinearPrompt — screen-reader-friendly linear prompt rendering
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, truncate } from '@termuijs/core';
 
 export interface LinearPromptOption {
     label: string;
@@ -98,7 +98,7 @@ export class LinearPrompt extends Widget {
         let currentY = y;
 
         // Render question
-        screen.writeString(x, currentY, this._question.slice(0, width), attrs);
+        screen.writeString(x, currentY, truncate(this._question, width, ''), attrs);
         currentY++;
 
         // Render options sequentially without positioning codes
@@ -106,12 +106,11 @@ export class LinearPrompt extends Widget {
             const opt = this._options[i];
             const isSel = i === this._selectedIndex;
             const marker = isSel ? '> ' : '  ';
-            const label = opt.label.slice(0, width - 2);
 
             screen.writeString(
                 x,
                 currentY,
-                marker + label,
+                truncate(marker + opt.label, width, ''),
                 {
                     ...attrs,
                     fg: opt.disabled
