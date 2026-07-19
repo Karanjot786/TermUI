@@ -319,31 +319,29 @@ export type { QuadrantProps, QuadrantPosition } from './parallel/Quadrant.jsx';
 export { ParallelContainer } from './parallel/ParallelContainer.jsx';
 export type { ParallelContainerProps } from './parallel/ParallelContainer.jsx';
 
-// ── Parallel Utilities ────────────────────────────────
+// ── Parallel Hooks ────────────────────────────────────
 export {
     useParallelRenderer,
     useParallelMetrics,
     useWorkerStatus,
-    type UseParallelRendererOptions,
-    type WorkerStatus
+} from './parallel/hooks.js';
+export type {
+    UseParallelRendererOptions,
+    WorkerStatus,
 } from './parallel/hooks.js';
 
 // ── Parallel Types ────────────────────────────────────
 export type {
     ParallelLayoutStrategy,
     ParallelPartitionStrategy,
-    ParallelRenderOptions
+    ParallelRenderOptions,
 } from './parallel/types.js';
 
-// ─────────────────────────────────────────────────────
-// ── Re-export Parallel Types from Core ──────────────
-// ─────────────────────────────────────────────────────
-
-// Re-export core parallel types for convenience
+// ── Re-export Core Parallel Types ─────────────────────
 export type {
     ParallelRendererConfig,
     RenderMetrics,
     ScreenSection,
     WorkerTask,
-    WorkerResult
+    WorkerResult,
 } from '@termuijs/core/parallel';
