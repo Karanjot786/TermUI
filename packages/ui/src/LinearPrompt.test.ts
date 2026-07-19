@@ -527,6 +527,18 @@ describe('LinearPrompt — rendering constraints', () => {
         }).not.toThrow();
     });
 
+    it('does not render options past the assigned height', () => {
+        const prompt = new LinearPrompt(basicOptions, { question: 'Q' });
+        const screen = new Screen(20, 4);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        prompt.updateRect({ x: 0, y: 1, width: 20, height: 1 });
+        prompt.render(screen);
+
+        for (const [, row] of writeSpy.mock.calls) {
+            expect(row).toBeLessThan(2);
+        }
+    });
+
     it('width smaller than option text renders safely (no overflow)', () => {
         const prompt = new LinearPrompt(
             [{ label: 'VeryLongOptionLabel', value: 'x' }],

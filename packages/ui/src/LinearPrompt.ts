@@ -91,8 +91,8 @@ export class LinearPrompt extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        const { x, y, width } = this._rect;
-        if (width <= 0) return;
+        const { x, y, width, height } = this._rect;
+        if (width <= 0 || height <= 0) return;
 
         const attrs = styleToCellAttrs(this.style);
         let currentY = y;
@@ -102,7 +102,7 @@ export class LinearPrompt extends Widget {
         currentY++;
 
         // Render options sequentially without positioning codes
-        for (let i = 0; i < this._options.length; i++) {
+        for (let i = 0; i < this._options.length && currentY < y + height; i++) {
             const opt = this._options[i];
             const isSel = i === this._selectedIndex;
             const marker = isSel ? '> ' : '  ';
