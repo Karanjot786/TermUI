@@ -115,6 +115,8 @@ export abstract class Widget {
     protected _dirty = true;
     /** Idempotency guard — true once unmount() has completed */
     private _unmounted = false;
+    /** Whether the widget is rendering its layout for the first time */
+    private _isFirstLayout = true;
     /** Render profiling statistics */
     private _renderStats: RenderStats = {
         renderCount: 0,
@@ -343,7 +345,8 @@ export abstract class Widget {
     }
 
     private _applyRect(newRect: Rect): void {
-        if (this._rect.width === 0 && this._rect.height === 0) {
+        if (this._isFirstLayout) {
+            this._isFirstLayout = false;
             // First render, do not animate
             this._rect = newRect;
             return;
@@ -566,6 +569,13 @@ export abstract class Widget {
     unmount(): void {
         if (this._unmounted) return;
         this._unmounted = true;
+
+        if (this._layoutCancel) {
+            this._layoutCancel();
+            this._layoutCancel = null;
+            this._targetRect = null;
+        }
+
         for (const child of this._children) {
             child.unmount();
         }

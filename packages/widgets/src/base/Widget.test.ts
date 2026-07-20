@@ -2,7 +2,7 @@
 // @termuijs/widgets — Tests for base Widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@termuijs/core', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@termuijs/core')>();
@@ -144,7 +144,7 @@ describe('Widget', () => {
         expect(w.renderError).toBeInstanceOf(Error);
         expect(w.isDirty).toBe(true);
         w.clearDirty();
-        w._renderError = null;
+        (w as any)._renderError = null;
         w.render(screen);
         expect(w.renderError).toBeNull();
         expect(w.callCount).toBe(2);
@@ -331,7 +331,7 @@ describe('Widget.layoutTransition', () => {
             protected _renderSelf(): void {}
         }
         
-        const widget = new TransitionTestWidget({ id: 'test' });
+        const widget = new TransitionTestWidget();
         
         widget.updateRect({ x: 0, y: 0, width: 10, height: 10 });
         expect(widget.rect).toEqual({ x: 0, y: 0, width: 10, height: 10 });
@@ -350,6 +350,48 @@ describe('Widget.layoutTransition', () => {
         
         await advanceSpring(5000);
         expect(widget.rect).toEqual({ x: 100, y: 100, width: 100, height: 100 });
+    });
+
+    it('cancels layout animation on unmount to prevent memory leak', async () => {
+        class TransitionTestWidget extends Widget {
+            protected _renderSelf(): void {}
+        }
+        
+        const widget = new TransitionTestWidget();
+        widget.updateRect({ x: 0, y: 0, width: 10, height: 10 });
+        
+        widget.layoutTransition = true;
+        widget.updateRect({ x: 100, y: 100, width: 100, height: 100 });
+        
+        await advanceSpring(64);
+        const intermediateX = widget.rect.x;
+        
+        widget.unmount();
+        
+        await advanceSpring(500);
+        // The animation should have been cancelled, so the rect should not have updated further
+        expect(widget.rect.x).toBe(intermediateX);
+    });
+
+    it('animates transitions correctly from a 0x0 size after first layout', async () => {
+        class TransitionTestWidget extends Widget {
+            protected _renderSelf(): void {}
+        }
+        
+        const widget = new TransitionTestWidget();
+        // First layout pass with 0x0 consumes the first render guard
+        widget.updateRect({ x: 0, y: 0, width: 0, height: 0 });
+        expect(widget.rect).toEqual({ x: 0, y: 0, width: 0, height: 0 });
+
+        widget.layoutTransition = true;
+        // Second pass should trigger animation, not snap
+        widget.updateRect({ x: 0, y: 0, width: 100, height: 100 });
+        
+        await advanceSpring(64);
+        
+        const rect = widget.rect;
+        expect(rect.width).toBeGreaterThan(0);
+        expect(rect.width).toBeLessThan(100);
     });
 });
 
