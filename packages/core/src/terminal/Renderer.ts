@@ -145,12 +145,12 @@ export class Renderer {
                 output += ansiReset;
                 output += endSyncUpdate;
 
+                this._terminal.writeSync(output);
                 // Write buffered logs wrapped in cursor save/restore so they
                 // don't shift the frame's expected cursor position
                 if (bufferedLogs) {
                     this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
                 }
-                this._terminal.writeSync(output);
 
                 // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
                 const ansiQueue = this._screen.drainAnsiQueue();
@@ -172,10 +172,10 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
+            this._terminal.writeSync(output);
             if (bufferedLogs) {
                 this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
             }
-            this._terminal.writeSync(output);
 
             // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
             const ansiQueue = this._screen.drainAnsiQueue();
