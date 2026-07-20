@@ -13,6 +13,8 @@ export type {
     SpringState,
     SpringPresetName,
 } from './spring.js';
+// Reduced-motion runtime override
+export { motionConfig, resetMotionConfig } from './motion-config.js';
 // Transitions & easings
 export { transition, fadeIn, fadeOut, slideIn, typewriter, pulse, easings, cubicBezier } from './transitions.js';
 export type { TransitionOptions, EasingFn } from './transitions.js';

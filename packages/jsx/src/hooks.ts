@@ -7,8 +7,7 @@
 // ─────────────────────────────────────────────────────
 
 import type { KeyEvent } from '@termuijs/core';
-import { caps } from '@termuijs/core';
-import { timerPoolSubscribe } from '@termuijs/motion';
+import { timerPoolSubscribe, motionConfig } from '@termuijs/motion';
 import type { FC } from './vnode.js';
 
 // ── Fiber — per-component-instance state ──
@@ -353,7 +352,10 @@ export function useInsertBefore(line: string): void {
 }
 
 export interface MotionPreferences {
-    /** True when the user prefers reduced motion (NO_MOTION=1 or CI=true) */
+    /**
+     * True when the user prefers reduced motion: `NO_MOTION=1`/`CI=1` in
+     * the environment, or `motionConfig.setReducedMotion(true)` at runtime.
+     */
     reduced: boolean;
 }
 
@@ -371,7 +373,7 @@ export interface MotionPreferences {
 export function useMotion(): MotionPreferences {
     // Validate we're inside a component — does NOT consume a hook slot
     currentFiber();
-    return { reduced: !caps.motion };
+    return { reduced: motionConfig.reducedMotion };
 }
 
 /**

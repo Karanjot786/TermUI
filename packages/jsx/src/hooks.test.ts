@@ -297,3 +297,36 @@ describe('useId', () => {
         expect(idA).not.toBe(idB);
     });
 });
+import { motionConfig, resetMotionConfig } from '@termuijs/motion';
+import { useMotion } from './hooks.js';
+
+describe('useMotion', () => {
+    beforeEach(() => {
+        setCurrentFiber(createFiber());
+    });
+
+    afterEach(() => {
+        clearCurrentFiber();
+        resetMotionConfig();
+    });
+
+    it('reflects reduced: false when no reduced-motion override is set', () => {
+        expect(useMotion()).toEqual({ reduced: false });
+    });
+
+    it('reflects reduced: true once motionConfig.setReducedMotion(true) is called', () => {
+        motionConfig.setReducedMotion(true);
+        expect(useMotion()).toEqual({ reduced: true });
+    });
+
+    it('goes back to reduced: false after the override is cleared', () => {
+        motionConfig.setReducedMotion(true);
+        motionConfig.setReducedMotion(null);
+        expect(useMotion()).toEqual({ reduced: false });
+    });
+
+    it('throws when called outside a component render', () => {
+        clearCurrentFiber();
+        expect(() => useMotion()).toThrow();
+    });
+});
