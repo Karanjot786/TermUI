@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { invalidate, clearCache, getCache, isFresh, setCache } from "./cache.js";
 import { render } from "@termuijs/testing";
 import { h, useState } from "@termuijs/jsx";
-import { useFetch, UseFetchOptions } from "./hooks.js";
+import { useFetch, UseFetchOptions, __resetSharedAbortControllersForTests } from "./hooks.js";
 
 const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
 
 function renderFetch(url: string, options?: UseFetchOptions) {
-  let currentResult: any;
+  let currentResult: any; // useFetch's generic result shape varies per call site in this helper
 
   function TestComponent(props: { url: string; options?: UseFetchOptions }) {
     currentResult = useFetch(props.url, props.options);
@@ -39,13 +39,14 @@ describe("useFetch caching", () => {
       ok: true,
       status: 200,
       json: async () => ({ status: "ok" }),
-    } as unknown) as typeof global.fetch;
+    } as unknown) as typeof global.fetch; // partial Response mock doesn't implement the full interface
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
     vi.restoreAllMocks();
     clearCache();
+    __resetSharedAbortControllersForTests();
   });
 
   it("first fetch populates cache", async () => {
@@ -177,7 +178,7 @@ describe("useFetch caching", () => {
       return new Promise(() => {
         // never resolves; unmount should abort it instead
       });
-    }) as unknown as typeof global.fetch;
+    }) as unknown as typeof global.fetch; // mock signature narrower than fetch's overloads
 
     const { unmount } = renderFetch("test-url-abort-unmount", { staleTime: 1000 });
 
@@ -196,7 +197,7 @@ describe("useFetch caching", () => {
       return new Promise(() => {
         // never resolves
       });
-    }) as unknown as typeof global.fetch;
+    }) as unknown as typeof global.fetch; // mock signature narrower than fetch's overloads
 
     let setKey: (key: string) => void = () => {};
 
@@ -229,9 +230,9 @@ describe("useFetch caching", () => {
           reject(err);
         });
       });
-    }) as unknown as typeof global.fetch;
+    }) as unknown as typeof global.fetch; // mock signature narrower than fetch's overloads
 
-    let currentResult: any;
+    let currentResult: any; // useFetch's generic result shape varies per call site in this test
     let setKey: (key: string) => void = () => {};
 
     function TestComponent() {
@@ -250,17 +251,15 @@ describe("useFetch caching", () => {
   });
 
   it("does not cache a response after the request was aborted", async () => {
-    let rejectFetch!: (err: Error) => void;
     global.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
       return new Promise((_resolve, reject) => {
-        rejectFetch = reject;
         init?.signal?.addEventListener("abort", () => {
           const err = new Error("The operation was aborted.");
           err.name = "AbortError";
           reject(err);
         });
       });
-    }) as unknown as typeof global.fetch;
+    }) as unknown as typeof global.fetch; // mock signature narrower than fetch's overloads
 
     const { unmount } = renderFetch("test-url-abort-cache", { staleTime: 1000 });
     unmount();
@@ -268,9 +267,59 @@ describe("useFetch caching", () => {
 
     expect(isFresh("test-url-abort-cache")).toBe(false);
     expect(getCache("test-url-abort-cache")).toBeUndefined();
+  });
 
-    // avoid an unhandled rejection warning from the never-otherwise-settled promise
-    rejectFetch(Object.assign(new Error("aborted"), { name: "AbortError" }));
+  it("does not populate the cache when a response resolves after unmount", async () => {
+    // Unlike the AbortError case above, this exercises the isMounted guard in
+    // the success branch directly: the underlying promise is unaffected by
+    // abort() (it ignores the signal) and still resolves successfully, but
+    // after the consumer has already unmounted.
+    let resolveFetch!: (value: unknown) => void;
+    global.fetch = vi.fn().mockImplementation(() => {
+      return new Promise(resolve => {
+        resolveFetch = resolve;
+      });
+    }) as unknown as typeof global.fetch; // mock signature narrower than fetch's overloads
+
+    const { unmount } = renderFetch("test-url-success-after-unmount", { staleTime: 1000 });
+    unmount();
+
+    resolveFetch({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "late" }),
+    });
+    await flushPromises();
+
+    expect(isFresh("test-url-success-after-unmount")).toBe(false);
+    expect(getCache("test-url-success-after-unmount")).toBeUndefined();
+  });
+
+  it("does not schedule fetch after unmount when a retry was pending", async () => {
+    vi.useFakeTimers();
+
+    let callCount = 0;
+    global.fetch = vi.fn().mockImplementation(() => {
+      callCount++;
+      return Promise.reject(new Error("network error"));
+    }) as unknown as typeof global.fetch; // mock signature narrower than fetch's overloads
+
+    const { unmount } = renderFetch("test-url-retry-cleanup", {
+      retry: 2,
+      retryDelay: 300,
+    });
+
+    // Let the first attempt fail and the retry timer get scheduled.
+    await vi.advanceTimersByTimeAsync(0);
+    expect(callCount).toBe(1);
+
+    unmount();
+
+    // Advance well past the retry delay — cleanup must have cleared the timer.
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(callCount).toBe(1);
+
+    vi.useRealTimers();
   });
 
   it("refetches when the key changes while URL cache is fresh", async () => {

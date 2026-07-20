@@ -402,6 +402,19 @@ function releaseAbortController(key: string): void {
 }
 
 /**
+ * Test-only helper to reset the module-scoped shared abort controller
+ * registry between test cases. Not part of the public API — not re-exported
+ * from index.ts. A test that misses an unmount/cleanup step could otherwise
+ * leave a stale refCount behind for later cases in the same process.
+ */
+export function __resetSharedAbortControllersForTests(): void {
+    for (const entry of sharedAbortControllers.values()) {
+        entry.controller.abort();
+    }
+    sharedAbortControllers.clear();
+}
+
+/**
  * useFetch — reactive fetch hook with caching.
  *
  * @param url - The URL to fetch.
