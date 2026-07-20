@@ -1,0 +1,269 @@
+// ─────────────────────────────────────────────────────
+// @termuijs/core — Flexbox-like Layout Engine
+// ─────────────────────────────────────────────────────
+
+import type { Style } from '../style/Style.js';
+import { normalizeEdges } from '../style/Style.js';
+import { borderSize } from '../style/Border.js';
+import type { Rect } from './Rect.js';
+
+/**
+ * A node in the layout tree. Each widget produces one LayoutNode.
+ */
+export interface LayoutNode {
+    /** Reference back to the widget/element that created this node */
+    id: string;
+    /** Style properties that affect layout */
+    style: Style;
+    /** Child nodes */
+    children: LayoutNode[];
+    /** Computed position and size — filled in by computeLayout() */
+    computed: Rect;
+    /** Dirty flag — true when this node needs to be re-laid-out. Foundation for layout caching. */
+    _dirty: boolean;
+}
+
+/**
+ * Create a LayoutNode with default values.
+ */
+export function createLayoutNode(id: string, style: Style, children: LayoutNode[] = []): LayoutNode {
+    return {
+        id,
+        style,
+        children,
+        computed: { x: 0, y: 0, width: 0, height: 0 },
+        _dirty: true,
+    };
+}
+
+/**
+ * Compute the layout of a tree of LayoutNodes.
+ *
+ * This is a simplified Flexbox implementation that handles:
+ * - flexDirection: row | column
+ * - justifyContent: flex-start | flex-end | center | space-between | space-around
+ * - alignItems: flex-start | flex-end | center | stretch
+ * - flexGrow / flexShrink
+ * - padding, margin, border
+ * - fixed width/height, percentage width/height
+ * - minWidth, maxWidth, minHeight, maxHeight
+ * - gap between children
+ */
+export function computeLayout(root: LayoutNode, containerWidth: number, containerHeight: number): void {
+    root.computed = { x: 0, y: 0, width: containerWidth, height: containerHeight };
+    layoutNode(root, containerWidth, containerHeight);
+}
+
+function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, precomputed = false): void {
+    const style = node.style;
+    const padding = normalizeEdges(style.padding);
+    const margin = normalizeEdges(style.margin);
+    const border = borderSize(style.border ?? 'none');
+
+    if (!precomputed) {
+        // Calculate this node's dimensions
+        let nodeWidth = resolveSize(style.width, availWidth);
+        let nodeHeight = resolveSize(style.height, availHeight);
+
+        // Apply constraints
+        if (nodeWidth === undefined) nodeWidth = availWidth - margin.left - margin.right;
+        if (nodeHeight === undefined) nodeHeight = availHeight - margin.top - margin.bottom;
+
+        nodeWidth = clampSize(nodeWidth, style.minWidth, style.maxWidth);
+        nodeHeight = clampSize(nodeHeight, style.minHeight, style.maxHeight);
+
+        node.computed.width = nodeWidth;
+        node.computed.height = nodeHeight;
+    }
+
+    if (node.children.length === 0) {
+        node._dirty = false;
+        return;
+    }
+
+    const nodeWidth = node.computed.width;
+    const nodeHeight = node.computed.height;
+
+    // Inner content area (after padding + border)
+    const innerX = padding.left + (border.horizontal / 2);
+    const innerY = padding.top + (border.vertical / 2);
+    const innerWidth = Math.max(0, nodeWidth - padding.left - padding.right - border.horizontal);
+    const innerHeight = Math.max(0, nodeHeight - padding.top - padding.bottom - border.vertical);
+
+    const direction = style.flexDirection ?? 'column';
+    const isRow = direction === 'row';
+    const gap = style.gap ?? 0;
+
+    // ── Phase 1: Measure children's desired sizes ──────
+
+    const childInfos: Array<{
+        node: LayoutNode;
+        mainSize: number;
+        crossSize: number;
+        flexGrow: number;
+        flexShrink: number;
+        margin: { top: number; right: number; bottom: number; left: number };
+    }> = [];
+
+    let totalFixed = 0;
+    let totalGrow = 0;
+    let totalShrink = 0;
+
+    for (const child of node.children) {
+        if (child.style.visible === false) continue;
+
+        const childMargin = normalizeEdges(child.style.margin);
+        const childBorder = borderSize(child.style.border ?? 'none');
+        const grow = child.style.flexGrow ?? 0;
+        const shrink = child.style.flexShrink ?? 1;
+
+        let mainSize: number;
+        let crossSize: number;
+
+        if (isRow) {
+            mainSize = resolveSize(child.style.width, innerWidth) ?? 0;
+            crossSize = resolveSize(child.style.height, innerHeight) ?? innerHeight;
+            mainSize += childMargin.left + childMargin.right;
+            crossSize = clampSize(crossSize, child.style.minHeight, child.style.maxHeight);
+        } else {
+            mainSize = resolveSize(child.style.height, innerHeight) ?? 0;
+            crossSize = resolveSize(child.style.width, innerWidth) ?? innerWidth;
+            mainSize += childMargin.top + childMargin.bottom;
+            crossSize = clampSize(crossSize, child.style.minWidth, child.style.maxWidth);
+        }
+
+        totalFixed += mainSize;
+        totalGrow += grow;
+        totalShrink += shrink;
+
+        childInfos.push({ node: child, mainSize, crossSize, flexGrow: grow, flexShrink: shrink, margin: childMargin });
+    }
+
+    const totalGaps = Math.max(0, childInfos.length - 1) * gap;
+    const mainAvail = isRow ? innerWidth : innerHeight;
+    const freeSpace = mainAvail - totalFixed - totalGaps;
+
+    // ── Phase 2: Distribute free space (grow/shrink) ───
+
+    if (freeSpace > 0 && totalGrow > 0) {
+        for (const info of childInfos) {
+            if (info.flexGrow > 0) {
+                info.mainSize += (info.flexGrow / totalGrow) * freeSpace;
+            }
+        }
+    } else if (freeSpace < 0 && totalShrink > 0) {
+        for (const info of childInfos) {
+            if (info.flexShrink > 0) {
+                info.mainSize += (info.flexShrink / totalShrink) * freeSpace;
+                info.mainSize = Math.max(0, info.mainSize);
+            }
+        }
+    }
+
+    // ── Phase 3: Position children ─────────────────────
+
+    const totalMainUsed = childInfos.reduce((sum, i) => sum + i.mainSize, 0) + totalGaps;
+    const remainingSpace = Math.max(0, mainAvail - totalMainUsed);
+
+    let mainOffset: number;
+    let spaceBetween = 0;
+
+    const justify = style.justifyContent ?? 'flex-start';
+    switch (justify) {
+        case 'flex-start':
+            mainOffset = 0;
+            break;
+        case 'flex-end':
+            mainOffset = remainingSpace;
+            break;
+        case 'center':
+            mainOffset = remainingSpace / 2;
+            break;
+        case 'space-between':
+            mainOffset = 0;
+            spaceBetween = childInfos.length > 1 ? remainingSpace / (childInfos.length - 1) : 0;
+            break;
+        case 'space-around':
+            spaceBetween = childInfos.length > 0 ? remainingSpace / childInfos.length : 0;
+            mainOffset = spaceBetween / 2;
+            break;
+        default:
+            mainOffset = 0;
+    }
+
+    const crossAvail = isRow ? innerHeight : innerWidth;
+    const align = style.alignItems ?? 'stretch';
+
+    for (const info of childInfos) {
+        // Cross axis alignment
+        let crossOffset: number;
+        let finalCrossSize = info.crossSize;
+
+        switch (align) {
+            case 'flex-start':
+                crossOffset = 0;
+                break;
+            case 'flex-end':
+                crossOffset = crossAvail - finalCrossSize;
+                break;
+            case 'center':
+                crossOffset = (crossAvail - finalCrossSize) / 2;
+                break;
+            case 'stretch':
+                crossOffset = 0;
+                finalCrossSize = crossAvail;
+                break;
+            default:
+                crossOffset = 0;
+        }
+
+        // Set computed rect
+        if (isRow) {
+            info.node.computed = {
+                x: Math.floor(node.computed.x + innerX + mainOffset + info.margin.left),
+                y: Math.floor(node.computed.y + innerY + crossOffset + info.margin.top),
+                width: Math.round(Math.max(0, info.mainSize - info.margin.left - info.margin.right)),
+                height: Math.round(Math.max(0, finalCrossSize - info.margin.top - info.margin.bottom)),
+            };
+        } else {
+            info.node.computed = {
+                x: Math.floor(node.computed.x + innerX + crossOffset + info.margin.left),
+                y: Math.floor(node.computed.y + innerY + mainOffset + info.margin.top),
+                width: Math.round(Math.max(0, finalCrossSize - info.margin.left - info.margin.right)),
+                height: Math.round(Math.max(0, info.mainSize - info.margin.top - info.margin.bottom)),
+            };
+        }
+
+        mainOffset += info.mainSize + gap + spaceBetween;
+
+        // Recursively layout children — dimensions already set by parent
+        layoutNode(info.node, info.node.computed.width, info.node.computed.height, true);
+    }
+
+    // Mark this node clean after layout is complete (used by future caching logic)
+    node._dirty = false;
+}
+
+/**
+ * Resolve a size value (fixed number or percentage string) to pixels.
+ * Returns undefined if the value is not set.
+ */
+function resolveSize(value: number | string | undefined, available: number): number | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string' && value.endsWith('%')) {
+        const pct = parseFloat(value) / 100;
+        return Math.floor(available * pct);
+    }
+    return undefined;
+}
+
+/**
+ * Clamp a size to min/max bounds.
+ */
+function clampSize(value: number, min?: number, max?: number): number {
+    let result = value;
+    if (min !== undefined) result = Math.max(result, min);
+    if (max !== undefined) result = Math.min(result, max);
+    return result;
+}

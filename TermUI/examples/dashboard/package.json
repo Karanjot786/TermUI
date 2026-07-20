@@ -1,0 +1,23 @@
+{
+    "name": "@termuijs/example-dashboard",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "description": "Example dashboard app using TermUI",
+    "scripts": {
+        "start": "bun src/index.ts",
+        "dev": "bun --watch src/index.ts",
+        "build": "echo 'no build needed'"
+    },
+    "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/data": "workspace:*",
+        "@termuijs/widgets": "workspace:*"
+    },
+    "engines": {
+        "bun": ">=1.3.0"
+    },
+    "devDependencies": {
+        "rimraf": "^6.1.3"
+    }
+}

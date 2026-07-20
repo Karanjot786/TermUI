@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 TermUI Documentation
+    url: https://www.termui.io
+    about: Read the docs before you open an issue.
+  - name: 💬 GSSoC 2026 Discord
+    url: https://gssoc.girlscript.org/getting-started
+    about: Ask GSSoC questions on the official Discord.
+  - name: 🐦 Twitter / X
+    url: https://x.com/Karanjotdulay
+    about: Follow for project updates.

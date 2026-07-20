@@ -1,0 +1,137 @@
+{
+  "skill": "knowledge-base",
+  "version": "0.1.0",
+  "evals": [
+    {
+      "id": "eval-001",
+      "description": "Triggers when user asks about help center category structure",
+      "prompt": "I need to design the category hierarchy for our SaaS help center. We have billing, team management, integrations, and reporting features. Where do I start?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "user" },
+        { "type": "contains", "value": "goal" },
+        { "type": "contains", "value": "category" }
+      ]
+    },
+    {
+      "id": "eval-002",
+      "description": "Triggers when user asks about writing a support article",
+      "prompt": "How should I write a knowledge base article that helps users reset their password?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "title" },
+        { "type": "contains", "value": "step" },
+        { "type": "contains", "value": "verb" }
+      ]
+    },
+    {
+      "id": "eval-003",
+      "description": "Triggers on search optimization request",
+      "prompt": "Users can't find our help articles in search even though we have them. How do I improve our help center search?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "synonym" },
+        { "type": "contains", "value": "title" },
+        { "type": "contains", "value": "keyword" }
+      ]
+    },
+    {
+      "id": "eval-004",
+      "description": "Agent designs a goal-based taxonomy, not feature-based",
+      "prompt": "Design a complete help center category structure for a project management tool. The product has tasks, projects, timelines, team management, and Slack integrations.",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "Getting Started" },
+        { "type": "contains", "value": "Billing" },
+        { "type": "not_contains", "value": "Timeline Module" }
+      ]
+    },
+    {
+      "id": "eval-005",
+      "description": "Agent writes a how-to article with correct structure",
+      "prompt": "Write a help center article for 'How to export project data as a CSV file'",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "Steps" },
+        { "type": "contains", "value": "Result" },
+        { "type": "contains", "value": "Related" }
+      ]
+    },
+    {
+      "id": "eval-006",
+      "description": "Agent writes a troubleshooting article with causes and solutions",
+      "prompt": "Write a troubleshooting article for users who see 'Payment Failed' when upgrading their plan",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "cause" },
+        { "type": "contains", "value": "solution" },
+        { "type": "contains", "value": "support" }
+      ]
+    },
+    {
+      "id": "eval-007",
+      "description": "Agent recommends synonym dictionary for search mismatches",
+      "prompt": "Our articles use the word 'invoice' but users search for 'bill' and get zero results. What should we do?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "synonym" },
+        { "type": "contains", "value": "invoice" },
+        { "type": "contains", "value": "bill" }
+      ]
+    },
+    {
+      "id": "eval-008",
+      "description": "Agent explains deflection rate and how to measure it",
+      "prompt": "How do I measure whether our knowledge base is actually reducing support tickets?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "deflection" },
+        { "type": "contains", "value": "ticket" },
+        { "type": "contains", "value": "rate" }
+      ]
+    },
+    {
+      "id": "eval-009",
+      "description": "Agent provides a maintenance workflow with review cadence",
+      "prompt": "We have 200 help articles and no process for keeping them updated. How do we maintain this?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "owner" },
+        { "type": "contains", "value": "review" },
+        { "type": "contains", "value": "archive" }
+      ]
+    },
+    {
+      "id": "eval-010",
+      "description": "Agent warns against answer-burying and enforces scan-first writing",
+      "prompt": "I wrote an article that starts with three paragraphs of background before the actual steps. Is that a good structure?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "scan" },
+        { "type": "not_contains", "value": "that's fine" },
+        { "type": "contains", "value": "first" }
+      ]
+    },
+    {
+      "id": "eval-011",
+      "description": "Agent gives contextual help patterns for in-product implementation",
+      "prompt": "We want to add help tooltips and contextual guidance inside our app. What patterns should we use?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "tooltip" },
+        { "type": "contains", "value": "inline" },
+        { "type": "contains", "value": "second person" }
+      ]
+    },
+    {
+      "id": "eval-012",
+      "description": "Agent does not trigger for internal runbook or API docs requests",
+      "prompt": "Write a runbook for our on-call engineers to follow when the payment service goes down",
+      "type": "explanation",
+      "assertions": [
+        { "type": "not_contains", "value": "help center" },
+        { "type": "not_contains", "value": "deflection" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+name: GSSoC / Star check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  star-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify PR author has starred the repo
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const user   = context.payload.pull_request.user.login;
+            const number = context.payload.pull_request.number;
+
+            // Maintainer bypass. Self-merges skip the gate.
+            const MAINTAINERS = ['Karanjot786'];
+            if (MAINTAINERS.includes(user)) {
+              core.info(`@${user} is a maintainer; skipping star check.`);
+              return;
+            }
+
+            // Bot bypass
+            if (user.endsWith('[bot]') || user === 'dependabot[bot]') {
+              core.info(`@${user} is a bot; skipping star check.`);
+              return;
+            }
+
+            // Paginate all stargazers
+            const stargazers = await github.paginate(
+              github.rest.activity.listStargazersForRepo,
+              { ...context.repo, per_page: 100 }
+            );
+            const starred = stargazers.some(s => s.login === user);
+
+            if (starred) {
+              core.info(`✓ @${user} has starred the repo.`);
+              // Remove needs-star label if it was previously applied
+              try {
+                await github.rest.issues.removeLabel({
+                  ...context.repo,
+                  issue_number: number,
+                  name: 'needs-star',
+                });
+                core.info('Removed needs-star label.');
+              } catch (e) {
+                // label not present, fine
+              }
+              return;
+            }
+
+            // Not starred → label + comment + fail the check
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: number,
+              labels: ['needs-star'],
+            });
+
+            // Avoid duplicate comments. Post only if we have not already.
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: number,
+              per_page: 100,
+            });
+            const alreadyAsked = comments.some(c =>
+              c.user.login.endsWith('[bot]') && c.body.includes('star this repo')
+            );
+            if (!alreadyAsked) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: number,
+                body: [
+                  `Hi @${user} 👋`,
+                  ``,
+                  `⭐ **[Star this repo](https://github.com/${context.repo.owner}/${context.repo.repo})** before your PR merges.`,
+                  ``,
+                  `Why? GSSoC 2026 contributors who star get priority review and points credit. After you star, push any commit (or re-run this check). The \`needs-star\` label lifts automatically.`,
+                  ``,
+                  `_Thanks for your contribution to TermUI._`,
+                ].join('\n'),
+              });
+            }
+
+            core.setFailed(`@${user} has not starred the repo.`);

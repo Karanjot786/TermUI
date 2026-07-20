@@ -1,0 +1,8 @@
+# Auto-assign @Karanjot786 as reviewer on every PR.
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner. Applies to every file.
+* @Karanjot786
+
+# Package-specific owners can be added here later as mentors join, e.g.:
+# packages/widgets/    @Karanjot786 @mentor-handle

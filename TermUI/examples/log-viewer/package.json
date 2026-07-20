@@ -1,0 +1,23 @@
+{
+    "name": "@termuijs/example-log-viewer",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "description": "Log viewer example app with realtime logs and filtering",
+    "scripts": {
+        "start": "bun src/index.tsx",
+        "dev": "bun --watch src/index.tsx",
+        "build": "echo 'no build needed'"
+    },
+    "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+        "@termuijs/ui": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.3"
+    },
+    "engines": {
+        "bun": ">=1.3.0"
+    }
+}

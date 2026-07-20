@@ -1,0 +1,64 @@
+{
+  "name": "@termuijs/jsx",
+  "homepage": "https://www.termui.io/docs/jsx/context",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Karanjot786/TermUI"
+  },
+  "version": "0.1.5",
+  "description": "JSX runtime for TermUI with useState, useEffect, useContext, useAsync, and memo()",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./jsx-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
+      "import": "./dist/jsx-runtime.js",
+      "require": "./dist/jsx-runtime.cjs"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
+      "import": "./dist/jsx-runtime.js",
+      "require": "./dist/jsx-runtime.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@termuijs/core": "workspace:*",
+    "@termuijs/motion": "workspace:*",
+    "@termuijs/widgets": "workspace:*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  },
+  "keywords": [
+    "terminal",
+    "tui",
+    "cli",
+    "jsx",
+    "tsx",
+    "react",
+    "hooks"
+  ],
+  "license": "MIT",
+  "engines": {
+    "bun": ">=1.3.0",
+    "node": ">=18.0.0"
+  }
+}

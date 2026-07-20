@@ -1,0 +1,53 @@
+# Path-based PR labels. Consumed by actions/labeler@v5.
+# .github/workflows/gssoc-auto-label.yml triggers this.
+
+# ── Area labels (one per package) ─────────────────────────────────
+"area:core":
+  - changed-files:
+      - any-glob-to-any-file: ["packages/core/**"]
+"area:widgets":
+  - changed-files:
+      - any-glob-to-any-file: ["packages/widgets/**"]
+"area:ui":
+  - changed-files:
+      - any-glob-to-any-file: ["packages/ui/**"]
+"area:jsx":
+  - changed-files:
+      - any-glob-to-any-file: ["packages/jsx/**"]
+"area:tss":
+  - changed-files:
+      - any-glob-to-any-file: ["packages/tss/**"]
+"area:data":
+  - changed-files:
+      - any-glob-to-any-file: ["packages/data/**"]
+"area:dev-server":
+  - changed-files:
+      - any-glob-to-any-file: ["packages/dev-server/**"]
+"area:website":
+  - changed-files:
+      - any-glob-to-any-file: ["website/**"]
+"area:examples":
+  - changed-files:
+      - any-glob-to-any-file: ["examples/**"]
+
+# ── Type labels (path heuristics) ─────────────────────────────────
+"type:testing":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.test.ts"
+          - "**/*.test.tsx"
+          - "**/__tests__/**"
+"type:docs":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "**/*.mdx"
+          - "website/src/content/**"
+          - "docs/**"
+"type:devops":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/**.yml"
+          - "turbo.json"
+          - "bunfig.toml"

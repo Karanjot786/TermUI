@@ -1,0 +1,105 @@
+name: GSSoC / Auto-assign on claim
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  issues: write
+
+jobs:
+  assign:
+    if: github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assign commenter if comment matches claim pattern
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body   = (context.payload.comment.body || '').toLowerCase();
+            const user   = context.payload.comment.user.login;
+            const number = context.payload.issue.number;
+            const issue  = context.payload.issue;
+
+            // Claim phrases. Accept several variants.
+            const CLAIM_RE = /(work on this|claim this|assign me|i would like to work|please assign|i'd like to work|let me work on this)/i;
+            if (!CLAIM_RE.test(body)) {
+              core.info('Comment does not match claim pattern; ignoring.');
+              return;
+            }
+
+            // Skip bots
+            if (user.endsWith('[bot]')) return;
+
+            // Cap: max 2 open issues assigned per contributor.
+            // Force them to open and merge a PR before claiming more.
+            const MAX_OPEN = 2;
+            const { owner, repo } = context.repo;
+            const search = await github.rest.search.issuesAndPullRequests({
+              q: `repo:${owner}/${repo} is:issue is:open assignee:${user}`,
+              per_page: 100,
+            });
+            const openAssigned = search.data.items
+              .filter(i => i.number !== number)
+              .map(i => `#${i.number}`);
+            if (openAssigned.length >= MAX_OPEN) {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: number,
+                body: [
+                  `Hi @${user}. You already have ${openAssigned.length} open issues assigned: ${openAssigned.join(', ')}.`,
+                  ``,
+                  `Open and merge a PR from one of those first. Then comment here again to claim this one.`,
+                  ``,
+                  `This keeps work moving and gives every contributor a fair chance.`,
+                ].join('\n'),
+              });
+              core.info(`@${user} at cap (${openAssigned.length}); not assigning.`);
+              return;
+            }
+
+            // Already assigned?
+            const currentAssignees = (issue.assignees || []).map(a => a.login);
+            if (currentAssignees.length > 0) {
+              if (currentAssignees.includes(user)) {
+                core.info(`@${user} already assigned; no-op.`);
+                return;
+              }
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: number,
+                body: `Hi @${user}. @${currentAssignees[0]} already claimed this issue. The bot frees it automatically if they do not open a PR within 7 days.`,
+              });
+              return;
+            }
+
+            // Assign + label + comment
+            await github.rest.issues.addAssignees({
+              ...context.repo,
+              issue_number: number,
+              assignees: [user],
+            });
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: number,
+              labels: ['assigned'],
+            });
+
+            const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: number,
+              body: [
+                `✅ Assigned to @${user}.`,
+                ``,
+                `Open your PR by **${due}** (7 days from now). The bot frees this issue for another contributor after that date.`,
+                ``,
+                `**Reminders:**`,
+                `- ⭐ Star the repo first. The \`star-check\` job blocks your merge otherwise.`,
+                `- PR title: \`type: short description\``,
+                `- Link this issue in your PR body: \`Closes #${number}\``,
+                ``,
+                `Good luck. 🚀`,
+              ].join('\n'),
+            });

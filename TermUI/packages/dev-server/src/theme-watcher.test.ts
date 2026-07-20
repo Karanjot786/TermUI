@@ -1,0 +1,55 @@
+/// <reference types="vitest" />
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { ThemeWatcher } from './theme-watcher.js';
+import { watch, existsSync } from 'node:fs';
+import { EventEmitter } from 'node:events';
+
+vi.mock('node:fs', () => ({
+    watch: vi.fn(),
+    existsSync: vi.fn(() => true)
+}));
+
+describe('ThemeWatcher', () => {
+    let mockWatcherEmitter: EventEmitter;
+
+    beforeEach(() => {
+        vi.useFakeTimers();
+        mockWatcherEmitter = new EventEmitter();
+        vi.mocked(watch).mockReturnValue(mockWatcherEmitter as any);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.useRealTimers();
+    });
+
+    it('notifies attached child via IPC on .tss change', () => {
+        const watcher = new ThemeWatcher({ watchDirs: ['./themes'] });
+        const mockChild = { send: vi.fn(), killed: false, exitCode: null } as any;
+
+        watcher.attachChild(mockChild);
+        watcher.start();
+
+        mockWatcherEmitter.emit('change', 'change', 'cool-theme.tss');
+        vi.advanceTimersByTime(100);
+
+        expect(mockChild.send).toHaveBeenCalledTimes(1);
+        expect(mockChild.send).toHaveBeenCalledWith({ type: 'theme-reload', filename: 'cool-theme.tss' });
+    });
+
+    it('emits onChange to listeners on .tss change', () => {
+        const watcher = new ThemeWatcher({ watchDirs: ['./themes'] });
+        const changeSpy = vi.fn();
+
+        watcher.onChange(changeSpy);
+        watcher.start();
+
+        mockWatcherEmitter.emit('change', 'change', 'styles.tss');
+        vi.advanceTimersByTime(100);
+
+        expect(changeSpy).toHaveBeenCalledTimes(1);
+        const arg = changeSpy.mock.calls[0][0];
+        expect(arg).toHaveProperty('filename', 'styles.tss');
+        expect(arg).toHaveProperty('timestamp');
+    });
+});

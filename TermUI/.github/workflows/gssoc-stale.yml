@@ -1,0 +1,105 @@
+name: GSSoC / Stale issues and assignments
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # daily at 03:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          days-before-stale: 14
+          days-before-close: 7
+          stale-issue-message: |
+            No activity on this issue for 14 days. Comment to keep it open. It closes in 7 days otherwise.
+          stale-pr-message: |
+            No activity on this PR for 14 days. Rebase, resolve conflicts, or comment to keep it open. It closes in 7 days otherwise.
+          close-issue-message: |
+            Closing as stale. Reopen any time with new context.
+          close-pr-message: |
+            Closing as stale. Reopen any time to continue your work.
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: "pinned,gssoc:approved,good first issue,help wanted,assigned"
+          exempt-pr-labels: "pinned,gssoc:approved,work-in-progress"
+          operations-per-run: 100
+
+  free-stale-assignments:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free assignments older than 7 days without a linked PR
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Find open issues with the "assigned" label
+            const { data: issues } = await github.rest.issues.listForRepo({
+              ...context.repo,
+              state: 'open',
+              labels: 'assigned',
+              per_page: 100,
+            });
+
+            const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+            for (const issue of issues) {
+              if (issue.pull_request) continue; // skip PRs
+              if (!issue.assignees || issue.assignees.length === 0) continue;
+
+              // Find when "assigned" label was last applied
+              const { data: events } = await github.rest.issues.listEventsForTimeline({
+                ...context.repo,
+                issue_number: issue.number,
+                per_page: 100,
+              });
+              const lastAssigned = events
+                .filter(e => e.event === 'labeled' && e.label?.name === 'assigned')
+                .pop();
+              if (!lastAssigned) continue;
+              const assignedAt = new Date(lastAssigned.created_at).getTime();
+              if (assignedAt > cutoff) continue;
+
+              // Check for linked PRs referencing this issue
+              const { data: timeline } = await github.rest.issues.listEventsForTimeline({
+                ...context.repo,
+                issue_number: issue.number,
+                per_page: 100,
+              });
+              const hasLinkedPR = timeline.some(
+                e => e.event === 'cross-referenced' && e.source?.issue?.pull_request
+              );
+              if (hasLinkedPR) continue;
+
+              // Free the issue
+              const assignees = issue.assignees.map(a => a.login);
+              await github.rest.issues.removeAssignees({
+                ...context.repo,
+                issue_number: issue.number,
+                assignees,
+              });
+              await github.rest.issues.removeLabel({
+                ...context.repo,
+                issue_number: issue.number,
+                name: 'assigned',
+              }).catch(() => {});
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: issue.number,
+                body: [
+                  `⏰ Auto-unassigned: no PR opened within 7 days.`,
+                  ``,
+                  `@${assignees.join(', @')}, re-claim it by commenting \`I would like to work on this\` again.`,
+                  ``,
+                  `Other contributors can now pick this up.`,
+                ].join('\n'),
+              });
+              core.info(`Freed issue #${issue.number} from @${assignees.join(', @')}`);
+            }

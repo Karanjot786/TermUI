@@ -1,0 +1,40 @@
+@theme cyberpunk {
+    --primary: #ff00ff;
+    --secondary: #00ffff;
+    --bg: #0a0a2e;
+    --surface: #1a1a4e;
+    --text: #e0e0ff;
+    --text-muted: #6060a0;
+    --accent: #ff6b6b;
+    --error: #ff4444;
+    --warning: #ffaa00;
+    --success: #00ff88;
+    --border: single;
+    --border-color: #00ffff;
+    --border-focus: #ff00ff;
+}
+
+Gauge {
+    color: var(--primary);
+    bar-filled: "█";
+    bar-empty: "░";
+}
+
+Table {
+    border: var(--border);
+    border-color: var(--border-color);
+    header-color: var(--primary);
+    stripe-color: var(--surface);
+    padding: 1;
+}
+
+Box.dashboard {
+    border: double;
+    border-color: var(--accent);
+    padding: 1 2;
+}
+
+Text:focused {
+    color: var(--primary);
+    bold: true;
+}

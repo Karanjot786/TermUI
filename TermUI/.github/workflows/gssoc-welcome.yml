@@ -1,0 +1,51 @@
+name: GSSoC / Welcome new contributors
+
+on:
+  pull_request_target:
+    types: [opened]
+  issues:
+    types: [opened]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            👋 Welcome to **TermUI**, @${{ github.actor }}. Thanks for opening your first issue.
+
+            **Quick checks:**
+            1. ⭐ Star the repo. Required for GSSoC point credit.
+            2. 📖 Read [CONTRIBUTING.md](https://github.com/Karanjot786/TermUI/blob/main/CONTRIBUTING.md).
+            3. 🏷  Use the right issue template.
+
+            **To claim an issue:** comment `I would like to work on this`. The bot assigns you. You have **7 days** to open your PR.
+
+            **GSSoC 2026 point system:** every approved PR earns `+50 base` plus difficulty, quality, and type bonuses. See [`gssoc-points.md`](https://github.com/Karanjot786/TermUI/blob/main/docs/gssoc-points.md).
+
+            Your reviewer responds within 48 hours.
+
+          pr-message: |
+            🎉 Thanks for your first PR to **TermUI**, @${{ github.actor }}.
+
+            **Before your PR merges:**
+            1. ⭐ **Star the repo.** Required. The `star-check` job blocks your merge otherwise.
+            2. ✅ All checks green: `build`, `test`, `typecheck`.
+            3. 🏷  PR title follows `type: short description`. Example: `fix: handle empty list`.
+            4. 🔗 Link your closing issue in the description.
+
+            **GSSoC 2026 points come from labels after merge:**
+            - `gssoc:approved`. +50 base points.
+            - `level:beginner` / `intermediate` / `advanced` / `critical`. +20 / +35 / +55 / +80.
+            - `quality:clean` / `exceptional`. x 1.2 / x 1.5.
+            - `type:*`. Stackable bonus.
+
+            Your reviewer responds within **48 hours**. Ping `@Karanjot786` on Discord for urgent help.
+
+            🚀 Welcome to the cohort.

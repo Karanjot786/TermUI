@@ -1,0 +1,304 @@
+// ─────────────────────────────────────────────────────
+// @termuijs/core — Focus Manager
+// ─────────────────────────────────────────────────────
+
+import { EventEmitter } from './EventEmitter.js';
+import type { FocusEvent } from './types.js';
+
+export interface Focusable {
+    id: string;
+    tabIndex: number;
+    focusable: boolean;
+}
+
+/**
+ * Manages tab-order focus cycling between focusable widgets.
+ * Dispatches focus/blur events when focus changes.
+ *
+ * Supports:
+ * - Tab-order cycling (focusNext/focusPrev)
+ * - Focus trapping (for modals — limits Tab to a container)
+ * - Focus groups (for arrow-key navigation within a group)
+ */
+export class FocusManager {
+    private _focusables: Focusable[] = [];
+    private _currentIndex = -1;
+    private _events = new EventEmitter<{ focus: FocusEvent; blur: FocusEvent }>();
+
+    /**
+     * Stack of trap container IDs. When non-empty, only focusables
+     * that belong to the topmost trap container are reachable via Tab.
+     */
+    private _trapStack: string[] = [];
+
+    /**
+     * Map of container ID → child widget IDs that belong to it.
+     * Used for trap membership lookup.
+     */
+    private _containerMembers: Map<string, Set<string>> = new Map();
+
+    /**
+     * Named focus groups. Arrow keys move within a group, Tab moves between groups.
+     * Maps groupId → ordered list of widget IDs.
+     */
+    private _groups: Map<string, string[]> = new Map();
+
+    /** Currently focused widget ID, or null if none */
+    get currentId(): string | null {
+        if (this._currentIndex < 0 || this._currentIndex >= this._focusables.length) {
+            return null;
+        }
+        return this._focusables[this._currentIndex].id;
+    }
+
+    /** Subscribe to focus/blur events */
+    on<K extends 'focus' | 'blur'>(event: K, handler: (data: FocusEvent) => void): () => void {
+        return this._events.on(event, handler);
+    }
+
+    /**
+     * Register a focusable widget.
+     * Widgets are ordered by tabIndex (ascending), then insertion order.
+     */
+    register(focusable: Focusable): void {
+        this._focusables.push(focusable);
+        this._focusables.sort((a, b) => a.tabIndex - b.tabIndex);
+
+        // Auto-focus the first widget if nothing is focused
+        if (this._currentIndex < 0 && focusable.focusable) {
+            this._currentIndex = this._focusables.indexOf(focusable);
+            this._events.emit('focus', { targetId: focusable.id, type: 'focus' });
+        }
+    }
+
+    /**
+     * Unregister a focusable widget.
+     */
+    unregister(id: string): void {
+        const idx = this._focusables.findIndex(f => f.id === id);
+        if (idx < 0) return;
+
+        const wasFocused = idx === this._currentIndex;
+        this._focusables.splice(idx, 1);
+
+        if (wasFocused) {
+            this._events.emit('blur', { targetId: id, type: 'blur' });
+            // Try to focus the next widget
+            if (this._focusables.length > 0) {
+                this._currentIndex = Math.min(this._currentIndex, this._focusables.length - 1);
+                this._events.emit('focus', {
+                    targetId: this._focusables[this._currentIndex].id,
+                    type: 'focus',
+                });
+            } else {
+                this._currentIndex = -1;
+            }
+        } else if (idx < this._currentIndex) {
+            this._currentIndex--;
+        }
+    }
+
+    /**
+     * Move focus to the next focusable widget (wraps around).
+     * Respects focus traps — if a trap is active, only cycles within it.
+     */
+    focusNext(): void {
+        const candidates = this._getActiveFocusables();
+        if (candidates.length === 0) return;
+
+        const currentInCandidates = this.currentId
+            ? candidates.findIndex(f => f.id === this.currentId)
+            : -1;
+
+        let next = (currentInCandidates + 1) % candidates.length;
+        const start = next;
+
+        // Skip non-focusable widgets
+        while (!candidates[next].focusable) {
+            next = (next + 1) % candidates.length;
+            if (next === start) return; // All non-focusable
+        }
+
+        // Find this candidate's index in the master list
+        const masterIdx = this._focusables.findIndex(f => f.id === candidates[next].id);
+        if (masterIdx >= 0) this._changeFocus(masterIdx);
+    }
+
+    /**
+     * Move focus to the previous focusable widget (wraps around).
+     * Respects focus traps.
+     */
+    focusPrev(): void {
+        const candidates = this._getActiveFocusables();
+        if (candidates.length === 0) return;
+
+        const currentInCandidates = this.currentId
+            ? candidates.findIndex(f => f.id === this.currentId)
+            : 0;
+
+        let prev = (currentInCandidates - 1 + candidates.length) % candidates.length;
+        const start = prev;
+
+        while (!candidates[prev].focusable) {
+            prev = (prev - 1 + candidates.length) % candidates.length;
+            if (prev === start) return;
+        }
+
+        const masterIdx = this._focusables.findIndex(f => f.id === candidates[prev].id);
+        if (masterIdx >= 0) this._changeFocus(masterIdx);
+    }
+
+    /**
+     * Focus a specific widget by ID.
+     */
+    focusWidget(id: string): void {
+        const idx = this._focusables.findIndex(f => f.id === id);
+        if (idx < 0 || !this._focusables[idx].focusable) return;
+        this._changeFocus(idx);
+    }
+
+    /**
+     * Check if a specific widget currently has focus.
+     */
+    isFocused(id: string): boolean {
+        return this.currentId === id;
+    }
+
+    // ── Focus Trap ──────────────────────────────────────
+
+    /**
+     * Register widget IDs as members of a container (for trap lookup).
+     */
+    registerContainerMembers(containerId: string, memberIds: string[]): void {
+        const set = this._containerMembers.get(containerId) ?? new Set();
+        for (const id of memberIds) set.add(id);
+        this._containerMembers.set(containerId, set);
+    }
+
+    /**
+     * Unregister a container's member list.
+     */
+    unregisterContainerMembers(containerId: string): void {
+        this._containerMembers.delete(containerId);
+    }
+
+    /**
+     * Trap focus within a container. Only focusables inside the
+     * container are reachable via Tab. Traps are stacked —
+     * nested modals create nested traps.
+     */
+    trap(containerId: string): void {
+        this._trapStack.push(containerId);
+
+        // Focus the first focusable inside the trap
+        const trapped = this._getActiveFocusables();
+        if (trapped.length > 0) {
+            const first = trapped.find(f => f.focusable);
+            if (first) {
+                const idx = this._focusables.findIndex(f => f.id === first.id);
+                if (idx >= 0) this._changeFocus(idx);
+            }
+        }
+    }
+
+    /**
+     * Release the current focus trap. Restores previous trap or free navigation.
+     */
+    release(): void {
+        this._trapStack.pop();
+    }
+
+    /** Whether a focus trap is currently active */
+    get isTrapped(): boolean {
+        return this._trapStack.length > 0;
+    }
+
+    /** ID of the current trap container, or null */
+    get currentTrapId(): string | null {
+        return this._trapStack.length > 0
+            ? this._trapStack[this._trapStack.length - 1]
+            : null;
+    }
+
+    // ── Focus Groups ────────────────────────────────────
+
+    /**
+     * Register a focus group. Arrow keys move within the group.
+     * @param groupId   Unique group identifier
+     * @param widgetIds Ordered list of widget IDs in the group
+     */
+    registerGroup(groupId: string, widgetIds: string[]): void {
+        this._groups.set(groupId, widgetIds);
+    }
+
+    /**
+     * Unregister a focus group.
+     */
+    unregisterGroup(groupId: string): void {
+        this._groups.delete(groupId);
+    }
+
+    /**
+     * Move focus to the next widget within the same group.
+     * Returns true if focus was moved, false if the widget isn't in a group.
+     */
+    focusNextInGroup(): boolean {
+        const currentId = this.currentId;
+        if (!currentId) return false;
+
+        for (const [, ids] of this._groups) {
+            const idx = ids.indexOf(currentId);
+            if (idx >= 0) {
+                const nextIdx = (idx + 1) % ids.length;
+                this.focusWidget(ids[nextIdx]);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Move focus to the previous widget within the same group.
+     */
+    focusPrevInGroup(): boolean {
+        const currentId = this.currentId;
+        if (!currentId) return false;
+
+        for (const [, ids] of this._groups) {
+            const idx = ids.indexOf(currentId);
+            if (idx >= 0) {
+                const prevIdx = (idx - 1 + ids.length) % ids.length;
+                this.focusWidget(ids[prevIdx]);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // ── Private ──────────────────────────────────────────
+
+    /**
+     * Get the active focusables, filtered by the current trap if any.
+     */
+    private _getActiveFocusables(): Focusable[] {
+        if (this._trapStack.length === 0) return this._focusables;
+
+        const containerId = this._trapStack[this._trapStack.length - 1];
+        const members = this._containerMembers.get(containerId);
+        if (!members) return this._focusables;
+
+        return this._focusables.filter(f => members.has(f.id));
+    }
+
+    private _changeFocus(newIndex: number): void {
+        const oldId = this.currentId;
+        if (oldId) {
+            this._events.emit('blur', { targetId: oldId, type: 'blur' });
+        }
+        this._currentIndex = newIndex;
+        this._events.emit('focus', {
+            targetId: this._focusables[newIndex].id,
+            type: 'focus',
+        });
+    }
+}

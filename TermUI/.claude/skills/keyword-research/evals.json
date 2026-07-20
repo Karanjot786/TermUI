@@ -1,0 +1,164 @@
+{
+  "skill": "keyword-research",
+  "version": "1.0.0",
+  "evals": [
+    {
+      "id": "eval-001",
+      "description": "Trigger: standard keyword research request",
+      "prompt": "I want to find the best keywords to target for my new SaaS landing page. Where do I start?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "intent" },
+        { "type": "contains_any", "value": ["search volume", "traffic potential"] },
+        { "type": "contains", "value": "SERP" }
+      ]
+    },
+    {
+      "id": "eval-002",
+      "description": "Trigger: search intent analysis request",
+      "prompt": "Analyze the search intent for these keywords: 'best CRM software', 'buy CRM', 'what is CRM', 'Salesforce login'",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "commercial investigation" },
+        { "type": "contains", "value": "transactional" },
+        { "type": "contains", "value": "informational" },
+        { "type": "contains", "value": "navigational" }
+      ]
+    },
+    {
+      "id": "eval-003",
+      "description": "Trigger: AI search evaluation request",
+      "prompt": "I want to understand which of my target keywords are being answered by Google AI Overviews and ChatGPT Search. How do I evaluate this?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains_any", "value": ["AI Overview", "AI Overviews"] },
+        { "type": "contains_any", "value": ["GEO", "geo", "AI search", "AI citation"] },
+        { "type": "contains_any", "value": ["citation", "cited", "sources"] },
+        { "type": "contains_any", "value": ["Perplexity", "ChatGPT Search", "tri-surface"] }
+      ]
+    },
+    {
+      "id": "eval-004",
+      "description": "Core task: competitor keyword gap analysis",
+      "prompt": "My competitor ranks for a bunch of keywords I don't rank for. How do I find and prioritize those gaps?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "gap" },
+        { "type": "contains_any", "value": ["traffic potential", "opportunity"] },
+        { "type": "contains_any", "value": ["Ahrefs", "Semrush", "competitor"] }
+      ]
+    },
+    {
+      "id": "eval-005",
+      "description": "Core task: keyword clustering with surface annotation",
+      "prompt": "Build a keyword cluster from the seed keyword 'email marketing'. Show me the primary keyword, secondary keywords, and what surface to optimize for.",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "primary" },
+        { "type": "contains_any", "value": ["secondary", "cluster"] },
+        { "type": "contains_any", "value": ["surface", "organic", "AEO", "GEO", "snippet"] }
+      ]
+    },
+    {
+      "id": "eval-006",
+      "description": "Core task: tri-surface scoring",
+      "prompt": "Score the keyword 'best project management software for remote teams' across organic, AEO, and GEO surfaces. Show me the opportunity on each.",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains_any", "value": ["organic", "Organic"] },
+        { "type": "contains_any", "value": ["AEO", "snippet", "answer engine"] },
+        { "type": "contains_any", "value": ["GEO", "AI Overview", "AI citation", "AI search"] },
+        { "type": "contains_any", "value": ["score", "opportunity", "0-10"] }
+      ]
+    },
+    {
+      "id": "eval-007",
+      "description": "Core task: keyword research report generation",
+      "prompt": "I have a list of 100 keywords for my B2B SaaS product. Produce a keyword research report with actionable recommendations.",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains_any", "value": ["executive summary", "summary"] },
+        { "type": "contains_any", "value": ["cluster", "clusters"] },
+        { "type": "contains_any", "value": ["surface", "tri-surface", "organic", "AEO", "GEO"] },
+        { "type": "contains_any", "value": ["quick win", "recommendation", "content"] }
+      ]
+    },
+    {
+      "id": "eval-008",
+      "description": "Core task: surface-aware long-tail variations",
+      "prompt": "Find long-tail keyword variations for 'email marketing' and tell me which ones are best for snippets vs AI search.",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains_any", "value": ["long-tail", "long tail", "variation"] },
+        { "type": "contains_any", "value": ["snippet", "AEO", "featured snippet"] },
+        { "type": "contains_any", "value": ["AI", "GEO", "AI Overview", "citation"] },
+        { "type": "contains_any", "value": ["question", "comparison", "how to"] }
+      ]
+    },
+    {
+      "id": "eval-009",
+      "description": "Gotcha: navigational terms are not worth targeting for non-brand",
+      "prompt": "Should I optimize a page to rank for 'Salesforce login' to steal traffic from Salesforce?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains", "value": "navigational" },
+        { "type": "not_contains", "value": "yes, you should target" },
+        { "type": "contains_any", "value": ["not worth", "difficult", "won't rank", "avoid"] }
+      ]
+    },
+    {
+      "id": "eval-010",
+      "description": "Gotcha: warns against high KD on a new domain",
+      "prompt": "My site launched 2 months ago. Should I go after keywords with keyword difficulty scores above 70?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains_any", "value": ["authority", "domain authority", "new site"] },
+        { "type": "not_contains", "value": "yes, target high difficulty keywords" },
+        { "type": "contains_any", "value": ["low difficulty", "KD < 30", "build up", "start with easier"] }
+      ]
+    },
+    {
+      "id": "eval-011",
+      "description": "Gotcha: GEO score is 0 when no AI Overview fires",
+      "prompt": "How should I score the GEO opportunity for the keyword 'buy standing desk adjustable'? I checked and no AI Overview appears.",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains_any", "value": ["0", "zero", "no GEO", "no opportunity"] },
+        { "type": "contains_any", "value": ["AI Overview", "doesn't fire", "not present", "no AI", "doesn't appear"] },
+        { "type": "contains_any", "value": ["transactional", "purchase", "organic"] }
+      ]
+    },
+    {
+      "id": "eval-012",
+      "description": "Anti-hallucination: does not invent fake keyword research metrics",
+      "prompt": "What is the 'keyword resonance score' and how does it differ from keyword difficulty?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "not_contains", "value": "keyword resonance score is a metric that measures" },
+        { "type": "contains_any", "value": ["does not exist", "not a standard metric", "not a recognized", "unfamiliar", "not aware"] }
+      ]
+    },
+    {
+      "id": "eval-013",
+      "description": "Anti-hallucination: does not fabricate specific tool features",
+      "prompt": "How do I use the 'Intent Predictor Pro' feature in Ahrefs to classify my keywords?",
+      "type": "explanation",
+      "assertions": [
+        { "type": "not_contains", "value": "Intent Predictor Pro works by" },
+        { "type": "contains_any", "value": ["not familiar", "does not appear", "cannot confirm", "no such feature", "not aware"] }
+      ]
+    },
+    {
+      "id": "eval-014",
+      "description": "Reference load: tri-surface scoring rubric detail",
+      "prompt": "Walk me through the exact scoring rubric for evaluating a keyword's AEO and GEO opportunity. I need the detailed factors and weights.",
+      "type": "explanation",
+      "assertions": [
+        { "type": "contains_any", "value": ["AEO", "snippet", "answer engine"] },
+        { "type": "contains_any", "value": ["GEO", "AI Overview", "citation"] },
+        { "type": "contains_any", "value": ["rubric", "score", "factor", "weight"] },
+        { "type": "contains_any", "value": ["tri-surface-scoring", "references/"] }
+      ]
+    }
+  ]
+}

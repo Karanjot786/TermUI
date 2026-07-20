@@ -1,0 +1,8 @@
+[install]
+# Use workspace protocol resolution for monorepo packages
+exact = false
+production = false
+
+[install.lockfile]
+# bun.lock is now text-formatted by default (Bun 1.3+)
+save = true
