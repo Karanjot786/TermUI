@@ -69,7 +69,7 @@ export class MenuBar extends Widget {
 
     private _selectNextItem(): void {
         const items = this._menus[this._activeMenu]?.items ?? [];
-        if (items.length === 0) return;
+        if (items.length === 0 || items.every(i => i.disabled)) return;
         let n = this._activeItem;
         const start = n;
         do {
@@ -84,7 +84,7 @@ export class MenuBar extends Widget {
 
     private _selectPrevItem(): void {
         const items = this._menus[this._activeMenu]?.items ?? [];
-        if (items.length === 0) return;
+        if (items.length === 0 || items.every(i => i.disabled)) return;
         let n = this._activeItem;
         const start = n;
         do {

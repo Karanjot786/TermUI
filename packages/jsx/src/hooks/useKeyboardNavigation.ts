@@ -8,13 +8,14 @@
 //   function Menu({ items }: { items: string[] }) {
 //       const { selectedIndex } = useKeyboardNavigation({
 //           itemCount: items.length,
-//           onSelect: (i) => console.log('selected', items[i]),
+//           onSelect: (i) => { /* handle selection */ },
 //       });
 //       return <List items={items} selectedIndex={selectedIndex} />;
 //   }
 // ─────────────────────────────────────────────────────
 
-import { useState, useInput } from '../hooks.js';
+import { useState, useInput, useEffect } from '../hooks.js';
+import { normalizeNavigationKey } from '@termuijs/core';
 
 export interface KeyboardNavigationOptions {
     /** Total number of items in the list */
@@ -72,7 +73,12 @@ export function useKeyboardNavigation({
 }: KeyboardNavigationOptions): KeyboardNavigationResult {
     const [selectedIndex, setSelectedIndex] = useState(0);
 
-    useInput((key) => {
+    // If the list shrinks, ensure the selected index doesn't stay out of bounds
+    useEffect(() => {
+        setSelectedIndex((prev) => Math.max(0, Math.min(Math.max(0, itemCount - 1), prev)));
+    }, [itemCount]);
+
+    useInput((key, event) => {
         if (itemCount === 0) return;
 
         const move = (delta: number) => {
@@ -86,7 +92,13 @@ export function useKeyboardNavigation({
             });
         };
 
-        switch (key) {
+        // Build a modifier-aware token when the KeyEvent is available so
+        // navigation modes like `emacs` (ctrl+n / ctrl+p) work as expected.
+        const token = event
+            ? `${event.ctrl ? 'ctrl+' : ''}${event.alt ? 'alt+' : ''}${event.shift ? 'shift+' : ''}${String(event.key).toLowerCase()}`
+            : String(key);
+
+        switch (normalizeNavigationKey(token)) {
             case 'up':
                 move(-1);
                 break;

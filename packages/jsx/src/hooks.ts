@@ -9,6 +9,7 @@
 import type { KeyEvent } from '@termuijs/core';
 import { timerPoolSubscribe, motionConfig } from '@termuijs/motion';
 import type { FC } from './vnode.js';
+import { suspendedFibers, fiberToWidgetMap, instanceMap } from './globals.js';
 
 // ── Fiber — per-component-instance state ──
 
@@ -29,6 +30,8 @@ export interface Fiber {
     intervals: ReturnType<typeof setInterval>[];
     /** Context values provided by this fiber's component */
     contextValues: Map<symbol, any>;
+    contextSubscribers?: Map<symbol, Set<Fiber>>;
+    contextDependencies?: Set<Set<Fiber>>;
     /** Parent fiber for context lookup */
     parent?: Fiber;
     // ── ErrorBoundary fields ──
@@ -43,11 +46,17 @@ export interface Fiber {
     _prevChildFibers?: Map<string, ChildFiberEntry>;
     /** Next child render index, reset by setCurrentFiber each render pass */
     _nextChildIdx?: number;
+    // ── Portal tracking ──
+    /** Widgets created via createPortal and their target, for proper teardown */
+    portalChildren?: Array<{ widgets: Widget[]; target: Widget }>;
+    // ── Keymap collision tracking (dev-mode, reset each render) ──
+    /** All keymap binding keys registered in the current render pass, for cross-call duplicate detection */
+    _keymapKeys?: Map<string, KeyBinding>;
 }
 
 interface HookState {
-    value: any;
-    deps?: any[];
+    value: any; // any: hook slots hold heterogeneous values
+    deps?: any[]; // any: hook slots hold heterogeneous values
 }
 
 interface EffectRecord {
@@ -64,6 +73,7 @@ let _requestRender: (() => void) | null = null;
 let _insertBefore: ((line: string) => (() => void) | void) | null = null;
 let _nextFiberId = 0;
 let _nextHookId = 0;
+
 export function useId(): string {
     const fiber = currentFiber();
     const idx = fiber.hookIndex++;
@@ -97,6 +107,10 @@ export function setCurrentFiber(fiber: Fiber): void {
     // Snapshot existing child fibers so renderComponent can look them up for reuse
     fiber._prevChildFibers = fiber.childFibers;
     fiber.childFibers = new Map();
+    // Reset cross-call keymap tracking for dev-mode duplicate detection
+    if (process.env.NODE_ENV !== 'production') {
+        fiber._keymapKeys = new Map();
+    }
 }
 
 /** Clear the current render context */
@@ -140,11 +154,29 @@ export function setInsertBefore(fn: ((line: string) => (() => void) | void) | nu
 let _pendingUpdates = new Set<Fiber>();
 let _flushScheduled = false;
 
+// ── Global Cleanup Registry ──
+// Used by singleton stores (NotificationStore, etc.) to register
+// cleanup functions that are called during test teardown.
+
+let _globalCleanups: Array<() => void> = [];
+
+/**
+ * Register a global cleanup function. Returns an unregister function.
+ * Registered cleanups are called when resetHooksGlobals() is invoked.
+ */
+export function registerCleanup(fn: () => void): () => void {
+    _globalCleanups.push(fn);
+    return () => {
+        const idx = _globalCleanups.indexOf(fn);
+        if (idx >= 0) _globalCleanups.splice(idx, 1);
+    };
+}
+
 /**
  * Schedule a re-render. Multiple setState calls within the same
  * microtask are batched into a single re-render cycle.
  */
-function scheduleRender(fiber?: Fiber): void {
+export function scheduleRender(fiber?: Fiber): void {
     if (fiber) {
         _pendingUpdates.add(fiber);
     }
@@ -157,8 +189,15 @@ function scheduleRender(fiber?: Fiber): void {
 /** Flush all pending state updates in a single render pass */
 function flushUpdates(): void {
     _flushScheduled = false;
-    _pendingUpdates.clear();
-    _requestRender?.();
+    const pending = _pendingUpdates;
+    _pendingUpdates = new Set<Fiber>();
+    if (!_requestRender) {
+        for (const fiber of pending) {
+            _pendingUpdates.add(fiber);
+        }
+        return;
+    }
+    _requestRender();
 }
 
 // ── Hooks ──
@@ -244,7 +283,7 @@ export function useLayoutEffect(effect: () => void | (() => void), deps?: any[])
         const record: EffectRecord = { effect, deps, ran: false };
         fiber.hooks.push({ value: record, deps });
         fiber.layoutEffects.push(record);
-        } else {
+    } else {
         const prev = fiber.hooks[idx];
         const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
 
@@ -291,7 +330,7 @@ export interface KeyBinding {
 /**
  * useKeymap — declarative keybindings with optional conflict detection.
  *
- * Mutually exclusive with useInput — only one per component.
+ * Supports multiple calls per component — handlers are chained via prevOnInput.
  *
  * ```tsx
  * useKeymap([
@@ -305,25 +344,39 @@ export function useKeymap(bindings: KeyBinding[]): void {
     const idx = fiber.hookIndex++;
 
     if (idx >= fiber.hooks.length) {
-        // Dev-mode conflict detection on first render
-        if (process.env.NODE_ENV !== 'production') {
-            const seen = new Map<string, KeyBinding>();
-            for (const b of bindings) {
-                const key = `${b.key}|${b.ctrl ?? false}|${b.alt ?? false}|${b.shift ?? false}`;
-                if (seen.has(key)) {
-                    console.warn(
-                        `[useKeymap] Conflicting keybinding for key "${b.key}" ` +
-                        `(ctrl=${b.ctrl ?? false}, alt=${b.alt ?? false}, shift=${b.shift ?? false})`
-                    );
-                }
-                seen.set(key, b);
-            }
-        }
         fiber.hooks.push({ value: bindings });
     } else {
         fiber.hooks[idx].value = bindings;
     }
 
+    if (process.env.NODE_ENV !== 'production') {
+        // Within-call duplicate check
+        const seen = new Map<string, KeyBinding>();
+        for (const b of bindings) {
+            const compositeKey = `${b.key}|${b.ctrl ?? false}|${b.alt ?? false}|${b.shift ?? false}`;
+            if (seen.has(compositeKey)) {
+                console.warn(
+                    `[useKeymap] Duplicate keymap binding: "${compositeKey}" registered more than once in the same useKeymap call. Last registration wins.`
+                );
+            } else {
+                seen.set(compositeKey, b);
+            }
+        }
+
+        // Cross-call duplicate check
+        if (fiber._keymapKeys) {
+            for (const [compositeKey, b] of seen) {
+                if (fiber._keymapKeys.has(compositeKey)) {
+                    console.warn(
+                        `[useKeymap] Duplicate keymap binding: "${compositeKey}" registered more than once in the same component. Last registration wins.`
+                    );
+                }
+                fiber._keymapKeys.set(compositeKey, b);
+            }
+        }
+    }
+
+    const prevOnInput = fiber.onInput;
     fiber.onInput = (event: KeyEvent) => {
         const currentBindings: KeyBinding[] = fiber.hooks[idx].value;
         for (const b of currentBindings) {
@@ -337,8 +390,10 @@ export function useKeymap(bindings: KeyBinding[]): void {
                 return;
             }
         }
+        prevOnInput?.(event);
     };
 }
+
 
 /**
  * useInsertBefore — register a persistent line above the inline viewport.
@@ -560,17 +615,16 @@ export function runLayoutEffects(fiber: Fiber): void {
     }
 }
 
-
 /** Clean up all effects and intervals for a fiber, including child fibers */
 export function destroyFiber(fiber: Fiber): void {
     for (const record of fiber.effects) {
-        record.cleanup?.();
+        try { record.cleanup?.(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const record of fiber.layoutEffects) {
-        record.cleanup?.();
+        try { record.cleanup?.(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const cleanup of fiber.cleanups) {
-        cleanup();
+        try { cleanup(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const timer of fiber.intervals) {
         clearInterval(timer);
@@ -586,14 +640,64 @@ export function destroyFiber(fiber: Fiber): void {
             destroyFiber(entry.fiber);
         }
     }
+    // Clean up portal children - remove portal widgets from their targets
+    // This is critical to prevent ghost widgets remaining in the target widget tree and causing a memory leak
+    if (fiber.portalChildren) {
+        for (const entry of fiber.portalChildren) {
+            // Guard against stale target: skip if target was already destroyed
+            if (entry.target.parent !== null) {
+                for (const widget of entry.widgets) {
+                    entry.target.removeChild(widget);
+                }
+            }
+        }
+        fiber.portalChildren = undefined;
+    }
+    // Clean up suspended promises (SuspenseBoundary tracking)
+    suspendedFibers.delete(fiber.id);
+
+    // Clean up global instanceMap via reverse fiber→widget mapping (O(1))
+    const widget = fiberToWidgetMap.get(fiber);
+    if (widget) {
+        instanceMap.delete(widget);
+        fiberToWidgetMap.delete(fiber);
+    }
     fiber.hooks = [];
     fiber.effects = [];
     fiber.layoutEffects = [];
     fiber.cleanups = [];
     fiber.intervals = [];
     fiber.contextValues.clear();
+    
+    if (fiber.contextDependencies) {
+        for (const subs of fiber.contextDependencies) {
+            subs.delete(fiber);
+        }
+        fiber.contextDependencies.clear();
+    }
+    
     fiber.childFibers = undefined;
     fiber._prevChildFibers = undefined;
+}
+
+/** Reset all module-level globals for test isolation */
+export function resetHooksGlobals(): void {
+    _currentFiber = null;
+    _requestRender = null;
+    _insertBefore = null;
+    _pendingUpdates.clear();
+    _flushScheduled = false;
+    // Run all registered global cleanups (singleton stores, etc.)
+    const cleanups = _globalCleanups;
+    _globalCleanups = [];
+    for (const fn of cleanups) {
+        try { fn(); } catch { /* ignore cleanup errors */ }
+    }
+    
+    // Clear global instance map
+    instanceMap.clear();
+    // Clear reverse fiber→widget map
+    fiberToWidgetMap.clear();
 }
 
 /**
@@ -678,4 +782,3 @@ export function useAsync<T>(
 
     return { data, loading, error, refetch };
 }
-

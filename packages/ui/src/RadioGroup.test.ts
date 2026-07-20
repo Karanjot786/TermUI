@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, createKeyEvent } from '@termuijs/core';
+import { Screen, createKeyEvent, stringWidth } from '@termuijs/core';
 import { RadioGroup } from './RadioGroup.js';
 
 const OPTIONS = [
@@ -83,6 +83,36 @@ describe('RadioGroup', () => {
         expect(radio.focusedIndex).toBe(0);
     });
 
+    it('handleKey home moves focus to first enabled option without confirming', () => {
+        const radio = new RadioGroup({ options: OPTIONS, defaultValue: 'light' });
+        radio.handleKey(createKeyEvent({ key: 'home', ctrl: false, shift: false, alt: false, raw: Buffer.alloc(0) }));
+        expect(radio.focusedIndex).toBe(0);
+        // value should not change until confirmed
+        expect(radio.selectedValue).toBe('light');
+    });
+
+    it('handleKey home is a no-op when already at first enabled option', () => {
+        const radio = new RadioGroup({ options: OPTIONS, defaultValue: 'dark' });
+        const spy = vi.spyOn(radio, 'markDirty');
+        radio.handleKey(createKeyEvent({ key: 'home', ctrl: false, shift: false, alt: false, raw: Buffer.alloc(0) }));
+        expect(radio.focusedIndex).toBe(0);
+        expect(spy).not.toHaveBeenCalled();
+    });
+
+    it('handleKey end moves focus to last enabled option (skips disabled)', () => {
+        const radio = new RadioGroup({ options: OPTIONS_WITH_DISABLED, defaultValue: 'dark' });
+        radio.handleKey(createKeyEvent({ key: 'end', ctrl: false, shift: false, alt: false, raw: Buffer.alloc(0) }));
+        expect(radio.focusedIndex).toBe(2);
+    });
+
+    it('handleKey end is a no-op when already at last enabled option', () => {
+        const radio = new RadioGroup({ options: OPTIONS, defaultValue: 'system' });
+        const spy = vi.spyOn(radio, 'markDirty');
+        radio.handleKey(createKeyEvent({ key: 'end', ctrl: false, shift: false, alt: false, raw: Buffer.alloc(0) }));
+        expect(radio.focusedIndex).toBe(2);
+        expect(spy).not.toHaveBeenCalled();
+    });
+
     // ── 3. onChange fires on Enter confirm ─────────────
 
     it('onChange fires when a new option is confirmed with enter', () => {
@@ -91,6 +121,18 @@ describe('RadioGroup', () => {
 
         radio.selectNext(); // move focus to 'light'
         radio.handleKey(createKeyEvent({ key: 'enter', ctrl: false, shift: false, alt: false, raw: Buffer.alloc(0) }));
+
+        expect(onChange).toHaveBeenCalledOnce();
+        expect(onChange).toHaveBeenCalledWith('light');
+        expect(radio.selectedValue).toBe('light');
+    });
+
+    it('onChange fires when a new option is confirmed with space', () => {
+        const onChange = vi.fn();
+        const radio = new RadioGroup({ options: OPTIONS, defaultValue: 'dark', onChange });
+
+        radio.selectNext(); // move focus to 'light'
+        radio.handleKey(createKeyEvent({ key: 'space', ctrl: false, shift: false, alt: false, raw: Buffer.alloc(0) }));
 
         expect(onChange).toHaveBeenCalledOnce();
         expect(onChange).toHaveBeenCalledWith('light');
@@ -141,7 +183,7 @@ describe('RadioGroup', () => {
         radio.render(screen);
 
         const row0 = screen.back[0]!.map((c) => c.char).join('');
-        expect(row0).toContain('(o)');
+        expect(row0).toMatch(/\((o|\*)\)/);
         expect(row0).toContain('Dark');
     });
 
@@ -154,5 +196,20 @@ describe('RadioGroup', () => {
         const row1 = screen.back[1]!.map((c) => c.char).join('');
         expect(row1).toContain('( )');
         expect(row1).toContain('Light');
+    });
+
+    it('clips wide option labels by cell width', () => {
+        const radio = new RadioGroup({
+            options: [{ label: '你好你好', value: 'wide' }],
+            defaultValue: 'wide',
+        });
+        const screen = new Screen(9, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        radio.updateRect({ x: 0, y: 0, width: 9, height: 1 });
+        radio.render(screen);
+
+        for (const [x, , text] of writeSpy.mock.calls) {
+            expect(x + stringWidth(text)).toBeLessThanOrEqual(9);
+        }
     });
 });

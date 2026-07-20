@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "File-watching dev server for TermUI that restarts your app on save",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -29,7 +29,9 @@
   },
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
   },
   "dependencies": {
     "@termuijs/core": "workspace:*",

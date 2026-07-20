@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { Screen, type KeyEvent } from '@termuijs/core';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import * as core from '@termuijs/core';
+import * as motion from '@termuijs/motion';
+import { Screen, type KeyEvent, caps, stringWidth } from '@termuijs/core';
 import { ThinkingBlock } from './ThinkingBlock.js';
 
 const key = (k: string): KeyEvent => ({ key: k, ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0), stopPropagation: () => {}, preventDefault: () => {} });
@@ -10,6 +12,10 @@ function render(widget: ThinkingBlock) {
     widget.render(screen);
     return screen;
 }
+
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 
 describe('ThinkingBlock', () => {
     it('renders collapsed state', () => {
@@ -47,4 +53,150 @@ describe('ThinkingBlock', () => {
 
         expect((block as any)._streaming).toBe(true);
     });
+
+    it('does not start animation when reduced motion is preferred', () => {
+        vi.spyOn(core, 'prefersReducedMotion')
+            .mockReturnValue(true);
+        const timerSpy = vi.spyOn(
+            motion,
+            'timerPoolSubscribe',
+        );
+
+        const block = new ThinkingBlock();
+        block.setStreaming(true);
+        block.mount();
+        expect(timerSpy).not.toHaveBeenCalled();
+    });
+
+    it('uses ASCII borders when caps.unicode is false', () => {
+        const originalUnicode = caps.unicode;
+        Object.defineProperty(caps, 'unicode', {
+            value: false,
+            configurable: true,
+        });
+        try {
+            const block = new ThinkingBlock();
+            block.handleKey(key('enter'));
+            const screen = render(block);
+            expect(screen.back[0]?.[0]?.char).toBe('+');
+            expect(screen.back[0]?.[1]?.char).toBe('-');
+            const secondRow = screen.back[1];
+            expect(secondRow?.[0]?.char).toBe('|');
+        } finally {
+            Object.defineProperty(caps, 'unicode', {
+                value: originalUnicode,
+                configurable: true,
+            });
+        }
+    });
+
+    it('toggles back to collapsed state on repeated Enter presses', () => {
+        const block = new ThinkingBlock();
+
+        block.handleKey(key('enter'));
+        block.handleKey(key('enter'));
+
+        const screen = render(block);
+
+        expect(screen.back[0]?.[0]?.char).toBe('[');
+    });
+
+    it('toggles when pressing t', () => {
+        const block = new ThinkingBlock();
+
+        block.handleKey(key('t'));
+
+        const screen = render(block);
+
+        expect(['┌', '+']).toContain(screen.back[0]?.[0]?.char);
+    });
+
+    it('ignores unsupported keys', () => {
+        const block = new ThinkingBlock();
+
+        block.handleKey(key('escape'));
+
+        const screen = render(block);
+
+        expect(screen.back[0]?.[0]?.char).toBe('[');
+    });
+
+    it('marks dirty after appendText', () => {
+        const block = new ThinkingBlock();
+
+        block.clearDirty();
+
+        block.appendText('Hello');
+
+        expect(block.isDirty).toBe(true);
+    });
+
+    it('marks dirty after setStreaming', () => {
+        const block = new ThinkingBlock();
+
+        block.clearDirty();
+
+        block.setStreaming(true);
+
+        expect(block.isDirty).toBe(true);
+    });
+
+    it('renders multiline content when expanded', () => {
+        const block = new ThinkingBlock({
+            thinking: 'Line 1\nLine 2',
+        });
+
+        block.handleKey(key('enter'));
+
+        const screen = render(block);
+
+        const output = screen.back
+            .map(row => row.map(c => c.char).join(''))
+            .join('\n');
+
+        expect(output).toContain('Line 1');
+        expect(output).toContain('Line 2');
+    });
+
+    it('toggles back to collapsed state when pressing t twice', () => {
+        const block = new ThinkingBlock();
+
+        block.handleKey(key('t'));
+        block.handleKey(key('t'));
+
+        const screen = render(block);
+
+        expect(screen.back[0]?.[0]?.char).toBe('[');
+    });
+
+    it('clips collapsed text to the widget width', () => {
+        const block = new ThinkingBlock();
+        const screen = new Screen(4, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        block.updateRect({ x: 0, y: 0, width: 4, height: 1 });
+        block.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(4);
+        }
+    });
+
+    it('keeps expanded rendering inside a narrow widget', () => {
+        const block = new ThinkingBlock({
+            thinking: 'Narrow content should stay inside the available box',
+        });
+        const screen = new Screen(3, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        block.handleKey(key('enter'));
+        block.updateRect({ x: 0, y: 0, width: 3, height: 3 });
+        block.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(3);
+            expect(call[1]).toBeLessThan(3);
+        }
+    });
+
 });

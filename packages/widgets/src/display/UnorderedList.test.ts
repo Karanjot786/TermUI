@@ -101,11 +101,21 @@ describe('UnorderedList', () => {
 
         list.clearDirty();
         list.setItems([{ text: 'New item' }]);
+        expect(list.isDirty).toBe(true);
 
         const nextScreen = new Screen(40, 10);
         list.render(nextScreen);
-
-        expect(list.isDirty).toBe(true);
         expect(rowText(nextScreen, 0)).toContain('New item');
+    });
+
+    it('getItems returns the items and setItems does not dirty when unchanged', () => {
+        const items = [{ text: 'Item' }];
+        const { list } = renderList(items);
+
+        expect(list.getItems()).toBe(items);
+
+        list.clearDirty();
+        list.setItems(items);
+        expect(list.isDirty).toBe(false);
     });
 });

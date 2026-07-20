@@ -245,4 +245,63 @@ describe('Banner', () => {
         banner.setVariant('success');
         expect(spy).toHaveBeenCalledTimes(3);
     });
+
+    it('does not mark dirty when title is unchanged', () => {
+        const banner = new Banner({}, { title: 'Hello' });
+    
+        banner.clearDirty();
+        banner.setTitle('Hello');
+    
+        expect(banner.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when body is unchanged', () => {
+        const banner = new Banner({}, { body: 'World' });
+    
+        banner.clearDirty();
+        banner.setBody('World');
+    
+        expect(banner.isDirty).toBe(false);
+    });
+
+    it('does not mark dirty when variant is unchanged', () => {
+        const banner = new Banner({}, { variant: 'error' });
+
+        banner.clearDirty();
+        banner.setVariant('error');
+
+        expect(banner.isDirty).toBe(false);
+    });
+
+    it('renders body without a title', () => {
+        const screen = renderBanner(
+            new Banner({}, { body: 'just body' }),
+            18,
+            6,
+        );
+
+        expect(rowText(screen, 2)).toContain('just body');
+    });
+
+    it('draws horizontal border characters along top and bottom edges', () => {
+        const screen = renderBanner(new Banner(), 10, 4);
+
+        // Top-left and top-right corners are non-space border chars
+        expect(cell(screen, 0, 0).char).not.toBe(' ');
+        expect(cell(screen, 9, 0).char).not.toBe(' ');
+        // Horizontal bar along top
+        expect(cell(screen, 1, 0).char).not.toBe(' ');
+        // Bottom-left and bottom-right corners
+        expect(cell(screen, 0, 3).char).not.toBe(' ');
+        expect(cell(screen, 9, 3).char).not.toBe(' ');
+    });
+
+    describe('Banner — getters', () => {
+        it('returns correct title, body, and variant via getters', () => {
+            const banner = new Banner({}, { title: 'T', body: 'B', variant: 'warning' });
+            expect(banner.getTitle()).toBe('T');
+            expect(banner.getBody()).toBe('B');
+            expect(banner.getVariant()).toBe('warning');
+        });
+    });
 });

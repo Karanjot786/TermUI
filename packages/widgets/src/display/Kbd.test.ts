@@ -94,4 +94,25 @@ describe('Kbd Widget', () => {
         expect(screen.getCell(0, 0).char).toBe('[');
         expect(screen.getCell(6, 0).char).toBe(']');
     });
+
+    it('does not mark dirty when setKeys receives the same value', () => {
+        const kbd = new Kbd('Ctrl+C');
+    
+        kbd.clearDirty();
+    
+        kbd.setKeys('Ctrl+C');
+    
+        expect(kbd.isDirty).toBe(false);
+    });
+    
+    it('marks dirty when setKeys receives a different value', () => {
+        const kbd = new Kbd('Ctrl+C');
+    
+        kbd.clearDirty();
+    
+        kbd.setKeys('Ctrl+V');
+    
+        expect(kbd.isDirty).toBe(true);
+    });
+
 });

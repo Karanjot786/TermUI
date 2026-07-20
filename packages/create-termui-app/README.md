@@ -69,10 +69,10 @@ import { useNotifications } from '@termuijs/ui'
 function App() {
     const { notify } = useNotifications()
 
-    useKeymap({
-        'ctrl+c': () => process.exit(0),
-        'r':      () => notify('Refreshed', { type: 'success' }),
-    })
+    useKeymap([
+        { key: 'c', ctrl: true, action: () => process.exit(0) },
+        { key: 'r', action: () => notify('Refreshed', { type: 'success' }) },
+    ])
 
     const cpu = useCpu(1000)
     const mem = useMemory(1000)

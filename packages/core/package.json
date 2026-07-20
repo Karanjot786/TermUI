@@ -5,7 +5,7 @@
     "type": "git",
     "url": "https://github.com/Karanjot786/TermUI"
   },
-  "version": "0.1.5",
+  "version": "0.1.7",
   "description": "Screen buffer, layout engine, input parser, and event system for TermUI",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -31,9 +31,9 @@
     "test": "vitest run --config ../../vitest.config.ts"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "typescript": "^5.7.0",
-    "tsup": "^8.3.0"
+    "@types/node": "^22.19.20",
+    "tsup": "^8.3.0",
+    "typescript": "^5.7.0"
   },
   "keywords": [
     "terminal",

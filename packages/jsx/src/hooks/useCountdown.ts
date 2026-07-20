@@ -33,6 +33,16 @@ export function useCountdown(
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const startValueRef = useRef(startValue);
 
+    // Sync startValueRef and count whenever startValue changes between renders.
+    // Without this, reset() always restores the mount-time value and start()
+    // cannot restart after the countdown finishes if the caller updates startValue.
+    useEffect(() => {
+        startValueRef.current = startValue;
+        if (!isRunning) {
+            setCount(startValue);
+        }
+    }, [startValue]);
+
     useEffect(() => {
         if (isRunning) {
             intervalRef.current = setInterval(() => {
@@ -40,7 +50,6 @@ export function useCountdown(
                     if (c <= 0) {
                         clearInterval(intervalRef.current!);
                         intervalRef.current = null;
-                        setIsRunning(false);
                         return 0;
                     }
                     return c - 1;
@@ -60,6 +69,16 @@ export function useCountdown(
             }
         };
     }, [isRunning, intervalMs]);
+
+    // Stop the countdown when count reaches zero.
+    // This is intentionally a separate effect so that setIsRunning(false)
+    // is never called synchronously inside a setCount functional updater,
+    // which would trigger scheduleRender re-entrantly.
+    useEffect(() => {
+        if (count === 0 && isRunning) {
+            setIsRunning(false);
+        }
+    }, [count, isRunning]);
 
     const start = (): void => {
         if (count > 0) {

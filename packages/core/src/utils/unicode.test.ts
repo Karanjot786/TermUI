@@ -53,6 +53,11 @@ describe('truncate', () => {
         const result = truncate('\x1b[31mhello world\x1b[0m', 8);
         expect(result).toContain('\x1b[31m');
     });
+
+    it('appends ANSI reset when truncating text with ANSI styling', () => {
+        const result = truncate('\x1b[31mhello world\x1b[0m', 8);
+        expect(result.endsWith('\x1b[0m')).toBe(true);
+    });
 });
 
 describe('stripAnsi', () => {
@@ -85,5 +90,15 @@ describe('wordWrap', () => {
     it('breaks very long words', () => {
         const result = wordWrap('abcdefghij', 5);
         expect(result.split('\n').every(l => stringWidth(l) <= 5)).toBe(true);
+    });
+
+    it('safely breaks long words containing ANSI escape sequences without premature wrapping', () => {
+        const styledWord = '\x1b[31mabcdefghij\x1b[0m';
+        const result = wordWrap(styledWord, 5);
+        const lines = result.split('\n');
+        expect(lines.length).toBe(2);
+        expect(stringWidth(lines[0]!)).toBe(5);
+        expect(stringWidth(lines[1]!)).toBe(5);
+        expect(lines[0]!).toContain('\x1b[31m');
     });
 });

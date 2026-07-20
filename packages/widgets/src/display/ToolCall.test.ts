@@ -151,7 +151,7 @@ describe('ToolCall', () => {
 
         it('Enter toggles from expanded to collapsed', () => {
             const widget = makeToolCall({ collapsed: false });
-            widget.handleKey('Enter');
+            widget.handleKey('enter');
 
             const screen = render(widget);
             const row0 = rowText(screen, 0);
@@ -343,7 +343,7 @@ describe('ToolApproval', () => {
         it('Enter key triggers onApprove callback', () => {
             const onApprove = vi.fn();
             const widget = makeToolApproval({ onApprove });
-            widget.handleKey('Enter');
+            widget.handleKey('enter');
             expect(onApprove).toHaveBeenCalledOnce();
         });
 
@@ -364,7 +364,7 @@ describe('ToolApproval', () => {
         it('Escape key triggers onDeny callback', () => {
             const onDeny = vi.fn();
             const widget = makeToolApproval({ onDeny });
-            widget.handleKey('Escape');
+            widget.handleKey('escape');
             expect(onDeny).toHaveBeenCalledOnce();
         });
 

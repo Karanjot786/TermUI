@@ -37,7 +37,7 @@ export class ProgressCircle extends Widget {
     private _showLabel: boolean;
 
     constructor(style: Partial<Style> = {}, options: ProgressCircleOptions = {}) {
-        super(style);
+        super({ height: 1, ...style });
         this._value = clamp01(options.value ?? 0);
         this._fillColor = options.fillColor ?? { type: 'named', name: 'green' };
         this._showLabel = options.showLabel ?? false;
@@ -45,6 +45,10 @@ export class ProgressCircle extends Widget {
 
     /** Update the current progress. Out-of-range values are clamped to [0, 1]. */
     setValue(value: number): void {
+        const nextValue = clamp01(value);
+            if (this._value === nextValue) {
+            return;
+        }
         this._value = clamp01(value);
         this.markDirty();
     }
@@ -72,6 +76,13 @@ export class ProgressCircle extends Widget {
         if (width <= 0 || height <= 0) return;
 
         const attrs = styleToCellAttrs(this._style);
+
+        // Clear all cells in the content area first to prevent ghosting
+        for (let r = 0; r < height; r++) {
+            for (let c = 0; c < width; c++) {
+                screen.setCell(x + c, y + r, { char: ' ', ...attrs });
+            }
+        }
 
         if (caps.unicode) {
             this._renderBraille(screen, x, y, width, height, attrs);

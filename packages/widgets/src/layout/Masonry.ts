@@ -46,6 +46,8 @@ export class Masonry extends Widget {
       const col = colHeights.indexOf(Math.min(...colHeights));
       const x = col * colWidth;
       const y = colHeights[col];
+      // preferredHeight is a test-only property set by test helper
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const height = (child as any).preferredHeight ?? (child.rect.height || 1);
 
       child.updateRect({ x, y, width: colWidth, height });

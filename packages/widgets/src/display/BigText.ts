@@ -2,7 +2,7 @@
 // @termuijs/widgets — BigText widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface BigTextOptions {
@@ -76,8 +76,16 @@ export class BigText extends Widget {
     }
 
     setText(text: string): void {
-        this._text = text.toUpperCase();
+        const normalized = text.toUpperCase();
+        if (normalized === this._text) {
+            return;
+        }
+        this._text = normalized;
         this.markDirty();
+    }
+
+    getText(): string {
+        return this._text;
     }
 
     protected _renderSelf(screen: Screen): void {
@@ -91,7 +99,7 @@ export class BigText extends Widget {
         let curX = x;
 
         for (const ch of this._text) {
-            const glyph = CHAR_MAP[ch] ?? ['# #', '# #', '# #', '# #', '# #'];
+            const glyph = CHAR_MAP[ch] ?? ['   ', '   ', '   ', '   ', '   '];
             const glyphWidth = glyph[0]?.length ?? CHAR_WIDTH;
 
             if (curX + glyphWidth > x + width) break;
@@ -100,7 +108,11 @@ export class BigText extends Widget {
                 const rowStr = glyph[row] ?? '';
                 for (let col = 0; col < rowStr.length; col++) {
                     if (rowStr[col] !== ' ') {
-                        screen.setCell(curX + col, y + row, { char: '█', ...attrs, fg });
+                        screen.setCell(curX + col, y + row, {
+                            char: caps.unicode ? '█' : '#',
+                            ...attrs,
+                            fg
+                        });
                     }
                 }
             }

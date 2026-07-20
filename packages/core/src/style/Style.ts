@@ -4,6 +4,10 @@
 
 import type { Color } from './Color.js';
 import type { BorderStyle } from './Border.js';
+import type { Pos } from '../layout/pos.js';
+import type { Dim } from '../layout/dim.js';
+import type { Constraint } from '../layout/constraint.js';
+import { adjustForContrast } from './contrast.js';
 
 /**
  * Edge values (padding, margin) — top, right, bottom, left.
@@ -39,12 +43,20 @@ export interface Style {
     borderColor?: Color;
 
     // ── Dimensions ──────────
-    width?: number | string;    // number = fixed chars, string = '50%'
-    height?: number | string;
+    width?: number | string | Dim;    // number = fixed chars, string = '50%', Dim = Dimension constraint
+    height?: number | string | Dim;
     minWidth?: number;
     minHeight?: number;
     maxWidth?: number;
     maxHeight?: number;
+    
+    // ── Positional Constraints ─
+    x?: number | Pos;
+    y?: number | Pos;
+    groupId?: string;
+    
+    // ── 1D Layout Constraints ──
+    constraints?: Constraint[];
 
     // ── Flex Layout ─────────
     flexDirection?: 'row' | 'column';
@@ -54,6 +66,16 @@ export interface Style {
     flexShrink?: number;
     flexWrap?: 'nowrap' | 'wrap';
     gap?: number;
+
+    // ── Grid Layout ─────────
+    display?: 'flex' | 'grid';
+    gridTemplateColumns?: string;
+    gridTemplateRows?: string;
+    gridColumnStart?: number | string;
+    gridColumnEnd?: number | string;
+    gridRowStart?: number | string;
+    gridRowEnd?: number | string;
+    gridGap?: number;
 
     // ── Overflow ────────────
     overflow?: 'visible' | 'hidden' | 'scroll';
@@ -98,7 +120,7 @@ export function mergeStyles(base: Style, override: Style): Style {
     for (const key of Object.keys(override) as Array<keyof Style>) {
         const val = override[key];
         if (val !== undefined) {
-            (result as any)[key] = val;
+            (result as any)[key] = val; // as any: keyof Style index write not supported without escape
         }
     }
 
@@ -123,6 +145,28 @@ export function defaultStyle(): Style {
 }
 
 /**
+ * Set of style property keys that affect layout.
+ * When only non-layout props change, the layout tree can be reused.
+ */
+export const LAYOUT_PROPS: ReadonlySet<keyof Style> = new Set<keyof Style>([
+    'width', 'height', 'minWidth', 'minHeight', 'maxWidth', 'maxHeight',
+    'padding', 'margin', 'border',
+    'flexDirection', 'justifyContent', 'alignItems', 'flexGrow', 'flexShrink', 'flexWrap', 'gap',
+    'display', 'gridTemplateColumns', 'gridTemplateRows', 'gridColumnStart', 'gridColumnEnd', 'gridRowStart', 'gridRowEnd', 'gridGap',
+    'overflow', 'visible',
+]);
+
+/**
+ * Returns true when any layout-affecting property differs between old and new style.
+ */
+export function hasLayoutChanges(oldStyle: Style, newStyle: Style): boolean {
+    for (const key of LAYOUT_PROPS) {
+        if (oldStyle[key as keyof Style] !== newStyle[key as keyof Style]) return true;
+    }
+    return false;
+}
+
+/**
  * Extract the cell-level style attributes from a Style object.
  * Used when rendering text into the screen buffer.
  */
@@ -136,9 +180,17 @@ export function styleToCellAttrs(style: Style): {
     strikethrough: boolean;
     inverse: boolean;
 } {
+    let fg = style.fg ?? { type: 'none' };
+    let bg = style.bg ?? { type: 'none' };
+
+    const env = typeof process !== 'undefined' ? process.env : undefined;
+    if (env?.TERMUI_ACCESSIBILITY_STRICT === '1' && fg.type !== 'none' && bg.type !== 'none') {
+        fg = adjustForContrast(fg, bg);
+    }
+
     return {
-        fg: style.fg ?? { type: 'none' },
-        bg: style.bg ?? { type: 'none' },
+        fg,
+        bg,
         bold: style.bold ?? false,
         italic: style.italic ?? false,
         underline: style.underline ?? false,

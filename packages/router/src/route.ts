@@ -14,6 +14,22 @@ export interface RouteParams {
     [key: string]: string;
 }
 
+export interface QueryParams {
+    [key: string]: string;
+}
+
+export function parseQuery(queryString: string): QueryParams {
+    return Object.fromEntries(new URLSearchParams(queryString));
+}
+
+export function serializeQuery(query: QueryParams): string {
+    return new URLSearchParams(query).toString();
+}
+
+export type RedirectTarget =
+    | string
+    | ((params: RouteParams) => string);
+
 export interface Route {
     /** URL-like path, e.g. "/settings/theme" */
     path: string;
@@ -35,6 +51,8 @@ export interface Route {
     afterEnter?: AfterEnterGuard;
     /** Optional metadata object */
     meta?: RouteMeta;
+    /** Declarative redirect target */
+    redirect?: RedirectTarget;
 }
 
 export interface RouteMatch {
@@ -42,6 +60,7 @@ export interface RouteMatch {
     chain: Route[];
     params: RouteParams;
     meta: RouteMeta;
+    query: QueryParams;
 }
 
 /**
@@ -120,6 +139,7 @@ function matchNested(
                 chain: [...chain, route],
                 params,
                 meta: route.meta ?? {},
+                query: {},
             };
         }
 
@@ -133,5 +153,14 @@ function matchNested(
 }
 
 export function matchRoute(path: string, routes: Route[]): RouteMatch | null {
-    return matchNested(path, routes);
+    const questionIdx = path.indexOf('?');
+    const pathname = questionIdx === -1 ? path : path.substring(0, questionIdx);
+    const queryString = questionIdx === -1 ? '' : path.substring(questionIdx + 1);
+
+    const match = matchNested(pathname, routes);
+    if (match) {
+        match.query = Object.fromEntries(new URLSearchParams(queryString));
+        return match;
+    }
+    return null;
 }

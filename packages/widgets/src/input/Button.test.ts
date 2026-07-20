@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Button } from './Button.js';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -36,6 +36,19 @@ describe('Button', () => {
         const { screen } = renderButton('Click');
         const contentRow = rowText(screen, 1);
         expect(contentRow).toContain('Click');
+    });
+
+    it('clips long labels inside narrow button bounds', () => {
+        const button = new Button('Very long label');
+        const screen = new Screen(6, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        button.updateRect({ x: 0, y: 0, width: 6, height: 3 });
+
+        button.render(screen);
+
+        const labelCall = writeSpy.mock.calls[0];
+        expect(labelCall[0]).toBeGreaterThanOrEqual(1);
+        expect(stringWidth(String(labelCall[2]))).toBeLessThanOrEqual(4);
     });
 
     // ── 2. Variant rendering ─────────────────────────────────────────────
@@ -156,5 +169,23 @@ describe('Button', () => {
         expect(screen.back[0][0].char).toBe('+');
         expect(screen.back[0][1].char).toBe('-');
         expect(screen.back[1][0].char).toBe('|');
+    });
+
+    it('does not mark dirty when label is unchanged', () => {
+        const button = new Button('Save');
+    
+        button.clearDirty();
+        button.setLabel('Save');
+    
+        expect(button.isDirty).toBe(false);
+    });
+    
+    it('does not mark dirty when disabled state is unchanged', () => {
+        const button = new Button('Save');
+    
+        button.clearDirty();
+        button.setDisabled(false);
+    
+        expect(button.isDirty).toBe(false);
     });
 });

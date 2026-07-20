@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { timerPoolUnsubscribeAll } from '@termuijs/motion';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
-    useState, useEffect, useRef, useId, useCallback,
+    useState, useEffect, useRef, useId, useCallback, useKeymap,
     useAsync, useInterval, useInsertBefore, setRequestRender, setInsertBefore, runEffects, destroyFiber,
     type Fiber, type AsyncState,
 } from './hooks.js';
@@ -257,6 +257,7 @@ describe('useInsertBefore', () => {
         expect(insertBefore).toHaveBeenCalledWith('HEADER LINE');
     });
 });
+
 describe('useId', () => {
     it('returns a string id', () => {
         const fiber = createFiber();

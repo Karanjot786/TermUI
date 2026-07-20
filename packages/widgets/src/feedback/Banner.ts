@@ -2,7 +2,7 @@
 // @termuijs/widgets — Banner widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, getBorderChars, normalizeEdges } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, getBorderChars, normalizeEdges, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type StatusVariant } from './StatusMessage.js';
 
@@ -47,18 +47,36 @@ export class Banner extends Widget {
     }
 
     setTitle(title: string): void {
+        if (this._title === title) return;
+
         this._title = title;
         this.markDirty();
     }
 
+    getTitle(): string {
+        return this._title;
+    }
+
     setBody(body: string): void {
+        if (this._body === body) return;
+
         this._body = body;
         this.markDirty();
     }
 
+    getBody(): string {
+        return this._body;
+    }
+
     setVariant(variant: StatusVariant): void {
+        if (this._variant === variant) return;
+        
         this._variant = variant;
         this.markDirty();
+    }
+
+    getVariant(): StatusVariant {
+        return this._variant;
     }
 
     protected _renderSelf(screen: Screen): void {
@@ -105,7 +123,7 @@ export class Banner extends Widget {
 
         // Title (bold)
         if (this._title && row < contentHeight) {
-            screen.writeString(cx, cy + row, this._title.slice(0, contentWidth), {
+            screen.writeString(cx, cy + row, truncate(this._title, contentWidth, ''), {
                 ...attrs,
                 fg: color,
                 bold: true,
@@ -118,7 +136,7 @@ export class Banner extends Widget {
             const lines = this._body.split('\n');
             for (const line of lines) {
                 if (row >= contentHeight) break;
-                screen.writeString(cx, cy + row, line.slice(0, contentWidth), {
+                screen.writeString(cx, cy + row, truncate(line, contentWidth, ''), {
                     ...attrs,
                     fg: color,
                 });

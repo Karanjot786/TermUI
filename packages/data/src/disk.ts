@@ -2,7 +2,7 @@
 // @termuijs/data — Disk usage via shell commands
 // ─────────────────────────────────────────────────────
 
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 export interface DiskPartition {
     filesystem: string;
@@ -19,13 +19,9 @@ const DISK_CACHE_MS = 5000; // refresh every 5s
 
 function parseDf(): DiskPartition[] {
     try {
-        const output = execSync('df -h 2>/dev/null', { encoding: 'utf-8', timeout: 3000 });
+        const output = execFileSync('df', ['-h'], { encoding: 'utf-8', timeout: 3000 });
         const lines = output.trim().split('\n');
         if (lines.length < 2) return [];
-
-        // Detect column layout from header
-        const header = lines[0];
-        const isMac = header.includes('iused') || header.includes('Capacity');
 
         return lines.slice(1) // skip header
             .map(line => {
@@ -34,7 +30,7 @@ function parseDf(): DiskPartition[] {
 
                 // macOS: Filesystem Size Used Avail Capacity iused ifree %iused Mounted on
                 // Linux:  Filesystem Size Used Avail Use%   Mounted on
-                const percentIdx = isMac ? 7 : 4;
+                const percentIdx = 4;
                 const percentStr = parts[percentIdx]?.replace('%', '');
                 // Mountpoint is always the last field
                 const mountpoint = parts[parts.length - 1];

@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { caps } from '@termuijs/core';
+import { caps, Screen } from '@termuijs/core';
 import { Spinner, SPINNER_FRAMES } from './Spinner.js';
 
 describe('Spinner', () => {
@@ -28,7 +28,11 @@ describe('Spinner', () => {
     it('starts at first frame', () => {
         // Default spinner is 'dots'
         const spinner = new Spinner();
-        expect(spinner).toBeDefined();
+        const screen = new Screen(20, 1);
+        spinner.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        spinner.render(screen);
+        const row = screen.back[0].map(c => c.char).join('');
+        expect(row.trim().length).toBeGreaterThan(0);
         const frameIndex = (spinner as unknown as { _frameIndex: number })._frameIndex;
         expect(frameIndex).toBe(0);
     });
@@ -65,6 +69,14 @@ describe('Spinner', () => {
         const spinner = new Spinner({}, { preset: 'bounce' });
         const interval = (spinner as unknown as { _interval: number })._interval;
         expect(interval).toBe(120);
+    });
+
+    it('supports variant property override', () => {
+        const spinner = new Spinner({}, { variant: 'braille' });
+        const interval = (spinner as unknown as { _interval: number })._interval;
+        expect(interval).toBe(80);
+        const frames = (spinner as unknown as { _frames: string[] })._frames;
+        expect(frames[0]).toBe('⠋');
     });
 
     it('supports custom interval overrides', () => {
@@ -134,5 +146,74 @@ describe('Spinner — Presets and ASCII fallback', () => {
         const spinner = new Spinner({}, { preset: 'pulse' });
         const frames = (spinner as unknown as { _frames: string[] })._frames;
         expect(frames).toEqual(SPINNER_FRAMES.pulse.frames);
+    });
+});
+
+describe('Spinner — Pulse animation', () => {
+    beforeEach(() => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(true);
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('renders pulse char with dim when progress < 0.5 and bold when >= 0.5', () => {
+        const spinner = new Spinner({}, { animation: 'pulse' });
+        spinner.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+
+        // Force animProgress to dim range
+        (spinner as unknown as { _animProgress: number })._animProgress = 0.3;
+        let screen = new Screen(20, 1);
+        spinner.render(screen);
+        expect(screen.back[0][0].char).toBe('█');
+        expect(screen.back[0][0].dim).toBe(true);
+        expect(screen.back[0][0].bold).toBe(false);
+
+        // Force animProgress to bold range
+        (spinner as unknown as { _animProgress: number })._animProgress = 0.7;
+        screen = new Screen(20, 1);
+        spinner.render(screen);
+        expect(screen.back[0][0].char).toBe('█');
+        expect(screen.back[0][0].dim).toBe(false);
+        expect(screen.back[0][0].bold).toBe(true);
+    });
+
+    it('renders static pulse char when motion is disabled', () => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
+        const spinner = new Spinner({}, { animation: 'pulse' });
+        spinner.updateRect({ x: 0, y: 0, width: 20, height: 1 });
+        const screen = new Screen(20, 1);
+        spinner.render(screen);
+        expect(screen.back[0][0].char).toBe('█');
+        expect(screen.back[0][0].dim).toBe(false);
+        expect(screen.back[0][0].bold).toBe(false);
+    });
+
+    it('tick is a no-op in pulse mode', () => {
+        const spinner = new Spinner({}, { animation: 'pulse' });
+        (spinner as unknown as { _frameIndex: number })._frameIndex = 0;
+        spinner.tick(1000);
+        expect((spinner as unknown as { _frameIndex: number })._frameIndex).toBe(0);
+    });
+
+    it('uses ASCII pulse char when unicode is not available', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const spinner = new Spinner({}, { animation: 'pulse' });
+        const pulseChar = (spinner as unknown as { _pulseChar: string })._pulseChar;
+        expect(pulseChar).toBe('#');
+    });
+
+    it('accepts custom pulseChar', () => {
+        const spinner = new Spinner({}, { animation: 'pulse', pulseChar: '●' });
+        const pulseChar = (spinner as unknown as { _pulseChar: string })._pulseChar;
+        expect(pulseChar).toBe('●');
+    });
+
+    it('spins frames by default when animation is not set', () => {
+        const spinner = new Spinner({}, { preset: 'line' });
+        const animation = (spinner as unknown as { _animation: string })._animation;
+        expect(animation).toBe('spin');
     });
 });

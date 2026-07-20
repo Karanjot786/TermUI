@@ -79,6 +79,12 @@ export class SegmentedControl extends Widget {
             case 'right':
                 this.next();
                 break;
+            case 'home':
+                this._setIndex(0);
+                break;
+            case 'end':
+                this._setIndex(this._options.length - 1);
+                break;
         }
     }
 
