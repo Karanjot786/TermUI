@@ -203,37 +203,40 @@ export class Checkbox extends Widget {
 
         const focusColor: Color = { type: 'named', name: 'cyan' };
 
-        if (stringWidth(fullLine) > width) {
-            // Not enough room — render truncated
-            screen.writeString(x, y, truncate(fullLine, width), { fg: labelColor });
-            return;
+        // Write '['
+        if (width >= 1) {
+            screen.setCell(x, y, {
+                char: boxOpen,
+                fg: this.isFocused ? focusColor : labelColor,
+            });
         }
 
-        // Write '['
-        screen.setCell(x, y, {
-            char: boxOpen,
-            fg: this.isFocused ? focusColor : labelColor,
-        });
-
         // Write mark char
-        screen.setCell(x + 1, y, {
-            char: mark,
-            fg: markColor,
-            dim: showMark && progress < 0.5,
-            bold: showMark && progress >= 0.5,
-        });
+        if (width >= 2) {
+            screen.setCell(x + 1, y, {
+                char: mark,
+                fg: markColor,
+                dim: showMark && progress < 0.5,
+                bold: showMark && progress >= 0.5,
+            });
+        }
 
         // Write ']'
-        screen.setCell(x + 2, y, {
-            char: boxClose,
-            fg: this.isFocused ? focusColor : labelColor,
-        });
+        if (width >= 3) {
+            screen.setCell(x + 2, y, {
+                char: boxClose,
+                fg: this.isFocused ? focusColor : labelColor,
+            });
+        }
 
         // Write ' Label'
-        const labelX = x + boxWidth + stringWidth(gap);
-        screen.writeString(labelX, y, labelPart, {
-            fg: labelColor,
-            dim: this._disabled,
-        });
+        if (width > 4) {
+            const labelX = x + 4;
+            const remainingWidth = width - 4;
+            screen.writeString(labelX, y, truncate(labelPart, remainingWidth), {
+                fg: labelColor,
+                dim: this._disabled,
+            });
+        }
     }
 }

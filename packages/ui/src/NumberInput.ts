@@ -41,8 +41,21 @@ export class NumberInput extends Widget {
         options: NumberInputOptions = {},
     ) {
         super({ border: 'single', height: 3, ...style });
+        const step = options.step ?? 1;
+        if (!Number.isFinite(step) || step <= 0) {
+            throw new RangeError('NumberInput step must be a finite positive number');
+        }
+        if (options.min !== undefined && !Number.isFinite(options.min)) {
+            throw new RangeError('NumberInput min must be a finite number');
+        }
+        if (options.max !== undefined && !Number.isFinite(options.max)) {
+            throw new RangeError('NumberInput max must be a finite number');
+        }
+        if (options.min !== undefined && options.max !== undefined && options.min > options.max) {
+            throw new RangeError('NumberInput min must be less than or equal to max');
+        }
         this._placeholder = options.placeholder ?? '';
-        this._step = options.step ?? 1;
+        this._step = step;
         this._min = options.min ?? -Infinity;
         this._max = options.max ?? Infinity;
         this._allowDecimal = options.allowDecimal ?? true;
@@ -55,7 +68,7 @@ export class NumberInput extends Widget {
     get numericValue(): number | null {
         if (this._raw === '' || this._raw === '-') return null;
         const n = parseFloat(this._raw);
-        return isNaN(n) ? null : n;
+        return isNaN(n) ? null : this._clamp(n);
     }
 
     /** Raw text string (what the user typed). */
@@ -64,6 +77,7 @@ export class NumberInput extends Widget {
     set rawValue(v: string) {
         this._raw = v;
         this._cursorPos = Math.min(this._cursorPos, this._raw.length);
+        this._notify();
     }
 
     private _clamp(n: number): number {

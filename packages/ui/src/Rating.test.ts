@@ -146,6 +146,27 @@ describe('Rating', () => {
         expect(rating.max).toBe(10);
     });
 
+    it('defaults to a finite max when max is NaN', () => {
+        const { rating } = renderRating({ max: NaN });
+        expect(rating.max).toBe(5);
+        expect(Number.isNaN(rating.max)).toBe(false);
+    });
+
+    it('defaults to zero when initial value is NaN', () => {
+        const { rating } = renderRating({ value: NaN });
+        expect(rating.getValue()).toBe(0);
+        expect(Number.isNaN(rating.getValue())).toBe(false);
+    });
+
+    it('does not store NaN from setValue', () => {
+        const { rating } = renderRating({ value: 3 });
+
+        rating.setValue(NaN);
+
+        expect(rating.getValue()).toBe(0);
+        expect(Number.isNaN(rating.getValue())).toBe(false);
+    });
+
     it('defaults to max 5 and value 0', () => {
         const { rating } = renderRating();
         expect(rating.max).toBe(5);

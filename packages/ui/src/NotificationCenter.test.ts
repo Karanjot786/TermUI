@@ -72,6 +72,36 @@ describe('NotificationStore', () => {
         store.reset();
     });
 
+    it('does not expose its internal array or notification objects', () => {
+        store.push('Original');
+        const snapshot = store.notifications;
+
+        snapshot[0].message = 'Changed';
+        snapshot.push({
+            id: 'external',
+            message: 'Injected',
+            type: 'info',
+            createdAt: Date.now(),
+        });
+
+        expect(store.notifications.map((notification) => notification.message)).toEqual(['Original']);
+    });
+
+    it('isolates notification snapshots between subscribers', () => {
+        const observed: string[][] = [];
+        store.subscribe((snapshot) => {
+            snapshot[0].message = 'Changed by first subscriber';
+        });
+        store.subscribe((snapshot) => {
+            observed.push(snapshot.map((notification) => notification.message));
+        });
+
+        store.push('Original');
+
+        expect(observed).toEqual([['Original']]);
+        expect(store.notifications[0].message).toBe('Original');
+    });
+
     afterEach(() => {
         store.reset();
         vi.useRealTimers();
