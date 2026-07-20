@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { invalidate, clearCache, getCache, isFresh, setCache } from "./cache.js";
 import { render } from "@termuijs/testing";
-import { h } from "@termuijs/jsx";
+import { h, useState } from "@termuijs/jsx";
 import { useFetch, UseFetchOptions } from "./hooks.js";
 
 const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -168,6 +168,109 @@ describe("useFetch caching", () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
 
     unmount();
+  });
+
+  it("aborts the in-flight request on unmount", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    global.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      capturedSignal = init?.signal;
+      return new Promise(() => {
+        // never resolves; unmount should abort it instead
+      });
+    }) as unknown as typeof global.fetch;
+
+    const { unmount } = renderFetch("test-url-abort-unmount", { staleTime: 1000 });
+
+    expect(capturedSignal).toBeDefined();
+    expect(capturedSignal?.aborted).toBe(false);
+
+    unmount();
+
+    expect(capturedSignal?.aborted).toBe(true);
+  });
+
+  it("aborts the in-flight request when the key changes", async () => {
+    const signals: AbortSignal[] = [];
+    global.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      if (init?.signal) signals.push(init.signal);
+      return new Promise(() => {
+        // never resolves
+      });
+    }) as unknown as typeof global.fetch;
+
+    let setKey: (key: string) => void = () => {};
+
+    function TestComponent() {
+      const [key, updateKey] = useState("initial");
+      setKey = updateKey;
+      const result = useFetch("test-url-abort-key", { key });
+      return h("text", null, result.loading ? "loading" : "done");
+    }
+
+    render(h(TestComponent, {}));
+
+    expect(signals).toHaveLength(1);
+    expect(signals[0].aborted).toBe(false);
+
+    setKey("changed");
+    await flushPromises();
+
+    expect(signals[0].aborted).toBe(true);
+    expect(signals).toHaveLength(2);
+    expect(signals[1].aborted).toBe(false);
+  });
+
+  it("ignores AbortError and does not set it as a user-visible error", async () => {
+    global.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          const err = new Error("The operation was aborted.");
+          err.name = "AbortError";
+          reject(err);
+        });
+      });
+    }) as unknown as typeof global.fetch;
+
+    let currentResult: any;
+    let setKey: (key: string) => void = () => {};
+
+    function TestComponent() {
+      const [key, updateKey] = useState("initial");
+      setKey = updateKey;
+      currentResult = useFetch("test-url-abort-error", { key });
+      return h("text", null, currentResult.loading ? "loading" : "done");
+    }
+
+    render(h(TestComponent, {}));
+
+    setKey("changed");
+    await flushPromises();
+
+    expect(currentResult.error).toBeNull();
+  });
+
+  it("does not cache a response after the request was aborted", async () => {
+    let rejectFetch!: (err: Error) => void;
+    global.fetch = vi.fn().mockImplementation((_url: string, init?: RequestInit) => {
+      return new Promise((_resolve, reject) => {
+        rejectFetch = reject;
+        init?.signal?.addEventListener("abort", () => {
+          const err = new Error("The operation was aborted.");
+          err.name = "AbortError";
+          reject(err);
+        });
+      });
+    }) as unknown as typeof global.fetch;
+
+    const { unmount } = renderFetch("test-url-abort-cache", { staleTime: 1000 });
+    unmount();
+    await flushPromises();
+
+    expect(isFresh("test-url-abort-cache")).toBe(false);
+    expect(getCache("test-url-abort-cache")).toBeUndefined();
+
+    // avoid an unhandled rejection warning from the never-otherwise-settled promise
+    rejectFetch(Object.assign(new Error("aborted"), { name: "AbortError" }));
   });
 
   it("refetches when the key changes while URL cache is fresh", async () => {

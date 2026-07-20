@@ -369,6 +369,38 @@ export interface UseFetchResult<T> {
     loading: boolean;
 }
 
+// Ref-counted AbortControllers keyed by cache key. Multiple useFetch
+// instances requesting the same key share one in-flight fetch (via
+// fetchShared); the underlying request is only aborted once every
+// subscriber for that key has released it (unmounted or moved on to a
+// different url/key).
+interface SharedAbortEntry {
+    controller: AbortController;
+    refCount: number;
+}
+
+const sharedAbortControllers = new Map<string, SharedAbortEntry>();
+
+function acquireAbortController(key: string): AbortController {
+    let entry = sharedAbortControllers.get(key);
+    if (!entry) {
+        entry = { controller: new AbortController(), refCount: 0 };
+        sharedAbortControllers.set(key, entry);
+    }
+    entry.refCount += 1;
+    return entry.controller;
+}
+
+function releaseAbortController(key: string): void {
+    const entry = sharedAbortControllers.get(key);
+    if (!entry) return;
+    entry.refCount -= 1;
+    if (entry.refCount <= 0) {
+        entry.controller.abort();
+        sharedAbortControllers.delete(key);
+    }
+}
+
 /**
  * useFetch — reactive fetch hook with caching.
  *
@@ -427,13 +459,15 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
 
         setLoading(true);
 
+        const controller = acquireAbortController(cacheKey);
+
         /**
          * Attempt the fetch and, on failure, schedule a retry using
          * exponential backoff. `attempt` is zero-based and controls the
          * backoff multiplier `retryDelay * 2 ** attempt`.
          */
         const fetchWithRetry = (attempt: number) => {
-            fetchShared<T>(cacheKey, () => fetch(url)
+            fetchShared<T>(cacheKey, () => fetch(url, { signal: controller.signal })
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
                     return res.json() as Promise<T>;
@@ -449,6 +483,11 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
             })
             .catch(err => {
                 if (!isMounted) return;
+
+                // The request was aborted because this hook instance unmounted
+                // or moved on to a different url/key. There is nothing left to
+                // report — the cleanup below already handles this case.
+                if (err instanceof Error && err.name === 'AbortError') return;
 
                 if (attempt < retry) {
                     clearRetryTimer();
@@ -473,6 +512,7 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
         return () => {
             isMounted = false;
             clearRetryTimer();
+            releaseAbortController(cacheKey);
         };
     }, [url, staleTime, retry, retryDelay, cacheKey]);
 
