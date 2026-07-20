@@ -42,7 +42,10 @@ export function tail(filePath: string, opts: TailOptions = {}): TailStream {
         active: true,
         stop() {
             stream.active = false;
-            fs.unwatchFile(filePath);
+            // Pass the specific listener — omitting it would remove every
+            // watcher registered for this path, including ones from other
+            // tail() calls on the same file.
+            fs.unwatchFile(filePath, onWatch);
         },
     };
 
@@ -50,10 +53,14 @@ export function tail(filePath: string, opts: TailOptions = {}): TailStream {
     const readInitial = () => {
         try {
             const content = fs.readFileSync(filePath, 'utf-8');
-            const allLines = content.split('\n').filter(l => l.length > 0);
-            stream.lines = allLines.slice(-initialLines);
+            const allLines = content.split('\n');
+            // The last split segment is only "complete" if content ended in
+            // a newline. Hold it back as partialLine so it joins correctly
+            // with whatever gets appended next, instead of being emitted as
+            // a finished line and then duplicated/split on the next append.
+            partialLine = allLines.pop() ?? '';
+            stream.lines = allLines.filter(l => l.length > 0).slice(-initialLines);
             fileSize = fs.statSync(filePath).size;
-            partialLine = '';
         } catch {
             // File disappeared between existsSync and the read — go back to waiting.
             fileExists = false;
@@ -68,9 +75,9 @@ export function tail(filePath: string, opts: TailOptions = {}): TailStream {
         readInitial();
     }
 
-    fs.watchFile(filePath, { interval: 500 }, (curr) => {
+    const onWatch = (curr: fs.Stats) => {
         if (!stream.active) {
-            fs.unwatchFile(filePath);
+            fs.unwatchFile(filePath, onWatch);
             return;
         }
 
@@ -119,13 +126,17 @@ export function tail(filePath: string, opts: TailOptions = {}): TailStream {
                 if (fd !== undefined) fs.closeSync(fd);
             }
         } else if (curr.size < fileSize) {
-            // File was truncated — re-read
-            partialLine = '';
+            // File was truncated — re-read, again holding back an
+            // unterminated trailing line as partialLine (see readInitial).
             const content = fs.readFileSync(filePath, 'utf-8');
-            stream.lines = content.split('\n').filter(l => l.length > 0).slice(-maxLines);
+            const allLines = content.split('\n');
+            partialLine = allLines.pop() ?? '';
+            stream.lines = allLines.filter(l => l.length > 0).slice(-maxLines);
             fileSize = curr.size;
         }
-    });
+    };
+
+    fs.watchFile(filePath, { interval: 500 }, onWatch);
 
     return stream;
 }

@@ -186,6 +186,44 @@ describe('tail', () => {
         stream.stop();
 
         expect(stream.active).toBe(false);
-        expect(fs.unwatchFile).toHaveBeenCalledWith('/tmp/never-exists.log');
+        // A listener must be passed — omitting it would remove every watcher
+        // registered for this path, including ones from unrelated tail() calls.
+        expect(fs.unwatchFile).toHaveBeenCalledWith('/tmp/never-exists.log', expect.any(Function));
+    });
+
+    it('preserves an unterminated trailing line across the initial read', () => {
+        fileContent = 'complete line\nincomplete tail';
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+
+        const stream = tail('/tmp/test.log', { initialLines: 100 });
+
+        // "incomplete tail" has no trailing newline yet, so it must be held
+        // back rather than emitted as a finished line.
+        expect(stream.lines).toEqual(['complete line']);
+
+        appendAndWatch(' end\n', stream);
+        expect(stream.lines).toEqual(['complete line', 'incomplete tail end']);
+    });
+
+    it('preserves an unterminated trailing line across truncation', () => {
+        fileContent = 'a long line that will be truncated\n\n\n\n\n';
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+
+        const stream = tail('/tmp/test.log', { initialLines: 100 });
+
+        // Truncate to shorter content with no trailing newline.
+        const prevSize = fileContent.length;
+        fileContent = 'new incomplete';
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+        watchCallback!(stats(fileContent.length), stats(prevSize));
+
+        // No trailing newline yet — nothing should be emitted as a complete line.
+        expect(stream.lines).toEqual([]);
+
+        appendAndWatch(' line\n', stream);
+        expect(stream.lines).toEqual(['new incomplete line']);
     });
 });
