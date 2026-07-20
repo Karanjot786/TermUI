@@ -185,6 +185,8 @@ export class Renderer {
             this._screen.saveLines();
             this._screen.swap();
         } catch (_err) {
+            // Roll back flushEpoch so the retry isn't skipped by the epoch guard
+            this._screen.flushEpoch = -1;
             // Re-request render so the next frame tick retries.
             this._renderRequested = true;
             // Reset style fingerprint to prevent color bleed on retry.

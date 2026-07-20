@@ -210,6 +210,28 @@ describe('Renderer profiling hooks', () => {
         vi.restoreAllMocks();
     });
 
+    it('does not deadlock rendering if flush encounters an error', () => {
+        const renderer = new Renderer(terminal, screen);
+        screen.setCell(0, 0, { char: 'x' });
+        
+        let callCount = 0;
+        vi.spyOn(terminal, 'writeSync').mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) {
+                throw new Error('transient write error');
+            }
+        });
+        
+        // First flush throws inside writeSync, should be caught
+        renderer.renderNow();
+        
+        // Second flush: Should attempt to writeSync again because flushEpoch was rolled back
+        renderer.renderNow();
+        
+        expect(callCount).toBeGreaterThanOrEqual(2);
+        vi.restoreAllMocks();
+    });
+
     it('does not emit cursor movement for a diff span starting at a wide-char continuation cell', () => {
         const narrowScreen = new Screen(10, 2);
         const renderer = new Renderer(terminal, narrowScreen);
