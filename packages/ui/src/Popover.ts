@@ -4,7 +4,9 @@ import {
     type Screen,
     type KeyEvent,
     caps,
-    styleToCellAttrs
+    styleToCellAttrs,
+    stringWidth,
+    truncate,
 } from '@termuijs/core';
 
 export type PopoverPlacement = 'top' | 'bottom' | 'left' | 'right';
@@ -124,9 +126,9 @@ export class Popover extends Widget {
         }
 
         // ── 2. Top Border with Title ──
-        const titleStr = this.opts.title ? ` ${this.opts.title} ` : '';
         const innerWidth = Math.max(0, width - 2);
-        const fill = Math.max(0, innerWidth - titleStr.length);
+        const titleStr = this.opts.title ? truncate(` ${this.opts.title} `, innerWidth, '') : '';
+        const fill = Math.max(0, innerWidth - stringWidth(titleStr));
         const leftFill = Math.floor(fill / 2);
         const rightFill = fill - leftFill;
 
