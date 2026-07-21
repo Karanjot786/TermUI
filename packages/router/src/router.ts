@@ -226,6 +226,16 @@ export class Router {
         return path;
     }
 
+    private _runBeforeEnterGuards(match: RouteMatch, path: string): boolean | string {
+        for (const route of match.chain) {
+            const result = route.beforeEnter?.(path);
+            if (result === false || typeof result === 'string') {
+                return result;
+            }
+        }
+        return true;
+    }
+
     /**
      * Core navigation execution with redirect resolution, guard evaluation,
      * history management, and hook dispatch. Used by push, replace, back, and forward.
@@ -284,7 +294,7 @@ export class Router {
             this._forwardStack = [];
         }
 
-        const guardResult = match.route.beforeEnter?.(resolvedPath);
+        const guardResult = this._runBeforeEnterGuards(match, resolvedPath);
 
         if (guardResult === false) {
             return;
@@ -375,7 +385,7 @@ export class Router {
             return;
         }
 
-        const guardResult = match.route.beforeEnter?.(prevPath);
+        const guardResult = this._runBeforeEnterGuards(match, prevPath);
 
         if (guardResult === false) {
             return;
@@ -428,7 +438,7 @@ export class Router {
             return;
         }
 
-        const guardResult = match.route.beforeEnter?.(nextPath);
+        const guardResult = this._runBeforeEnterGuards(match, nextPath);
 
         if (guardResult === false) {
             return;
