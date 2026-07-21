@@ -54,7 +54,7 @@ export function createKeyEvent(base: {
  */
 export type MouseEventType =
     | 'mousedown' | 'mouseup' | 'mousemove' | 'scroll'
-    | 'dblclick' | 'drag' | 'dragend' | 'mouseenter' | 'mouseleave';
+    | 'dblclick' | 'drag' | 'dragend' | 'mouseenter' | 'mouseleave' | 'click';
 export type MouseButton = 'left' | 'middle' | 'right' | 'none';
 
 /**

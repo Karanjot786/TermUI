@@ -396,6 +396,8 @@ export class Router {
         }
 
         this._currentMatch = match;
+        const app = getCurrentApp();
+        if (app) app.focus.clearFocus();
         if (this.autoUnmount) unmountAll();
         const screen = this.wrapScreen(match);
 
@@ -434,13 +436,19 @@ export class Router {
 
         if (typeof guardResult === 'string') {
             this._forwardStack.pop();
-            this.push(guardResult);
+            this._executeNavigation(guardResult, {
+                modifyHistory: 'push',
+                clearForwardStack: false,
+                direction: 'forward',
+            });
             return;
         }
 
         this._forwardStack.pop();
         this._history.push(nextPath);
         this._currentMatch = match;
+        const fwdApp = getCurrentApp();
+        if (fwdApp) fwdApp.focus.clearFocus();
         if (this.autoUnmount) unmountAll();
         const screen = this.wrapScreen(match);
         this.events.emit('navigate', { match, screen, direction: 'forward' });

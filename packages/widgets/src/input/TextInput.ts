@@ -36,6 +36,7 @@ export class TextInput extends Widget {
     public signal?: AbortSignal;
 
     private _raw: boolean;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
 
     constructor(
         style: Partial<Style> = {},
@@ -74,7 +75,13 @@ export class TextInput extends Widget {
 
         this.focusable = true;
 
-        this.events.on('key', (event: KeyEvent) => this.handleKey(event));
+        this.events.on('key', this._keyHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
     }
 
     get value(): string {
