@@ -1,6 +1,6 @@
 /**
- * Unicode box-drawing characters mapped to their ASCII fallbacks, used when
- * `caps.unicode` is disabled so layouts still render on plain terminals.
+ * Box-drawing character set (corners/edges/junctions) for unicode and ASCII
+ * fallback. Exported for consumers that build their own borders.
  */
 export const BOX: Record<string, string> = {
   '┌': '+', '┐': '+', '└': '+', '┘': '+',
