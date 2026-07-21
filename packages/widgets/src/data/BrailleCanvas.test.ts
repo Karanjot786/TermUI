@@ -182,4 +182,4 @@ describe('rendering', () => {
         expect(lines[0]![0]).toBe('⠃');
     });
 });
-});
+});
