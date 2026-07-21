@@ -9,6 +9,7 @@ import {
     stringWidth,
     truncate,
 } from '@termuijs/core';
+import { firstEnabledIndex, lastEnabledIndex, nextEnabledIndex, previousEnabledIndex } from './navigation.js';
 
 export interface MenuItem {
     label: string;
@@ -46,38 +47,22 @@ export class Menu extends Widget {
     }
 
     private _initSelection(): void {
-        for (let i = 0; i < this._items.length; i++) {
-            if (!this._items[i].disabled) {
-                this._selectedIndex = i;
-                break;
-            }
-        }
+        const first = firstEnabledIndex(this._items, (item) => Boolean(item.disabled));
+        this._selectedIndex = first >= 0 ? first : 0;
     }
 
     private _selectNext(): void {
-        const start = this._selectedIndex;
-        let next = (this._selectedIndex + 1) % this._items.length;
-        
-        while (next !== start && this._items[next].disabled) {
-            next = (next + 1) % this._items.length;
-        }
-
-        if (next !== start && !this._items[next].disabled) {
+        const next = nextEnabledIndex(this._items, this._selectedIndex, (item) => Boolean(item.disabled), true);
+        if (next !== this._selectedIndex) {
             this._selectedIndex = next;
             this.markDirty();
         }
     }
 
     private _selectPrev(): void {
-        const start = this._selectedIndex;
-        let next = (this._selectedIndex - 1 + this._items.length) % this._items.length;
-        
-        while (next !== start && this._items[next].disabled) {
-            next = (next - 1 + this._items.length) % this._items.length;
-        }
-
-        if (next !== start && !this._items[next].disabled) {
-            this._selectedIndex = next;
+        const prev = previousEnabledIndex(this._items, this._selectedIndex, (item) => Boolean(item.disabled), true);
+        if (prev !== this._selectedIndex) {
+            this._selectedIndex = prev;
             this.markDirty();
         }
     }
@@ -99,7 +84,7 @@ export class Menu extends Widget {
                 this._selectNext();
                 return true;
             case 'home': {
-                const first = this._items.findIndex(i => !i.disabled);
+                const first = firstEnabledIndex(this._items, (item) => Boolean(item.disabled));
                 if (first >= 0 && first !== this._selectedIndex) {
                     this._selectedIndex = first;
                     this.markDirty();
@@ -107,10 +92,7 @@ export class Menu extends Widget {
                 return true;
             }
             case 'end': {
-                let last = -1;
-                for (let i = this._items.length - 1; i >= 0; i--) {
-                    if (!this._items[i].disabled) { last = i; break; }
-                }
+                const last = lastEnabledIndex(this._items, (item) => Boolean(item.disabled));
                 if (last >= 0 && last !== this._selectedIndex) {
                     this._selectedIndex = last;
                     this.markDirty();

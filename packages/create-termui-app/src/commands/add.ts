@@ -47,7 +47,7 @@ export async function runAddCommand(options: AddCommandOptions): Promise<void> {
         await fetchComponentEntry(indexEntry.slug ?? indexEntry.name) ??
         indexEntry;
     const outputRoot = resolve(process.cwd(), options.dir ?? "src/components");
-    const componentDirName = componentEntry.slug ?? componentEntry.name;
+    const componentDirName = indexEntry.slug ?? componentEntry.slug ?? indexEntry.name;
     const destinationRoot = join(outputRoot, componentDirName);
     const fileEntries = await resolveComponentFiles(componentEntry);
 
@@ -77,7 +77,7 @@ export async function runAddCommand(options: AddCommandOptions): Promise<void> {
     console.log();
     console.log("  Import it with:");
     console.log(
-        `    import { ${pascalCase(componentEntry.name)} } from './components/${componentEntry.name}';`,
+        `    import { ${pascalCase(componentEntry.name)} } from './components/${componentDirName}';`,
     );
 }
 
@@ -91,7 +91,7 @@ async function fetchRegistryIndex(): Promise<RegistryIndex> {
         );
     }
 
-    return await response.json();
+    return await response.json() as RegistryIndex;
 }
 
 async function fetchComponentEntry(componentSlug: string): Promise<RegistryComponent | undefined> {
@@ -112,7 +112,7 @@ async function fetchComponentEntry(componentSlug: string): Promise<RegistryCompo
         return undefined;
     }
 
-    return await response.json();
+    return await response.json() as RegistryComponent;
 }
 
 function findComponentEntry(

@@ -2,7 +2,7 @@
 // @termuijs/widgets — Tests for base Widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@termuijs/core', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@termuijs/core')>();
@@ -157,7 +157,7 @@ describe('Widget', () => {
         expect(w.renderError).toBeInstanceOf(Error);
         expect(w.isDirty).toBe(true);
         w.clearDirty();
-        w._renderError = null;
+        (w as any)._renderError = null;
         w.render(screen);
         expect(w.renderError).toBeNull();
         expect(w.callCount).toBe(2);
@@ -407,7 +407,7 @@ describe('Widget.layoutTransition', () => {
             protected _renderSelf(): void {}
         }
         
-        const widget = new TransitionTestWidget({ id: 'test' });
+        const widget = new TransitionTestWidget();
         
         widget.updateRect({ x: 0, y: 0, width: 10, height: 10 });
         expect(widget.rect).toEqual({ x: 0, y: 0, width: 10, height: 10 });
@@ -427,5 +427,48 @@ describe('Widget.layoutTransition', () => {
         await advanceSpring(5000);
         expect(widget.rect).toEqual({ x: 100, y: 100, width: 100, height: 100 });
     });
+
+    describe('z-index styling and rendering order', () => {
+        it('supports zIndex getter and setter', () => {
+            const w = new TestWidget();
+            expect(w.zIndex).toBe(0);
+            w.zIndex = 5;
+            expect(w.zIndex).toBe(5);
+            expect(w.style.zIndex).toBe(5);
+        });
+
+        it('renders children sorted by zIndex (Painter\'s Algorithm)', () => {
+            const parent = new TestWidget();
+            const order: string[] = [];
+
+            class OrderedWidget extends Widget {
+                private _name: string;
+                constructor(name: string, z: number) {
+                    super({ zIndex: z });
+                    this._name = name;
+                }
+                protected _renderSelf(): void {
+                    order.push(this._name);
+                }
+            }
+
+            const w1 = new OrderedWidget('first', 10);
+            const w2 = new OrderedWidget('second', 5);
+            const w3 = new OrderedWidget('third', 20);
+            const w4 = new OrderedWidget('fourth', 5); // same zIndex as w2, should preserve insertion order
+
+            parent.addChild(w1);
+            parent.addChild(w2);
+            parent.addChild(w3);
+            parent.addChild(w4);
+
+            const screen = new Screen(10, 5);
+            parent.render(screen);
+
+            // Sorted order by zIndex: w2 (5), w4 (5), w1 (10), w3 (20)
+            expect(order).toEqual(['second', 'fourth', 'first', 'third']);
+        });
+    });
 });
+
 

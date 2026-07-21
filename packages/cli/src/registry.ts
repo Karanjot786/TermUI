@@ -5,6 +5,11 @@ export interface ResolvedComponent {
     dependencies: string[];
 }
 
+interface RegistryComponentJson extends Partial<ResolvedComponent> {
+    deps?: string[];
+    peerDeps?: string[];
+}
+
 const BASE_URL = process.env.TERMUI_REGISTRY_URL ?? 'https://termui.io';
 
 export async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = 8000): Promise<Response> {
@@ -52,15 +57,22 @@ export async function resolveComponent(slug: string): Promise<ResolvedComponent>
     if (!res.ok) {
         throw new Error(`Component "${slug}" not found in registry (${res.status} ${url}).`);
     }
-    const json = await res.json() as Partial<ResolvedComponent>;
+    const json = await res.json() as RegistryComponentJson;
     if (!json.files || json.files.length === 0) {
         throw new Error(`Component "${slug}" has no source files in the registry.`);
     }
+    const dependencies = [
+        ...new Set([
+            ...(json.dependencies ?? []),
+            ...(json.deps ?? []),
+            ...(json.peerDeps ?? []),
+        ]),
+    ].sort();
     return {
         name: json.name ?? slug,
         slug,
         files: json.files,
-        dependencies: json.dependencies ?? [],
+        dependencies,
     };
 }
 

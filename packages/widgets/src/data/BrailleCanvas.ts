@@ -17,7 +17,7 @@ const BRAILLE_BITS = [
 export class BrailleCanvas extends Widget {
     private _canvasWidth: number;
     private _canvasHeight: number;
-    private _pixels: boolean[][];
+    private _pixels: (Color | undefined)[][];
     private _color?: Color;
 
     constructor(
@@ -32,11 +32,11 @@ export class BrailleCanvas extends Widget {
 
         this._pixels = Array.from(
             { length: this._canvasHeight },
-            () => Array(this._canvasWidth).fill(false),
+            () => Array(this._canvasWidth).fill(undefined),
         );
     }
 
-    drawPixel(x: number, y: number): void {
+    drawPixel(x: number, y: number, color?: Color): void {
         if (
             x < 0 ||
             y < 0 ||
@@ -46,7 +46,7 @@ export class BrailleCanvas extends Widget {
             return;
         }
 
-        this._pixels[y]![x] = true;
+        this._pixels[y]![x] = color ?? this._color ?? { type: 'named', name: 'white' };
         this.markDirty();
     }
 
@@ -55,6 +55,7 @@ export class BrailleCanvas extends Widget {
         y0: number,
         x1: number,
         y1: number,
+        color?: Color,
     ): void {
        
     const dx = Math.abs(x1 - x0);
@@ -66,7 +67,7 @@ export class BrailleCanvas extends Widget {
     let err = dx - dy;
 
     while (true) {
-        this.drawPixel(x0, y0);
+        this.drawPixel(x0, y0, color);
 
         if (x0 === x1 && y0 === y1) {
             break;
@@ -87,6 +88,14 @@ export class BrailleCanvas extends Widget {
     }
     this.markDirty();
 }
+
+    fillRect(x: number, y: number, w: number, h: number, color?: Color): void {
+        for (let r = Math.max(0, y); r < Math.min(this._canvasHeight, y + h); r++) {
+            for (let c = Math.max(0, x); c < Math.min(this._canvasWidth, x + w); c++) {
+                this.drawPixel(c, r, color);
+            }
+        }
+    }
     
 
     protected _renderSelf(screen: Screen): void {
@@ -104,6 +113,7 @@ export class BrailleCanvas extends Widget {
         for (let cy = 0; cy < cellHeight; cy++) {
             for (let cx = 0; cx < cellWidth; cx++) {
                 let pattern = 0;
+                let cellColor = this._color;
 
                 for (let py = 0; py < 4; py++) {
                     for (let px = 0; px < 2; px++) {
@@ -113,9 +123,10 @@ export class BrailleCanvas extends Widget {
                         if (
                             pixelY < this._canvasHeight &&
                             pixelX < this._canvasWidth &&
-                            this._pixels[pixelY]?.[pixelX]
+                            this._pixels[pixelY]?.[pixelX] !== undefined
                         ) {
                             pattern |= BRAILLE_BITS[py]![px]!;
+                            cellColor = this._pixels[pixelY]![pixelX];
                         }
                     }
                 }
@@ -131,7 +142,7 @@ export class BrailleCanvas extends Widget {
                     y + cy,
                     {
                         char,
-                        fg: this._color,
+                        fg: cellColor,
                     },
                 );
             }

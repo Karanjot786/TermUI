@@ -20,7 +20,8 @@ import {
     parseColor,
     colorToRgb,
     Color,
-    NamedColor
+    NamedColor,
+    truncate
 } from '@termuijs/core';
 
 export interface ColorPickerOptions {
@@ -216,7 +217,7 @@ export class ColorPicker extends Widget {
         // 2. Render Hex Input & Live Swatch Line (Row 3)
         const hexPrefix = 'Hex: #';
         const hexFull = hexPrefix + this._hexValue;
-        screen.writeString(x, y + 3, hexFull, attrs);
+        screen.writeString(x, y + 3, truncate(hexFull, width), attrs);
 
         // Render input cursor if focused
         if (this.isFocused) {

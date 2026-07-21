@@ -4,6 +4,7 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { filterFinite } from './utils.js';
 
 export interface HeatMapOptions {
     /** Color for maximum value cells */
@@ -42,7 +43,7 @@ export class HeatMap extends Widget {
     }
 
     setMatrix(matrix: number[][]): void {
-        this._matrix = matrix;
+        this._matrix = matrix.map(row => filterFinite(row));
         this.markDirty();
     }
 

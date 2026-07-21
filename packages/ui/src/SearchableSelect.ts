@@ -1,6 +1,6 @@
 // SearchableSelect — searchable dropdown selector with filtering
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps, truncate } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps, truncate, splitGraphemes } from '@termuijs/core';
 
 export interface SearchableSelectOption {
     label: string;
@@ -61,7 +61,7 @@ export class SearchableSelect extends Widget {
         }
 
         if (event.key === 'backspace') {
-            this._searchQuery = this._searchQuery.slice(0, -1);
+            this._searchQuery = splitGraphemes(this._searchQuery).slice(0, -1).join('');
             this._filterOptions();
             this._selectedIndex = 0;
             this.markDirty();
