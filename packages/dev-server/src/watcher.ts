@@ -5,6 +5,15 @@
 import { watch, existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
 
+const DEFAULT_IGNORED_DIRS = new Set([
+    '.git',
+    '.next',
+    '.turbo',
+    'coverage',
+    'dist',
+    'node_modules',
+]);
+
 /**
  * A single detected file change emitted by the {@link FileWatcher}.
  */
@@ -70,6 +79,7 @@ export class FileWatcher {
         this.watchDir(rootDir, rootDir, ac, false);
 
         for (const entry of readdirSync(rootDir)) {
+            if (DEFAULT_IGNORED_DIRS.has(entry)) continue;
             const child = join(rootDir, entry);
             if (statSync(child).isDirectory()) {
                 this.watchDirectoryTree(child, ac);

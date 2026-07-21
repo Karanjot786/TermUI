@@ -393,6 +393,27 @@ describe('FileWatcher', () => {
         expect(changeSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('skips generated directories during fallback traversal', () => {
+        vi.mocked(watch)
+            .mockImplementationOnce(() => {
+                throw new Error('recursive watch unavailable');
+            })
+            .mockReturnValue(mockWatcherEmitter as any);
+        vi.mocked(readdirSync).mockImplementation((dir) => {
+            if (String(dir).endsWith('src')) return ['components', 'node_modules', 'dist'] as any;
+            return [] as any;
+        });
+        vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as any);
+
+        const watcher = new FileWatcher(['./src']);
+
+        watcher.start();
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(3);
+        expect(vi.mocked(statSync)).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(statSync).mock.calls[0][0]).toEqual(expect.stringContaining('components'));
+    });
+
     // ─── 13. Timestamp generation ─────────────────────────────────────────────
 
     it('attaches a timestamp within the expected execution range', () => {
