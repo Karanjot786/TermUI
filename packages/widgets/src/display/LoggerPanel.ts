@@ -20,10 +20,15 @@ export interface LogEntry {
 
 export interface LoggerPanelOptions {
     logs?: LogEntry[];
+    /** Maximum number of log entries retained; oldest entries are evicted past this. Default 1000. */
+    maxEntries?: number;
 }
+
+const DEFAULT_MAX_ENTRIES = 1000;
 
 export class LoggerPanel extends Widget {
     private _logs: LogEntry[];
+    private _maxEntries: number;
 
     constructor(
         style: Partial<Style> = {},
@@ -34,11 +39,17 @@ export class LoggerPanel extends Widget {
             ...style,
         });
 
+        this._maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
         this._logs = options.logs ?? [];
     }
 
     addLog(level: LogLevel, message: string): void {
         this._logs.push({ level, message });
+
+        if (this._logs.length > this._maxEntries) {
+            this._logs.splice(0, this._logs.length - this._maxEntries);
+        }
+
         this.markDirty();
     }
 
