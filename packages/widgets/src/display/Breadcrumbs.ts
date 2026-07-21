@@ -46,8 +46,27 @@ export class Breadcrumbs extends Widget {
             return;
         }
         this._segments = segments;
+        this._selectedIndex = Math.max(0, segments.length - 1);
         this.markDirty();
     }
+
+    handleKey(event: { key: string }): void {
+    if (event.key === 'left') {
+        this._selectedIndex = Math.max(0, this._selectedIndex - 1);
+        this.markDirty();
+    } else if (event.key === 'right') {
+        this._selectedIndex = Math.min(
+            this._segments.length - 1,
+            this._selectedIndex + 1
+        );
+        this.markDirty();
+    } else if (event.key === 'enter') {
+        this._onSelect?.(
+            this._selectedIndex,
+            this._segments[this._selectedIndex]
+        );
+    }
+}
 
     handleKey(event: { key: string }): void {
     if (event.key === 'left') {
