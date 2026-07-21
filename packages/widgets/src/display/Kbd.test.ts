@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { vi } from 'vitest';
 import { Kbd } from './Kbd.js';
 import { caps } from '@termuijs/core';
@@ -24,6 +24,10 @@ class MockScreen {
 
 describe('Kbd Widget', () => {
     let screen: MockScreen;
+
+    beforeEach(() => {
+        screen = new MockScreen();
+    });
 
     afterEach(() => {
         vi.restoreAllMocks();
