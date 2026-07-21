@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { vi } from 'vitest';
 import { Kbd } from './Kbd.js';
 import { caps } from '@termuijs/core';
 
@@ -23,20 +24,17 @@ class MockScreen {
 
 describe('Kbd Widget', () => {
     let screen: MockScreen;
-    let originalUnicode: boolean;
 
     beforeEach(() => {
         screen = new MockScreen();
-        originalUnicode = caps.unicode;
     });
 
     afterEach(() => {
-        // Force reset ignoring readonly checks
-        (caps as any).unicode = originalUnicode; 
+        vi.restoreAllMocks();
     });
 
     it('renders a single key', () => {
-        (caps as any).unicode = true;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const kbd = new Kbd('Enter');
         
         (kbd as any)._rect = { x: 0, y: 0, width: 20, height: 1 };
@@ -49,7 +47,7 @@ describe('Kbd Widget', () => {
     });
 
     it('renders a combo split on + into multiple caps', () => {
-        (caps as any).unicode = true;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const kbd = new Kbd('Ctrl+C');
         
         (kbd as any)._rect = { x: 0, y: 0, width: 30, height: 1 };
@@ -72,7 +70,7 @@ describe('Kbd Widget', () => {
     });
 
     it('setKeys() updates the rendered output', () => {
-        (caps as any).unicode = true;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const kbd = new Kbd('A');
         
         (kbd as any)._rect = { x: 0, y: 0, width: 10, height: 1 };
@@ -85,7 +83,7 @@ describe('Kbd Widget', () => {
     });
 
     it('ASCII fallback when caps.unicode is false', () => {
-        (caps as any).unicode = false;
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const kbd = new Kbd('Alt');
         
         (kbd as any)._rect = { x: 0, y: 0, width: 10, height: 1 };
