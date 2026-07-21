@@ -14,13 +14,17 @@ export class Pagination extends Widget {
 
     constructor(page: number, totalPages: number, options: PaginationOptions = {}) {
         super(mergeStyles(defaultStyle(), { height: 1 }));
-        this._totalPages = Math.max(1, Math.floor(totalPages));
+        this._totalPages = this._normalizeTotalPages(totalPages);
         this._page = this._clamp(Math.floor(page));
         this._onChange = options.onChange;
     }
 
     get page(): number { return this._page; }
     get totalPages(): number { return this._totalPages; }
+
+    private _normalizeTotalPages(n: number): number {
+        return Number.isFinite(n) ? Math.max(1, Math.floor(n)) : 1;
+    }
 
     private _clamp(n: number): number {
         if (isNaN(n) || !isFinite(n)) return 1;

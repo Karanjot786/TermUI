@@ -2,7 +2,7 @@
 // @termuijs/widgets — Timeline widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, caps, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export type TimelineStatus = 'done' | 'active' | 'pending';
@@ -90,33 +90,45 @@ export class Timeline extends Widget {
                     : { type: 'named', name: 'white' };
 
             // Connector + icon portion: e.g. "├─ ● "
-            const iconX = x + connector.length;
+            const right = x + width;
+            const connectorWidth = stringWidth(connector);
+            const iconX = x + connectorWidth;
             const titleX = iconX + 2;
 
-            screen.writeString(x, y + i, connector, {
+            screen.writeString(x, y + i, truncate(connector, width, ''), {
                 ...attrs,
                 fg: statusColor,
                 bold: isActive,
                 dim: isPending,
             });
 
-            screen.setCell(iconX, y + i, {
-                char: icon,
-                fg: statusColor,
-                bold: isActive,
-                dim: isPending,
-            });
+            if (iconX < right) {
+                screen.setCell(iconX, y + i, {
+                    char: icon,
+                    fg: statusColor,
+                    bold: isActive,
+                    dim: isPending,
+                });
+            }
 
-            screen.writeString(titleX, y + i, item.title, {
-                ...attrs,
-                bold: isActive,
-                dim: isPending,
-            });
+            const timeStr = item.time ? ` ${item.time}` : '';
+            const timeWidth = stringWidth(timeStr);
+            const timeX = timeStr ? x + width - timeWidth : right;
+            const titleWidth = Math.max(
+                0,
+                (timeStr && timeX > titleX ? timeX : right) - titleX,
+            );
+
+            if (titleWidth > 0) {
+                screen.writeString(titleX, y + i, truncate(item.title, titleWidth, ''), {
+                    ...attrs,
+                    bold: isActive,
+                    dim: isPending,
+                });
+            }
 
             // Time — dimmed right-aligned
-            if (item.time) {
-                const timeStr = ` ${item.time}`;
-                const timeX = x + width - timeStr.length;
+            if (timeStr) {
                 if (timeX > titleX) {
                     screen.writeString(timeX, y + i, timeStr, {
                         ...attrs,

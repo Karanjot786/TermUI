@@ -71,7 +71,7 @@ export class TypingIndicator extends Widget {
     }
 
     unmount(): void {
-        this._clearInterval();
+        this.stop();
         super.unmount();
     }
 

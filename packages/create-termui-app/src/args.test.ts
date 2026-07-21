@@ -37,6 +37,32 @@ describe("CLI args", () => {
         expect(res.name).toBe("my-app");
     });
 
+    it("skips scaffold flag values when finding the project name", () => {
+        const res = parseArgs([
+            "--template",
+            "dashboard",
+            "my-app",
+            "--theme",
+            "default",
+        ]);
+
+        expect(res.name).toBe("my-app");
+        expect(res.template).toBe("dashboard");
+        expect(res.theme).toBe("default");
+    });
+
+    it("skips inline scaffold flags when finding the project name", () => {
+        const res = parseArgs([
+            "--template=dashboard",
+            "--theme=default",
+            "my-app",
+        ]);
+
+        expect(res.name).toBe("my-app");
+        expect(res.template).toBe("dashboard");
+        expect(res.theme).toBe("default");
+    });
+
     it("parses add command with component only", () => {
         const res = parseArgs(["add", "Badge"]);
 

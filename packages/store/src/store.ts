@@ -620,17 +620,28 @@ export function createStore<T extends object>(
         equalityRef.current = equalityFn as EqualityFn<U> | undefined;
 
         useEffect(() => {
-            let prevSelected = selectorRef.current(store.getState());
+            let latestSelected = selectorRef.current(store.getState());
+
             const unsubscribe = store.subscribe((newState) => {
                 const newSelected = selectorRef.current(newState);
                 const areEqual = equalityRef.current
-                    ? equalityRef.current(prevSelected as U, newSelected as U)
-                    : Object.is(prevSelected, newSelected);
+                    ? equalityRef.current(latestSelected as U, newSelected as U)
+                    : Object.is(latestSelected, newSelected);
                 if (!areEqual) {
-                    prevSelected = newSelected;
+                    latestSelected = newSelected;
                     setSelectedState(newSelected);
                 }
             });
+
+            // Tearing check: did the store change between render and this effect?
+            const areEqual = equalityRef.current
+                ? equalityRef.current(latestSelected as U, selectedState as U)
+                : Object.is(latestSelected, selectedState);
+                
+            if (!areEqual) {
+                setSelectedState(latestSelected);
+            }
+
             return unsubscribe;
         }, []);
 
