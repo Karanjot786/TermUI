@@ -307,34 +307,37 @@ describe('Renderer profiling hooks', () => {
     it('preserves and requeues buffered logs when a frame write fails', () => {
         const renderer = new Renderer(terminal, screen);
         renderer.hook.start();
-        
-        console.log('test log recovery');
 
-        // Spy on terminal writeSync to throw an error on the first write call
-        let writeCallsCount = 0;
-        const originalWriteSync = terminal.writeSync;
-        vi.spyOn(terminal, 'writeSync').mockImplementation((data: string) => {
-            writeCallsCount++;
-            if (writeCallsCount === 1) {
-                throw new Error('write failure simulation');
-            }
-            return originalWriteSync.call(terminal, data);
-        });
+        try {
+            console.log('test log recovery');
 
-        // This render should fail to write the frame and logs, but should not throw, and should requeue the log
-        expect(() => renderer.renderNow()).not.toThrow();
-        expect(writeCallsCount).toBe(1); // Only the first writeSync was called and failed
-        
-        // Restore writeSync mock so it succeeds now
-        vi.restoreAllMocks();
+            // Spy on terminal writeSync to throw an error on the first write call
+            let writeCallsCount = 0;
+            const originalWriteSync = terminal.writeSync;
+            vi.spyOn(terminal, 'writeSync').mockImplementation((data: string) => {
+                writeCallsCount++;
+                if (writeCallsCount === 1) {
+                    throw new Error('write failure simulation');
+                }
+                return originalWriteSync.call(terminal, data);
+            });
 
-        // Trigger another render
-        fakeStdout.writes = '';
-        renderer.renderNow();
+            // This render should fail to write the frame and logs, but should not throw, and should requeue the log
+            expect(() => renderer.renderNow()).not.toThrow();
+            expect(writeCallsCount).toBe(1); // Only the first writeSync was called and failed
+            
+            // Restore writeSync mock so it succeeds now
+            vi.restoreAllMocks();
 
-        // The log should be present in the output
-        expect(fakeStdout.writes).toContain('test log recovery');
+            // Trigger another render
+            fakeStdout.writes = '';
+            renderer.renderNow();
 
-        renderer.hook.stop();
+            // The log should be present in the output
+            expect(fakeStdout.writes).toContain('test log recovery');
+        } finally {
+            vi.restoreAllMocks();
+            renderer.hook.stop();
+        }
     });
 });
