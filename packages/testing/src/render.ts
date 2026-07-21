@@ -453,11 +453,23 @@ export function render(
 
         fireMouse(x: number, y: number, init?: Partial<MouseEvent>) {
             // Normalize the mouse event
-            const event: MouseEvent = {
+            const event = {
+                ...init,
                 x,
                 y,
                 type: init?.type ?? 'mousedown',
                 button: init?.button ?? 'left',
+                stopPropagation() {
+                    this._propagationStopped = true;
+                },
+                preventDefault() {
+                    this._defaultPrevented = true;
+                },
+            } as MouseEvent & {
+                _propagationStopped?: boolean;
+                _defaultPrevented?: boolean;
+                stopPropagation(): void;
+                preventDefault(): void;
             };
 
             // Hit-test the widget tree
@@ -491,13 +503,17 @@ export function render(
                 return false;
             });
 
-            if (target) {
+            let current: Widget | null | undefined = target;
+            while (current) {
                 // Dispatch to the widget
-                if (typeof (target as any).handleMouse === 'function') { // as any: handleMouse not on Widget base type but implemented on interactive subclasses
-                    (target as any).handleMouse(event); // as any: handleMouse not on Widget base type but implemented on interactive subclasses
+                if (typeof (current as any).handleMouse === 'function') { // as any: handleMouse not on Widget base type but implemented on interactive subclasses
+                    (current as any).handleMouse(event); // as any: handleMouse not on Widget base type but implemented on interactive subclasses
                 } else {
-                    target.events.emit('mouse', event);
+                    current.events.emit('mouse', event);
                 }
+
+                if (event._propagationStopped) break;
+                current = current.parent;
             }
 
             // Re-render and flush any sync state updates

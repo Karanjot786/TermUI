@@ -4,7 +4,7 @@ import { createElement } from "@termuijs/jsx";
 import { render } from "./render.js";
 
 describe("mouse target resolution", () => {
-    it("dispatches clicks to the deepest matching widget", () => {
+    it("bubbles mouse events from the deepest matching widget", () => {
         // render() reconciles a VNode into a real Widget tree, so the tree under
         // test has to be built through createElement() rather than by constructing
         // Widget instances directly (those never enter the reconciled tree).
@@ -22,9 +22,27 @@ describe("mouse target resolution", () => {
         parent.events.on("mouse", parentMouse);
         child.events.on("mouse", childMouse);
 
-        t.click(5, 5);
+        t.fireMouse(5, 5);
 
-        expect(childMouse).toHaveBeenCalled();
+        expect(childMouse).toHaveBeenCalledTimes(1);
+        expect(parentMouse).toHaveBeenCalledTimes(1);
+    });
+
+    it("stops bubbling when a mouse handler stops propagation", () => {
+        const t = render(createElement("box", null, createElement("box", null)));
+
+        const parent = (t.container as any)._children[0] as Box; // as any: Widget._children is protected; needed to reach the reconciled widget under test
+        const child = (parent as any)._children[0] as Box; // as any: Widget._children is protected; needed to reach the reconciled child widget under test
+
+        const parentMouse = vi.fn();
+        const childMouse = vi.fn((event: any) => event.stopPropagation());
+
+        parent.events.on("mouse", parentMouse);
+        child.events.on("mouse", childMouse);
+
+        t.fireMouse(5, 5);
+
+        expect(childMouse).toHaveBeenCalledTimes(1);
         expect(parentMouse).not.toHaveBeenCalled();
     });
 });
