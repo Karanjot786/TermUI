@@ -35,6 +35,9 @@ export class Breadcrumbs extends Widget {
         this._separator = opts.separator;
         this._activeColor = opts.activeColor;
         this._onSelect = opts.onSelect;
+
+        this.focusable = true;
+        this.events.on('key', (event) => this.handleKey(event));
     }
 
     /** Update the trail of segments. */

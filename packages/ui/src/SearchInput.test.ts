@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { Screen, caps, createKeyEvent } from '@termuijs/core';
+import { Screen, caps, createKeyEvent, stringWidth } from '@termuijs/core';
 import { SearchInput } from './SearchInput.js';
 
 afterEach(() => {
@@ -131,6 +131,20 @@ describe('SearchInput', () => {
         expect(row[1]?.char).toBe(' ');
         // The icon and placeholder should start at x=2
         expect(row[2]?.char).not.toBe(' ');
+    });
+
+    it('clips the prefix to very narrow widths', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const input = new SearchInput({ placeholder: 'query' });
+        const screen = new Screen(1, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        input.updateRect({ x: 0, y: 0, width: 1, height: 1 });
+        input.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(1);
+        }
     });
 
         it('clears the debounce timer when destroyed to prevent memory leaks', () => {
