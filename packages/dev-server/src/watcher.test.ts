@@ -307,6 +307,25 @@ describe('FileWatcher', () => {
         expect(vi.mocked(watch)).toHaveBeenCalledTimes(dirs.length);
     });
 
+    it('does not register duplicate watchers when start is called twice', () => {
+        const watcher = new FileWatcher(['./src']);
+
+        watcher.start();
+        watcher.start();
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(1);
+    });
+
+    it('can start again after stop', () => {
+        const watcher = new FileWatcher(['./src']);
+
+        watcher.start();
+        watcher.stop();
+        watcher.start();
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(2);
+    });
+
     it('handles events from multiple directories independently', () => {
         // Use separate emitters per directory
         const emitters = [new EventEmitter(), new EventEmitter(), new EventEmitter()];
