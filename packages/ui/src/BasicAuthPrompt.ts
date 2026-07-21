@@ -1,5 +1,5 @@
 import { Widget } from "@termuijs/widgets";
-import { type Style, type KeyEvent, Screen, caps, truncate } from "@termuijs/core";
+import { type Style, type KeyEvent, Screen, caps, truncate, splitGraphemes } from "@termuijs/core";
 
 export interface BasicAuthCredentials {
     username: string;
@@ -45,9 +45,9 @@ export class BasicAuthPrompt extends Widget {
     }
     private deleteBackward(): void {
         if (this._activeField === "username") {
-            this._username = this._username.slice(0, -1);
+            this._username = splitGraphemes(this._username).slice(0, -1).join("");
         } else {
-            this._password = this._password.slice(0, -1);
+            this._password = splitGraphemes(this._password).slice(0, -1).join("");
         }
         this.markDirty();
     }
