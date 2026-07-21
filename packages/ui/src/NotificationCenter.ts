@@ -76,11 +76,13 @@ export class NotificationStore {
     }
 
     get notifications(): Notification[] {
-        return this._notifications;
+        return this._notifications.map((notification) => ({ ...notification }));
     }
 
     private _emit(): void {
-        for (const fn of this._subs) fn(this._notifications);
+        for (const fn of this._subs) {
+            fn(this._notifications.map((notification) => ({ ...notification })));
+        }
     }
 }
 

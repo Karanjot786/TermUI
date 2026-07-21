@@ -137,5 +137,16 @@ describe('Marquee', () => {
     
         expect(second).toBe(first);
     });
+
+    it('correctly handles visual column widths for double-width characters', () => {
+        const { mq, screen } = renderMarquee('测试', {}, 5, 1);
+        const line = getLine(screen);
+        expect(line.length).toBeLessThanOrEqual(5);
+        expect(line.trim()).not.toBe('');
+    });
     
+    it("should return the correct text using getText()", () =>{
+        const { mq } = renderMarquee("Hello World", {}, 5, 1);
+        expect(mq.getText()).toBe("Hello World");
+    });
 });

@@ -1,2 +1,2 @@
-export { Markdown } from '../../../packages/widgets/src/display/Markdown';
-export type { MarkdownOptions } from '../../../packages/widgets/src/display/Markdown';
+export { Markdown } from '@termuijs/widgets';
+export type { MarkdownOptions } from '@termuijs/widgets';

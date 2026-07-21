@@ -368,8 +368,7 @@ function scanDirectory(dir: string, entries: { path: string; content: string }[]
         scanDirectory(full, entries);
       }
     } else if (file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.d.ts')) {
-      const relPath = full.substring(ROOT.length + 1).replace(/\\/g, '/');
-      entries.push({ path: relPath, content: readFileSync(full, 'utf-8') });
+      entries.push({ path: full.replace(ROOT, '').replace(/\\/g, '/').replace(/^\//, ''), content: readFileSync(full, 'utf-8') });
     }
   }
 }
@@ -451,6 +450,7 @@ async function main(): Promise<void> {
   // plus api, without the heavy files/dependencies (those live in public/r).
   const slim = entries.map(({ files: _files, dependencies: _deps, ...rest }) => rest);
   const srcData = join(ROOT, 'website', 'src', 'data', 'registry.json');
+  mkdirSync(dirname(srcData), { recursive: true });
   writeFileSync(srcData, JSON.stringify(slim, null, 2));
   console.log(`✓ website/src/data/registry.json — ${slim.length} entries (slim + api)`);
 }

@@ -404,4 +404,98 @@ describe('InputParser', () => {
             expect(pasteHandler).toHaveBeenCalledWith('hello world');
         });
     });
+
+    describe('configurable size limits', () => {
+        it('limits escape sequence length with maxEscapeSequenceLength option', () => {
+            const stdin = createMockStdin();
+            const parser = new InputParser(stdin, { maxEscapeSequenceLength: 5 });
+            const handler = vi.fn();
+            parser.onKey(handler);
+            parser.start();
+            // Send a long escape sequence — exceeds max of 5
+            sendKey(stdin, '\x1b[1;2;3;4;5;6;7;8;9;0A');
+            // Should not emit any key (sequence discarded)
+            expect(handler).not.toHaveBeenCalled();
+        });
+
+        it('limits paste buffer size with maxPasteBufferSize option', () => {
+            const stdin = createMockStdin();
+            const parser = new InputParser(stdin, { maxPasteBufferSize: 10 });
+            const pasteHandler = vi.fn();
+            parser.onPaste(pasteHandler);
+            parser.start();
+            // Paste content larger than 10 bytes
+            stdin.emit('data', Buffer.from('\x1b[200~hello world, this is a long paste\x1b[201~', 'utf8'));
+            // Content should be truncated to last 10 bytes
+            expect(pasteHandler).toHaveBeenCalledWith(expect.stringMatching(/.{10}/));
+            expect(pasteHandler).toHaveBeenCalledTimes(1);
+        });
+
+        it('discards escape buffer when it exceeds maxEscapeSequenceLength', () => {
+            const stdin = createMockStdin();
+            const parser = new InputParser(stdin, { maxEscapeSequenceLength: 4 });
+            const handler = vi.fn();
+            parser.onKey(handler);
+            parser.start();
+            // Send a lone ESC, then enough bytes to exceed the limit (4)
+            stdin.emit('data', Buffer.from([0x1b]));
+            stdin.emit('data', Buffer.from('ABCD', 'utf8'));
+            vi.advanceTimersByTime(10);
+            // ESC + ABCD = 5 bytes > 4 limit — buffer was discarded
+            expect(handler).not.toHaveBeenCalled();
+        });
+
+        it('limits grapheme buffer size with maxGraphemeBufferSize option', () => {
+            const stdin = createMockStdin();
+            const parser = new InputParser(stdin, { maxGraphemeBufferSize: 5 });
+            const handler = vi.fn();
+            parser.onKey(handler);
+            parser.start();
+            // Send many characters at once (exceeds grapheme buffer limit of 5)
+            stdin.emit('data', Buffer.from('abcdefghijklmnop', 'utf8'));
+            vi.advanceTimersByTime(20);
+            // Buffer keeps only last 5 bytes → 'klmno' → 5 grapheme events
+            expect(handler).toHaveBeenCalledTimes(5);
+        });
+
+        it('limits key events per chunk with maxKeyEventsPerChunk option', () => {
+            const stdin = createMockStdin();
+            const parser = new InputParser(stdin, { maxKeyEventsPerChunk: 3 });
+            const handler = vi.fn();
+            parser.onKey(handler);
+            parser.start();
+            // Send many characters at once
+            stdin.emit('data', Buffer.from('abcdefghij', 'utf8'));
+            vi.advanceTimersByTime(20);
+            // Should only emit up to 3 events
+            expect(handler).toHaveBeenCalledTimes(3);
+        });
+
+        it('default options preserve backward compatibility', () => {
+            const stdin = createMockStdin();
+            const parser = new InputParser(stdin);
+            const handler = vi.fn();
+            parser.onKey(handler);
+            parser.start();
+            sendKey(stdin, 'hello');
+            expect(handler).toHaveBeenCalledTimes(5);
+        });
+
+        it('does not drop bytes from a raw chunk larger than maxEscapeSequenceLength', () => {
+            // A single data event bigger than the (default 4096) escape-sequence
+            // limit must not be truncated before parsing — that limit only bounds
+            // escape-sequence buffering, not the whole incoming chunk.
+            const stdin = createMockStdin();
+            const parser = new InputParser(stdin);
+            const pasteHandler = vi.fn();
+            parser.onPaste(pasteHandler);
+            parser.start();
+
+            const content = 'x'.repeat(5000); // > DEFAULT_MAX_ESCAPE_SEQUENCE_LENGTH (4096), < paste buffer cap (1MB)
+            stdin.emit('data', Buffer.from(`\x1b[200~${content}\x1b[201~`, 'utf8'));
+
+            expect(pasteHandler).toHaveBeenCalledWith(content);
+            expect(pasteHandler.mock.calls[0][0]).toHaveLength(5000);
+        });
+    });
 });
