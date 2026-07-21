@@ -134,11 +134,12 @@ function matchNested(
             for (let i = 0; i < paramNames.length; i++) {
                 params[paramNames[i]] = match[i + 1] ?? '';
             }
+            const nextChain = [...chain, route];
             return {
                 route,
-                chain: [...chain, route],
+                chain: nextChain,
                 params,
-                meta: route.meta ?? {},
+                meta: Object.assign({}, ...nextChain.map(r => r.meta ?? {})),
                 query: {},
             };
         }

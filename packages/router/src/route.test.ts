@@ -104,17 +104,17 @@ describe('route - matchRoute', () => {
         {
             path: '/users/[id]',
             component: mockComponent,
-            meta: { name: 'user-detail' },
+            meta: { name: 'user-detail', section: 'users', auth: true },
             children: [
                 {
                     path: 'posts',
                     component: mockComponent,
-                    meta: { name: 'user-posts' },
+                    meta: { name: 'user-posts', title: 'Posts' },
                 },
                 {
                     path: '/users/[id]/settings', // absolute path in nested route
                     component: mockComponent,
-                    meta: { name: 'user-settings' },
+                    meta: { name: 'user-settings', auth: false },
                 }
             ],
         },
@@ -157,10 +157,29 @@ describe('route - matchRoute', () => {
         expect(match?.chain[1].meta?.name).toBe('user-posts');
     });
 
+    it('merges nested route metadata from parent to child', () => {
+        const match = matchRoute('/users/42/posts', routes);
+        expect(match?.meta).toEqual({
+            name: 'user-posts',
+            section: 'users',
+            auth: true,
+            title: 'Posts',
+        });
+    });
+
     it('matches nested absolute route correctly', () => {
         const match = matchRoute('/users/42/settings', routes);
         expect(match?.route.meta?.name).toBe('user-settings');
         expect(match?.params).toEqual({ id: '42' });
+    });
+
+    it('lets child metadata override parent metadata keys', () => {
+        const match = matchRoute('/users/42/settings', routes);
+        expect(match?.meta).toMatchObject({
+            name: 'user-settings',
+            section: 'users',
+            auth: false,
+        });
     });
 
     it('matches wildcard route and parses catch-all params', () => {
