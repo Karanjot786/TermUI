@@ -283,6 +283,19 @@ describe('ErrorOverlay rendering — long error messages', () => {
         const textOutput = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
         expect(textOutput).toContain('DEV-SERVER RUNTIME / COMPILE ERROR');
     });
+
+    it('keeps rows within bounds on very narrow screens', () => {
+        const rawTrace = `Error: ${'C'.repeat(200)}\n    at /app/src/main.ts:1:1`;
+        const screen = new Screen(4, 6);
+        const overlay = new ErrorOverlay(rawTrace);
+
+        overlay.render(screen);
+
+        expect(screen.back).toHaveLength(6);
+        for (const row of screen.back) {
+            expect(row).toHaveLength(4);
+        }
+    });
 });
 
 // 8. ErrorOverlay rendering with missing location data

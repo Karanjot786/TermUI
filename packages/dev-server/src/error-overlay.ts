@@ -120,6 +120,20 @@ export class ErrorOverlay implements RootWidget {
     render(screen: Screen): void {
         const { cols, rows } = screen;
         if (cols <= 0 || rows <= 0) return;
+        const writeClipped = (
+            x: number,
+            y: number,
+            text: string,
+            attrs?: Parameters<Screen['writeString']>[3],
+        ) => {
+            if (y < 0 || y >= rows || x >= cols) return;
+
+            const startX = Math.max(0, x);
+            const available = cols - startX;
+            if (available <= 0) return;
+
+            screen.writeString(startX, y, text.slice(0, available), attrs);
+        };
 
         // Clear screen with a consistent background
         for (let y = 0; y < rows; y++) {
@@ -134,7 +148,7 @@ export class ErrorOverlay implements RootWidget {
 
         // 1. Draw top banner
         const bannerText = '  ❌ DEV-SERVER RUNTIME / COMPILE ERROR  ';
-        screen.writeString(0, 0, bannerText.padEnd(cols, ' '), {
+        writeClipped(0, 0, bannerText.padEnd(cols, ' '), {
             fg: { type: 'named', name: 'white' },
             bg: { type: 'named', name: 'red' },
             bold: true,
@@ -142,11 +156,11 @@ export class ErrorOverlay implements RootWidget {
 
         // 2. Draw error header (Name: message)
         let currentLine = 2;
-        screen.writeString(2, currentLine, `${this._error.name}:`, {
+        writeClipped(2, currentLine, `${this._error.name}:`, {
             fg: { type: 'named', name: 'red' },
             bold: true,
         });
-        screen.writeString(2 + this._error.name.length + 2, currentLine, this._error.message, {
+        writeClipped(2 + this._error.name.length + 2, currentLine, this._error.message, {
             fg: { type: 'named', name: 'white' },
             bold: true,
         });
@@ -155,14 +169,14 @@ export class ErrorOverlay implements RootWidget {
         // 3. Draw primary error location
         if (this._error.file) {
             const locText = `Location: ${this._error.file}:${this._error.line ?? 0}:${this._error.column ?? 0}`;
-            screen.writeString(2, currentLine, locText, {
+            writeClipped(2, currentLine, locText, {
                 fg: { type: 'named', name: 'yellow' },
             });
             currentLine += 2;
         }
 
         // 4. Draw stack trace header
-        screen.writeString(2, currentLine, 'Stack Trace:', {
+        writeClipped(2, currentLine, 'Stack Trace:', {
             fg: { type: 'named', name: 'brightBlack' },
             underline: true,
         });
@@ -182,12 +196,12 @@ export class ErrorOverlay implements RootWidget {
                 ? { fg: { type: 'named' as const, name: 'brightBlack' as const } }
                 : { fg: { type: 'named' as const, name: 'white' as const } };
 
-            screen.writeString(4, currentLine, line.slice(0, cols - 6), style);
+            writeClipped(4, currentLine, line, style);
             currentLine++;
         }
 
         if (this._error.rawStack.length > visibleTrace.length) {
-            screen.writeString(
+            writeClipped(
                 4,
                 currentLine,
                 `... and ${this._error.rawStack.length - visibleTrace.length} more frames`,
@@ -197,7 +211,7 @@ export class ErrorOverlay implements RootWidget {
 
         // 6. Draw bottom footer
         const footerText = '  🔄 Watching for changes... (Save a file to auto-reload)  ';
-        screen.writeString(0, rows - 1, footerText.padEnd(cols, ' '), {
+        writeClipped(0, rows - 1, footerText.padEnd(cols, ' '), {
             fg: { type: 'named', name: 'black' },
             bg: { type: 'named', name: 'brightBlack' },
             bold: true,
