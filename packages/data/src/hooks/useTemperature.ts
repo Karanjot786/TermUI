@@ -32,7 +32,27 @@ export function useTemperature(intervalMs = 5000): UseTemperatureResult {
                     const content = await readFile('/sys/class/thermal/thermal_zone0/temp', 'utf8');
                     celsius = parseInt(content.trim(), 10) / 1000;
                 } else if (platform === 'darwin') {
-                    throw new Error('Temperature reading is not supported on macOS');
+                    try {
+                        const { stdout } = await execFileAsync('osx-cpu-temp', [], { timeout: 2000 });
+                        const match = stdout.match(/([0-9.]+)/);
+                        if (match) {
+                            celsius = parseFloat(match[1]);
+                        } else {
+                            throw new Error('Could not parse osx-cpu-temp output');
+                        }
+                    } catch {
+                        try {
+                            const { stdout } = await execFileAsync('smc', ['-k', 'TC0P', '-r'], { timeout: 2000 });
+                            const match = stdout.match(/([0-9]{2,3}\.[0-9]+)/);
+                            if (match) {
+                                celsius = parseFloat(match[1]);
+                            } else {
+                                throw new Error('Could not parse smc output');
+                            }
+                        } catch {
+                            throw new Error('Temperature reading requires osx-cpu-temp or smc on macOS');
+                        }
+                    }
                 } else if (platform === 'win32') {
                     const { stdout } = await execFileAsync(
                         'wmic',

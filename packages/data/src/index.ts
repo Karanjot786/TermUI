@@ -15,7 +15,7 @@ export { tail } from './tail.js';
 export type { TailOptions, TailStream } from './tail.js';
 export { http } from './http.js';
 export type { HealthResult, Endpoint } from './http.js';
-export { invalidate } from './cache.js';
+export { invalidate, setCacheMaxSize, getCache, setCache, isFresh, clearCache, fetchShared } from './cache.js';
 
 
 // ── Reactive hooks ────────────────────────────────────

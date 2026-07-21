@@ -2,7 +2,7 @@
 // @termuijs/widgets — Table widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, type KeyEvent, styleToCellAttrs, stringWidth, truncate, wordWrap, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, type KeyEvent, type MouseEvent, styleToCellAttrs, stringWidth, truncate, wordWrap, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type TableState } from './TableState.js';
 import { computeVariableRange } from '../input/virtual-scroll.js';
@@ -35,6 +35,8 @@ export interface TableOptions {
     separator?: string;
     /** Callback when a column header is activated to sort */
     onSort?: (colIndex: number, direction: 'asc' | 'desc') => void;
+    /** Whether columns can be resized by dragging separators */
+    resizable?: boolean;
 }
 
 export interface TableProps {
@@ -71,6 +73,12 @@ export class Table extends Widget {
     protected _stripe: boolean;
     protected _stripeColor: Color;
     protected _separator: string;
+    protected _resizable: boolean;
+    protected _columnWidths: number[] = [];
+    private _lastWidth = -1;
+    private _isDragging = false;
+    private _dragColIndex = -1;
+    
     private _state?: TableState;
     private _onStateChange?: (state: TableState) => void;
     private _selectedRow = 0;
@@ -79,6 +87,8 @@ export class Table extends Widget {
     private _focusedHeaderIndex = 0;
     private _tableOnSort?: (colIndex: number, direction: 'asc' | 'desc') => void;
     private _sortState: { colIndex: number; direction: 'asc' | 'desc' } | null = null;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
+    private readonly _mouseHandler = (event: MouseEvent): void => this.handleMouse(event);
 
     constructor(
         columnsOrProps: TableColumn[] | TableProps,
@@ -110,9 +120,25 @@ export class Table extends Widget {
         this._stripe = options.stripe ?? true;
         this._stripeColor = options.stripeColor ?? { type: 'named', name: 'brightBlack' };
         this._separator = options.separator ?? ' │ ';
+        this._resizable = options.resizable ?? false;
         this._state = state;
         this._onStateChange = onStateChange;
         this._tableOnSort = options.onSort;
+
+        this.events.on('key', this._keyHandler);
+        if (this._resizable) {
+            this.events.on('mouse', this._mouseHandler);
+        }
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
+        if (this._resizable) {
+            this.events.off('mouse', this._mouseHandler);
+            this.events.on('mouse', this._mouseHandler);
+        }
     }
 
     // ── Public API ────────────────────────────────────
@@ -170,6 +196,54 @@ export class Table extends Widget {
         }
     }
 
+    handleMouse(event: MouseEvent): void {
+        if (!this._resizable) return;
+
+        // Ensure we have computed widths at least once
+        const rect = this._getContentRect();
+        const sepWidth = stringWidth(this._separator);
+        this._getColWidths(rect.width, sepWidth);
+
+        if (event.type === 'mousedown') {
+            const colIndex = this._findColumnBoundaryAt(event.x);
+            if (colIndex !== -1) {
+                this._isDragging = true;
+                this._dragColIndex = colIndex;
+            }
+        } else if (event.type === 'mouseup' || event.type === 'dragend') {
+            this._isDragging = false;
+            this._dragColIndex = -1;
+        } else if (event.type === 'drag' && this._isDragging) {
+            let colStartX = rect.x;
+            for (let i = 0; i < this._dragColIndex; i++) {
+                colStartX += (this._columnWidths[i] ?? 0) + sepWidth;
+            }
+            
+            const newWidth = Math.max(1, event.x - colStartX);
+            this._columnWidths[this._dragColIndex] = newWidth;
+            
+            // To prevent table width from changing uncontrollably, we can subtract dx from the next column 
+            // if there's enough space, but a simpler free-resizing UX works better for terminal tables
+            this.markDirty();
+        }
+    }
+
+    private _findColumnBoundaryAt(screenX: number): number {
+        const rect = this._getContentRect();
+        let cx = rect.x;
+        const sepWidth = stringWidth(this._separator);
+        
+        for (let c = 0; c < this._columns.length - 1; c++) {
+            cx += this._columnWidths[c] ?? 0;
+            // The separator is from cx to cx + sepWidth
+            if (screenX >= cx && screenX < cx + sepWidth) {
+                return c;
+            }
+            cx += sepWidth;
+        }
+        return -1;
+    }
+
     handleKey(event: KeyEvent): void {
         const minRow = this._showHeader ? -1 : 0;
 
@@ -182,6 +256,24 @@ export class Table extends Widget {
                 this._rows.length - 1,
                 this._selectedRow + 1
             );
+        }
+
+        if (event.key === 'pageup') {
+            const pageSize = Math.max(1, this._getContentRect().height - (this._showHeader ? 2 : 0));
+            this._selectedRow = Math.max(minRow, this._selectedRow - pageSize);
+        }
+
+        if (event.key === 'pagedown') {
+            const pageSize = Math.max(1, this._getContentRect().height - (this._showHeader ? 2 : 0));
+            this._selectedRow = Math.min(this._rows.length - 1, this._selectedRow + pageSize);
+        }
+        
+        if (event.key === 'home') {
+            this._selectedRow = minRow;
+        }
+        
+        if (event.key === 'end') {
+            this._selectedRow = Math.max(minRow, this._rows.length - 1);
         }
 
         // Header Navigation Mode
@@ -225,7 +317,7 @@ export class Table extends Widget {
         if (visibleHeight <= 0) { this._scrollOffset = 0; return; }
 
         const sepWidth = stringWidth(this._separator);
-        const colWidths = this._computeColumnWidths(Math.max(0, rect.width - (this._columns.length - 1) * sepWidth));
+        const colWidths = this._getColWidths(rect.width, sepWidth);
         const sizes = this._computeRowHeights(colWidths);
 
         let selectedTop = 0;
@@ -253,9 +345,7 @@ export class Table extends Widget {
         const sepWidth = stringWidth(this._separator);
 
         // Calculate column widths
-        const colWidths = this._computeColumnWidths(
-            width - (this._columns.length - 1) * sepWidth,
-        );
+        const colWidths = this._getColWidths(width, sepWidth);
 
         let headerOffset = 0;
 
@@ -365,6 +455,18 @@ export class Table extends Widget {
                 }
             }
         }
+    }
+
+    private _getColWidths(rectWidth: number, sepWidth: number): number[] {
+        if (!this._resizable) {
+            return this._computeColumnWidths(Math.max(0, rectWidth - (this._columns.length - 1) * sepWidth));
+        }
+        
+        if (this._columnWidths.length !== this._columns.length || this._lastWidth !== rectWidth) {
+            this._columnWidths = this._computeColumnWidths(Math.max(0, rectWidth - (this._columns.length - 1) * sepWidth));
+            this._lastWidth = rectWidth;
+        }
+        return this._columnWidths;
     }
 
     protected _computeColumnWidths(totalWidth: number): number[] {

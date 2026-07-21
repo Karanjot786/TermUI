@@ -120,6 +120,12 @@ describe('Badge', () => {
         expect(() => renderBadge('test', {}, {}, 0, 0)).not.toThrow();
     });
 
+    it('truncates double-width characters correctly to fit within layout width', () => {
+        const { screen } = renderBadge('测试试', {}, {}, 6, 3);
+        const row = rowText(screen, 1);
+        expect(row.length).toBeLessThanOrEqual(6);
+    });
+
     // ── 6. Constructor signature ────────────────────────────────────────────
     it('canonical signature Badge(text, style, opts) works correctly', () => {
         const { badge } = renderBadge('test', {}, { variant: 'info' });
