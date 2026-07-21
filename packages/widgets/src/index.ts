@@ -139,6 +139,8 @@ export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { SplitPane } from './layout/SplitPane.js';
 export type { SplitPaneOptions, SplitDirection } from './layout/SplitPane.js';
+export { LayoutDebug } from './display/LayoutDebug.js';
+export type { LayoutDebugOptions, LayoutDebugInfo } from './display/LayoutDebug.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';

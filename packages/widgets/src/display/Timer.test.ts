@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 import { Timer } from './Timer.js';
 
 /** Helper: create a Timer, give it a rect, render to a screen, return both. */
@@ -56,6 +56,19 @@ describe('Timer – rendering', () => {
 
     it('renders nothing when the content rect has zero width', () => {
         expect(() => renderTimer({ duration: 30_000 }, {}, 0, 1)).not.toThrow();
+    });
+
+    it('clips the formatted label to narrow widths', () => {
+        const timer = new Timer({ duration: 61_000 });
+        const screen = new Screen(3, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        timer.updateRect({ x: 0, y: 0, width: 3, height: 1 });
+        timer.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(3);
+        }
     });
 });
 

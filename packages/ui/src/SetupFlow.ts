@@ -86,7 +86,7 @@ export class SetupFlow extends Widget {
         let row = y;
 
         // ── Header ────────────────────────────────────
-        const header = ` Setup: ${this._appName} `;
+        const header = truncate(` Setup: ${this._appName} `, width, '');
         const headerX = x + Math.max(0, Math.floor((width - stringWidth(header)) / 2));
         screen.writeString(headerX, row, header, { ...attrs, bold: true });
         row++;
@@ -127,9 +127,12 @@ export class SetupFlow extends Widget {
                 }
             }
         } else if (this._complete) {
-            const msg = `${caps.unicode ? '✓' : 'v'} Setup complete!`;
-            const msgX = x + Math.max(0, Math.floor((width - stringWidth(msg)) / 2));
-            screen.writeString(msgX, row + 2, msg, { ...attrs, bold: true });
+            const completeRow = row + 2;
+            if (completeRow < y + height) {
+                const msg = truncate(`${caps.unicode ? '✓' : 'v'} Setup complete!`, width, '');
+                const msgX = x + Math.max(0, Math.floor((width - stringWidth(msg)) / 2));
+                screen.writeString(msgX, completeRow, msg, { ...attrs, bold: true });
+            }
         }
 
         // ── Key hints at bottom ───────────────────────
