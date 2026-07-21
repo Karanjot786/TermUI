@@ -169,177 +169,216 @@ export class App {
         this.renderer.hook.start();
 
         // Set up terminal
-        this.terminal.enterRawMode();
-        // Enter alternate screen only when requested via screenMode === 'alternate'
-        if (this._options.screenMode === 'alternate') {
-            this.terminal.enterAltScreen();
-        }
-        this.terminal.hideCursor();
+        // From here on, any synchronous throw before the executor below
+        // returns must not leave the terminal stuck in raw mode with no
+        // input listener attached (see #2014). Wrap remaining interactive
+        // setup and restore + rethrow on failure, so callers (e.g. the
+        // dev-server's error overlay) don't silently swallow a
+        // partially-mounted terminal.
+        try {
+            this.terminal.enterRawMode();
+            // Enter alternate screen only when requested via screenMode === 'alternate'
+            if (this._options.screenMode === 'alternate') {
+                this.terminal.enterAltScreen();
+            }
+            this.terminal.hideCursor();
 
-        if (this._options.mouse) {
-            this.terminal.enableMouse();
-        }
+            if (this._options.mouse) {
+                this.terminal.enableMouse();
+            }
 
-        if (this._options.title) {
-            const safeTitle = this._options.title.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
-            this.terminal.write(`\x1b]0;${safeTitle}\x07`);
-        }
+            if (this._options.title) {
+                const safeTitle = this._options.title.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
+                this.terminal.write(`\x1b]0;${safeTitle}\x07`);
+            }
 
-        // Handle resize
-        this._unsubResize = this.terminal.onResize((cols, rows) => {
-            this.screen.resize(cols, rows);
-            this.screen.invalidate();
-            this.layers.resize(cols, rows);
-            this._hitGridDirty = true;
-            this.events.emit('resize', { cols, rows });
-            (this._rootWidget as any).markDirty?.(); // as any: RootWidget.markDirty may be absent in some configs
-            this.requestRender();
-        });
-
-        // Set up input handling
-        this.input.start();
-
-        // Forward key events with bubble dispatch
-        this._unsubKey = this.input.onKey((rawEvent) => {
-            const event = createKeyEvent({
-                ...rawEvent,
-                targetId: this.focus.currentId ?? undefined,
+            // Handle resize
+            this._unsubResize = this.terminal.onResize((cols, rows) => {
+                this.screen.resize(cols, rows);
+                this.screen.invalidate();
+                this.layers.resize(cols, rows);
+                this._hitGridDirty = true;
+                this.events.emit('resize', { cols, rows });
+                (this._rootWidget as any).markDirty?.(); // as any: RootWidget.markDirty may be absent in some configs
+                this.requestRender();
             });
 
-            // Phase 1: Bubble dispatch — focused widget → parent → root
-            const focusedId = this.focus.currentId;
-            if (focusedId) {
-                const chain = this._buildBubbleChain(focusedId);
-                for (const widget of chain) {
-                    widget.events.emit('key', event);
-                    if (event._propagationStopped) break;
-                }
-            }
+            // Set up input handling
+            this.input.start();
 
-            // Phase 2: Default actions (Tab for focus cycling)
-            if (!event._defaultPrevented) {
-                if (event.key === 'tab' && !event.ctrl && !event.alt) {
-                    if (event.shift) {
-                        this.focus.focusPrev();
-                    } else {
-                        this.focus.focusNext();
+            // Forward key events with bubble dispatch
+            this._unsubKey = this.input.onKey((rawEvent) => {
+                const event = createKeyEvent({
+                    ...rawEvent,
+                    targetId: this.focus.currentId ?? undefined,
+                });
+
+                // Phase 1: Bubble dispatch — focused widget → parent → root
+                const focusedId = this.focus.currentId;
+                if (focusedId) {
+                    const chain = this._buildBubbleChain(focusedId);
+                    for (const widget of chain) {
+                        widget.events.emit('key', event);
+                        if (event._propagationStopped) break;
                     }
                 }
-            }
 
-            // Phase 3: App-level broadcast (always fires unless stopped)
-            if (!event._propagationStopped) {
-                this.events.emit('key', event);
-            }
-        });
+                // Phase 2: Default actions (Tab for focus cycling)
+                if (!event._defaultPrevented) {
+                    if (event.key === 'tab' && !event.ctrl && !event.alt) {
+                        if (event.shift) {
+                            this.focus.focusPrev();
+                        } else {
+                            this.focus.focusNext();
+                        }
+                    }
+                }
 
-        // Forward mouse events
-        this._unsubMouse = this.input.onMouse((event) => {
-            this.events.emit('mouse', event);
+                // Phase 3: App-level broadcast (always fires unless stopped)
+                if (!event._propagationStopped) {
+                    this.events.emit('key', event);
+                }
+            });
 
-            if (event.type === 'mousedown') {
-                const hitWidget = this._findWidgetAt(event.x, event.y);
-                if (hitWidget) {
-                    this._clickedWidgetId = hitWidget.id;
-                    hitWidget.events.emit('mouse', event);
-                } else {
+            // Forward mouse events
+            this._unsubMouse = this.input.onMouse((event) => {
+                this.events.emit('mouse', event);
+
+                if (event.type === 'mousedown') {
+                    const hitWidget = this._findWidgetAt(event.x, event.y);
+                    if (hitWidget) {
+                        this._clickedWidgetId = hitWidget.id;
+                        hitWidget.events.emit('mouse', event);
+                    } else {
+                        this._clickedWidgetId = null;
+                    }
+                }
+
+                if (event.type === 'mouseup') {
+                    const hitWidget = this._findWidgetAt(event.x, event.y);
+                    if (hitWidget) {
+                        hitWidget.events.emit('mouse', event);
+                        if (hitWidget.id === this._clickedWidgetId) {
+                            const clickEvent = { ...event, type: 'click' as const };
+                            hitWidget.events.emit('click' as any, clickEvent);
+                            hitWidget.onClick?.(clickEvent);
+                        }
+                    }
                     this._clickedWidgetId = null;
                 }
-            }
 
-            if (event.type === 'mouseup') {
-                const hitWidget = this._findWidgetAt(event.x, event.y);
-                if (hitWidget) {
-                    hitWidget.events.emit('mouse', event);
-                    if (hitWidget.id === this._clickedWidgetId) {
-                        const clickEvent = { ...event, type: 'click' as const };
-                        hitWidget.events.emit('click' as any, clickEvent);
-                        hitWidget.onClick?.(clickEvent);
+                if (event.type === 'mousemove') {
+                    const hitWidget = this._findWidgetAt(event.x, event.y);
+                    const hitId = hitWidget?.id ?? null;
+
+                    if (hitId !== this._hoveredWidgetId) {
+                        const prevWidget = this._hoveredWidgetId
+                            ? this._widgetById.get(this._hoveredWidgetId)
+                            : null;
+                        if (prevWidget) {
+                            const leaveEvent = { ...event, type: 'mouseleave' as const };
+                            prevWidget.events.emit('mouseleave' as any, leaveEvent);
+                            prevWidget.onMouseLeave?.(leaveEvent);
+                        }
+
+                        if (hitWidget) {
+                            const enterEvent = { ...event, type: 'mouseenter' as const };
+                            hitWidget.events.emit('mouseenter' as any, enterEvent);
+                            hitWidget.onMouseEnter?.(enterEvent);
+                        }
+
+                        this._hoveredWidgetId = hitId;
                     }
                 }
-                this._clickedWidgetId = null;
-            }
+            });
 
-            if (event.type === 'mousemove') {
-                const hitWidget = this._findWidgetAt(event.x, event.y);
-                const hitId = hitWidget?.id ?? null;
+            // Forward paste events
+            this._unsubPaste = this.input.onPaste((text) => {
+                this.events.emit('paste', text);
+            });
 
-                if (hitId !== this._hoveredWidgetId) {
-                    const prevWidget = this._hoveredWidgetId
-                        ? this._widgetById.get(this._hoveredWidgetId)
-                        : null;
-                    if (prevWidget) {
-                        const leaveEvent = { ...event, type: 'mouseleave' as const };
-                        prevWidget.events.emit('mouseleave' as any, leaveEvent);
-                        prevWidget.onMouseLeave?.(leaveEvent);
-                    }
+            // Handle signals to ensure hook cleanup on forced exit
+            const onSigInt = (): void => { this.exit(130); };
+            const onSigTerm = (): void => { this.exit(143); };
+            process.on('SIGINT', onSigInt);
+            process.on('SIGTERM', onSigTerm);
+            this._unsubSigInt = () => process.off('SIGINT', onSigInt);
+            this._unsubSigTerm = () => process.off('SIGTERM', onSigTerm);
 
-                    if (hitWidget) {
-                        const enterEvent = { ...event, type: 'mouseenter' as const };
-                        hitWidget.events.emit('mouseenter' as any, enterEvent);
-                        hitWidget.onMouseEnter?.(enterEvent);
-                    }
+            // Register terminal cleanup to stop render hook on process exit
+            this.terminal.onCleanup(() => {
+                this.renderer.hook.stop();
+            });
 
-                    this._hoveredWidgetId = hitId;
-                }
-            }
-        });
+            // Handle uncaught exceptions — stop hook first so console works, then restore terminal
+            const onUncaughtException = (err: Error) => {
+                this.renderer.hook.stop();
+                this.renderer.hook.writeRaw(this.renderer.hook.flush());
+                this.renderer.hook.writeRaw(`Uncaught exception: ${err.message}\n${err.stack}\n`);
+                this.terminal.restore();
+                process.exit(1);
+            };
+            process.on('uncaughtException', onUncaughtException);
+            this._unsubUncaughtException = () => process.off('uncaughtException', onUncaughtException);
 
-        // Forward paste events
-        this._unsubPaste = this.input.onPaste((text) => {
-            this.events.emit('paste', text);
-        });
+            const onUnhandledRejection = (reason: any) => { // any: Node unhandledRejection passes unknown reason
+                this.renderer.hook.stop();
+                this.renderer.hook.writeRaw(this.renderer.hook.flush());
+                this.renderer.hook.writeRaw(`Unhandled rejection: ${reason}\n`);
+                this.terminal.restore();
+                process.exit(1);
+            };
+            process.on('unhandledRejection', onUnhandledRejection);
+            this._unsubUnhandledRejection = () => process.off('unhandledRejection', onUnhandledRejection);
 
-        // Handle signals to ensure hook cleanup on forced exit
-        const onSigInt = (): void => { this.exit(130); };
-        const onSigTerm = (): void => { this.exit(143); };
-        process.on('SIGINT', onSigInt);
-        process.on('SIGTERM', onSigTerm);
-        this._unsubSigInt = () => process.off('SIGINT', onSigInt);
-        this._unsubSigTerm = () => process.off('SIGTERM', onSigTerm);
+            // Start render loop — tick drives requestRender() so dirty widgets
+            // (motion, timers) get redrawn without a separate setInterval.
+            this.renderer.start(() => this.requestRender());
 
-        // Register terminal cleanup to stop render hook on process exit
-        this.terminal.onCleanup(() => {
-            this.renderer.hook.stop();
-        });
+            // Mount root widget
+            this._rootWidget.mount?.();
+            this.events.emit('mount', undefined as any); // as any: EventEmitter generic requires a value; payload is intentionally void
 
-        // Handle uncaught exceptions — stop hook first so console works, then restore terminal
-        const onUncaughtException = (err: Error) => {
-            this.renderer.hook.stop();
-            this.renderer.hook.writeRaw(this.renderer.hook.flush());
-            this.renderer.hook.writeRaw(`Uncaught exception: ${err.message}\n${err.stack}\n`);
+            // Initial render — invalidate front buffer to force full redraw
+            this.screen.invalidate();
+            this.requestRender();
+        } catch (err) {
+            this._mounted = false;
+            this._teardownListeners();
             this.terminal.restore();
-            process.exit(1);
-        };
-        process.on('uncaughtException', onUncaughtException);
-        this._unsubUncaughtException = () => process.off('uncaughtException', onUncaughtException);
-
-        const onUnhandledRejection = (reason: any) => { // any: Node unhandledRejection passes unknown reason
-            this.renderer.hook.stop();
-            this.renderer.hook.writeRaw(this.renderer.hook.flush());
-            this.renderer.hook.writeRaw(`Unhandled rejection: ${reason}\n`);
-            this.terminal.restore();
-            process.exit(1);
-        };
-        process.on('unhandledRejection', onUnhandledRejection);
-        this._unsubUnhandledRejection = () => process.off('unhandledRejection', onUnhandledRejection);
-
-        // Start render loop — tick drives requestRender() so dirty widgets
-        // (motion, timers) get redrawn without a separate setInterval.
-        this.renderer.start(() => this.requestRender());
-
-        // Mount root widget
-        this._rootWidget.mount?.();
-        this.events.emit('mount', undefined as any); // as any: EventEmitter generic requires a value; payload is intentionally void
-
-        // Initial render — invalidate front buffer to force full redraw
-        this.screen.invalidate();
-        this.requestRender();
+            throw err;
+        }
 
         // Block until exit() is called
         return new Promise<number>((resolve) => {
             this._exitResolve = resolve;
         });
+    }
+
+    private _teardownListeners(): void {
+        this._unsubSigInt?.();
+        this._unsubSigInt = null;
+        this._unsubSigTerm?.();
+        this._unsubSigTerm = null;
+        this._unsubKey?.();
+        this._unsubKey = null;
+        this._unsubMouse?.();
+        this._unsubMouse = null;
+        this._unsubFocus?.();
+        this._unsubFocus = null;
+        this._unsubBlur?.();
+        this._unsubBlur = null;
+        this._unsubPaste?.();
+        this._unsubPaste = null;
+        this._unsubResize?.();
+        this._unsubResize = null;
+        this._unsubUncaughtException?.();
+        this._unsubUncaughtException = null;
+        this._unsubUnhandledRejection?.();
+        this._unsubUnhandledRejection = null;
+        this.renderer.hook.stop();
+        this.renderer.stop();
+        this.input.stop();
     }
 
     /**
@@ -353,34 +392,7 @@ export class App {
         this._rootWidget.unmount?.();
         this.events.emit('unmount', undefined as any); // as any: EventEmitter generic requires a value; payload is intentionally void
 
-        this._unsubSigInt?.();
-        this._unsubSigInt = null;
-        this._unsubSigTerm?.();
-        this._unsubSigTerm = null;
-        this._unsubKey?.();
-        this._unsubKey = null;
-        this._unsubMouse?.();
-        this._unsubMouse = null;
-
-        this._unsubFocus?.();
-        this._unsubFocus = null;
-        this._unsubBlur?.();
-        this._unsubBlur = null;
-        this._unsubPaste?.();
-        this._unsubPaste = null;
-        this._unsubResize?.();
-        this._unsubResize = null;
-        this._unsubUncaughtException?.();
-        this._unsubUncaughtException = null;
-        this._unsubUnhandledRejection?.();
-        this._unsubUnhandledRejection = null;
-
-
-        // Stop the stdout interceptor to restore native console.log behavior
-        this.renderer.hook.stop();
-
-        this.renderer.stop();
-        this.input.stop();
+        this._teardownListeners();
         this.terminal.restore();
         this.events.removeAll();
 

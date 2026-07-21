@@ -29,18 +29,30 @@ export function usePolling<T>(
     const fnRef = useRef(fn);
     fnRef.current = fn;
 
+    const inFlightRef = useRef(false);
+    const requestIdRef = useRef(0);
+
     const execute = async () => {
+        if (inFlightRef.current) {
+            return;
+        }
+        inFlightRef.current = true;
+        const requestId = ++requestIdRef.current;
         try {
             const result = await fnRef.current();
-            if (mountedRef.current) {
+            if (mountedRef.current && requestId === requestIdRef.current) {
                 setData(result);
                 setError(null);
                 setLoading(false);
             }
         } catch (err) {
-            if (mountedRef.current) {
+            if (mountedRef.current && requestId === requestIdRef.current) {
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setLoading(false);
+            }
+        } finally {
+            if (requestId === requestIdRef.current) {
+                inFlightRef.current = false;
             }
         }
     };
@@ -73,6 +85,8 @@ export function usePolling<T>(
 
         return () => {
             mountedRef.current = false;
+            inFlightRef.current = false;
+            requestIdRef.current++;
             clearInterval(timer);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
