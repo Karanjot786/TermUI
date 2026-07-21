@@ -341,4 +341,22 @@ describe("useFetch caching", () => {
 
     unmount();
   });
+
+  it("accepts circular cache keys", async () => {
+    const key: Record<string, unknown> = { scope: "dashboard" };
+    key.self = key;
+
+    const { unmount } = renderFetch("test-url-circular-key", {
+      key,
+      staleTime: 1000,
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    await flushPromises();
+
+    expect(isFresh('test-url-circular-key::{"scope":"dashboard","self":"[Circular]"}')).toBe(true);
+
+    unmount();
+  });
 });

@@ -414,6 +414,30 @@ export function __resetSharedAbortControllersForTests(): void {
     sharedAbortControllers.clear();
 }
 
+function stringifyFetchCacheKey(key: unknown): string {
+    const seen = new WeakSet<object>();
+    const serialized = JSON.stringify(key, (_property, value) => {
+        if (typeof value === 'bigint') {
+            return `${value.toString()}n`;
+        }
+
+        if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) {
+                return '[Circular]';
+            }
+            seen.add(value);
+        }
+
+        return value;
+    });
+
+    return serialized ?? String(key);
+}
+
+function getFetchCacheKey(url: string, key: unknown): string {
+    return key === undefined ? url : `${url}::${stringifyFetchCacheKey(key)}`;
+}
+
 /**
  * useFetch — reactive fetch hook with caching.
  *
@@ -424,9 +448,7 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
     const staleTime = options?.staleTime ?? 0;
     const retry = options?.retry ?? 0;
     const retryDelay = options?.retryDelay ?? 300;
-    const cacheKey = options?.key === undefined
-        ? url
-        : `${url}::${JSON.stringify(options.key)}`;
+    const cacheKey = getFetchCacheKey(url, options?.key);
     const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [data, setData] = useState<T | null>(() => {
