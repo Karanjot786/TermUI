@@ -536,7 +536,7 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
 
 export interface InfiniteQueryOptions<T, P> {
     /** Called with a page param; resolves to one page of data. */
-    queryFn: (pageParam: P) => Promise<T>;
+    queryFn: (pageParam: P, signal?: AbortSignal) => Promise<T>;
     /** Param used for the very first page fetch. */
     initialPageParam: P;
     /**
@@ -574,6 +574,7 @@ export function useInfiniteQuery<T, P = number>(
     // Each effect run creates a fresh controller and aborts the previous one on
     // cleanup, so stale promise callbacks see `signal.aborted === true` and bail.
     const abortControllerRef = useRef<AbortController | null>(null);
+    const pageAbortControllerRef = useRef<AbortController | null>(null);
 
     // Generation counter for fetchNextPage: incremented when the main effect
     // re-runs (queryFn / initialPageParam changed), so any in-flight
@@ -587,6 +588,7 @@ export function useInfiniteQuery<T, P = number>(
     useEffect(() => {
         // Abort any previous in-flight fetch from the last effect run.
         abortControllerRef.current?.abort();
+        pageAbortControllerRef.current?.abort();
         const controller = new AbortController();
         abortControllerRef.current = controller;
 
@@ -596,7 +598,7 @@ export function useInfiniteQuery<T, P = number>(
         setLoading(true);
         loadingRef.current = true;
 
-        queryFn(initialPageParam)
+        queryFn(initialPageParam, controller.signal)
             .then(page => {
                 if (controller.signal.aborted) return;
                 setPages([page]);
@@ -614,6 +616,8 @@ export function useInfiniteQuery<T, P = number>(
         return () => {
             generationRef.current += 1;
             controller.abort();
+            pageAbortControllerRef.current?.abort();
+            pageAbortControllerRef.current = null;
         };
     }, [queryFn, initialPageParam]);
 
@@ -633,18 +637,26 @@ export function useInfiniteQuery<T, P = number>(
         // Capture the current generation; if the main effect re-runs before
         // this promise settles, the generation will have changed and we skip.
         const myGeneration = generationRef.current;
+        const controller = new AbortController();
+        pageAbortControllerRef.current = controller;
 
         setLoading(true);
-        queryFn(nextParam)
+        queryFn(nextParam, controller.signal)
             .then(page => {
-                if (myGeneration !== generationRef.current) return;
+                if (myGeneration !== generationRef.current || controller.signal.aborted) return;
+                if (pageAbortControllerRef.current === controller) {
+                    pageAbortControllerRef.current = null;
+                }
                 loadingRef.current = false;
                 setPages(prev => [...prev, page]);
                 setError(null);
                 setLoading(false);
             })
             .catch(err => {
-                if (myGeneration !== generationRef.current) return;
+                if (pageAbortControllerRef.current === controller) {
+                    pageAbortControllerRef.current = null;
+                }
+                if (myGeneration !== generationRef.current || controller.signal.aborted) return;
                 loadingRef.current = false;
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setLoading(false);
