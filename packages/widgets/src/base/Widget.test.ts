@@ -2,7 +2,7 @@
 // @termuijs/widgets — Tests for base Widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@termuijs/core', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@termuijs/core')>();
@@ -157,7 +157,7 @@ describe('Widget', () => {
         expect(w.renderError).toBeInstanceOf(Error);
         expect(w.isDirty).toBe(true);
         w.clearDirty();
-        w._renderError = null;
+        (w as any)._renderError = null;
         w.render(screen);
         expect(w.renderError).toBeNull();
         expect(w.callCount).toBe(2);
@@ -407,7 +407,7 @@ describe('Widget.layoutTransition', () => {
             protected _renderSelf(): void {}
         }
         
-        const widget = new TransitionTestWidget({ id: 'test' });
+        const widget = new TransitionTestWidget();
         
         widget.updateRect({ x: 0, y: 0, width: 10, height: 10 });
         expect(widget.rect).toEqual({ x: 0, y: 0, width: 10, height: 10 });

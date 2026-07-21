@@ -277,6 +277,47 @@ describe('VirtualList', () => {
         });
     });
 
+    describe('invalidateCache', () => {
+        it('rerenders updated row content after mutable data changes', () => {
+            const rows = ['alpha'];
+            const list = new VirtualList({
+                totalItems: rows.length,
+                renderItem: (i) => rows[i],
+                springScroll: false,
+                showScrollbar: false,
+                style: { width: 20, height: 3 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 20, 3);
+            list.syncLayout();
+
+            const screen = new Screen(20, 3);
+            list.render(screen);
+            const rowText = (row: number) => screen.back[row].map(c => c.char).join('').trim();
+            expect(rowText(1)).toContain('alpha');
+
+            // Mutate the backing data without replacing the render function.
+            rows[0] = 'beta';
+            list.markDirty();
+            list.render(screen);
+
+            // Cache is keyed by index/selection/focus only, so the stale
+            // "alpha" row is served until the cache is invalidated.
+            expect(rowText(1)).toContain('alpha');
+
+            list.invalidateCache();
+            list.render(screen);
+            expect(rowText(1)).toContain('beta');
+        });
+
+        it('marks the widget dirty so a subsequent render reflects the invalidation', () => {
+            const list = createList(10);
+            const markDirtySpy = vi.spyOn(list, 'markDirty');
+            list.invalidateCache();
+            expect(markDirtySpy).toHaveBeenCalled();
+        });
+    });
+
     describe('render cache eviction', () => {
         it('evicts old entries outside visible range after scroll', () => {
             const list = new VirtualList({

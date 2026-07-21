@@ -3,17 +3,34 @@ import { readFile } from 'node:fs/promises';
 import * as os from 'node:os';
 import { execFileAsync } from './_exec.js';
 
+/**
+ * Latest available system temperature reading.
+ */
 export interface TemperatureData {
+    /** Temperature in degrees Celsius. */
     celsius: number;
+    /** The OS platform the reading came from. */
     platform: string;
 }
 
+/**
+ * Result of the {@link useTemperature} hook.
+ */
 export interface UseTemperatureResult {
+    /** Most recent reading, or `null` until the first fetch resolves. */
     data: TemperatureData | null;
+    /** Error from the last failed read, or `null`. */
     error: Error | null;
+    /** True until the first reading resolves; stays false on subsequent polls. */
     loading: boolean;
 }
 
+/**
+ * Reactive hook that polls the system temperature every `intervalMs`.
+ *
+ * Reads from `/sys/class/thermal` on Linux, `osx-cpu-temp`/`smc` on macOS,
+ * and `wmic` on Windows. Cleanly clears its interval on unmount.
+ */
 export function useTemperature(intervalMs = 5000): UseTemperatureResult {
     const [data, setData] = useState<TemperatureData | null>(null);
     const [error, setError] = useState<Error | null>(null);
