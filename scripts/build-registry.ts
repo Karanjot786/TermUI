@@ -368,7 +368,8 @@ function scanDirectory(dir: string, entries: { path: string; content: string }[]
         scanDirectory(full, entries);
       }
     } else if (file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.d.ts')) {
-      entries.push({ path: full.replace(ROOT + '/', ''), content: readFileSync(full, 'utf-8') });
+      const relPath = full.startsWith(ROOT) ? full.slice(ROOT.length + 1).replace(/\\/g, '/') : full.replace(/\\/g, '/');
+      entries.push({ path: relPath, content: readFileSync(full, 'utf-8') });
     }
   }
 }
