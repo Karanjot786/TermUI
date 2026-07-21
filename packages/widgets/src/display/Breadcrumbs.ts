@@ -35,6 +35,10 @@ export class Breadcrumbs extends Widget {
         this._separator = opts.separator;
         this._activeColor = opts.activeColor;
         this._onSelect = opts.onSelect;
+        this._selectedIndex = Math.max(0, segments.length - 1);
+
+        this.focusable = true;
+        this.events.on('key', (event) => this.handleKey(event));
     }
 
     /** Update the trail of segments. */
@@ -46,7 +50,12 @@ export class Breadcrumbs extends Widget {
             return;
         }
         this._segments = segments;
+        this._selectedIndex = Math.max(0, segments.length - 1);
         this.markDirty();
+    }
+
+    getSegments(): string[] {
+        return this._segments;
     }
 
     handleKey(event: { key: string }): void {
