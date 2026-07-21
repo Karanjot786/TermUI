@@ -68,6 +68,15 @@ describe('Router', () => {
         expect(r.params.id).toBe('42');
     });
 
+    it('push serializes array query values as repeated params', () => {
+        const r = new Router();
+        r.addRoute('/search', () => 'Search');
+        r.push('/search', { query: { tag: ['ui', 'data'] } });
+
+        expect(r.currentPath).toBe('/search?tag=ui&tag=data');
+        expect(r.query).toEqual({ tag: ['ui', 'data'] });
+    });
+
     it('navigate event fires on push', () => {
         const r = new Router();
         r.addRoute('/home', () => 'Home');

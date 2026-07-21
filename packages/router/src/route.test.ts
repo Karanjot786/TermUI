@@ -27,6 +27,13 @@ describe('route - Query Utilities', () => {
                 'key space': 'value',
             });
         });
+
+        it('preserves repeated query parameters as arrays', () => {
+            expect(parseQuery('tag=ui&tag=data&sort=asc')).toEqual({
+                tag: ['ui', 'data'],
+                sort: 'asc',
+            });
+        });
     });
 
     describe('serializeQuery', () => {
@@ -45,6 +52,12 @@ describe('route - Query Utilities', () => {
         it('URL-encodes parameters during serialization', () => {
             expect(serializeQuery({ hello: 'world!', 'key space': 'value' })).toBe(
                 'hello=world%21&key+space=value'
+            );
+        });
+
+        it('serializes array values as repeated query parameters', () => {
+            expect(serializeQuery({ tag: ['ui', 'data'], sort: 'asc' })).toBe(
+                'tag=ui&tag=data&sort=asc'
             );
         });
     });
@@ -173,5 +186,10 @@ describe('route - matchRoute', () => {
         const match = matchRoute('/about?tab=settings&theme=dark', routes);
         expect(match?.route.meta?.name).toBe('about');
         expect(match?.query).toEqual({ tab: 'settings', theme: 'dark' });
+    });
+
+    it('preserves repeated query parameters in route match', () => {
+        const match = matchRoute('/about?tag=ui&tag=data', routes);
+        expect(match?.query).toEqual({ tag: ['ui', 'data'] });
     });
 });
