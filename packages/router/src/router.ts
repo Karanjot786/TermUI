@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { EventEmitter } from '@termuijs/core';
-import { createElement, ErrorBoundary, unmountAll, type VNode } from '@termuijs/jsx';
+import { createElement, ErrorBoundary, type VNode } from '@termuijs/jsx';
 import { type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern } from './route.js';
 import { RouterContext } from './hooks.js';
 
@@ -266,7 +266,6 @@ export class Router {
 
                 const notFoundMatch = this._createNotFoundMatch(resolvedPath);
                 this._currentMatch = notFoundMatch;
-                if (this.autoUnmount) unmountAll();
                 const screen = this._wrapScreen(notFoundMatch);
                 const emitEvent = direction === 'back' ? 'back' : 'navigate';
                 this.events.emit(emitEvent, { match: notFoundMatch, screen, direction });
@@ -309,7 +308,6 @@ export class Router {
         }
 
         this._currentMatch = match;
-        if (this.autoUnmount) unmountAll();
         const screen = this._wrapScreen(match);
 
         const emitEvent = direction === 'back' ? 'back' : 'navigate';
@@ -378,7 +376,6 @@ export class Router {
         }
 
         this._currentMatch = match;
-        if (this.autoUnmount) unmountAll();
         const screen = this._wrapScreen(match);
 
         this.events.emit('back', { match, screen, direction: 'back' });
@@ -413,7 +410,6 @@ export class Router {
         this._forwardStack.pop();
         this._history.push(nextPath);
         this._currentMatch = match;
-        if (this.autoUnmount) unmountAll();
         const screen = this._wrapScreen(match);
         this.events.emit('navigate', { match, screen, direction: 'forward' });
 
