@@ -24,7 +24,7 @@ export function RouterView({ router }: RouterViewProps) {
         progress: number;
     }>({
         previous: null,
-        current: router.current ? router._wrapScreen(router.current) : null,
+        current: router.current ? router.wrapScreen(router.current) : null,
         direction: 'push',
         progress: 1,
     });

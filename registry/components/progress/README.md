@@ -31,8 +31,8 @@ constructor(style?: Partial<Style>, options?: ProgressBarOptions)
 
 ### Methods
 
-* `setValue(value: number): void` — Update the current progress value
-* `getValue(): number` — Get the current progress value
+* `setValue(value: number): void` - Update the current progress value
+* `getValue(): number` - Get the current progress value
 
 ## Example
 

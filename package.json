@@ -15,7 +15,7 @@
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "bench": "bun packages/core/src/benchmark/run-all.ts",
-    "clean": "turbo run clean && rm -rf node_modules",
+    "clean": "turbo run clean && node scripts/clean-root.mjs",
     "format": "prettier --write \".\"",
     "registry:build": "bun scripts/build-registry.ts"
   },

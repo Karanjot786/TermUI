@@ -49,6 +49,12 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
     return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
+/**
+ * Adjust `fg` so it meets `targetRatio` against `bg`, returning the original
+ * colour when it already passes. When adjustment is needed, the lightness of
+ * `fg` is nudged along its own hue/saturation toward the nearer contrast
+ * extreme (black or white). `none`-typed colours are returned unchanged.
+ */
 export function adjustForContrast(fg: Color, bg: Color, targetRatio = 4.5): Color {
     if (fg.type === 'none' || bg.type === 'none') return fg;
 

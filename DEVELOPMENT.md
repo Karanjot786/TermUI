@@ -1,180 +1,204 @@
-# Development Guide
+# TermUI Development Guide
 
-This guide helps contributors set up the project locally, understand the monorepo structure, and run builds, tests, and examples.
+Welcome! This guide is designed to help contributors set up their local development environment, understand the monorepo architecture, adhere to code quality standards, run workspace commands, and follow the validation workflow before submitting a Pull Request.
+
+---
 
 ## Prerequisites
 
-Before starting, make sure you have the following installed:
+Ensure you have the following installed locally:
 
-* [Bun](https://bun.sh/)
-* Git
+* **Bun** (>= 1.3.0) — **Mandatory**. Development is Bun-only; do not use `npm`, `yarn`, or `pnpm`.
+* **Git** — Latest version.
+* **Node.js** (>= 18.0.0) — Only required to verify package compatibility on Node, or if you consume published npm packages.
+* **A Modern Terminal** — Supporting ANSI escape codes and unicode characters (e.g., Windows Terminal, iTerm2, Alacritty, GNOME Terminal).
 
-You can verify Bun installation with:
-
-```bash
-bun --version
+### Windows-Specific Notes
+If you are developing on Windows, we highly recommend using **Windows Terminal** with PowerShell. If you run into execution policy errors when running Bun scripts, run:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ---
 
-# Clone the Repository
+## 1. Setting Up Your Environment
+
+### Step 1: Fork and Clone the Repository
+Fork the repository on GitHub and clone **your fork**:
 
 ```bash
-git clone https://github.com/Karanjot786/TermUI.git
+git clone https://github.com/<your-username>/TermUI.git
 cd TermUI
 ```
 
----
-
-# Install Dependencies
-
-Install all workspace dependencies from the repository root:
+### Step 2: Install Workspace Dependencies
+Install dependencies from the repository root:
 
 ```bash
 bun install
 ```
 
----
+> [!WARNING]
+> **Never edit `bun.lock` by hand.** If your change requires a dependency, add it to the package's specific `package.json` and run `bun install` at the root. If `bun.lock` contains unrelated changes, revert it before committing using `git checkout origin/main -- bun.lock`.
 
-# Monorepo Structure
-
-This project uses a monorepo layout.
-
-## Root Structure
-
-```text
-.
-├── packages/
-├── examples/
-├── package.json
-├── bun.lockb
-├── README.md
-├── CONTRIBUTING.md
-└── DEVELOPMENT.md
-```
-
-## Packages Folder
-
-The `packages/` directory contains the core libraries and modules used across the project.
-
-Example structure:
-
-```text
-packages/
-├── motion/
-├── router/
-├── core/
-└── ...
-```
-
-Each package contains its own source code, tests, and configuration.
-
-## Examples Folder
-
-The `examples/` directory contains runnable demo applications that showcase how the packages work together.
-
-Example:
-
-```text
-examples/dashboard
-```
-
----
-
-# Available Commands
-
-Run all commands from the repository root unless stated otherwise.
-
-## Build
-
-Build all packages:
+### Step 3: Run the Initial Build
+Build all packages in the correct dependency order:
 
 ```bash
 bun run build
 ```
 
-## Test
+---
 
-Run the full test suite:
+## 2. Monorepo Architecture & Package Layout
 
-```bash
-bun run test
-```
+TermUI is managed as a Bun workspace monorepo. All packages are located under the `packages/` directory, and publish as `@termuijs/<package-name>`.
+
+### Monorepo Boundaries
+* **Independence**: Each package is independent. Do not introduce circular dependencies.
+* **Dependency Direction**: The dependency graph flows from low-level to high-level:
+  * `core` $\leftarrow$ everything else
+  * `widgets` $\leftarrow$ `ui`
+* **Imports**: Do not import across packages unless explicitly specified in the issue. If package `A` depends on `B`, specify the dependency in `packages/A/package.json` under `dependencies` as `"@termuijs/B": "workspace:*"` and run `bun install` from the root.
+
+For testing guidelines and recommended practices, see
+`docs/TESTING_BEST_PRACTICES.md`.
 
 ## Typecheck
 
-Run TypeScript type checking:
+### Directory Structure of a Package
+Each package under `packages/` follows a standardized layout:
 
-```bash
-bun run typecheck
+```text
+packages/<package-name>/
+├── src/
+│   ├── index.ts               # Public exports (named exports only)
+│   └── data/
+│       ├── WidgetName.ts      # Main logic
+│       └── WidgetName.test.ts # Vitest unit tests (placed next to source)
+├── package.json
+└── tsconfig.json
 ```
 
 ---
 
-# Running Tests for a Single Package
+## 3. Core Development Commands
 
-To run tests for a specific package, navigate into that package directory.
+Run all commands from the repository root:
 
-Example:
+| Command | Action |
+|---------|--------|
+| `bun install` | Install workspace-wide dependencies and link workspaces. |
+| `bun run build` | Builds all packages using `turbo` in dependency order. |
+| `bun run lint` | Runs the workspace linter. |
+| `bun run typecheck` | Runs TypeScript typechecks across all workspaces. |
+| `bun vitest run` | Runs the full Vitest suite. |
+| `bun vitest run packages/<name>` | Runs Vitest tests exclusively for the specified package. |
 
-```bash
-cd packages/router
-bun test
-```
-
-You can replace `router` with any package name inside the `packages/` folder.
-
----
-
-# Running an Example App
-
-To start the dashboard example:
+### Running an Example Application
+To test your changes visually, you can start any of the example apps. For example, to run the system monitoring dashboard:
 
 ```bash
 cd examples/dashboard
 bun run dev
 ```
 
-This starts the development server for the example application.
+This starts the Bun-native hot-reloading dev server.
 
 ---
 
-# Contributor Workflow
+## 4. Coding Style and Best Practices
 
-Typical workflow for contributors:
+To maintain code quality and prevent build breaks, adhere strictly to the following rules:
 
-1. Fork the repository
-2. Clone your fork
-3. Create a new branch
-4. Make changes
-5. Run build, tests, and typecheck
-6. Open a Pull Request
+### TypeScript Strict Mode
+* **No `any`**: Type assertions must be avoided. If you must use `any` or a type assertion, include an inline comment explaining why.
+* **No `@ts-ignore`**: Use `@ts-expect-error` with a descriptive comment if a compiler error is absolutely unresolvable, but prefer proper type safety.
+* **Named Exports Only**: Do not use `export default`. Use named exports for all APIs.
 
-Example:
+### Node Built-ins
+* Always use the `node:` prefix when importing Node built-in modules:
+  ```typescript
+  import { readFileSync } from 'node:fs'; // Correct
+  import { readFileSync } from 'fs';      // Incorrect
+  ```
 
-```bash
-git checkout -b feat/update-docs
+### Widget Development Checklist
+If you are adding or modifying a widget:
+1. **Canonical Reference**: Read `packages/widgets/src/data/Gauge.ts` and `packages/widgets/src/data/Gauge.test.ts` first. Match their constructor signature and coding patterns.
+2. **Dirty States**: Every method modifying a widget's state must call `this.markDirty()`. This triggers the layout engine to queue a re-render.
+3. **Key Handling**: Widgets that process keyboard events must implement `handleKey(event: KeyEvent)` using types from `@termuijs/core`.
+4. **Key Name Convention**: Key names must be lowercase (e.g., `enter`, `escape`, `left`, `right`, `space`, `up`, `down`). Never use capitalized variants like `Enter` or `ArrowUp`.
+5. **Console Logging**: Do not leave `console.log` or debug print statements in the package code. Use proper logging, event emission, or test assertions.
+6. **Unicode Capabilities**: Support non-ASCII symbols with an ASCII fallback using the `caps.unicode` capability flag:
+   ```typescript
+   const borderChar = caps.unicode ? '█' : '#';
+   ```
+
+---
+
+## 5. Testing Patterns
+
+We use **Vitest** for testing. All unit tests must be kept in `<FileName>.test.ts` files adjacent to their source code.
+
+### Standard Test Layout
+Tests must use the real `Screen` object from `@termuijs/core` to render and assert visual outcomes:
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { Screen } from '@termuijs/core';
+import { MyWidget } from './MyWidget';
+
+describe('MyWidget', () => {
+    it('renders the expected text content', () => {
+        const screen = new Screen(40, 10);
+        const widget = new MyWidget();
+        
+        widget.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        widget.render(screen);
+        
+        const row0 = screen.back[0].map(c => c.char).join('');
+        expect(row0).toContain('expected text');
+    });
+});
+```
+
+### Mocking Capabilities Safely
+Do not mutate capability flags directly (e.g. `caps.unicode = false`), as these are shared global singletons and will leak across tests. Instead, mock them via Vitest's `vi.spyOn`:
+
+```typescript
+import { vi, afterEach } from 'vitest';
+import { caps } from '@termuijs/core';
+
+afterEach(() => {
+    vi.restoreAllMocks();
+});
+
+it('falls back to ASCII characters when unicode is disabled', () => {
+    vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+    
+    // perform test steps and assert ASCII fallback
+});
 ```
 
 ---
 
-# Helpful Commands Summary
+## 6. Pull Request Checklist
 
-| Command             | Purpose                       |
-| ------------------- | ----------------------------- |
-| `bun install`       | Install dependencies          |
-| `bun run build`     | Build all packages            |
-| `bun run test`      | Run all tests                 |
-| `bun run typecheck` | Run type checks               |
-| `bun test`          | Run tests for current package |
-| `bun run dev`       | Start example app             |
+Before submitting a Pull Request, run the validation commands and verify all checks pass locally:
 
----
-
-# Additional Notes
-
-* Read `CONTRIBUTING.md` before opening a Pull Request.
-* Keep changes focused and minimal.
-* Ensure tests pass before submitting changes.
-
-Happy contributing!
+1. **Verify Builds, Tests, and Types**:
+   Run the following pipeline from the repository root:
+   ```bash
+   bun run build && bun vitest run && bun run typecheck
+   ```
+2. **Follow Conventional Commits**:
+   Format your commits using conventional prefixes:
+   * `feat(widgets): add Sparkline widget`
+   * `fix(core): handle empty event buffer`
+   * `test(ui): add Modal unit tests`
+   * `docs: expand DEVELOPMENT.md`
+3. **Keep Changes Focused**:
+   Confine your changes to the relevant package. Do not bundle formatting adjustments, refactors, or unrelated changes into your Pull Request.
+4. **Link Issues**:
+   Always link the issue you are resolving in the PR description (e.g. `Closes #1618`).
