@@ -21,7 +21,7 @@ export interface UseTemperatureResult {
     data: TemperatureData | null;
     /** Error from the last failed read, or `null`. */
     error: Error | null;
-    /** Whether a read is currently in flight. */
+    /** True until the first reading resolves; stays false on subsequent polls. */
     loading: boolean;
 }
 
