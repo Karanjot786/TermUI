@@ -5,6 +5,7 @@ import {
     type Style,
     type Screen,
     type KeyEvent,
+    type Color,
     mergeStyles,
     defaultStyle,
     styleToCellAttrs,
@@ -23,7 +24,7 @@ export interface SegmentedControlOptions {
 export class SegmentedControl extends Widget {
     private _options: string[];
     private _selectedIndex = 0;
-    private _activeColor: Style['fg'];
+    private _activeColor: Color;
     private _onChange?: (value: string) => void;
 
     focusable = true;
