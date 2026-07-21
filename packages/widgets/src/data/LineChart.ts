@@ -4,6 +4,7 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { filterFinite } from './utils.js';
 
 export interface LineChartOptions {
     /** Color of the plotted points/lines */
@@ -41,7 +42,7 @@ export class LineChart extends Widget {
 
     constructor(data: number[], style: Partial<Style> = {}, opts: LineChartOptions = {}) {
         super(style);
-        this._data = data;
+        this._data = filterFinite(data);
         this._color = opts.color ?? { type: 'named', name: 'cyan' };
         this._showYAxis = opts.showYAxis ?? false;
         this._showXAxis = opts.showXAxis ?? false;
@@ -51,12 +52,12 @@ export class LineChart extends Widget {
     }
 
     setData(data: number[]): void {
-        this._data = data;
+        this._data = filterFinite(data);
         this.markDirty();
     }
 
     pushValue(value: number): void {
-        this._data.push(value);
+        this._data.push(Number.isFinite(value) ? value : 0);
         this.markDirty();
     }
 

@@ -62,4 +62,15 @@ describe('Code', () => {
         expect(screen.back[1][4].char).toBe('w');
         expect(screen.back[1][8].char).toBe('d');
     });
+
+    it('clamps language label when width is narrow', () => {
+        const code = new Code('hello', {}, { language: 'typescript' });
+        // Width of 5 only allows a 2-character label "[t"
+        code.updateRect({ x: 0, y: 0, width: 5, height: 4 });
+        const screen = new Screen(5, 4);
+        code.render(screen);
+        expect(screen.back[0][2].char).toBe('[');
+        expect(screen.back[0][3].char).toBe('t');
+        expect(screen.back[0][4].char).toBe('╮'); // topRight corner (width-1 index)
+    });
 });

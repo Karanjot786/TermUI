@@ -72,4 +72,10 @@ describe('Callout', () => {
         expect(callout.isDirty).toBe(false);
     });
 
+    it('truncates double-width characters properly without overflowing available width', () => {
+        const callout = new Callout('🌟🌟🌟🌟🌟');
+        const output = render(callout, 6);
+        expect(output.length).toBeLessThanOrEqual(6);
+    });
+
 });

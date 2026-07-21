@@ -63,6 +63,44 @@ describe('ThemeEngine', () => {
         expect(style.fg).toEqual({ type: 'named', name: 'cyan' });
     });
 
+    it('resolves negative numeric style values', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            Box {
+                margin: -2;
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.margin).toBe(-2);
+    });
+
+    it('resolves multi-value padding and margin declarations', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            Box {
+                padding: 1 2;
+                margin: 1 2 3 4;
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.padding).toEqual({ top: 1, bottom: 1, left: 2, right: 2 });
+        expect(style.margin).toEqual({ top: 1, right: 2, bottom: 3, left: 4 });
+    });
+
+    it('resolves calc expressions in numeric style properties', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            Box {
+                width: calc(10 - 2);
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.width).toBe(8);
+    });
+
     it('onChange notifies listeners on theme switch', () => {
         const engine = new ThemeEngine();
         engine.load(TSS_SOURCE);

@@ -131,6 +131,22 @@ describe('NotificationBadge', () => {
         const badge = new NotificationBadge({ count: 3 });
         expect(badge.getPosition()).toBe('top-right');
     });
+
+    it('clamps negative count values to 0', () => {
+        const badge = new NotificationBadge({ count: -5 });
+        expect(badge.getCount()).toBe(0);
+
+        badge.setCount(-10);
+        expect(badge.getCount()).toBe(0);
+    });
+
+    it('truncates badge label to fit narrow layout widths', () => {
+        const { screen } = renderBadge({ count: 150, position: 'top-left' }, {}, 2, 5);
+        // label "99+" is length 3, rendered in width 2, so it should be truncated to "99"
+        const topRow = rowText(screen, 0);
+        expect(topRow.length).toBeLessThanOrEqual(2);
+        expect(topRow).toBe('99');
+    });
 });
 
 describe('NotificationBadge – mutation regression tests', () => {

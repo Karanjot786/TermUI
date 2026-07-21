@@ -107,4 +107,39 @@ describe('useCountdown', () => {
 
         destroyFiber(fiber);
     });
+
+    it('reset() restores to the latest startValue, not the mount-time value', () => {
+        const fiber = createFiber();
+
+        // Mount with startValue=10
+        renderWithFiber(fiber, () => useCountdown(10));
+
+        // Re-render with a new startValue=20 (countdown is idle, not running)
+        renderWithFiber(fiber, () => useCountdown(20));
+
+        // Trigger effects so the sync useEffect runs
+        const [, controls] = renderWithFiber(fiber, () => useCountdown(20));
+        controls.reset();
+
+        // Re-render to pick up the new count
+        const [count] = renderWithFiber(fiber, () => useCountdown(20));
+        expect(count).toBe(20);
+
+        destroyFiber(fiber);
+    });
+
+    it('count syncs to new startValue when not running', () => {
+        const fiber = createFiber();
+
+        // Mount with startValue=5
+        renderWithFiber(fiber, () => useCountdown(5));
+
+        // Re-render with startValue=15 while idle
+        renderWithFiber(fiber, () => useCountdown(15));
+        const [count] = renderWithFiber(fiber, () => useCountdown(15));
+
+        expect(count).toBe(15);
+
+        destroyFiber(fiber);
+    });
 });
