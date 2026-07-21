@@ -16,9 +16,13 @@ export const ESC = '\x1b';
 
 // ── Cursor Control ──────────────────────────────────
 
+/** Hide the terminal cursor (DEC private mode 25). */
 export const hideCursor = `${CSI}?25l`;
+/** Show the terminal cursor (DEC private mode 25). */
 export const showCursor = `${CSI}?25h`;
+/** Save cursor position (SCO save). */
 export const saveCursorPosition = `${CSI}s`;
+/** Restore previously saved cursor position (SCO restore). */
 export const restoreCursorPosition = `${CSI}u`;
 
 export type CursorShape = 'block' | 'bar' | 'underline';
@@ -43,20 +47,29 @@ export function moveDown(n = 1): string { return `${CSI}${n}B`; }
 export function moveRight(n = 1): string { return `${CSI}${n}C`; }
 export function moveLeft(n = 1): string { return `${CSI}${n}D`; }
 
+/** Request cursor position report (ESC[6n). Terminal responds with ESC[row;colR. */
 export const requestCursorPosition = `${CSI}6n`;
 
 // ── Screen Control ──────────────────────────────────
 
+/** Clear entire screen (CSI 2J). */
 export const clearScreen = `${CSI}2J`;
+/** Clear entire current line (CSI 2K). */
 export const clearLine = `${CSI}2K`;
+/** Clear from cursor to end of line (CSI 0K). */
 export const clearLineToEnd = `${CSI}0K`;
+/** Clear from cursor to start of line (CSI 1K). */
 export const clearLineToStart = `${CSI}1K`;
+/** Clear from cursor to bottom of screen (CSI J). */
 export const clearDown = `${CSI}J`;
+/** Clear from cursor to top of screen (CSI 1J). */
 export const clearUp = `${CSI}1J`;
 
 // ── Alternate Screen Buffer ─────────────────────────
 
+/** Enter alternate screen buffer (DEC private mode 1049). Restores main buffer on exit. */
 export const enterAltScreen = `${CSI}?1049h`;
+/** Exit alternate screen buffer, returning to main buffer. */
 export const exitAltScreen = `${CSI}?1049l`;
 
 // ── Synchronized Output (CSI 2026) ──────────────────
@@ -69,48 +82,79 @@ export const endSyncUpdate = `${CSI}?2026l`;
 // ── Mouse Tracking ──────────────────────────────────
 
 /** Enable SGR mouse tracking (most compatible modern mode) */
-export const enableMouse = `${CSI}?1000h${CSI}?1002h${CSI}?1006h`;
+export const enableMouse = `${CSI}?1000h${CSI}?1003h${CSI}?1015h${CSI}?1006h`;
 /** Disable mouse tracking */
-export const disableMouse = `${CSI}?1000l${CSI}?1002l${CSI}?1006l`;
+export const disableMouse = `${CSI}?1000l${CSI}?1003l${CSI}?1015l${CSI}?1006l`;
 
 // ── Bracketed Paste ─────────────────────────────────
 
+/** Enable bracketed paste mode (DEC private mode 2004). Wraps pasted text in escape sequences. */
 export const enableBracketedPaste = `${CSI}?2004h`;
+/** Disable bracketed paste mode. */
 export const disableBracketedPaste = `${CSI}?2004l`;
 
 // ── Focus Tracking ──────────────────────────────────
 
+/** Enable focus tracking (DEC private mode 1004). Terminal sends events on focus in/out. */
 export const enableFocusTracking = `${CSI}?1004h`;
+/** Disable focus tracking. */
 export const disableFocusTracking = `${CSI}?1004l`;
 
 // ── Text Styling ────────────────────────────────────
 
+/** Reset all text attributes to default (SGR 0). */
 export const reset = `${CSI}0m`;
+/** Enable bold/high-intensity text (SGR 1). */
 export const bold = `${CSI}1m`;
+/** Enable dim/faint text (SGR 2). */
 export const dim = `${CSI}2m`;
+/** Enable italic text (SGR 3). Not supported by all terminals. */
 export const italic = `${CSI}3m`;
+/** Enable underlined text (SGR 4). */
 export const underline = `${CSI}4m`;
+/** Enable blinking text (SGR 5). Most terminals ignore this. */
 export const blink = `${CSI}5m`;
+/** Enable inverse/reverse video (SGR 7). Swaps foreground and background. */
 export const inverse = `${CSI}7m`;
+/** Enable strikethrough text (SGR 9). */
 export const strikethrough = `${CSI}9m`;
 
+/** Reset bold and dim attributes (SGR 22). */
 export const resetBold = `${CSI}22m`;
+/** Reset dim attribute (alias for resetBold). */
 export const resetDim = resetBold;
+/** Reset italic attribute (SGR 23). */
 export const resetItalic = `${CSI}23m`;
+/** Reset underline attribute (SGR 24). */
 export const resetUnderline = `${CSI}24m`;
+/** Reset blink attribute (SGR 25). */
 export const resetBlink = `${CSI}25m`;
+/** Reset inverse attribute (SGR 27). */
 export const resetInverse = `${CSI}27m`;
+/** Reset strikethrough attribute (SGR 29). */
 export const resetStrikethrough = `${CSI}29m`;
 
 // ── Scrolling Region ────────────────────────────────
 
+/**
+ * Set the terminal's scroll region (DECSTBM).
+ * Lines outside this region will not scroll.
+ * @param top - Top line of scroll region (0-indexed).
+ * @param bottom - Bottom line of scroll region (0-indexed, inclusive).
+ */
 export function setScrollRegion(top: number, bottom: number): string {
     return `${CSI}${top + 1};${bottom + 1}r`;
 }
+/** Reset scroll region to entire screen (CSI r). */
 export const resetScrollRegion = `${CSI}r`;
 
 // ── Title ───────────────────────────────────────────
 
+/**
+ * Set the terminal window/tab title via OSC 0.
+ * Input is sanitized to prevent terminal escape injection.
+ * @param title - The title string to display.
+ */
 export function setTitle(title: string): string {
     const safeTitle = title.replace(/[\u0000-\u001F\u007F-\u009F\u001B]/g, '');
     return `${OSC}0;${safeTitle}\x07`;
@@ -179,6 +223,15 @@ export function writeClipboard(text: string, stdout: NodeJS.WriteStream = proces
     const encoded = Buffer.from(text, 'utf8').toString('base64');
     stdout.write(`${OSC}52;c;${encoded}\x07`);
 }
+/**
+ * Read text from the system clipboard via OSC 52.
+ * Sends a clipboard read request and waits for the terminal's response.
+ * @param stdin - Input stream to listen for the response (default: process.stdin).
+ * @param stdout - Output stream to send the request (default: process.stdout).
+ * @param timeoutMs - Maximum wait time in ms before rejecting (default: 1000).
+ * @returns The clipboard contents as a UTF-8 string.
+ * @throws {Error} If the terminal does not respond within timeoutMs.
+ */
 export function readClipboard(
     stdin: NodeJS.ReadStream = process.stdin,
     stdout: NodeJS.WriteStream = process.stdout,

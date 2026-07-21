@@ -91,6 +91,27 @@ describe('BarChart', () => {
             // Wider canvas → more bar cells
             expect(wideFilled).toBeGreaterThan(narrowFilled);
         });
+
+        it('correctly aligns mixed single-byte and multi-byte labels', () => {
+            const chart = new BarChart(
+                [
+                    {
+                        bars: [
+                            { value: 50, label: 'a' },
+                            { value: 50, label: '测试' },
+                        ],
+                    },
+                ],
+                {},
+                { direction: 'horizontal', max: 100, barWidth: 1, barGap: 0 },
+            );
+            const rows = renderChart(chart, 30, 4);
+            // maxLabelWidth is 4.
+            // Row 0 label for 'a': padded to 4 cols -> "   a"
+            // Row 1 label for '测试': padded to 4 cols -> "测试"
+            expect(rows[0]!.startsWith('   a')).toBe(true);
+            expect(rows[1]!.startsWith('测试')).toBe(true);
+        });
     });
 
     // ── Vertical ─────────────────────────────────────

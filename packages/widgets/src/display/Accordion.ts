@@ -144,6 +144,11 @@ export class Accordion extends Widget {
         this.markDirty();
     }
 
+    /** Get the current list of sections. */
+    getSections(): AccordionSection[] {
+        return this._sections;
+    }
+
     // ── Keyboard ────────────────────────────────────────────────────────
 
     /**

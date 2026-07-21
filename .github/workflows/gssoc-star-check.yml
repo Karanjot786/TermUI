@@ -33,11 +33,22 @@ jobs:
               return;
             }
 
-            // Paginate all stargazers
-            const stargazers = await github.paginate(
-              github.rest.activity.listStargazersForRepo,
-              { ...context.repo, per_page: 100 }
-            );
+            // Paginate all stargazers. Some repository/token combinations cannot
+            // read this endpoint even though the rest of the workflow can run.
+            let stargazers;
+            try {
+              stargazers = await github.paginate(
+                github.rest.activity.listStargazersForRepo,
+                { ...context.repo, per_page: 100 }
+              );
+            } catch (error) {
+              if (error.status === 403 || error.status === 404) {
+                core.warning(`Could not verify stargazers for ${context.repo.owner}/${context.repo.repo}: ${error.message}`);
+                core.info('Skipping star check because GitHub did not allow this workflow token to read stargazers.');
+                return;
+              }
+              throw error;
+            }
             const starred = stargazers.some(s => s.login === user);
 
             if (starred) {

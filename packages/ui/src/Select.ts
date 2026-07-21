@@ -1,6 +1,7 @@
 // Select — single-item dropdown selector
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps, truncate } from '@termuijs/core';
+import { firstEnabledIndex, nextEnabledIndex, previousEnabledIndex } from './navigation.js';
 
 export interface SelectOption { label: string; value: string; disabled?: boolean; }
 export interface SelectOptions {
@@ -12,7 +13,7 @@ export interface SelectOptions {
 
 export class Select extends Widget {
     private _options: SelectOption[];
-    private _selectedIndex = 0;
+    private _selectedIndex = -1;
     private _isOpen = false;
     private _placeholder: string;
     private _activeColor: Style['fg'];
@@ -26,13 +27,14 @@ export class Select extends Widget {
         super(mergeStyles(mergeStyles(defaultStyle(), { height: 1 }), style ?? {}));
         this._closedHeight = typeof this._style.height === 'number' ? this._style.height : 1;
         this._options = options;
+        this._selectedIndex = firstEnabledIndex(options, option => Boolean(option.disabled));
         this._placeholder = config.placeholder ?? 'Select...';
         this._activeColor = config.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSelect = config.onSelect;
         this.signal = config.signal;
     }
 
-    get selectedOption(): SelectOption | undefined { return this._options[this._selectedIndex]; }
+    get selectedOption(): SelectOption | undefined { return this._selectedIndex >= 0 ? this._options[this._selectedIndex] : undefined; }
     get selectedIndex(): number { return this._selectedIndex; }
     get isOpen(): boolean { return this._isOpen; }
     open(): void { this._isOpen = true; this._expandHeight(); this.markDirty(); }
@@ -51,14 +53,18 @@ export class Select extends Widget {
     }
 
     selectNext(): void {
-        let n = this._selectedIndex + 1;
-        while (n < this._options.length && this._options[n].disabled) n++;
-        if (n < this._options.length) { this._selectedIndex = n; this.markDirty(); }
+        const next = nextEnabledIndex(this._options, this._selectedIndex, option => Boolean(option.disabled));
+        if (next !== this._selectedIndex) {
+            this._selectedIndex = next;
+            this.markDirty();
+        }
     }
     selectPrev(): void {
-        let n = this._selectedIndex - 1;
-        while (n >= 0 && this._options[n].disabled) n--;
-        if (n >= 0) { this._selectedIndex = n; this.markDirty(); }
+        const prev = previousEnabledIndex(this._options, this._selectedIndex, option => Boolean(option.disabled));
+        if (prev !== this._selectedIndex) {
+            this._selectedIndex = prev;
+            this.markDirty();
+        }
     }
     confirm(): void {
         const opt = this._options[this._selectedIndex];
@@ -79,16 +85,16 @@ export class Select extends Widget {
         const { x, y, width } = this._rect;
         if (width <= 0) return;
         const attrs = styleToCellAttrs(this.style);
-        const sel = this._options[this._selectedIndex];
+        const sel = this.selectedOption;
         const label = sel ? sel.label : this._placeholder;
         const prefix = this._isOpen ? (caps.unicode ? '▼ ' : 'v ') : (caps.unicode ? '▶ ' : '> ');
-        screen.writeString(x, y, prefix + label.slice(0, width - 2), { ...attrs, fg: this._activeColor });
+        screen.writeString(x, y, truncate(prefix + label, width, ''), { ...attrs, fg: this._activeColor });
         if (this._isOpen) {
             for (let i = 0; i < this._options.length; i++) {
                 const o = this._options[i];
                 const isSel = i === this._selectedIndex;
                 const m = isSel ? (caps.unicode ? '● ' : '* ') : '  ';
-                screen.writeString(x, y + 1 + i, m + o.label.slice(0, width - 2), {
+                screen.writeString(x, y + 1 + i, truncate(m + o.label, width, ''), {
                     ...attrs,
                     fg: o.disabled ? { type: 'named' as const, name: 'brightBlack' as const } : isSel ? this._activeColor : attrs.fg,
                     bold: isSel, dim: o.disabled,

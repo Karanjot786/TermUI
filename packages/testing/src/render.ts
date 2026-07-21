@@ -462,11 +462,33 @@ export function render(
 
             // Hit-test the widget tree
             let target: Widget | undefined;
-            walkWidgets(rootWidget, (w) => {
-                if (w.hitTest(x, y)) {
-                    target = w;
+            let targetDepth = -1;
+
+            const getDepth = (widget: Widget): number => {
+                let depth = 0;
+                let current = widget.parent;
+
+                while (current) {
+                    depth++;
+                    current = current.parent;
                 }
-                return false; // walkWidgets result doesn't matter here
+
+                return depth;
+            };
+
+            walkWidgets(rootWidget, (w) => {
+                if (!w.hitTest(x, y)) {
+                    return false;
+                }
+
+                const depth = getDepth(w);
+
+                if (depth > targetDepth) {
+                    target = w;
+                    targetDepth = depth;
+                }
+
+                return false;
             });
 
             if (target) {
