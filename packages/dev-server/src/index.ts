@@ -9,3 +9,5 @@ export { ErrorOverlay, parseErrorStack } from './error-overlay.js';
 export type { ParsedError } from './error-overlay.js';
 export { WidgetTreeInspector } from './inspector.js';
 export { cleanupActiveInstances } from './cleanup.js';
+export { ModuleGraph } from './module-graph.js';
+export type { ModuleGraphNode, ModuleInvalidationResult } from './module-graph.js';
