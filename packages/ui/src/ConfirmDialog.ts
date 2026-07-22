@@ -1,6 +1,6 @@
 // ConfirmDialog — yes/no prompt overlay
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars } from '@termuijs/core';
 
 export interface ConfirmDialogOptions {
     message: string;
@@ -20,6 +20,7 @@ export class ConfirmDialog extends Widget {
     private _visible = false;
     private _onConfirm?: () => void;
     private _onCancel?: () => void;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
     focusable = true;
 
     constructor(options: ConfirmDialogOptions) {
@@ -30,6 +31,13 @@ export class ConfirmDialog extends Widget {
         this._borderColor = options.borderColor ?? { type: 'named', name: 'yellow' };
         this._onConfirm = options.onConfirm;
         this._onCancel = options.onCancel;
+        this.events.on('key', this._keyHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
     }
 
     get visible(): boolean { return this._visible; }
@@ -44,13 +52,42 @@ export class ConfirmDialog extends Widget {
         this.markDirty();
     }
 
+    private handleKey(event: KeyEvent): void {
+        if (!this._visible) return;
+        switch (event.key) {
+            case 'escape':
+                this.selectCancel();
+                this.confirm();
+                break;
+            case 'left':
+                this.selectConfirm();
+                break;
+            case 'right':
+                this.selectCancel();
+                break;
+            case 'tab':
+                this.toggleSelection();
+                break;
+            case 'enter':
+            case 'return':
+                this.confirm();
+                break;
+            default:
+                return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
     protected _renderSelf(screen: Screen): void {
         if (!this._visible) return;
         const { x, y, width, height } = this._rect;
+        if (width <= 0 || height <= 0) return;
         const attrs = styleToCellAttrs(this.style);
         for (let r = 0; r < height; r++) screen.writeString(x, y + r, '░'.repeat(width), { ...attrs, dim: true });
         const bw = Math.min(40, width - 4);
         const bh = 5;
+        if (bw < 2 || height < bh) return;
         const bx = x + Math.floor((width - bw) / 2);
         const by = y + Math.floor((height - bh) / 2);
         const border = getBorderChars('single');

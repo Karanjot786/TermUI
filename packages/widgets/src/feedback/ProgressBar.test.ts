@@ -38,6 +38,40 @@ describe('ProgressBar', () => {
         pb.setValue(-0.5);
         expect(pb.value).toBe(0);
     });
+        it('handles negative initialization by clamping to 0', () => {
+        const pb = new ProgressBar({}, { value: -0.5 });
+        expect(pb.value).toBe(0);
+    });
+
+    it('clear() resets value to 0 without changing max', () => {
+        const pb = new ProgressBar({}, { max: 50 });
+        pb.setValue(25);
+        expect(pb.value).toBe(25);
+        expect(pb.percentage).toBe(0.5);
+
+        pb.clear();
+        expect(pb.value).toBe(0);
+        expect(pb.percentage).toBe(0);
+
+        // max should remain unchanged
+        pb.setValue(50);
+        expect(pb.percentage).toBe(1);
+    });
+
+    it('clear() does not mark dirty when already cleared', () => {
+        const pb = new ProgressBar({}, { value: 0 });
+        pb.clearDirty();
+
+        pb.clear();
+
+        expect(pb.isDirty).toBe(false);
+    });
+
+
+    it('handles value above 1 by clamping to 1', () => {
+        const pb = new ProgressBar({}, { value: 1.5 });
+        expect(pb.value).toBe(1);
+    });
 });
 
 describe('ProgressBar — rendering', () => {
@@ -160,5 +194,27 @@ describe('ProgressBar — ASCII fallback', () => {
         const pb = new ProgressBar({}, { fillChar: '=' });
         const fillChar = (pb as unknown as { _fillChar: string })._fillChar;
         expect(fillChar).toBe('=');
+    });
+});
+
+describe('Performance optimizations', () => {
+    it('does not mark dirty when setValue receives the same value', () => {
+        const pb = new ProgressBar({}, { value: 0.5 });
+
+        pb.clearDirty();
+
+        pb.setValue(0.5);
+
+        expect(pb.isDirty).toBe(false);
+    });
+
+    it('marks dirty when setValue receives a different value', () => {
+        const pb = new ProgressBar({}, { value: 0.5 });
+
+        pb.clearDirty();
+
+        pb.setValue(0.75);
+
+        expect(pb.isDirty).toBe(true);
     });
 });

@@ -2,7 +2,7 @@
 // @termuijs/widgets — Badge widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, stringWidth, caps, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export type BadgeVariant = 'info' | 'success' | 'warning' | 'error' | 'neutral';
@@ -30,19 +30,22 @@ const FG_COLOR: Color = { type: 'named', name: 'black' };
  * Used for status indicators such as "online", "error", "beta".
  * Renders a bordered box with the text on a colored background.
  * Uses `caps.unicode` to choose between Unicode box-drawing and ASCII fallback.
+ *
+ * CONSTRUCTOR: (text, style?, opts?)
  */
 export class Badge extends Widget {
     private _text: string;
     private _variant: BadgeVariant;
 
-    constructor(text: string, opts: BadgeOptions = {}, style: Partial<Style> = {}) {
-        super(style);
+    constructor(text: string, style?: Partial<Style>, opts?: BadgeOptions) {
+        super(style ?? {});
         this._text = text;
-        this._variant = opts.variant ?? 'neutral';
+        this._variant = opts?.variant ?? 'neutral';
     }
 
     /** Update the badge text. */
     setText(text: string): void {
+        if (text === this._text) return; 
         this._text = text;
         this.markDirty();
     }
@@ -54,6 +57,7 @@ export class Badge extends Widget {
 
     /** Update the badge variant. */
     setVariant(variant: BadgeVariant): void {
+        if (variant === this._variant) return;
         this._variant = variant;
         this.markDirty();
     }
@@ -104,7 +108,7 @@ export class Badge extends Widget {
             screen.setCell(x, y + 1, { char: vt, ...borderAttrs });
 
             // Write padded text with colored background
-            const visibleText = padded.slice(0, innerWidth);
+            const visibleText = truncate(padded, innerWidth, '');
             screen.writeString(x + 1, y + 1, visibleText, contentAttrs);
 
             // Fill remaining inner space with background

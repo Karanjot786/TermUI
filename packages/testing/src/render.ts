@@ -7,7 +7,7 @@
 // ─────────────────────────────────────────────────────
 
 import { Screen, type KeyEvent, type MouseEvent } from "@termuijs/core";
-import { Box, Text, Widget } from "@termuijs/widgets";
+import { Box, Text, Widget, _resetWidgetIdCounter } from "@termuijs/widgets";
 import {
     reconcile,
     reRenderComponent,
@@ -16,6 +16,7 @@ import {
     getRequestRender,
     collectInputHandlers,
     destroyFiber,
+    resetHooksGlobals,
     type VNode,
 } from "@termuijs/jsx";
 
@@ -46,9 +47,21 @@ export interface TestInstance {
     getAllByText(text: string): Widget[];
 
     /**
+     * Find a widget whose role prop matches the given string.
+     * Returns null if not found.
+     */
+    getByRole(role: string): Widget | null;
+
+    /**
+     * Find a widget whose label prop matches the given string.
+     * Returns null if not found.
+     */
+    getByLabelText(label: string): Widget | null;
+
+    /**
      * Find all widgets of a specific type (by constructor).
      */
-    getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[];
+    getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
 
     /**
      * Find the first widget whose text content includes the given string.
@@ -71,7 +84,18 @@ export interface TestInstance {
      * Find the first widget of a specific type (by constructor).
      * Returns null instead of throwing when nothing matches.
      */
-    queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null;
+    queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null; // any[] is required to accept widget constructors with varying signatures
+
+    /**
+     * Find all widgets whose text content includes the given string.
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByText(text: string): Widget[];
+    /**
+     * Find all widgets of a specific type (by constructor).
+     * Returns empty array instead of throwing when nothing matches.
+     */
+    queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[]; // any[] is required to accept widget constructors with varying signatures
 
     /**
      * Simulate a key press event. This dispatches to useInput handlers.
@@ -80,6 +104,18 @@ export interface TestInstance {
         key: string,
         modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
     ): void;
+
+    pressKey(
+        key: string,
+        modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
+    ): void;
+
+    pressKeys(
+        keys: string[],
+        modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean },
+    ): void;
+
+    getOutput(): string;
 
     /** Simulate a mouse event at (x, y). */
     fireMouse(x: number, y: number, init?: Partial<MouseEvent>): void;
@@ -156,7 +192,7 @@ function walkWidgets(
         const w = stack.pop()!;
         if (predicate(w)) result.push(w);
         // Push children in reverse so we process left-to-right
-        const children: Widget[] = (w as any)._children ?? [];
+        const children: Widget[] = (w as any)._children ?? []; // as any: Widget._children is private; accessed for test renderer tree walk
         for (let i = children.length - 1; i >= 0; i--) {
             stack.push(children[i]);
         }
@@ -167,7 +203,7 @@ function walkWidgets(
 /** Extract text content from a Text widget */
 function getTextContent(widget: Widget): string {
     if (widget instanceof Text) {
-        return (widget as any)._content ?? "";
+        return (widget as any)._content ?? ""; // as any: Text._content is private; accessed for test renderer content inspection
     }
     return "";
 }
@@ -175,7 +211,7 @@ function getTextContent(widget: Widget): string {
 /** Render the widget tree to the screen buffer */
 function renderToScreen(container: Box, screen: Screen): void {
     // Set the root rect to fill the screen
-    (container as any)._rect = {
+    (container as any)._rect = { // as any: Widget private fields accessed by test renderer; no public inspection API
         x: 0,
         y: 0,
         width: screen.cols,
@@ -187,11 +223,15 @@ function renderToScreen(container: Box, screen: Screen): void {
 
     // Clear and render
     screen.clear();
-    (container as any)._renderSelf?.(screen);
+    (container as any)._renderSelf?.(screen); // as any: Widget private fields accessed by test renderer; no public inspection API
     renderChildren(container, screen);
 }
 
-/** Simple recursive layout: stack children vertically */
+/**
+ * Simplified layout: divides height equally among children using integer division.
+ * Does NOT match ConstraintLayout's real output — do not assert pixel-perfect
+ * coordinates in tests using this renderer. Only assert cell content (text, chars).
+ */
 function assignRects(
     widget: Widget,
     x: number,
@@ -199,8 +239,8 @@ function assignRects(
     width: number,
     height: number,
 ): void {
-    (widget as any)._rect = { x, y, width, height };
-    const children: Widget[] = (widget as any)._children ?? [];
+    (widget as any)._rect = { x, y, width, height }; // as any: Widget private fields accessed by test renderer; no public inspection API
+    const children: Widget[] = (widget as any)._children ?? []; // as any: Widget private fields accessed by test renderer; no public inspection API
     if (children.length === 0) return;
     const childHeight = Math.max(1, Math.floor(height / children.length));
     let currentY = y;
@@ -211,9 +251,9 @@ function assignRects(
 }
 
 function renderChildren(parent: Widget, screen: Screen): void {
-    const children: Widget[] = (parent as any)._children ?? [];
+    const children: Widget[] = (parent as any)._children ?? []; // as any: Widget private fields accessed by test renderer; no public inspection API
     for (const child of children) {
-        (child as any)._renderSelf?.(screen);
+        (child as any)._renderSelf?.(screen); // as any: Widget private fields accessed by test renderer; no public inspection API
         renderChildren(child, screen);
     }
 }
@@ -260,7 +300,7 @@ export function render(
 ): TestInstance {
     const width = options.width ?? 80;
     const height = options.height ?? 24;
-    const screen = new Screen(width, height);
+    const screenRef = { current: new Screen(width, height) };
 
     let currentElement = element;
 
@@ -280,7 +320,7 @@ export function render(
 
     // Set up re-render callback — use fiber-preserving reRenderComponent
     setRequestRender(() => {
-        const instances: Map<Widget, any> = (globalThis as any)
+        const instances: Map<Widget, any> = (globalThis as any) // as any: set by @termuijs/jsx reconciler at runtime; not in globalThis type
             .__termuijs_instances;
         const rootInstance = instances?.get(rootWidget);
         if (rootInstance) {
@@ -294,24 +334,24 @@ export function render(
             container.addChild(newRoot);
             rootWidget = newRoot;
         }
-        renderToScreen(container, screen);
+        renderToScreen(container, screenRef.current);
     });
 
     // Initial render
-    renderToScreen(container, screen);
+    renderToScreen(container, screenRef.current);
 
     const instance: TestInstance = {
         container,
-        screen,
+        screen: screenRef.current,
 
         toString(): string {
-            return readScreenLines(screen)
+            return readScreenLines(screenRef.current)
                 .filter((l) => l.length > 0)
                 .join("\n");
         },
 
         lastFrame(): string[] {
-            return readScreenLines(screen);
+            return readScreenLines(screenRef.current);
         },
 
         getByText(text: string): Widget | null {
@@ -325,11 +365,21 @@ export function render(
             if (matches.length > 0) return matches[0];
 
             // Fallback: check screen buffer
-            const screenText = readScreenLines(screen).join("\n");
+            const screenText = readScreenLines(screenRef.current).join("\n");
             if (screenText.includes(text)) {
                 return container;
             }
             return null;
+        },
+
+        getByRole(role: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'role') === role);
+            return matches.length > 0 ? matches[0] : null;
+        },
+
+        getByLabelText(label: string): Widget | null {
+            const matches = walkWidgets(container, (w) => Reflect.get(w, 'label') === label);
+            return matches.length > 0 ? matches[0] : null;
         },
 
         getAllByText(text: string): Widget[] {
@@ -341,7 +391,7 @@ export function render(
             });
         },
 
-        getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] {
+        getAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] { // any[]: required to accept widget constructors with varying signatures
             return walkWidgets(container, (w) => w instanceof type) as T[];
         },
 
@@ -383,6 +433,13 @@ export function render(
             return matches.length > 0 ? matches[0] : null;
         },
 
+        queryAllByText(text: string): Widget[] {
+            return instance.getAllByText(text);
+        },
+        queryAllByType<T extends Widget>(type: new (...args: any[]) => T): T[] { // any[]: required to accept widget constructors with varying signatures
+            return instance.getAllByType(type);
+        },
+
         fireKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
             const event: KeyEvent = {
                 key,
@@ -398,6 +455,8 @@ export function render(
                 },
             };
 
+        
+
             const instances: Map<Widget, any> = (globalThis as any)
                 .__termuijs_instances;
             const rootInstance = instances?.get(rootWidget);
@@ -412,35 +471,83 @@ export function render(
                 container.clearChildren();
                 container.addChild(newRoot);
                 rootWidget = newRoot;
-                renderToScreen(container, screen);
+                renderToScreen(container, screenRef.current);
+            }
+        },
+
+        pressKey(key: string, modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
+            instance.fireKey(key, modifiers);
+        },
+
+        pressKeys(keys: string[], modifiers?: { ctrl?: boolean; shift?: boolean; alt?: boolean }): void {
+            for (const key of keys) {
+                instance.fireKey(key, modifiers);
             }
         },
 
         fireMouse(x: number, y: number, init?: Partial<MouseEvent>) {
             // Normalize the mouse event
-            const event: MouseEvent = {
+            const event = {
+                ...init,
                 x,
                 y,
                 type: init?.type ?? 'mousedown',
                 button: init?.button ?? 'left',
+                stopPropagation() {
+                    this._propagationStopped = true;
+                },
+                preventDefault() {
+                    this._defaultPrevented = true;
+                },
+            } as MouseEvent & {
+                _propagationStopped?: boolean;
+                _defaultPrevented?: boolean;
+                stopPropagation(): void;
+                preventDefault(): void;
             };
 
             // Hit-test the widget tree
             let target: Widget | undefined;
-            walkWidgets(rootWidget, (w) => {
-                if (w.hitTest(x, y)) {
-                    target = w;
+            let targetDepth = -1;
+
+            const getDepth = (widget: Widget): number => {
+                let depth = 0;
+                let current = widget.parent;
+
+                while (current) {
+                    depth++;
+                    current = current.parent;
                 }
-                return false; // walkWidgets result doesn't matter here
+
+                return depth;
+            };
+
+            walkWidgets(rootWidget, (w) => {
+                if (!w.hitTest(x, y)) {
+                    return false;
+                }
+
+                const depth = getDepth(w);
+
+                if (depth > targetDepth) {
+                    target = w;
+                    targetDepth = depth;
+                }
+
+                return false;
             });
 
-            if (target) {
+            let current: Widget | null | undefined = target;
+            while (current) {
                 // Dispatch to the widget
-                if (typeof (target as any).handleMouse === 'function') {
-                    (target as any).handleMouse(event);
+                if (typeof (current as any).handleMouse === 'function') { // as any: handleMouse not on Widget base type but implemented on interactive subclasses
+                    (current as any).handleMouse(event); // as any: handleMouse not on Widget base type but implemented on interactive subclasses
                 } else {
-                    target.events.emit('mouse', event);
+                    current.events.emit('mouse', event);
                 }
+
+                if (event._propagationStopped) break;
+                current = current.parent;
             }
 
             // Re-render and flush any sync state updates
@@ -452,7 +559,7 @@ export function render(
                 container.addChild(newRoot);
                 rootWidget = newRoot;
             }
-            renderToScreen(container, screen);
+            renderToScreen(container, screenRef.current);
         },
 
         click(x: number, y: number) {
@@ -475,7 +582,7 @@ export function render(
                 container.clearChildren();
                 container.addChild(newRoot);
                 rootWidget = newRoot;
-                renderToScreen(container, screen);
+                renderToScreen(container, screenRef.current);
             } else {
                 // No new element: re-render existing fiber, preserving state.
                 const instances: Map<Widget, any> = (globalThis as any)
@@ -486,7 +593,7 @@ export function render(
                     container.clearChildren();
                     container.addChild(newRoot);
                     rootWidget = newRoot;
-                    renderToScreen(container, screen);
+                    renderToScreen(container, screenRef.current);
                 } else {
                     console.warn(
                         "[testing] rerender() called but no fiber instance or element available",
@@ -524,10 +631,14 @@ export function render(
             return this.toString();
         },
 
+        getOutput(): string {
+            return this.renderToString();
+        },
+
         fireResize(cols: number, rows: number): void {
-            const newScreen = new Screen(cols, rows);
-            Object.assign(instance, { screen: newScreen });
-            renderToScreen(container, newScreen);
+            screenRef.current = new Screen(cols, rows);
+            instance.screen = screenRef.current;
+            renderToScreen(container, screenRef.current);
         },
 
         unmount(): void {
@@ -541,6 +652,10 @@ export function render(
                 destroyFiber(rootInstance.fiber);
             }
             instances?.delete(rootWidget);
+            // Reset module globals to prevent cross-test pollution
+            resetHooksGlobals();
+            // Reset widget ID counter to prevent ID bloat across tests
+            _resetWidgetIdCounter();
         },
     };
 
@@ -556,6 +671,13 @@ export function createFixture(defaults: TestRenderOptions = {}): Fixture {
 
     return {
         render(element: VNode, options: TestRenderOptions = {}): TestInstance {
+            // Auto-cleanup previous renders to prevent cross-test state leakage
+            if (instances.length > 0) {
+                for (const inst of instances) {
+                    inst.unmount();
+                }
+                instances.length = 0;
+            }
             const instance = render(element, { ...defaults, ...options });
             instances.push(instance);
             return instance;

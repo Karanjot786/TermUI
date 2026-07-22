@@ -2,8 +2,17 @@
 // Feedback Tab — MultiProgress, CommandPalette
 // ─────────────────────────────────────────────────────
 
-import { Widget, Box, Text } from '@termuijs/widgets';
-import { MultiProgress, CommandPalette } from '@termuijs/widgets';
+import {
+    Widget,
+    Box,
+    Text,
+    MultiProgress,
+    CommandPalette,
+    Spinner,
+    Callout,
+    StatusMessage,
+} from '@termuijs/widgets';
+
 import type { Command } from '@termuijs/widgets';
 import type { Screen } from '@termuijs/core';
 
@@ -32,7 +41,9 @@ export class FeedbackTab extends Widget {
         super({ flexDirection: 'column', flexGrow: 1 });
 
         // Header
-        const header = new Text('Feedback Tab — MultiProgress  |  CommandPalette', {
+        const header = new Text(
+        'Feedback Tab — MultiProgress  |  Callout  |  StatusMessage  |  CommandPalette',
+        {
             bold: true,
             fg: { type: 'named', name: 'magenta' },
             height: 1,
@@ -60,7 +71,7 @@ export class FeedbackTab extends Widget {
                 labelWidth: 12,
                 showValues: true,
             },
-            { border: 'single', height: 8 },
+            { border: 'single', height: 10 },
         );
 
         // Animate progress values
@@ -72,6 +83,55 @@ export class FeedbackTab extends Widget {
             this._multiProgress.updateItem(3, Math.min(1, this._tick / 120));
         }, 100);
 
+        // ── Callout + StatusMessage ────────────────────
+
+        const feedbackLabel = new Text(
+            ' Callout & StatusMessage — Feedback widgets:',
+            {
+                height: 1,
+                bold: true,
+                fg: { type: 'named', name: 'cyan' },
+            },
+        );
+        
+        const feedbackBox = new Box({
+            border: 'single',
+            flexDirection: 'column',
+            height: 10,
+        });
+        
+        feedbackBox.addChild(
+            new StatusMessage(
+                'Operation completed successfully',
+                {},
+                { variant: 'success' },
+            ),
+        );
+        
+        feedbackBox.addChild(
+            new StatusMessage(
+                'Build failed',
+                {},
+                { variant: 'error' },
+            ),
+        );
+        
+        feedbackBox.addChild(
+            new Callout(
+                'Configuration saved',
+                {},
+                { variant: 'success', title: 'Success' },
+            ),
+        );
+        
+        feedbackBox.addChild(
+            new Callout(
+                'Please review settings',
+                {},
+                { variant: 'warn', title: 'Warning' },
+            ),
+        );    
+
         // ── CommandPalette ─────────────────────────────
         const paletteLabel = new Text(' CommandPalette — Fuzzy search (type to filter):', {
             height: 1, bold: true, fg: { type: 'named', name: 'cyan' },
@@ -82,14 +142,30 @@ export class FeedbackTab extends Widget {
             { border: 'single', flexGrow: 1 },
         );
         this._cmdPalette.open();
+                // ── Spinner Demos ──────────────────────────────
+        const spinnerLabel = new Text(' Spinner — Loading indicators (dots, line, pulse):', {
+            height: 1, bold: true, fg: { type: 'named', name: 'cyan' },
+        });
+
+        const spinnerRow = new Box({ flexDirection: 'row', height: 1, gap: 4 });
+        const spinnerDots = new Spinner({}, { preset: 'dots', label: 'dots' });
+        const spinnerLine = new Spinner({}, { preset: 'line', label: 'line' });
+        const spinnerPulse = new Spinner({}, { preset: 'pulse', label: 'pulse' });
+        spinnerRow.addChild(spinnerDots);
+        spinnerRow.addChild(spinnerLine);
+        spinnerRow.addChild(spinnerPulse);
 
         // Build widget tree
         this.addChild(header);
         this.addChild(hint);
         this.addChild(progressLabel);
         this.addChild(this._multiProgress);
+        this.addChild(feedbackLabel);
+        this.addChild(feedbackBox);
         this.addChild(paletteLabel);
         this.addChild(this._cmdPalette);
+        this.addChild(spinnerLabel);
+        this.addChild(spinnerRow);
     }
 
     handleKey(key: string): void {

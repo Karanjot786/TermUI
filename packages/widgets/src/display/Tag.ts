@@ -2,7 +2,7 @@
 // @termuijs/widgets — Tag widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, stringWidth, caps, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export type TagVariant = 'info' | 'success' | 'warning' | 'error' | 'neutral';
@@ -27,19 +27,23 @@ const FG_COLORS: Record<TagVariant, Color> = {
  * Used for categorical labels such as "typescript", "react", "v2.0".
  * Renders a bordered box with the text colored by variant but no background.
  * Uses `caps.unicode` to choose between Unicode box-drawing and ASCII fallback.
+ *
+ * CONSTRUCTOR: (text, style?, opts?)
  */
 export class Tag extends Widget {
     private _text: string;
     private _variant: TagVariant;
 
-    constructor(text: string, opts: TagOptions = {}, style: Partial<Style> = {}) {
-        super(style);
+    constructor(text: string, style?: Partial<Style>, opts?: TagOptions) {
+        super(style ?? {});
         this._text = text;
-        this._variant = opts.variant ?? 'neutral';
+        this._variant = opts?.variant ?? 'neutral';
     }
 
     /** Update the tag text. */
     setText(text: string): void {
+        if (text === this._text) return;
+
         this._text = text;
         this.markDirty();
     }
@@ -51,6 +55,8 @@ export class Tag extends Widget {
 
     /** Update the tag variant. */
     setVariant(variant: TagVariant): void {
+        if (variant === this._variant) return;
+
         this._variant = variant;
         this.markDirty();
     }
@@ -100,7 +106,7 @@ export class Tag extends Widget {
             screen.setCell(x, y + 1, { char: vt, ...borderAttrs });
 
             // Write padded text with variant foreground, no background
-            const visibleText = padded.slice(0, innerWidth);
+            const visibleText = truncate(padded, innerWidth, '');
             screen.writeString(x + 1, y + 1, visibleText, textAttrs);
 
             if (innerWidth + 1 < width) {

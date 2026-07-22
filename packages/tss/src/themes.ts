@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────
-// Built-in Themes — 10 curated terminal color palettes
+// Built-in Themes — 12 curated terminal color palettes
 // ─────────────────────────────────────────────────────
 
 export const BUILTIN_THEMES: Record<string, string> = {
@@ -300,6 +300,33 @@ Gauge {
 Table {
     border: var(--border);
     header-color: var(--primary);
+}
+`,
+
+    "rose-pine": `
+@theme rose-pine {
+    --primary: #c4a7e7;
+    --secondary: #ebbcba;
+    --bg: #191724;
+    --surface: #26233a;
+    --text: #e0def4;
+    --text-muted: #6e6a86;
+    --accent: #9ccfd8;
+    --error: #eb6f92;
+    --warning: #f6c177;
+    --success: #9ccfd8;
+    --border: #6e6a86;
+    --border-color: #6e6a86;
+    --border-focus: #c4a7e7;
+}
+
+Gauge {
+    color: var(--primary);
+}
+
+Table {
+    border: var(--border);
+    header-color: var(--secondary);
 }
 `,
 };

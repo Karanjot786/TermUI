@@ -7,6 +7,7 @@ export enum TokenType {
     AtTheme = 'AT_THEME',
     AtMixin = 'AT_MIXIN',      // @mixin
     AtInclude = 'AT_INCLUDE',  // @include
+    AtKeyframes = 'AT_KEYFRAMES', // @keyframes
     LBrace = 'LBRACE',
     RBrace = 'RBRACE',
     Colon = 'COLON',
@@ -15,11 +16,13 @@ export enum TokenType {
     Comma = 'COMMA',
 
     // Values
+    Percent = 'PERCENT',      // %
     Ident = 'IDENT',
     String = 'STRING',
     Number = 'NUMBER',
     Color = 'COLOR',           // #rrggbb or #rgb
     Var = 'VAR',               // var(--name)
+    Calc = 'CALC',             // calc(...)
     Variable = 'VARIABLE',     // --name
 
     // Pseudo-selectors
@@ -91,8 +94,9 @@ export function tokenize(source: string): Token[] {
         if (ch === ';') { tokens.push({ type: TokenType.Semicolon, value: ';', line, col }); advance(); continue; }
         if (ch === '.') { tokens.push({ type: TokenType.Dot, value: '.', line, col }); advance(); continue; }
         if (ch === ',') { tokens.push({ type: TokenType.Comma, value: ',', line, col }); advance(); continue; }
+        if (ch === '%') { tokens.push({ type: TokenType.Percent, value: '%', line, col }); advance(); continue; }
 
-        // @ directives: @theme, @mixin, @include
+        // @ directives: @theme, @mixin, @include, @keyframes
         if (ch === '@') {
             const startCol = col;
             advance();
@@ -104,6 +108,8 @@ export function tokenize(source: string): Token[] {
                 tokens.push({ type: TokenType.AtMixin, value: '@mixin', line, col: startCol });
             } else if (word === 'include') {
                 tokens.push({ type: TokenType.AtInclude, value: '@include', line, col: startCol });
+            } else if (word === 'keyframes') {
+                tokens.push({ type: TokenType.AtKeyframes, value: '@keyframes', line, col: startCol });
             } else {
                 tokens.push({ type: TokenType.Ident, value: '@' + word, line, col: startCol });
             }
@@ -136,9 +142,10 @@ export function tokenize(source: string): Token[] {
         }
 
         // Numbers
-        if (/[0-9]/.test(ch)) {
+        if (/[0-9]/.test(ch) || (ch === '-' && /[0-9.]/.test(at(pos + 1)))) {
             const startCol = col;
             let num = '';
+            if (ch === '-') num += advance();
             while (pos < source.length && /[0-9.]/.test(peek())) num += advance();
             tokens.push({ type: TokenType.Number, value: num, line, col: startCol });
             continue;
@@ -160,13 +167,23 @@ export function tokenize(source: string): Token[] {
             let ident = '';
             while (pos < source.length && /[a-zA-Z0-9_-]/.test(peek())) ident += advance();
 
-            if (ident === 'var' && peek() === '(') {
+            if ((ident === 'var' || ident === 'calc') && peek() === '(') {
                 advance();
                 while (pos < source.length && /\s/.test(peek())) advance();
-                let varName = '';
-                while (pos < source.length && peek() !== ')') varName += advance();
-                if (pos < source.length) advance();
-                tokens.push({ type: TokenType.Var, value: varName.trim(), line, col: startCol });
+                let value = '';
+                let depth = 1;
+                while (pos < source.length && depth > 0) {
+                    const next = advance();
+                    if (next === '(') depth++;
+                    if (next === ')') depth--;
+                    if (depth > 0) value += next;
+                }
+                tokens.push({
+                    type: ident === 'var' ? TokenType.Var : TokenType.Calc,
+                    value: ident === 'var' ? value.trim() : `calc(${value.trim()})`,
+                    line,
+                    col: startCol,
+                });
             } else {
                 tokens.push({ type: TokenType.Ident, value: ident, line, col: startCol });
             }

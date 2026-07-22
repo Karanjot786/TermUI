@@ -18,7 +18,12 @@ import {
     styleToCellAttrs,
     containsPoint,
     caps,
+    stripAnsiEscapes,
+    sanitizeForDisplay,
+    type A11yProps,
+    emitA11y,
 } from '@termuijs/core';
+import { animateRect, type SpringConfig, type SpringPresetName } from '@termuijs/motion';
 
 /**
  * Event map for widgets.
@@ -26,10 +31,19 @@ import {
 export interface WidgetEvents {
     key: KeyEvent;
     mouse: TermMouseEvent;
+    click: TermMouseEvent;
+    mouseenter: TermMouseEvent;
+    mouseleave: TermMouseEvent;
     focus: void;
     blur: void;
     mount: void;
     unmount: void;
+}
+
+export interface RenderStats {
+    renderCount: number;
+    lastDurationMs: number;
+    totalDurationMs: number;
 }
 
 let _widgetIdCounter = 0;
@@ -41,6 +55,20 @@ export function _resetWidgetIdCounter(): void {
 
 /**
  * Base class for all TermUI widgets.
+ *
+ * CONSTRUCTOR SIGNATURE CONVENTION:
+ * - Simple display widgets: (content?, style?: Partial<Style>, opts?: SpecificOptions)
+ * - Data widgets:           (data, style?: Partial<Style>, opts?: SpecificOptions)
+ * - Compound UI widgets:    (options: SpecificOptions, style?: Partial<Style>)
+ *
+ * FOCUSABLE PATTERN:
+ * Set `focusable = true` as a class field initializer, OR in the constructor
+ * body after calling `super()`. Do NOT set it inside `_renderSelf()`.
+ *
+ * STYLE MERGE PATTERN:
+ * All widgets should call `super(mergeStyles(defaultStyle(), { ...defaults }, style))`
+ * to produce consistent base styles. For widgets that accept `style` as the
+ * second parameter, pass it directly through to `super()`.
  *
  * Provides:
  * - Unique ID generation
@@ -70,6 +98,9 @@ export abstract class Widget {
     /** Reference to the layout node (set during getLayoutNode) */
     private _layoutNode: LayoutNode | null = null;
 
+    /** Error from last render call, null if no error */
+    protected _renderError: Error | null = null;
+
     /** Whether this widget can receive focus */
     focusable = false;
 
@@ -82,19 +113,83 @@ export abstract class Widget {
     /** Whether the widget is currently focused */
     isFocused = false;
 
+    /** Optional callback for mouse click events */
+    onClick?: (event: TermMouseEvent) => void;
+    /** Optional callback for mouse enter events */
+    onMouseEnter?: (event: TermMouseEvent) => void;
+    /** Optional callback for mouse leave events */
+    onMouseLeave?: (event: TermMouseEvent) => void;
+
     /**
      * Dirty flag — true when this widget needs re-rendering.
      * Newly created widgets start dirty.
      */
     protected _dirty = true;
+    /** Idempotency guard — true once unmount() has completed */
+    private _unmounted = false;
+    /** Render profiling statistics */
+    private _renderStats: RenderStats = {
+        renderCount: 0,
+        lastDurationMs: 0,
+        totalDurationMs: 0,
+    };
+
+    /** Accessibility annotation props */
+    protected _a11y?: A11yProps;
+
+    /** Enable animated layout transitions for size/position changes */
+    public layoutTransition: Partial<SpringConfig> | SpringPresetName | boolean = false;
+    private _layoutCancel: (() => void) | null = null;
+    private _targetRect: Rect | null = null;
+
+    /**
+     * Whether to automatically strip ANSI escape sequences from text content
+     * before rendering.  Defaults to `true` for security — set to `false` only
+     * when the widget displays trusted, internally-generated formatted text.
+     */
+    protected sanitizeContent = true;
 
     constructor(style: Partial<Style> = {}) {
         this.id = `widget_${++_widgetIdCounter}`;
         this._style = mergeStyles(defaultStyle(), style);
     }
 
+    /** Check if this widget is currently active (focused) */
+    isActive(): boolean {
+        return this.isFocused;
+    }
+
+    getRenderStats(): RenderStats {
+        return { ...this._renderStats };
+    }
+
+    getAverageRenderDuration(): number {
+        return this._renderStats.renderCount === 0
+            ? 0
+            : this._renderStats.totalDurationMs /
+                this._renderStats.renderCount;
+    }
+
     /** Get the current style */
     get style(): Style { return this._style; }
+
+    /** Get the z-index stacking order */
+    get zIndex(): number {
+        return this._style.zIndex ?? 0;
+    }
+
+    /** Set the z-index stacking order */
+    set zIndex(value: number) {
+        this.setStyle({ zIndex: value });
+    }
+
+    get a11y(): A11yProps | undefined { return this._a11y; }
+
+    public setA11y(props: A11yProps): this {
+        this._a11y = props;
+        this._dirty = true;
+        return this;
+    }
 
     /** Update the style (merge with existing) */
     setStyle(style: Partial<Style>): void {
@@ -109,6 +204,12 @@ export abstract class Widget {
     addChild(child: Widget): void {
         child.parent = this;
         this._children.push(child);
+        this.markDirty();
+        // Propagate any dirty state the child accumulated before being added
+        // to the tree (e.g., Pty output that arrived before mount).
+        if (child._dirty) {
+            this.markDirty();
+        }
     }
 
     /** Remove a child widget */
@@ -116,16 +217,36 @@ export abstract class Widget {
         const idx = this._children.indexOf(child);
         if (idx >= 0) {
             this._children.splice(idx, 1);
-            child.parent = null;
+            child.destroy();
+            this.markDirty();
         }
     }
 
     /** Remove all children */
     clearChildren(): void {
-        for (const child of this._children) {
-            child.parent = null;
-        }
+        const children = [...this._children];
         this._children = [];
+        for (const child of children) {
+            child.destroy();
+        }
+        this.markDirty();
+    }
+
+    /**
+     * Destroy this widget and all its descendants.
+     * Cleans up event handlers, cancels active animations, removes parent references, and clears children.
+     */
+    destroy(): void {
+        this._layoutCancel?.();
+        this._layoutCancel = null;
+        this._targetRect = null;
+        this.unmount();
+        const children = [...this._children];
+        this._children = [];
+        for (const child of children) {
+            child.destroy();
+        }
+        this.parent = null;
     }
 
     /** Get all children */
@@ -140,7 +261,12 @@ export abstract class Widget {
             .filter(c => c.style.visible !== false)
             .map(c => c.getLayoutNode());
 
-        this._layoutNode = createLayoutNode(this.id, this._style, childNodes);
+        if (this._layoutNode) {
+            this._layoutNode.style = this._style;
+            this._layoutNode.children = childNodes;
+        } else {
+            this._layoutNode = createLayoutNode(this.id, this._style, childNodes);
+        }
         return this._layoutNode;
     }
 
@@ -151,7 +277,7 @@ export abstract class Widget {
      */
     syncLayout(): void {
         if (this._layoutNode) {
-            this._rect = { ...this._layoutNode.computed };
+            this._applyRect({ ...this._layoutNode.computed });
         }
 
         // Sync children (match visible children to layout node children)
@@ -168,20 +294,51 @@ export abstract class Widget {
     render(screen: Screen): void {
         if (this._style.visible === false) return;
 
+        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'start');
+
         // Push clip region if overflow is hidden (default style)
         const shouldClip = this._style.overflow !== 'visible';
         if (shouldClip) {
             screen.pushClip(this._rect);
         }
 
-        // Render own content
-        this._renderSelf(screen);
+        // Render own content with error isolation
+        try {
+            const start = performance.now();
+            this._renderSelf(screen);
+            const duration = performance.now() - start;
+            this._renderStats.renderCount++;
+            this._renderStats.lastDurationMs = duration;
+            this._renderStats.totalDurationMs += duration;
+            this._renderError = null;
+            this._dirty = false;
+        } catch (err) {
+            this._renderError = err instanceof Error ? err : new Error(String(err));
+            // Keep widget dirty so it will be retried on the next frame
+            this._dirty = true;
+            // Visual fallback in dev mode — show a red placeholder with widget name
+            if (process.env.NODE_ENV !== 'production') {
+                const { x, y, width } = this._rect;
+                if (width > 2) {
+                    const label = `Error: ${this.constructor.name}`;
+                    const truncated = label.slice(0, Math.max(3, width - 2));
+                    screen.writeString(x + 1, y, truncated, {
+                        fg: { type: 'named', name: 'red' },
+                    });
+                }
+            }
+        }
 
         // Render border
         this._renderBorder(screen);
 
         // Render children
-        for (const child of this._children) {
+        const sortedChildren = [...this._children].sort((a, b) => {
+            const az = a.style.zIndex ?? 0;
+            const bz = b.style.zIndex ?? 0;
+            return az - bz;
+        });
+        for (const child of sortedChildren) {
             child.render(screen);
         }
 
@@ -189,6 +346,8 @@ export abstract class Widget {
         if (shouldClip) {
             screen.popClip();
         }
+
+        emitA11y(this._a11y, (data: string) => screen.writeAnsi(data), 'end');
     }
 
     /**
@@ -198,10 +357,84 @@ export abstract class Widget {
     protected abstract _renderSelf(screen: Screen): void;
 
     /**
+     * Update the widget with previous props/state.
+     * Subclasses override this with a specific type parameter
+     * to receive typed previous state instead of `any`.
+     *
+     * @example
+     * ```ts
+     * update(previousProps: MyWidgetProps): void {
+     *   if (previousProps.label !== this.props.label) {
+     *     this.markDirty();
+     *   }
+     * }
+     * ```
+     */
+    update<T = unknown>(_previousProps: T): void {
+        this.markDirty();
+    }
+
+    /**
      * Update the computed rect from layout results.
      */
     updateRect(rect: Rect): void {
-        this._rect = rect;
+        this._applyRect(rect);
+    }
+
+    private _applyRect(newRect: Rect): void {
+        if (this._rect.width === 0 && this._rect.height === 0) {
+            // First render, do not animate
+            this._rect = newRect;
+            return;
+        }
+
+        if (!this.layoutTransition) {
+            if (this._layoutCancel) {
+                this._layoutCancel();
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+            this._rect = newRect;
+            return;
+        }
+        
+        // If target is same, ignore
+        if (this._targetRect && 
+            this._targetRect.x === newRect.x && 
+            this._targetRect.y === newRect.y && 
+            this._targetRect.width === newRect.width && 
+            this._targetRect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._rect.x === newRect.x && 
+            this._rect.y === newRect.y && 
+            this._rect.width === newRect.width && 
+            this._rect.height === newRect.height) {
+            return;
+        }
+        
+        if (this._layoutCancel) {
+            this._layoutCancel();
+        }
+        
+        this._targetRect = { ...newRect };
+        
+        const config = typeof this.layoutTransition === 'boolean' 
+            ? 'default' 
+            : this.layoutTransition;
+            
+        this._layoutCancel = animateRect(this._rect, newRect, {
+            config,
+            onFrame: (rect) => {
+                this._rect = rect;
+                this.markDirty();
+            },
+            onComplete: () => {
+                this._layoutCancel = null;
+                this._targetRect = null;
+            }
+        });
     }
 
     /**
@@ -211,21 +444,64 @@ export abstract class Widget {
     markDirty(): void {
         if (this._dirty) return; // Already dirty
         this._dirty = true;
+        if (this._layoutNode) {
+            this._layoutNode._dirty = true;
+        }
         this.parent?.markDirty();
     }
 
     /**
+     * Marks the widget as dirty without invalidating the layout node.
+     * Used for performance optimizations like memoized scrolling.
+     */
+    protected _markDirtyNoLayout(): void {
+        if (this._dirty) return;
+        this._dirty = true;
+        this.parent?._markDirtyNoLayout();
+    }
+
+    /**
      * Clear the dirty flag after rendering.
+     * Widgets with a render error stay dirty so they are retried on the next frame.
      */
     clearDirty(): void {
+        if (this._renderError) {
+            this._dirty = true;
+            return;
+        }
         this._dirty = false;
         for (const child of this._children) {
             child.clearDirty();
+            // If child remains dirty due to render error, keep ancestor dirty too
+            if (child._dirty) {
+                this._dirty = true;
+            }
         }
     }
 
     /** Check if this widget (or any child) needs re-rendering */
     get isDirty(): boolean { return this._dirty; }
+
+    /** Get the last render error, if any */
+    get renderError(): Error | null { return this._renderError; }
+
+    /**
+     * Sanitize text content by stripping ANSI escape sequences.
+     *
+     * When `sanitizeContent` is `true` (default), all ANSI escapes and
+     * control characters are stripped. When `false` (e.g. `Text` with
+     * `raw: true`), SGR formatting is preserved but cursor movement, screen
+     * clears, and OSC sequences (title, clipboard, hyperlinks) are still
+     * stripped — content is never passed through completely unsanitized.
+     *
+     * Subclasses can override to customize behavior.
+     */
+    protected sanitize(text: string): string {
+        if (this.sanitizeContent) {
+            return stripAnsiEscapes(text);
+        }
+        return sanitizeForDisplay(text, /* allowFormatting */ true);
+    }
 
     /**
      * Render the border around this widget, including focus ring if focused.
@@ -286,28 +562,33 @@ export abstract class Widget {
             const fg = this._style.focusRingColor ?? { type: 'named' as const, name: 'cyan' as const };
             const cellStyle = { fg, bold: true };
 
+            const useAscii = (this._style.asciiOnly ?? false) || !caps.unicode;
+            const corner = useAscii ? '+' : '┌';
+            const horizontal = useAscii ? '-' : '─';
+            const vertical = useAscii ? '|' : '│';
+
             // Top-left corner
-            screen.setCell(x, y, { char: '┌', ...cellStyle });
-            if (width > 2) screen.setCell(x + 1, y, { char: '─', ...cellStyle });
+            screen.setCell(x, y, { char: corner, ...cellStyle });
+            if (width > 2) screen.setCell(x + 1, y, { char: horizontal, ...cellStyle });
 
             // Top-right corner
-            screen.setCell(x + width - 1, y, { char: '┐', ...cellStyle });
-            if (width > 2) screen.setCell(x + width - 2, y, { char: '─', ...cellStyle });
+            screen.setCell(x + width - 1, y, { char: corner, ...cellStyle });
+            if (width > 2) screen.setCell(x + width - 2, y, { char: horizontal, ...cellStyle });
 
             // Bottom-left corner
-            screen.setCell(x, y + height - 1, { char: '└', ...cellStyle });
-            if (width > 2) screen.setCell(x + 1, y + height - 1, { char: '─', ...cellStyle });
+            screen.setCell(x, y + height - 1, { char: corner, ...cellStyle });
+            if (width > 2) screen.setCell(x + 1, y + height - 1, { char: horizontal, ...cellStyle });
 
             // Bottom-right corner
-            screen.setCell(x + width - 1, y + height - 1, { char: '┘', ...cellStyle });
-            if (width > 2) screen.setCell(x + width - 2, y + height - 1, { char: '─', ...cellStyle });
+            screen.setCell(x + width - 1, y + height - 1, { char: corner, ...cellStyle });
+            if (width > 2) screen.setCell(x + width - 2, y + height - 1, { char: horizontal, ...cellStyle });
 
             // Short vertical marks if tall enough
             if (height > 2) {
-                screen.setCell(x, y + 1, { char: '│', ...cellStyle });
-                screen.setCell(x + width - 1, y + 1, { char: '│', ...cellStyle });
-                screen.setCell(x, y + height - 2, { char: '│', ...cellStyle });
-                screen.setCell(x + width - 1, y + height - 2, { char: '│', ...cellStyle });
+                screen.setCell(x, y + 1, { char: vertical, ...cellStyle });
+                screen.setCell(x + width - 1, y + 1, { char: vertical, ...cellStyle });
+                screen.setCell(x, y + height - 2, { char: vertical, ...cellStyle });
+                screen.setCell(x + width - 1, y + height - 2, { char: vertical, ...cellStyle });
             }
         }
     }
@@ -336,7 +617,8 @@ export abstract class Widget {
 
     /** Lifecycle: called when the widget is mounted */
     mount(): void {
-        this.events.emit('mount', undefined as any);
+        this._unmounted = false;
+        this.events.emit('mount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         for (const child of this._children) {
             child.mount();
         }
@@ -344,10 +626,15 @@ export abstract class Widget {
 
     /** Lifecycle: called when the widget is unmounted */
     unmount(): void {
+        if (this._unmounted) return;
+        this._unmounted = true;
+        this._layoutCancel?.();
+        this._layoutCancel = null;
+        this._targetRect = null;
         for (const child of this._children) {
             child.unmount();
         }
-        this.events.emit('unmount', undefined as any);
+        this.events.emit('unmount', undefined as any); // as any: EventEmitter payload typed as never for void events; cast required
         this.events.removeAll();
     }
 }

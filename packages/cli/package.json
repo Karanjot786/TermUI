@@ -1,0 +1,17 @@
+{
+  "name": "termuijs",
+  "version": "0.1.1",
+  "description": "Add TermUI components to your project — npx termuijs add <name>",
+  "homepage": "https://www.termui.io",
+  "repository": { "type": "git", "url": "https://github.com/Karanjot786/TermUI" },
+  "type": "module",
+  "bin": { "termuijs": "./dist/index.js" },
+  "main": "./dist/index.js",
+  "files": ["dist"],
+  "scripts": { "build": "tsup", "dev": "tsup --watch", "test": "vitest run" },
+  "dependencies": { "@termuijs/widgets": "workspace:*", "@termuijs/core": "workspace:*" },
+  "devDependencies": { "tsup": "^8.0.0", "typescript": "^5.3.0", "vitest": "^4.1.8" },
+  "keywords": ["terminal", "tui", "cli", "components", "add"],
+  "engines": { "node": ">=18" },
+  "license": "MIT"
+}

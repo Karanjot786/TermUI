@@ -2,7 +2,7 @@
 // Transitions — pre-built animation effects
 // ─────────────────────────────────────────────────────
 
-import { caps } from '@termuijs/core';
+import { prefersReducedMotion } from '@termuijs/core';
 import { subscribe } from './timer-pool.js';
 
 export type EasingFn = (t: number) => number;
@@ -35,7 +35,7 @@ export interface TransitionOptions {
 export function transition(options: TransitionOptions): () => void {
     const { durationMs, easing = easings.easeInOut, onFrame, onComplete } = options;
 
-    if (!caps.motion) {
+    if (prefersReducedMotion()) {
         onFrame(easing(1));
         onComplete?.();
         return () => {};
@@ -86,7 +86,7 @@ export function typewriter(text: string, durationMs: number, onFrame: (visibleCh
 
 /** Pulse: oscillates between 0 and 1 */
 export function pulse(periodMs: number, onFrame: (intensity: number) => void): () => void {
-    if (!caps.motion) {
+    if (prefersReducedMotion()) {
         onFrame(1);
         return () => {};
     }

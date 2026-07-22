@@ -2,7 +2,7 @@
 // Project name validation to prevent path traversal attacks
 // ─────────────────────────────────────────────────────
 
-import { resolve } from "node:path";
+import { resolve, relative, isAbsolute, sep } from "node:path";
 
 // Regex allows: lowercase letters, numbers, hyphens, underscores
 // Must start with a lowercase letter or number
@@ -63,17 +63,14 @@ export function validateProjectName(name: unknown): string {
  */
 export function validateResolvedPath(cwd: string, projectName: string): void {
     const resolved = resolve(cwd, projectName);
-
-    // Normalize both paths for comparison
     const cwdNorm = resolve(cwd);
 
-    // Check if the resolved path is within the current working directory
-    if (!resolved.startsWith(cwdNorm + (cwdNorm.endsWith("/") || cwdNorm.endsWith("\\") ? "" : "/"))) {
-        if (resolved !== cwdNorm) {
-            // Allow the case where resolved equals cwd exactly
-            throw new Error(
-                `Security check failed: resolved path escapes current working directory`
-            );
-        }
+    const rel = relative(cwdNorm, resolved);
+
+    // If relative path starts with '..' or is absolute, it escapes cwd
+    if (rel === ".." || rel.startsWith(`..${sep}`) || isAbsolute(rel)) {
+        throw new Error(
+            "Security check failed: resolved path escapes current working directory"
+        );
     }
 }

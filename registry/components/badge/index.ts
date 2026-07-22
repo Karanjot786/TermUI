@@ -1,2 +1,2 @@
-export { Badge } from '../../../packages/widgets/src/display/Badge';
-export type { BadgeOptions, BadgeVariant } from '../../../packages/widgets/src/display/Badge';
+export { Badge } from '@termuijs/widgets';
+export type { BadgeOptions, BadgeVariant } from '@termuijs/widgets';

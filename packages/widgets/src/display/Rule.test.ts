@@ -122,3 +122,23 @@ describe('Rule', () => {
         expect(() => renderRule({}, { title: 'Very Long Title' }, 5, 1)).not.toThrow();
     });
 });
+
+describe('Rule – mutation regression tests', () => {
+    it('does not mark dirty when title is unchanged', () => {
+        const rule = new Rule({}, { title: 'Logs' });
+
+        rule.clearDirty();
+        rule.setTitle('Logs');
+
+        expect(rule.isDirty).toBe(false);
+    });
+
+    it('marks dirty when title changes', () => {
+        const rule = new Rule({}, { title: 'Logs' });
+
+        rule.clearDirty();
+        rule.setTitle('Errors');
+
+        expect(rule.isDirty).toBe(true);
+    });
+});

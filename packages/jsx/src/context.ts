@@ -20,7 +20,7 @@
 //   }
 // ─────────────────────────────────────────────────────
 
-import { currentFiber, type Fiber } from './hooks.js';
+import { currentFiber, scheduleRender, type Fiber } from './hooks.js';
 import type { VNode, FC } from './vnode.js';
 
 // ── Context ──
@@ -53,7 +53,19 @@ export function createContext<T>(defaultValue: T): Context<T> {
     // It renders its children transparently.
     const Provider: FC<{ value: T; children?: VNode | VNode[] }> = ({ value, children }) => {
         const fiber = currentFiber();
+        const oldValue = fiber.contextValues.get(id);
+        const hasOldValue = fiber.contextValues.has(id);
         fiber.contextValues.set(id, value);
+
+        // If value changed, trigger render on all subscribers
+        if (hasOldValue && !Object.is(oldValue, value)) {
+            const subs = fiber.contextSubscribers?.get(id);
+            if (subs) {
+                for (const sub of subs) {
+                    scheduleRender(sub);
+                }
+            }
+        }
 
         // Return children as-is (single child or fragment)
         if (Array.isArray(children)) {
@@ -86,6 +98,19 @@ export function useContext<T>(context: Context<T>): T {
     let current: Fiber | undefined = fiber;
     while (current) {
         if (current.contextValues.has(context._id)) {
+            // Track subscription for re-renders
+            if (!current.contextSubscribers) current.contextSubscribers = new Map();
+            let subs = current.contextSubscribers.get(context._id);
+            if (!subs) {
+                subs = new Set();
+                current.contextSubscribers.set(context._id, subs);
+            }
+            subs.add(fiber);
+            
+            // Register dependency on consumer fiber for teardown
+            if (!fiber.contextDependencies) fiber.contextDependencies = new Set();
+            fiber.contextDependencies.add(subs);
+
             return current.contextValues.get(context._id) as T;
         }
         current = current.parent;

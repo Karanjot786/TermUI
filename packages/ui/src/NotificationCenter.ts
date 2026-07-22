@@ -5,9 +5,14 @@
 // ─────────────────────────────────────────────────────
 
 import { Widget } from '@termuijs/widgets';
-import { useState, useEffect } from '@termuijs/jsx';
+import { useState, useEffect, registerCleanup } from '@termuijs/jsx';
 import { caps, type Screen } from '@termuijs/core';
 import type { Color } from '@termuijs/core';
+
+// Auto-register cleanup for test isolation
+registerCleanup(() => {
+    NotificationStore.getInstance().reset();
+});
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -60,17 +65,24 @@ export class NotificationStore {
         }
     }
 
+    reset(): void {
+        this._notifications = [];
+        this._subs.clear();
+    }
+
     subscribe(fn: (notifications: Notification[]) => void): () => void {
         this._subs.add(fn);
         return () => this._subs.delete(fn);
     }
 
     get notifications(): Notification[] {
-        return this._notifications;
+        return this._notifications.map((notification) => ({ ...notification }));
     }
 
     private _emit(): void {
-        for (const fn of this._subs) fn(this._notifications);
+        for (const fn of this._subs) {
+            fn(this._notifications.map((notification) => ({ ...notification })));
+        }
     }
 }
 
@@ -145,16 +157,32 @@ export class NotificationCenter extends Widget {
     }
 
     override unmount(): void {
-        this._unsub?.();
-        this._unsub = undefined;
+        this._cleanup();
         super.unmount();
     }
 
+    override destroy(): void {
+        this._cleanup();
+        super.destroy();
+    }
+
+    private _cleanup(): void {
+        if (this._unsub) {
+            this._unsub();
+            this._unsub = undefined;
+        }
+        this._current = [];
+    }
+
     protected override _renderSelf(screen: Screen): void {
-        const visible = this._current.slice(-this._maxVisible);
-        if (visible.length === 0) return;
+        if (this._maxVisible <= 0) return;
 
         const { x, y, width, height } = this._rect;
+        if (width <= 2 || height <= 1) return;
+
+        const visible = this._current.slice(-this._maxVisible).slice(-(height - 1));
+        if (visible.length === 0) return;
+
         const tw = Math.min(this._notifWidth, width - 2);
         if (tw <= 0) return;
 

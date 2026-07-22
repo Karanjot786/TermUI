@@ -7,6 +7,7 @@ import {
     styleToCellAttrs,
     caps,
 } from '@termuijs/core';
+import { nextEnabledIndex, previousEnabledIndex } from './navigation.js';
 
 export interface CheckboxGroupOption {
     label: string;
@@ -36,7 +37,10 @@ export class CheckboxGroup extends Widget {
         );
 
         this._options = options.options;
-        this._selected = new Set(options.defaultValues ?? []);
+        const knownValues = new Set(options.options.map(o => o.value));
+        this._selected = new Set(
+            (options.defaultValues ?? []).filter(v => knownValues.has(v)),
+        );
         this.onChange = options.onChange;
     }
 
@@ -49,15 +53,17 @@ export class CheckboxGroup extends Widget {
     }
 
     selectNext(): void {
-        if (this._focusedIndex < this._options.length - 1) {
-            this._focusedIndex++;
+        const next = nextEnabledIndex(this._options, this._focusedIndex, () => false);
+        if (next !== this._focusedIndex) {
+            this._focusedIndex = next;
             this.markDirty();
         }
     }
 
     selectPrev(): void {
-        if (this._focusedIndex > 0) {
-            this._focusedIndex--;
+        const prev = previousEnabledIndex(this._options, this._focusedIndex, () => false);
+        if (prev !== this._focusedIndex) {
+            this._focusedIndex = prev;
             this.markDirty();
         }
     }

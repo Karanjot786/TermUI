@@ -1,6 +1,6 @@
 // CommandPalette — fuzzy-search command launcher
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars, caps, splitGraphemes } from '@termuijs/core';
 
 export interface Command { id: string; label: string; shortcut?: string; action: () => void; category?: string; }
 export interface CommandPaletteOptions { placeholder?: string; borderColor?: Style['fg']; activeColor?: Style['fg']; maxVisible?: number; }
@@ -32,8 +32,24 @@ export class CommandPalette extends Widget {
     show(): void { this._visible = true; this._query = ''; this._cursorPos = 0; this._selectedIndex = 0; this._filtered = [...this._commands]; this.markDirty(); }
     hide(): void { this._visible = false; this.markDirty(); }
     toggle(): void { this._visible ? this.hide() : this.show(); }
-    insertChar(ch: string): void { this._query = this._query.slice(0, this._cursorPos) + ch + this._query.slice(this._cursorPos); this._cursorPos++; this._filter(); this.markDirty(); }
-    deleteBack(): void { if (this._cursorPos > 0) { this._query = this._query.slice(0, this._cursorPos - 1) + this._query.slice(this._cursorPos); this._cursorPos--; this._filter(); this.markDirty(); } }
+    insertChar(ch: string): void {
+        const query = splitGraphemes(this._query);
+        const inserted = splitGraphemes(ch);
+        query.splice(this._cursorPos, 0, ...inserted);
+        this._query = query.join('');
+        this._cursorPos += inserted.length;
+        this._filter();
+        this.markDirty();
+    }
+    deleteBack(): void {
+        if (this._cursorPos === 0) return;
+        const query = splitGraphemes(this._query);
+        query.splice(this._cursorPos - 1, 1);
+        this._query = query.join('');
+        this._cursorPos--;
+        this._filter();
+        this.markDirty();
+    }
     selectNext(): void { if (this._selectedIndex < this._filtered.length - 1) { this._selectedIndex++; this.markDirty(); } }
     selectPrev(): void { if (this._selectedIndex > 0) { this._selectedIndex--; this.markDirty(); } }
     confirm(): void { const c = this._filtered[this._selectedIndex]; if (c) { this.hide(); c.action(); } }
@@ -111,7 +127,9 @@ export class CommandPalette extends Widget {
     private _filter(): void {
         const q = this._query.toLowerCase();
         if (!q) { this._filtered = [...this._commands]; } else {
-            this._filtered = this._commands.filter(c => { const l = c.label.toLowerCase(); let qi = 0; for (let i = 0; i < l.length && qi < q.length; i++) { if (l[i] === q[qi]) qi++; } return qi === q.length; });
+            this._filtered = this._commands.filter(c => { 
+                const l =
+    `${c.label} ${c.category ?? ''}`.toLowerCase(); let qi = 0; for (let i = 0; i < l.length && qi < q.length; i++) { if (l[i] === q[qi]) qi++; } return qi === q.length; });
         }
         this._selectedIndex = 0;
     }
@@ -125,8 +143,17 @@ export class CommandPalette extends Widget {
         for (let r = 0; r < height; r++) screen.writeString(x, y + r, backdropCh.repeat(width), { ...attrs, dim: true });
         // Box
         const vis = this._filtered.slice(0, this._maxVisible);
+        const grouped = new Map<string, Command[]>();
+        for (const cmd of vis) {
+            const category = cmd.category ?? 'General';
+            if (!grouped.has(category)) {
+                grouped.set(category, []);
+            }
+            grouped.get(category)!.push(cmd);
+        }
         const bw = Math.min(60, width - 4);
-        const bh = Math.min(vis.length + 3, height - 2);
+        const totalVisRows = grouped.size + vis.length;
+        const bh = Math.min(totalVisRows + 3, height - 2);
         const bx = x + Math.floor((width - bw) / 2);
         const by = y + 2;
         const border = getBorderChars('single');
@@ -142,17 +169,42 @@ export class CommandPalette extends Widget {
         // Separator
         screen.writeString(bx, by + 2, border.left + '─'.repeat(bw - 2) + border.right, ba);
         // Items
-        for (let i = 0; i < vis.length && i + 3 < bh - 1; i++) {
-            const c = vis[i]; const active = i === this._selectedIndex;
-            const label = (active ? (caps.unicode ? '❯ ' : '> ') : '  ') + c.label;
-            const sc = c.shortcut ?? '';
-            screen.writeString(bx, by + 3 + i, border.left, ba);
-            screen.writeString(bx + 1, by + 3 + i, (' ' + label).slice(0, bw - sc.length - 3).padEnd(bw - sc.length - 3), { ...attrs, fg: active ? this._activeColor : attrs.fg, bold: active });
-            if (sc) screen.writeString(bx + bw - sc.length - 2, by + 3 + i, sc, { ...attrs, dim: true });
-            screen.writeString(bx + bw - 1, by + 3 + i, border.right, ba);
-        }
+        let rowOffset = 0;
+
+for (const [category, commands] of grouped) {
+    screen.writeString(
+        bx + 1,
+        by + 3 + rowOffset,
+        `[${category}]`,
+        { ...attrs, bold: true }
+    );
+
+    rowOffset++;
+
+    for (const c of commands) {
+        const active = rowOffset - 1 === this._selectedIndex;
+
+        const prefix = active ? (caps.unicode ? '❯ ' : '> ') : '  ';
+        const shortcutStr = c.shortcut ? `  ${c.shortcut}` : '';
+        const labelFull = prefix + c.label + shortcutStr;
+        const label = labelFull.slice(0, bw - 4).padEnd(bw - 4);
+
+        screen.writeString(
+            bx + 1,
+            by + 3 + rowOffset,
+            label,
+            {
+                ...attrs,
+                fg: active ? this._activeColor : attrs.fg,
+                bold: active,
+            }
+        );
+
+        rowOffset++;
+    }
+}
         // Bottom
-        const last = Math.min(by + 3 + vis.length, by + bh - 1);
+        const last = Math.min(by + 3 + totalVisRows, by + bh - 1);
         screen.writeString(bx, last, border.bottomLeft + border.bottom.repeat(bw - 2) + border.bottomRight, ba);
     }
 }

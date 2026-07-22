@@ -30,8 +30,9 @@ export {
     useInsertBefore,
     useReducer,
 } from './hooks.js';
-export { useMediaQuery } from './hooks/useMediaQuery.js';
 export { useToggle } from './hooks/useToggle.js';
+export { useAnimation } from './hooks/useAnimation.js';
+export type { UseAnimationConfig } from './hooks/useAnimation.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 export { useCounter } from './hooks/useCounter.js';
 export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
@@ -43,9 +44,6 @@ export { useList } from './hooks/useList.js';
 export type { UseListActions } from './hooks/useList.js';
 export { useMap } from './hooks/useMap.js';
 export type { UseMapActions } from './hooks/useMap.js';
-export { useUpdateEffect } from './hooks/useUpdateEffect.js';
-
-export { useDefault } from './hooks/useDefault.js';
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
 export type { ErrorBoundaryProps } from './error-boundary.js';
@@ -74,6 +72,7 @@ export type { UseFocusWithinOptions } from './hooks/useFocusWithin.js';
 export { useFocusTrap } from './hooks/useFocusTrap.js';
 export { useKeyboardNavigation } from './hooks/useKeyboardNavigation.js';
 export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hooks/useKeyboardNavigation.js';
+export { useTypeahead } from './hooks/useTypeahead.js';
 export { useModal } from './hooks/useModal.js';
 export type { UseModalResult } from './hooks/useModal.js';
 
@@ -90,22 +89,29 @@ export { getCurrentApp } from './runtime.js';
 export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
 
 // ── Internal — used by @termuijs/testing ──
-export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber } from './hooks.js';
+export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber, resetHooksGlobals, registerCleanup } from './hooks.js';
 
 // ── Convenience alias ──
 /** h() — shorthand for createElement */
 export { createElement as h } from './createElement.js';
-export { usePrevious } from './hooks/usePrevious.js';
-export { useFirstRender } from './hooks/useFirstRender.js';
-export { useSyncExternalStore } from './hooks/useSyncExternalStore.js';
-export { useHover } from './hooks/useHover.js';
+export { useTimeout } from './hooks/useTimeout.js';
 export { useElementSize } from './hooks/useElementSize.js';
 export type { ElementSize } from './hooks/useElementSize.js';
 export { useDebounce } from './hooks/useDebounce.js';
 export { useTerminalSize } from './hooks/useTerminalSize.js';
 export type { TerminalSize } from './hooks/useTerminalSize.js';
-export { useIsMounted } from './hooks/useIsMounted.js';
-export { useUnmount } from './hooks/useUnmount.js';
-export { useTransition } from './hooks/useTransition.js';
 export { useStopwatch } from './hooks/useStopwatch.js';
 export type { UseStopwatchOptions, UseStopwatchControls } from './hooks/useStopwatch.js';
+export { useBell } from './hooks/useBell.js';
+export { useCountdown } from './hooks/useCountdown.js';
+export type { UseCountdownOptions, UseCountdownControls } from './hooks/useCountdown.js';
+export { usePackageManager, detectPackageManager, getPackageManagerCommands } from './hooks/usePackageManager.js';
+export type { PackageManager, PackageManagerCommands } from './hooks/usePackageManager.js';
+export { useFeedback, triggerFeedback, AUDIBLE_FEEDBACK_TYPES } from './hooks/useFeedback.js';
+export type { FeedbackType, FeedbackOptions } from './hooks/useFeedback.js';
+export { useSet } from './hooks/useSet.js';
+export type { UseSetActions } from './hooks/useSet.js';
+export { useThrottle } from './hooks/useThrottle.js';
+export { useViewMeta } from './hooks/useViewMeta.js';
+export { usePrevious } from './hooks/usePrevious.js';
+export type { ViewMeta, ViewMetaCursor, ViewMetaMouseMode } from './hooks/useViewMeta.js';

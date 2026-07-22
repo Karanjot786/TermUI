@@ -82,15 +82,9 @@ export class KeyboardShortcuts extends Widget {
      * We fit it on one line: [ key ] — box drawing characters or ASCII fallback.
      */
     private _renderKeyLabel(screen: Screen, kx: number, ky: number, key: string, attrs: ReturnType<typeof styleToCellAttrs>): number {
-        if (caps.unicode) {
-            const label = `[${key}]`;
-            screen.writeString(kx, ky, label, { ...attrs, fg: this._keyColor, bold: true });
-            return label.length;
-        } else {
-            const label = `[${key}]`;
-            screen.writeString(kx, ky, label, { ...attrs, fg: this._keyColor, bold: true });
-            return label.length;
-        }
+        const label = `[${key}]`;
+        screen.writeString(kx, ky, label, { ...attrs, fg: this._keyColor, bold: true });
+        return label.length;
     }
 
     protected _renderSelf(screen: Screen): void {

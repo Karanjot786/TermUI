@@ -1,5 +1,5 @@
 import { Widget } from '../base/Widget.js';
-import { caps, type Screen, type Style } from '@termuijs/core';
+import { caps, type Screen, type Style, type KeyEvent, stringWidth, truncate } from '@termuijs/core';
 
 export type TreeNode = {
 name: string;
@@ -82,50 +82,53 @@ private _select(node: TreeNode, path: string[]) {
     this.onSelect?.(node, path.join('/'));
 }
 
-handleKey(key: string) {
-    const current = this._visible[this._selectedIndex];
-    if (!current) return;
+    handleKey(event: KeyEvent): boolean {
+        const current = this._visible[this._selectedIndex];
+        if (!current) return false;
 
-    switch (key) {
-        case 'down':
-            this._selectedIndex = Math.min(
-                this._selectedIndex + 1,
-                this._visible.length - 1,
-            );
-            this.markDirty();
-            break;
+        switch (event.key) {
+            case 'down':
+                this._selectedIndex = Math.min(
+                    this._selectedIndex + 1,
+                    this._visible.length - 1,
+                );
+                this.markDirty();
+                return true;
 
-        case 'up':
-            this._selectedIndex = Math.max(
-                this._selectedIndex - 1,
-                0,
-            );
-            this.markDirty();
-            break;
+            case 'up':
+                this._selectedIndex = Math.max(
+                    this._selectedIndex - 1,
+                    0,
+                );
+                this.markDirty();
+                return true;
 
-        case 'right':
-        case 'enter':
-            if (current.node.type === 'dir') {
-                this._toggle(current.node, current.path);
+            case 'right':
+            case 'enter':
+                if (current.node.type === 'dir') {
+                    this._toggle(current.node, current.path);
+                }
+                return true;
+
+            case 'left': {
+                const keyPath = current.path.join('/');
+                if (
+                    current.node.type === 'dir' &&
+                    this._expanded.has(keyPath)
+                ) {
+                    this._toggle(current.node, current.path);
+                }
+                return true;
             }
-            break;
 
-        case 'left': {
-            const keyPath = current.path.join('/');
-            if (
-                current.node.type === 'dir' &&
-                this._expanded.has(keyPath)
-            ) {
-                this._toggle(current.node, current.path);
-            }
-            break;
+            case 'space':
+                this._select(current.node, current.path);
+                return true;
+
+            default:
+                return false;
         }
-
-        case 'space':
-            this._select(current.node, current.path);
-            break;
     }
-}
 
 protected _renderSelf(screen: Screen): void {
     const rect = this._getContentRect();
@@ -144,8 +147,8 @@ protected _renderSelf(screen: Screen): void {
         const line = `${indent}${icon} ${item.node.name}`;
 
         const text =
-            line.length > width
-                ? line.slice(0, width)
+            stringWidth(line) > width
+                ? truncate(line, width, '')
                 : line;
 
         screen.writeString(rect.x, rect.y + i, text, {

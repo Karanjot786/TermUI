@@ -42,3 +42,70 @@ Once we confirm a vulnerability:
 4. We disclose details after users have had time to update.
 
 We follow a 90-day disclosure window. If we can't fix it within 90 days, we'll explain why and provide a workaround.
+
+## Responsible Disclosure
+
+If you discover a potential security vulnerability, please report it privately instead of creating a public GitHub issue.
+
+When reporting a vulnerability, please include:
+
+- A clear description of the issue.
+- Steps to reproduce the vulnerability.
+- The affected package(s) or component(s).
+- Potential impact or severity.
+- Any suggested mitigation or fix (if available).
+
+Please avoid publicly disclosing security issues until they have been reviewed and addressed by the maintainers.
+
+---
+
+## Response Timeline
+
+The project aims to acknowledge new security reports within:
+
+| Stage | Target Time |
+|--------|-------------|
+| Initial acknowledgement | Within 48 hours |
+| Initial assessment | Within 7 days |
+| Status updates | As needed during investigation |
+| Security fix | Depending on severity and complexity |
+
+These timelines are goals rather than guaranteed service-level agreements.
+
+---
+
+## Supported Versions
+
+The following table indicates which versions currently receive security updates.
+
+| Version | Supported |
+|----------|:---------:|
+| Latest Release | ✅ |
+| Previous Minor Release | ✅ |
+| Older Releases | ❌ |
+
+Users are encouraged to upgrade to the latest supported version whenever possible.
+
+---
+
+## Reporting Recommendations
+
+To help maintainers investigate efficiently, please include:
+
+- Operating system
+- Bun version
+- Node.js version
+- Package version
+- Environment variables (if relevant)
+- Complete reproduction steps
+- Screenshots or terminal logs (when applicable)
+
+Avoid including sensitive information such as API keys, passwords, or personal credentials in your report.
+
+---
+
+## Coordinated Disclosure
+
+Please allow maintainers reasonable time to investigate and prepare a fix before publicly discussing the vulnerability.
+
+Coordinated disclosure helps protect users while allowing sufficient time for remediation and testing.

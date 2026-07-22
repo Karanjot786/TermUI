@@ -1,4 +1,4 @@
-import { App, type KeyEvent, type Screen, type Style, styleToCellAttrs } from '@termuijs/core';
+import { App, type KeyEvent, type Screen, type Style, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget, Box, Text, Center } from '@termuijs/widgets';
 
 const GRID_SIZE = 15;
@@ -36,10 +36,10 @@ class SnakeBoard extends Widget {
         const grid: string[][] = Array(this.gridSize).fill(null).map(() => Array(this.gridSize).fill(' '));
         for (const seg of this.snake) {
             if (seg.x >= 0 && seg.x < this.gridSize && seg.y >= 0 && seg.y < this.gridSize)
-                grid[seg.y][seg.x] = '■';
+                grid[seg.y][seg.x] = caps.unicode ? '■' : '#';
         }
         if (this.food.x >= 0 && this.food.x < this.gridSize && this.food.y >= 0 && this.food.y < this.gridSize)
-            grid[this.food.y][this.food.x] = '●';
+            grid[this.food.y][this.food.x] = caps.unicode ? '●' : 'o';
 
         for (let row = 0; row < this.gridSize; row++) {
             let line = '';
@@ -58,6 +58,7 @@ class SnakeGame extends Widget {
     private gameOverText: Text | null = null;
     private snake: { x: number; y: number }[] = [{ x: 7, y: 7 }];
     private direction: 'up' | 'down' | 'left' | 'right' = 'right';
+    private pendingDirection: 'up' | 'down' | 'left' | 'right' | null = null;
     private food: { x: number; y: number };
     private score = 0;
     private gameOver = false;
@@ -101,20 +102,34 @@ class SnakeGame extends Widget {
 
     // Returns null when board is full (victory condition)
     private generateRandomFood(): { x: number; y: number } | null {
-        if (this.snake.length >= GRID_SIZE * GRID_SIZE) {
+        const emptyCells: { x: number; y: number }[] = [];
+
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const occupied = this.snake.some(
+                    seg => seg.x === x && seg.y === y
+                );
+
+                if (!occupied) {
+                    emptyCells.push({ x, y });
+                }
+            }
+        }
+
+        if (emptyCells.length === 0) {
             return null;
         }
-        let newPos: { x: number; y: number };
-        do {
-            newPos = {
-                x: Math.floor(Math.random() * GRID_SIZE),
-                y: Math.floor(Math.random() * GRID_SIZE),
-            };
-        } while (this.snake.some(seg => seg.x === newPos.x && seg.y === newPos.y));
-        return newPos;
+
+        return emptyCells[
+            Math.floor(Math.random() * emptyCells.length)
+        ];
     }
 
     private moveSnake() {
+        if (this.pendingDirection) {
+            this.direction = this.pendingDirection;
+            this.pendingDirection = null;
+        }
         if (this.gameOver) return;
 
         const head = this.snake[0];
@@ -122,9 +137,9 @@ class SnakeGame extends Widget {
 
         switch (this.direction) {
             case 'right': newHead.x++; break;
-            case 'left':  newHead.x--; break;
-            case 'up':    newHead.y--; break;
-            case 'down':  newHead.y++; break;
+            case 'left': newHead.x--; break;
+            case 'up': newHead.y--; break;
+            case 'down': newHead.y++; break;
         }
 
         // Wall collision
@@ -178,20 +193,33 @@ class SnakeGame extends Widget {
     private restart() {
         this.snake = [{ x: 7, y: 7 }];
         this.direction = 'right';
+        this.pendingDirection = null;
         this.score = 0;
         this.gameOver = false;
+
         const newFood = this.generateRandomFood();
-        if (newFood) this.food = newFood;
+        if (newFood) {
+            this.food = newFood;
+        }
+
         this.scoreText.setContent('Score: 0');
+
         if (this.gameOverText) {
             this.removeChild(this.gameOverText);
             this.gameOverText = null;
         }
+
         this.board.updateState(this.snake, this.food);
         this.markDirty();
 
-        if (this.timer) clearInterval(this.timer);
-        this.timer = setInterval(() => this.moveSnake(), TICK_INTERVAL_MS);
+        if (this.timer) {
+            clearInterval(this.timer);
+        }
+
+        this.timer = setInterval(
+            () => this.moveSnake(),
+            TICK_INTERVAL_MS
+        );
     }
 
     public onMount() {
@@ -221,20 +249,23 @@ class SnakeGame extends Widget {
         else if (key === 'right' || key === 'd') newDir = 'right';
 
         if (newDir) {
+            const currentDirection =
+                this.pendingDirection ?? this.direction;
+
             if (
-                (newDir === 'up' && this.direction !== 'down') ||
-                (newDir === 'down' && this.direction !== 'up') ||
-                (newDir === 'left' && this.direction !== 'right') ||
-                (newDir === 'right' && this.direction !== 'left')
+                (newDir === 'up' && currentDirection !== 'down') ||
+                (newDir === 'down' && currentDirection !== 'up') ||
+                (newDir === 'left' && currentDirection !== 'right') ||
+                (newDir === 'right' && currentDirection !== 'left')
             ) {
-                this.direction = newDir;
+                this.pendingDirection = newDir;
             }
             return true;
         }
         return true;
     }
 
-    protected _renderSelf(_screen: Screen): void {}
+    protected _renderSelf(_screen: Screen): void { }
 }
 
 async function main() {

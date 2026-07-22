@@ -6,6 +6,7 @@ import { type Screen, type Style, type Color, styleToCellAttrs } from '@termuijs
 import { Widget } from '../base/Widget.js';
 
 export interface DigitsOptions {
+    value?: string | number;
     color?: Color;
 }
 
@@ -44,11 +45,13 @@ export class Digits extends Widget {
 
     constructor(style: Partial<Style> = {}, opts: DigitsOptions = {}) {
         super({ height: DIGIT_HEIGHT, ...style });
-        this._value = String((style as Record<string, unknown>).value ?? '0');
+        const initVal = opts.value ?? (style as Record<string, unknown>).value ?? '0';
+        this._value = String(initVal);
         this._color = opts.color ?? { type: 'named', name: 'white' };
     }
 
     setValue(value: string): void {
+        if (this._value === value) return;
         this._value = value;
         this.markDirty();
     }
@@ -58,6 +61,7 @@ export class Digits extends Widget {
     }
 
     setColor(color: Color): void {
+        if (this._color === color) return;
         this._color = color;
         this.markDirty();
     }

@@ -53,6 +53,11 @@ describe('truncate', () => {
         const result = truncate('\x1b[31mhello world\x1b[0m', 8);
         expect(result).toContain('\x1b[31m');
     });
+
+    it('appends ANSI reset when truncating text with ANSI styling', () => {
+        const result = truncate('\x1b[31mhello world\x1b[0m', 8);
+        expect(result.endsWith('\x1b[0m')).toBe(true);
+    });
 });
 
 describe('stripAnsi', () => {
@@ -85,5 +90,46 @@ describe('wordWrap', () => {
     it('breaks very long words', () => {
         const result = wordWrap('abcdefghij', 5);
         expect(result.split('\n').every(l => stringWidth(l) <= 5)).toBe(true);
+    });
+
+    it('safely breaks long words containing ANSI escape sequences without premature wrapping', () => {
+        const styledWord = '\x1b[31mabcdefghij\x1b[0m';
+        const result = wordWrap(styledWord, 5);
+        const lines = result.split('\n');
+        expect(lines.length).toBe(2);
+        expect(stringWidth(lines[0]!)).toBe(5);
+        expect(stringWidth(lines[1]!)).toBe(5);
+        expect(lines[0]!).toContain('\x1b[31m');
+    });
+
+    it('preserves style state across wraps and resets at the end of each wrapped line', () => {
+        const input = '\x1b[31mHello 🚀 你好 World\x1b[0m';
+        const result = wordWrap(input, 5);
+        const lines = result.split('\n');
+        expect(lines.length).toBe(4);
+        
+        // Line 1: 'Hello' (red)
+        expect(lines[0]).toBe('\x1b[31mHello\x1b[0m');
+        // Line 2: '🚀 ' (red)
+        expect(lines[1]).toBe('\x1b[31m🚀 \x1b[0m');
+        // Line 3: '你好 ' (red)
+        expect(lines[2]).toBe('\x1b[31m你好 \x1b[0m');
+        // Line 4: 'World' (red)
+        expect(lines[3]).toBe('\x1b[31mWorld\x1b[0m');
+    });
+
+    it('safely wraps wide characters and emojis at wrap boundaries without splitting them', () => {
+        const input = '🚀你好';
+        // Width is 4. '🚀' (width 2) and '你' (width 2) fit on line 1. '好' (width 2) goes to line 2.
+        const result = wordWrap(input, 4);
+        const lines = result.split('\n');
+        expect(lines[0]).toBe('🚀你');
+        expect(lines[1]).toBe('好');
+    });
+
+    it('does not insert a spurious empty line when a single character exceeds width', () => {
+        const result = wordWrap('🚀', 1);
+        const lines = result.split('\n');
+        expect(lines).toEqual(['🚀']);
     });
 });

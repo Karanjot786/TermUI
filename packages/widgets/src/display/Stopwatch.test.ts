@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 import { Stopwatch } from './Stopwatch.js';
 
 /** Helper: create a Stopwatch, give it a rect, render to a screen, return both. */
@@ -48,6 +48,19 @@ describe('Stopwatch – rendering', () => {
 
     it('renders nothing when the content rect has zero width', () => {
         expect(() => renderStopwatch(0, {}, 0, 1)).not.toThrow();
+    });
+
+    it('clips the formatted label to narrow widths', () => {
+        const sw = new Stopwatch();
+        const screen = new Screen(3, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        sw.updateRect({ x: 0, y: 0, width: 3, height: 1 });
+        sw.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(3);
+        }
     });
 });
 
@@ -172,3 +185,82 @@ describe('Stopwatch – destroy()', () => {
         expect((sw as any)._intervalId).toBeUndefined();
     });
 });
+
+// ── 7. setInterval() mutation behavior ───────────────────────────────────
+describe('Stopwatch – setInterval()', () => {
+    it('rejects invalid constructor intervals', () => {
+        expect(() => new Stopwatch({ interval: 0 })).toThrow(/interval/);
+        expect(() => new Stopwatch({ interval: -1 })).toThrow(/interval/);
+        expect(() => new Stopwatch({ interval: Number.NaN })).toThrow(/interval/);
+        expect(() => new Stopwatch({ interval: Infinity })).toThrow(/interval/);
+    });
+
+    it('rejects invalid setInterval values', () => {
+        const sw = new Stopwatch({ interval: 10 });
+
+        expect(() => sw.setInterval(0)).toThrow(/interval/);
+        expect(() => sw.setInterval(-1)).toThrow(/interval/);
+        expect(() => sw.setInterval(Number.NaN)).toThrow(/interval/);
+        expect(() => sw.setInterval(Infinity)).toThrow(/interval/);
+    });
+
+    it('setInterval marks widget dirty', () => {
+        const sw = new Stopwatch({ interval: 10 });
+
+        sw.clearDirty();
+        sw.setInterval(20);
+
+        expect(sw.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when interval is unchanged', () => {
+        const sw = new Stopwatch({ interval: 10 });
+
+        sw.clearDirty();
+        sw.setInterval(10);
+
+        expect(sw.isDirty).toBe(false);
+    });
+
+    it('updates interval value', () => {
+        const sw = new Stopwatch({ interval: 10 });
+
+        sw.setInterval(25);
+
+        expect(sw.getInterval()).toBe(25);
+    });
+});
+
+// ── 8. unmount and lifecycle ──────────────────────────────────────────────────
+describe('Stopwatch – unmount and lifecycle', () => {
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('unmount() pauses the stopwatch, stops it from running, and prevents elapsed time from growing', () => {
+        const sw = new Stopwatch({ interval: 10 });
+        sw.start();
+        vi.advanceTimersByTime(100);
+        
+        // Unmount
+        sw.unmount();
+        expect(sw.isRunning()).toBe(false);
+        
+        const elapsedAtUnmount = sw.getElapsed();
+        
+        // Time passes while unmounted - elapsed time should not change
+        vi.advanceTimersByTime(200);
+        expect(sw.getElapsed()).toBe(elapsedAtUnmount);
+        
+        // Remount and resume
+        sw.mount();
+        sw.start();
+        expect(sw.isRunning()).toBe(true);
+        
+        vi.advanceTimersByTime(100);
+        expect(sw.getElapsed()).toBeGreaterThan(elapsedAtUnmount);
+        
+        sw.destroy();
+    });
+});
+
+

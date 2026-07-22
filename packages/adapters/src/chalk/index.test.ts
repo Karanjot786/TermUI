@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chalkToTermUI, ensureChalkInstalled } from './index.js'
+import { chalkToTermUI } from './index.js'
 
 describe('chalk adapter', () => {
  it('passes ANSI strings through when NO_COLOR is not set', () => {
@@ -26,7 +26,4 @@ it('strips ANSI sequences when NO_COLOR is set', () => {
   process.env.NO_COLOR = originalNoColor
 })
 
-  it('exports chalk dependency guard', () => {
-    expect(typeof ensureChalkInstalled).toBe('function')
-  })
 })

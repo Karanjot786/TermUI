@@ -63,6 +63,44 @@ describe('ThemeEngine', () => {
         expect(style.fg).toEqual({ type: 'named', name: 'cyan' });
     });
 
+    it('resolves negative numeric style values', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            Box {
+                margin: -2;
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.margin).toBe(-2);
+    });
+
+    it('resolves multi-value padding and margin declarations', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            Box {
+                padding: 1 2;
+                margin: 1 2 3 4;
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.padding).toEqual({ top: 1, bottom: 1, left: 2, right: 2 });
+        expect(style.margin).toEqual({ top: 1, right: 2, bottom: 3, left: 4 });
+    });
+
+    it('resolves calc expressions in numeric style properties', () => {
+        const engine = new ThemeEngine();
+        engine.load(`
+            Box {
+                width: calc(10 - 2);
+            }
+        `);
+
+        const style = engine.resolveStyle('Box');
+        expect(style.width).toBe(8);
+    });
+
     it('onChange notifies listeners on theme switch', () => {
         const engine = new ThemeEngine();
         engine.load(TSS_SOURCE);
@@ -90,5 +128,36 @@ describe('ThemeEngine', () => {
         ]);
         expect(engine.getVariable('--a')).toBe('red');
         expect(engine.rules.length).toBeGreaterThan(0);
+    });
+
+    // ── @keyframes pipeline ──
+
+    it('engine.load() preserves @keyframes observable via getKeyframes()', () => {
+        const engine = new ThemeEngine();
+        engine.load(`@keyframes fade { 0% { opacity: 0; } 100% { opacity: 1; } }\nBox { bold: true; }`);
+
+        const decls = engine.getKeyframes();
+        expect(decls).toHaveLength(1);
+        expect(decls[0].name).toBe('fade');
+        expect(decls[0].frames).toEqual({
+            '0%':   { opacity: '0' },
+            '100%': { opacity: '1' },
+        });
+
+        // Engine must still resolve regular rules after loading @keyframes
+        const style = engine.resolveStyle('Box');
+        expect(style.bold).toBe(true);
+    });
+
+    it('loadAll() preserves keyframes from merged sources observable via getKeyframes()', () => {
+        const engine = new ThemeEngine();
+        engine.loadAll([
+            '@keyframes fadeIn { 0% { opacity: 0; } 100% { opacity: 1; } }',
+            '@keyframes slideUp { 0% { y: 10; } 100% { y: 0; } }',
+        ]);
+
+        const decls = engine.getKeyframes();
+        expect(decls).toHaveLength(2);
+        expect(decls.map(d => d.name)).toEqual(['fadeIn', 'slideUp']);
     });
 });

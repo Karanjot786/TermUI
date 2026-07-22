@@ -1,3 +1,7 @@
+import type { VirtualClock } from './virtual-clock.js';
+
+export type { VirtualClock };
+
 export type AnimatableValue = number | string
 
 export interface SequenceStep {
@@ -7,13 +11,14 @@ export interface SequenceStep {
 
 export type AnimationRunner = (done: () => void) => () => void
 
-export type VirtualClock = {
-  now(): number
-  advance(ms: number): void
-  tick(): void
-  _setInterval(delayMs: number, cb: () => void): () => void
-}
-
+export function sequence(
+  runners: AnimationRunner[],
+  onComplete?: () => void
+): () => void
+export function sequence(
+  runners: SequenceStep[],
+  onComplete?: () => void
+): SequenceStep[]
 export function sequence(
   runners: AnimationRunner[] | SequenceStep[],
   onComplete?: () => void
@@ -62,10 +67,12 @@ export function parallel(
   }
 
   let remaining = runners.length
+  let cancelled = false
   const cancellers: Array<() => void> = []
 
   for (const runner of runners) {
     const cancel = runner(() => {
+      if (cancelled) return
       remaining--
       if (remaining === 0) onComplete?.()
     })
@@ -73,6 +80,7 @@ export function parallel(
   }
 
   return () => {
+    cancelled = true
     cancellers.forEach(c => c())
   }
 }

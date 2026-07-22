@@ -13,6 +13,23 @@ import { reconcile, unmountAll, reRenderComponent } from './reconciler.js';
 import { setRequestRender, setInsertBefore, collectInputHandlers } from './hooks.js';
 import { createElement } from './createElement.js';
 import { setCurrentApp } from './runtime.js';
+import { instanceMap, activeApps } from './globals.js';
+
+/**
+ * Unmount a list of apps. Swallow any errors thrown by `unmount()` but log
+ * a single error message for observability. Exported only for tests.
+ */
+export function unmountApps(apps: Array<{ unmount?: () => void }>): void {
+    apps.forEach((app) => {
+        if (typeof app.unmount === 'function') {
+            try {
+                app.unmount();
+            } catch (err) {
+                process.stderr.write('[jsx] Error during unmount(): ' + String(err) + '\n');
+            }
+        }
+    });
+}
 
 export interface RenderOptions {
     /** App title shown in the title bar */
@@ -74,8 +91,7 @@ export async function render(
     setRequestRender(() => {
         // Re-render from the root component instance to preserve fiber state (useState, useRef, etc.)
         // Falling back to a full reconcile only when the root instance is not found.
-        const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
-        const rootInstance = instances?.get(rootWidget);
+        const rootInstance = instanceMap.get(rootWidget);
 
         let newRoot: Widget;
         if (rootInstance) {
@@ -119,14 +135,37 @@ export async function render(
         // instanceMap dispatch is unreliable for pass-through components (ancestors
         // overwrite descendants' instanceMap entries). Traversing the root fiber's
         // childFibers tree finds every onInput handler regardless of nesting.
-        const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
-        const rootInstance = instances?.get(rootWidget);
+        const rootInstance = instanceMap.get(rootWidget);
         if (rootInstance?.fiber) {
             for (const handler of collectInputHandlers(rootInstance.fiber)) {
                 handler(event);
             }
         }
     });
+
+    // Register the app instance for HMR cleanups
+    activeApps.push(appInstance);
+
+    if ((import.meta as any).hot) {
+        (import.meta as any).hot.accept();
+        (import.meta as any).hot.dispose(() => {
+            // Dynamically import dev-server to clean up apps, falling back to local inline cleanup if unavailable
+            const devServerPkg = '@termuijs/dev-server';
+            import(devServerPkg)
+                .then(({ cleanupActiveInstances }) => {
+                    cleanupActiveInstances(activeApps);
+                    activeApps.length = 0;
+                })
+                .catch(() => {
+                    // dev-server unavailable — use local helper for cleanup
+                    const apps = activeApps;
+                    if (Array.isArray(apps)) {
+                        unmountApps(apps);
+                        activeApps.length = 0;
+                    }
+                });
+        });
+    }
 
     // Mount and run
     return appInstance.mount();
