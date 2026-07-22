@@ -128,8 +128,9 @@ function flushBatch(threw: boolean, immediate = false) {
                         listener(newState, prevState);
                     }
                 } catch (e) {
-                    for (const [, entry] of stores) {
-                        entry.rollback();
+                    const failedEntry = stores.find(([l]) => l === listeners);
+                    if (failedEntry) {
+                        failedEntry[1].rollback();
                     }
                     throw e;
                 }
