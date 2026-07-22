@@ -392,12 +392,14 @@ export function wordWrap(str: string, width: number): string {
                         }
                         const charW = segmentWidth(segment);
                         if (currentWidth + charW > width) {
-                            if (ansiState.getAsString()) {
-                                currentLine += '\x1b[0m';
+                            if (currentWidth > 0) {
+                                if (ansiState.getAsString()) {
+                                    currentLine += '\x1b[0m';
+                                }
+                                result.push(currentLine);
+                                currentLine = ansiState.getAsString();
+                                currentWidth = 0;
                             }
-                            result.push(currentLine);
-                            currentLine = ansiState.getAsString();
-                            currentWidth = 0;
                         }
                         currentLine += segment;
                         currentWidth += charW;

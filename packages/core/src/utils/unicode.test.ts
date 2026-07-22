@@ -126,4 +126,10 @@ describe('wordWrap', () => {
         expect(lines[0]).toBe('🚀你');
         expect(lines[1]).toBe('好');
     });
+
+    it('does not insert a spurious empty line when a single character exceeds width', () => {
+        const result = wordWrap('🚀', 1);
+        const lines = result.split('\n');
+        expect(lines).toEqual(['🚀']);
+    });
 });
