@@ -753,13 +753,16 @@ export function useAsync<T>(
 
     // Track a version counter to ignore stale responses
     const versionRef = useRef(0);
+    // Always call the latest asyncFn to avoid stale closure
+    const asyncFnRef = useRef(asyncFn);
+    asyncFnRef.current = asyncFn;
 
     const refetch = useCallback(() => {
         const version = ++versionRef.current;
         setLoading(true);
         setError(null);
 
-        asyncFn()
+        asyncFnRef.current()
             .then((result) => {
                 // Only update if this is still the latest request
                 if (versionRef.current === version) {
