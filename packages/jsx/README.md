@@ -90,6 +90,19 @@ function App() {
 
 Modifier syntax: `ctrl+`, `alt+`, `shift+`, `meta+`. Combine them: `ctrl+shift+k`.
 
+**Duplicate keys:** because bindings across calls are additive, it's possible to accidentally register the same key twice (e.g. from two different hooks or conditionals). In non-production builds, `useKeymap` detects this — both within a single call and across multiple calls in the same component — and logs a `console.warn` naming the colliding key, since the second registration silently wins otherwise:
+
+\`\`\`tsx
+useKeymap([{ key: '/', action: () => openSearch() }])
+
+// Registered elsewhere in the same component, same key:
+useKeymap([{ key: '/', action: () => openFilter() }])
+// console.warn: [useKeymap] Duplicate keymap binding: "/|false|false|false"
+// registered more than once in the same component. Last registration wins.
+\`\`\`
+
+This is a warning, not an error — the app keeps running with the last handler active — but it flags the collision instead of leaving the first handler as silent dead code.
+
 ## useMotion
 
 Read the user's motion preference before starting animations.

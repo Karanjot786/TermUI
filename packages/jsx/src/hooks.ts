@@ -330,9 +330,11 @@ export interface KeyBinding {
 }
 
 /**
- * useKeymap — declarative keybindings with optional conflict detection.
+ * useKeymap — declarative keybindings with automatic duplicate-key detection.
  *
- * Supports multiple calls per component — handlers are chained via prevOnInput.
+ * Supports multiple calls per component — bindings are additive, and handlers
+ * are chained via prevOnInput. The most recently registered handler for a key
+ * wins if the same key is bound more than once.
  *
  * ```tsx
  * useKeymap([
@@ -340,6 +342,23 @@ export interface KeyBinding {
  *     { key: 'r', ctrl: true, action: refresh, description: 'Refresh' },
  * ]);
  * ```
+ *
+ * In non-production builds, registering the same key twice — whether inside a
+ * single `useKeymap` call or across multiple calls in the same component —
+ * logs a `console.warn` so the collision isn't silent:
+ *
+ * ```tsx
+ * useKeymap([{ key: '/', action: () => openSearch() }]);
+ * useKeymap([{ key: '/', action: () => openFilter() }]);
+ * // [useKeymap] Duplicate keymap binding: "/|false|false|false" registered
+ * // more than once in the same component. Last registration wins.
+ * ```
+ *
+ * This check runs once per render (state is reset in `setCurrentFiber`), so it
+ * flags real same-render collisions without accumulating stale warnings across
+ * re-renders. It is a `console.warn`, not a thrown error — the last binding
+ * still wins at runtime, this only makes the overwrite visible during
+ * development.
  */
 export function useKeymap(bindings: KeyBinding[]): void {
     const fiber = currentFiber();

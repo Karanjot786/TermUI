@@ -155,6 +155,8 @@ function App() {
 }
 ```
 
+Bindings across multiple `useKeymap` calls in the same component are additive, so it's possible to accidentally register the same key twice. In development, `useKeymap` detects this and logs a `console.warn` naming the key instead of silently letting the later registration win — see the [`@termuijs/jsx` README](./packages/jsx#usekeymap) for details.
+
 ### Focus management
 
 Four hooks for building keyboard-accessible interfaces:
