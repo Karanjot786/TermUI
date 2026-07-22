@@ -145,7 +145,7 @@ export class ScreenRecorder {
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&apos;');
-            svgLines += `  <text x="15" y="${yOffset}" fill="#DCDCCC" font-family="Courier, monospace" font-size="14">${escapedLine}</text>\n`;
+            svgLines += `  <text x="15" y="${yOffset}" fill="#DCDCCC" font-family="Courier, monospace" font-size="14" xml:space="preserve">${escapedLine}</text>\n`;
             yOffset += 18;
         }
 

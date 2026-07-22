@@ -133,6 +133,17 @@ describe('ScreenRecorder', () => {
         expect(svg).toContain('</svg>');
     });
 
+    it('preserves repeated spaces in SVG text rows', () => {
+        const recorder = new ScreenRecorder();
+        recorder.recordFrame('Name    Value\nleft      right');
+
+        const svg = recorder.toSVG();
+
+        expect(svg).toContain('xml:space="preserve"');
+        expect(svg).toContain('Name    Value');
+        expect(svg).toContain('left      right');
+    });
+
     it('validates maxFrames option as a positive integer', () => {
         expect(() => new ScreenRecorder({ maxFrames: 0 })).toThrow('maxFrames must be a positive integer');
         expect(() => new ScreenRecorder({ maxFrames: -5 })).toThrow('maxFrames must be a positive integer');
