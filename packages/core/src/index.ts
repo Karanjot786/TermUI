@@ -12,6 +12,19 @@ export type { FrameStats } from './terminal/Renderer.js';
 export { LayerManager } from './terminal/LayerManager.js';
 export type { Layer } from './terminal/LayerManager.js';
 export { caps, prefersReducedMotion, shouldUseColor, prefersHighContrast } from './terminal/env-caps.js';
+export {
+    detectTerminalCapabilities,
+    getTerminalCapabilities,
+    setTerminalCapabilitiesForTests,
+} from './terminal/capabilities.js';
+export type {
+    TerminalCapabilities,
+    TerminalCapabilityEnv,
+    TerminalCapabilityOptions,
+    TerminalColorLevel,
+    TerminalBackground,
+    TerminalKeybindingMode,
+} from './terminal/capabilities.js';
 export { BOX, BRAILLE_SPIN, BLOCK } from './terminal/ascii-map.js';
 
 // ── Renderer ──────────────────────────────────────────

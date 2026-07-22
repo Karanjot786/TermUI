@@ -1,4 +1,5 @@
-import { ColorDepth, detectColorDepth } from '../style/Color.js';
+import { ColorDepth } from '../style/Color.js';
+import { getTerminalCapabilities } from './capabilities.js';
 
 /**
  * Terminal capability detection hub.
@@ -10,40 +11,31 @@ import { ColorDepth, detectColorDepth } from '../style/Color.js';
 export const caps = {
   /** Detected color depth (None, ANSI16, ANSI256, TrueColor). */
   get colorDepth(): ColorDepth {
-    return detectColorDepth();
+    return getTerminalCapabilities().color.depth;
   },
   /** Whether color output is enabled. Returns false when NO_COLOR or TERM=dumb. */
   get color(): boolean {
-    if (process.env.NO_COLOR !== undefined) return false;
-    if (process.env.TERM === 'dumb') return false;
-    return this.colorDepth !== ColorDepth.None;
+    return getTerminalCapabilities().color.enabled;
   },
   /** Whether Unicode characters are supported. Disabled by NO_UNICODE or TERM=dumb. */
-  unicode: !process.env.NO_UNICODE && process.env.TERM !== 'dumb',
+  get unicode(): boolean {
+    return getTerminalCapabilities().unicode.enabled;
+  },
   /** Whether animations are enabled. Disabled by NO_MOTION or CI environments. */
-  motion:  !process.env.NO_MOTION && !process.env.CI,
+  get motion(): boolean {
+    return getTerminalCapabilities().motion;
+  },
   /** Whether running inside a CI system (CI=1). */
-  ci:      !!process.env.CI,
+  get ci(): boolean {
+    return getTerminalCapabilities().ci;
+  },
   /** Terminal background color (light/dark). Checks TERM_BACKGROUND then COLORFGBG. */
   get background(): 'light' | 'dark' {
-    // Explicit override takes priority over terminal heuristics.
-    if (process.env.TERM_BACKGROUND === 'light') return 'light';
-    if (process.env.TERM_BACKGROUND === 'dark') return 'dark';
-
-    const colorfgbg = process.env.COLORFGBG;
-    if (colorfgbg) {
-      const parts = colorfgbg.split(';');
-      const bg = parseInt(parts[parts.length - 1], 10);
-      if (!Number.isNaN(bg)) return bg < 8 ? 'dark' : 'light';
-    }
-
-    return 'dark';
+    return getTerminalCapabilities().background;
   },
   /** Keyboard navigation mode: 'default' (arrow keys), 'vim' (hjkl), or 'emacs' (C-n/p). */
   get keybindingMode(): 'vim' | 'emacs' | 'default' {
-    const mode = process.env.TERMUI_KEYBINDINGS;
-    if (mode === 'vim' || mode === 'emacs') return mode;
-    return 'default';
+    return getTerminalCapabilities().keybindingMode;
   },
 } as const;
 
