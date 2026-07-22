@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { describe, it, expect, vi } from 'vitest';
+import { Screen, stringWidth } from '@termuijs/core';
 import { parseErrorStack, ErrorOverlay } from './error-overlay.js';
 
 // ─────────────────────────────────────────────────────
@@ -284,16 +284,27 @@ describe('ErrorOverlay rendering — long error messages', () => {
         expect(textOutput).toContain('DEV-SERVER RUNTIME / COMPILE ERROR');
     });
 
-    it('keeps rows within bounds on very narrow screens', () => {
-        const rawTrace = `Error: ${'C'.repeat(200)}\n    at /app/src/main.ts:1:1`;
+    it('clips every write to the visible screen bounds on very narrow screens', () => {
+        const rawTrace = `Error: ${'C'.repeat(200)} ❌\n    at /app/src/main.ts:1:1`;
         const screen = new Screen(4, 6);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        const setCellSpy = vi.spyOn(screen, 'setCell');
         const overlay = new ErrorOverlay(rawTrace);
 
         overlay.render(screen);
 
-        expect(screen.back).toHaveLength(6);
-        for (const row of screen.back) {
-            expect(row).toHaveLength(4);
+        for (const [x, y, text] of writeSpy.mock.calls) {
+            expect(x).toBeGreaterThanOrEqual(0);
+            expect(y).toBeGreaterThanOrEqual(0);
+            expect(y).toBeLessThan(screen.rows);
+            expect(x + stringWidth(String(text))).toBeLessThanOrEqual(screen.cols);
+        }
+
+        for (const [x, y] of setCellSpy.mock.calls) {
+            expect(x).toBeGreaterThanOrEqual(0);
+            expect(x).toBeLessThan(screen.cols);
+            expect(y).toBeGreaterThanOrEqual(0);
+            expect(y).toBeLessThan(screen.rows);
         }
     });
 });

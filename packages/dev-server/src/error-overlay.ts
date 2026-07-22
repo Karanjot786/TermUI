@@ -2,7 +2,7 @@
 // @termuijs/dev-server — Full-screen Error Overlay
 // ─────────────────────────────────────────────────────
 
-import { Screen, type LayoutNode, type RootWidget, stripAnsi, createLayoutNode, defaultStyle } from '@termuijs/core';
+import { Screen, type LayoutNode, type RootWidget, stripAnsi, createLayoutNode, defaultStyle, truncate } from '@termuijs/core';
 
 export interface ParsedError {
     name: string;
@@ -132,7 +132,7 @@ export class ErrorOverlay implements RootWidget {
             const available = cols - startX;
             if (available <= 0) return;
 
-            screen.writeString(startX, y, text.slice(0, available), attrs);
+            screen.writeString(startX, y, truncate(text, available, ''), attrs);
         };
 
         // Clear screen with a consistent background
