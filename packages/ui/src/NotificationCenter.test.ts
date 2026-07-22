@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 
 vi.mock('@termuijs/jsx', async () => {
     const actual = await vi.importActual<typeof import('@termuijs/jsx')>('@termuijs/jsx');
@@ -298,6 +298,20 @@ describe('NotificationCenter rendering and lifecycle', () => {
         const lines = renderLines(center, 12, 4, { x: 0, y: 0, width: 12, height: 4 });
         expect(lines[1]).toContain(' i abcdef');
         expect(lines.join('\n')).not.toContain('klmnopqrstuvwxyz');
+    });
+
+    it('truncates and pads wide notification text by terminal cell width', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const center = new NotificationCenter({ width: 10 });
+        const localScreen = new Screen(30, 10);
+        const writeSpy = vi.spyOn(localScreen, 'writeString');
+
+        store.push('部署完成 ok', 'info');
+        center.updateRect({ x: 0, y: 0, width: 30, height: 10 });
+        center.render(localScreen);
+
+        const rowText = String(writeSpy.mock.calls[0][2]);
+        expect(stringWidth(rowText)).toBe(10);
     });
 
     it.each([

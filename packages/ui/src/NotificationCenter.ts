@@ -6,7 +6,7 @@
 
 import { Widget } from '@termuijs/widgets';
 import { useState, useEffect, registerCleanup } from '@termuijs/jsx';
-import { caps, type Screen } from '@termuijs/core';
+import { caps, stringWidth, truncate, type Screen } from '@termuijs/core';
 import type { Color } from '@termuijs/core';
 
 // Auto-register cleanup for test isolation
@@ -199,7 +199,8 @@ export class NotificationCenter extends Widget {
                 : TYPE_ICONS[notif.type].ascii;
 
             const raw = `${icon} ${notif.message}`;
-            const label = ` ${raw} `.slice(0, tw).padEnd(tw);
+            const clipped = truncate(` ${raw} `, tw, '');
+            const label = clipped + ' '.repeat(Math.max(0, tw - stringWidth(clipped)));
 
             screen.writeString(sx, sy + i, label, {
                 fg: TYPE_COLORS[notif.type],
