@@ -396,4 +396,101 @@ describe('Accordion', () => {
             expect(accordion.getSections()).toBe(SECTIONS);
         });
     });
+
+    describe('13. Nested accordions', () => {
+        const NESTED_SECTIONS: AccordionSection[] = [
+            {
+                title: 'Parent 1',
+                content: 'Parent content',
+                sections: [
+                    { title: 'Child 1.1', content: 'Child 1.1 content' },
+                    { title: 'Child 1.2', content: 'Child 1.2 content' },
+                ],
+            },
+            {
+                title: 'Parent 2',
+                content: 'Parent 2 content',
+                sections: [
+                    { title: 'Child 2.1', content: 'Child 2.1 content' },
+                ],
+            },
+        ];
+
+        it('renders nested section titles when parent is open', () => {
+            const accordion = makeAccordion(NESTED_SECTIONS, {}, 50, 30);
+            const screen = renderAccordion(accordion, 50, 30);
+            const text = allText(screen, 30);
+            expect(text).toContain('Child 1.1');
+            expect(text).toContain('Child 1.2');
+        });
+
+        it('renders nested content when nested section is open', () => {
+            const accordion = makeAccordion(NESTED_SECTIONS, {}, 50, 30);
+            accordion.openNested(0, 1);
+            const screen = renderAccordion(accordion, 50, 30);
+            const text = allText(screen, 30);
+            expect(text).toContain('Child 1.2 content');
+        });
+
+        it('toggleNested opens and closes nested sections', () => {
+            const accordion = makeAccordion(NESTED_SECTIONS, {}, 50, 30);
+            expect(accordion.isNestedOpen(0, 0)).toBe(true); // default
+            accordion.toggleNested(0, 0);
+            expect(accordion.isNestedOpen(0, 0)).toBe(false);
+            accordion.toggleNested(0, 0);
+            expect(accordion.isNestedOpen(0, 0)).toBe(true);
+        });
+
+        it('closeNested closes nested section', () => {
+            const accordion = makeAccordion(NESTED_SECTIONS, {}, 50, 30);
+            accordion.closeNested(0, 0);
+            expect(accordion.isNestedOpen(0, 0)).toBe(false);
+        });
+
+        it('openNested opens nested section', () => {
+            const accordion = makeAccordion(NESTED_SECTIONS, {}, 50, 30);
+            accordion.closeNested(0, 0);
+            accordion.openNested(0, 0);
+            expect(accordion.isNestedOpen(0, 0)).toBe(true);
+        });
+
+        it('getNestedOpenSet returns correct set', () => {
+            const accordion = makeAccordion(NESTED_SECTIONS, {}, 50, 30);
+            accordion.openNested(0, 1);
+            const nestedSet = accordion.getNestedOpenSet(0);
+            expect(nestedSet.has(0)).toBe(true);
+            expect(nestedSet.has(1)).toBe(true);
+        });
+
+        it('handles sections without nested content', () => {
+            const accordion = makeAccordion(SECTIONS, {}, 40, 20);
+            expect(() => accordion.isNestedOpen(0, 0)).not.toThrow();
+            expect(() => accordion.toggleNested(0, 0)).not.toThrow();
+        });
+
+        it('icon property renders in title', () => {
+            const accordion = makeAccordion([
+                { title: 'With Icon', content: 'body', icon: '⚙' },
+                { title: 'No Icon', content: 'body' },
+            ], {}, 40, 20);
+            const screen = renderAccordion(accordion, 40, 20);
+            const text = allText(screen, 20);
+            expect(text).toContain('⚙');
+        });
+    });
+
+    describe('14. Animation support', () => {
+        it('animateToggle calls toggle and marks dirty', () => {
+            const accordion = makeAccordion(SECTIONS);
+            const spy = vi.spyOn(accordion, 'markDirty');
+            accordion.animateToggle(1);
+            expect(accordion.isOpen(1)).toBe(true);
+            expect(spy).toHaveBeenCalled();
+        });
+
+        it('animateToggle ignores out-of-bounds index', () => {
+            const accordion = makeAccordion(SECTIONS);
+            expect(() => accordion.animateToggle(99)).not.toThrow();
+        });
+    });
 });
