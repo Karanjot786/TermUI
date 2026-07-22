@@ -244,13 +244,17 @@ export class Router {
         };
     }
 
-    private _runBeforeEnterGuards(match: RouteMatch, path: string, navigation: NavigationGuardContext): boolean | string {
+    private _runBeforeEnterGuards(match: RouteMatch, path: string, navigation: NavigationGuardContext, guardedPaths?: Set<string>): boolean | string {
         for (const route of match.chain) {
+            if (guardedPaths?.has(route.path)) {
+                continue;
+            }
             const result = route.beforeEnter?.(path, navigation);
             if (navigation.isStale()) return false;
             if (result === false || typeof result === 'string') {
                 return result;
             }
+            guardedPaths?.add(route.path);
         }
         return true;
     }
@@ -266,6 +270,7 @@ export class Router {
             clearForwardStack?: boolean;
             direction?: 'push' | 'replace' | 'back' | 'forward';
             navigation?: NavigationGuardContext;
+            guardedPaths?: Set<string>;
         } = {},
     ): void {
         const navigation = options.navigation ?? this._beginNavigation();
@@ -318,15 +323,16 @@ export class Router {
             this._forwardStack = [];
         }
 
-        const guardResult = this._runBeforeEnterGuards(match, resolvedPath, navigation);
+        const guardedPaths = options.guardedPaths ?? new Set<string>();
+        const guardResult = this._runBeforeEnterGuards(match, resolvedPath, navigation, guardedPaths);
         if (navigation.isStale()) return;
 
-        if (guardResult === false) {
-            return;
-        }
+            if (guardResult === false) {
+                return;
+            }
 
         if (typeof guardResult === 'string') {
-            this._executeNavigation(guardResult, { ...options, clearForwardStack: false, navigation });
+            this._executeNavigation(guardResult, { ...options, clearForwardStack: false, navigation, guardedPaths });
             return;
         }
 
@@ -404,6 +410,8 @@ export class Router {
                     modifyHistory: 'none',
                     clearForwardStack: false,
                     direction: 'back',
+                    navigation,
+                    guardedPaths: new Set<string>(),
                 });
                 return;
             }
@@ -412,7 +420,8 @@ export class Router {
             return;
         }
 
-        const guardResult = this._runBeforeEnterGuards(match, prevPath, navigation);
+        const guardedPaths = new Set<string>();
+        const guardResult = this._runBeforeEnterGuards(match, prevPath, navigation, guardedPaths);
         if (navigation.isStale()) return;
 
         if (guardResult === false) {
@@ -424,7 +433,7 @@ export class Router {
             if (poppedPath) {
                 this._forwardStack.push(poppedPath);
             }
-            this._executeNavigation(guardResult, { clearForwardStack: false, direction: 'back', navigation });
+            this._executeNavigation(guardResult, { clearForwardStack: false, direction: 'back', navigation, guardedPaths });
             return;
         }
 
@@ -460,6 +469,8 @@ export class Router {
                     modifyHistory: 'push',
                     clearForwardStack: false,
                     direction: 'forward',
+                    navigation,
+                    guardedPaths: new Set<string>(),
                 });
                 return;
             }
@@ -468,7 +479,8 @@ export class Router {
             return;
         }
 
-        const guardResult = this._runBeforeEnterGuards(match, nextPath, navigation);
+        const guardedPaths = new Set<string>();
+        const guardResult = this._runBeforeEnterGuards(match, nextPath, navigation, guardedPaths);
         if (navigation.isStale()) return;
 
         if (guardResult === false) {
@@ -482,6 +494,7 @@ export class Router {
                 clearForwardStack: false,
                 direction: 'forward',
                 navigation,
+                guardedPaths: new Set<string>(),
             });
             return;
         }
