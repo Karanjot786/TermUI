@@ -162,6 +162,8 @@ export class QuizPrompt extends Widget {
         }
         
         // Render feedback message
+        if (row >= height) return;
+
         if (this._feedback === 'correct') {
             screen.writeString(x, y + row, '✓ Correct!'.slice(0, width), { ...attrs, fg: this._correctColor });
         } else if (this._feedback === 'wrong') {

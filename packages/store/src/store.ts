@@ -494,6 +494,7 @@ export function createStore<T extends object>(
     };
 
     const destroy = (): void => {
+        _batchStores.delete(listeners);
         listeners.clear();
         if (writeTimeout) {
             clearTimeout(writeTimeout);

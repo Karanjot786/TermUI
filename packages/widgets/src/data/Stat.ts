@@ -1,4 +1,4 @@
-import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { validateFinite } from './utils.js';
 
@@ -37,18 +37,20 @@ export class Stat extends Widget {
         if (width <= 0 || height <= 0) return;
 
         const attrs = styleToCellAttrs(this._style);
+        const label = truncate(this._label, width, '');
+        const value = truncate(this._value, width, '');
 
         // Row 0: label (bold)
-        screen.writeString(x, y, this._label, { ...attrs, bold: true });
+        screen.writeString(x, y, label, { ...attrs, bold: true });
 
         if (height < 2) return;
 
         // Row 1: value
-        screen.writeString(x, y + 1, this._value, { ...attrs, fg: this._valueColor });
+        screen.writeString(x, y + 1, value, { ...attrs, fg: this._valueColor });
 
         // Optional delta arrow
         if (this._delta !== undefined) {
-            const valueWidth = stringWidth(this._value);
+            const valueWidth = stringWidth(value);
             const arrowX = x + valueWidth + 1;
 
             if (arrowX >= x + width) return;

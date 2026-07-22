@@ -68,6 +68,15 @@ describe('Router', () => {
         expect(r.params.id).toBe('42');
     });
 
+    it('push serializes array query values as repeated params', () => {
+        const r = new Router();
+        r.addRoute('/search', () => 'Search');
+        r.push('/search', { query: { tag: ['ui', 'data'] } });
+
+        expect(r.currentPath).toBe('/search?tag=ui&tag=data');
+        expect(r.query).toEqual({ tag: ['ui', 'data'] });
+    });
+
     it('navigate event fires on push', () => {
         const r = new Router();
         r.addRoute('/home', () => 'Home');
@@ -192,6 +201,33 @@ describe('Router', () => {
         r.push('/admin');
         
         expect(r.currentPath).toBe('/login');
+    });
+
+    it('parent beforeEnter can block nested child navigation', () => {
+        const r = new Router();
+        const parentGuard = vi.fn().mockReturnValue(false);
+        r.addRoute('/admin', () => 'Admin', undefined, [
+            { path: 'users', component: () => 'Users' },
+        ], undefined, { beforeEnter: parentGuard });
+
+        r.push('/admin/users');
+
+        expect(parentGuard).toHaveBeenCalledWith('/admin/users');
+        expect(r.current).toBeNull();
+        expect(r.historyLength).toBe(0);
+    });
+
+    it('parent beforeEnter can redirect nested child navigation', () => {
+        const r = new Router();
+        r.addRoute('/login', () => 'Login');
+        r.addRoute('/admin', () => 'Admin', undefined, [
+            { path: 'users', component: () => 'Users' },
+        ], undefined, { beforeEnter: () => '/login' });
+
+        r.push('/admin/users');
+
+        expect(r.currentPath).toBe('/login');
+        expect(r.current?.route.path).toBe('/login');
     });
 
     it('back() with beforeEnter redirect does not corrupt history', () => {
