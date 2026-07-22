@@ -57,6 +57,17 @@ export interface TestInstance {
     queryByText(text: string): Widget | null;
 
     /**
+     * Find a widget whose text content includes the given string.
+     * Throws if nothing matches.
+     */
+    findByText(text: string): Widget;
+    
+    /**
+     * Find all widgets having the specified accessibility role.
+     */
+    queryAllByRole(role: string): Widget[];
+
+    /**
      * Find the first widget of a specific type (by constructor).
      * Returns null instead of throwing when nothing matches.
      */
@@ -342,6 +353,29 @@ export function render(
                 return false;
             });
             return matches.length > 0 ? matches[0] : null;
+        },
+
+        findByText(text: string): Widget {
+            const widget = this.queryByText(text);
+        
+            if (!widget) {
+                throw new Error(
+                    `Unable to find widget with text "${text}"`,
+                );
+            }
+        
+            return widget;
+        },
+
+        queryAllByRole(role: string): Widget[] {
+            return walkWidgets(container, (widget) => {
+                const accessibility = (widget as any).accessibility;
+        
+                return (
+                    (widget as any).role === role ||
+                    accessibility?.role === role
+                );
+            });
         },
 
         queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null {
