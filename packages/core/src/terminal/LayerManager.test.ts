@@ -37,7 +37,7 @@ describe('LayerManager — Hit Testing', () => {
         expect(lm.hitTest(7, 7)).toBe('bg');
     });
 
-    it('equal z-index overlapping regions resolve to the last written region', () => {
+    it('equal z-index overlapping regions keep the first owner stable', () => {
         const lm = new LayerManager(20, 10);
         lm.clearHitGrid();
 
@@ -46,8 +46,8 @@ describe('LayerManager — Hit Testing', () => {
 
         // Overlapping at (3, 3), (3, 4), (4, 3), (4, 4)
         expect(lm.hitTest(2, 2)).toBe('widgetA');
-        expect(lm.hitTest(3, 3)).toBe('widgetB');
-        expect(lm.hitTest(4, 4)).toBe('widgetB');
+        expect(lm.hitTest(3, 3)).toBe('widgetA');
+        expect(lm.hitTest(4, 4)).toBe('widgetA');
     });
 
     it('a cell outside all regions returns null', () => {
