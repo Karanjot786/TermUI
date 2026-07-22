@@ -15,15 +15,37 @@ export interface RouteParams {
 }
 
 export interface QueryParams {
-    [key: string]: string;
+    [key: string]: string | string[];
 }
 
 export function parseQuery(queryString: string): QueryParams {
-    return Object.fromEntries(new URLSearchParams(queryString));
+    const params = new URLSearchParams(queryString);
+    const result: QueryParams = {};
+    for (const [key, value] of params) {
+        const existing = result[key];
+        if (existing === undefined) {
+            result[key] = value;
+        } else if (Array.isArray(existing)) {
+            existing.push(value);
+        } else {
+            result[key] = [existing, value];
+        }
+    }
+    return result;
 }
 
 export function serializeQuery(query: QueryParams): string {
-    return new URLSearchParams(query).toString();
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+        if (Array.isArray(value)) {
+            for (const item of value) {
+                params.append(key, item);
+            }
+        } else {
+            params.append(key, value);
+        }
+    }
+    return params.toString();
 }
 
 export type RedirectTarget =
@@ -134,11 +156,12 @@ function matchNested(
             for (let i = 0; i < paramNames.length; i++) {
                 params[paramNames[i]] = match[i + 1] ?? '';
             }
+            const nextChain = [...chain, route];
             return {
                 route,
-                chain: [...chain, route],
+                chain: nextChain,
                 params,
-                meta: route.meta ?? {},
+                meta: Object.assign({}, ...nextChain.map(r => r.meta ?? {})),
                 query: {},
             };
         }
@@ -159,7 +182,7 @@ export function matchRoute(path: string, routes: Route[]): RouteMatch | null {
 
     const match = matchNested(pathname, routes);
     if (match) {
-        match.query = Object.fromEntries(new URLSearchParams(queryString));
+        match.query = parseQuery(queryString);
         return match;
     }
     return null;

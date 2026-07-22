@@ -369,6 +369,75 @@ export interface UseFetchResult<T> {
     loading: boolean;
 }
 
+// Ref-counted AbortControllers keyed by cache key. Multiple useFetch
+// instances requesting the same key share one in-flight fetch (via
+// fetchShared); the underlying request is only aborted once every
+// subscriber for that key has released it (unmounted or moved on to a
+// different url/key).
+interface SharedAbortEntry {
+    controller: AbortController;
+    refCount: number;
+}
+
+const sharedAbortControllers = new Map<string, SharedAbortEntry>();
+
+function acquireAbortController(key: string): AbortController {
+    let entry = sharedAbortControllers.get(key);
+    if (!entry) {
+        entry = { controller: new AbortController(), refCount: 0 };
+        sharedAbortControllers.set(key, entry);
+    }
+    entry.refCount += 1;
+    return entry.controller;
+}
+
+function releaseAbortController(key: string): void {
+    const entry = sharedAbortControllers.get(key);
+    if (!entry) return;
+    entry.refCount -= 1;
+    if (entry.refCount <= 0) {
+        entry.controller.abort();
+        sharedAbortControllers.delete(key);
+    }
+}
+
+/**
+ * Test-only helper to reset the module-scoped shared abort controller
+ * registry between test cases. Not part of the public API — not re-exported
+ * from index.ts. A test that misses an unmount/cleanup step could otherwise
+ * leave a stale refCount behind for later cases in the same process.
+ */
+export function __resetSharedAbortControllersForTests(): void {
+    for (const entry of sharedAbortControllers.values()) {
+        entry.controller.abort();
+    }
+    sharedAbortControllers.clear();
+}
+
+function stringifyFetchCacheKey(key: unknown): string {
+    const seen = new WeakSet<object>();
+    const serialized = JSON.stringify(key, (_property, value) => {
+        if (typeof value === 'bigint') {
+            return `${value.toString()}n`;
+        }
+
+        if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) {
+                return '[Circular]';
+            }
+            seen.add(value);
+        }
+
+        return value;
+    });
+
+    return serialized ?? String(key);
+}
+
+function getFetchCacheKey(url: string, key: unknown): string {
+    return key === undefined ? url : `${url}::${stringifyFetchCacheKey(key)}`;
+}
+
 /**
  * useFetch — reactive fetch hook with caching.
  *
@@ -379,9 +448,7 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
     const staleTime = options?.staleTime ?? 0;
     const retry = options?.retry ?? 0;
     const retryDelay = options?.retryDelay ?? 300;
-    const cacheKey = options?.key === undefined
-        ? url
-        : `${url}::${JSON.stringify(options.key)}`;
+    const cacheKey = getFetchCacheKey(url, options?.key);
     const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [data, setData] = useState<T | null>(() => {
@@ -427,13 +494,15 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
 
         setLoading(true);
 
+        const controller = acquireAbortController(cacheKey);
+
         /**
          * Attempt the fetch and, on failure, schedule a retry using
          * exponential backoff. `attempt` is zero-based and controls the
          * backoff multiplier `retryDelay * 2 ** attempt`.
          */
         const fetchWithRetry = (attempt: number) => {
-            fetchShared<T>(cacheKey, () => fetch(url)
+            fetchShared<T>(cacheKey, () => fetch(url, { signal: controller.signal })
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
                     return res.json() as Promise<T>;
@@ -449,6 +518,11 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
             })
             .catch(err => {
                 if (!isMounted) return;
+
+                // The request was aborted because this hook instance unmounted
+                // or moved on to a different url/key. There is nothing left to
+                // report — the cleanup below already handles this case.
+                if (err instanceof Error && err.name === 'AbortError') return;
 
                 if (attempt < retry) {
                     clearRetryTimer();
@@ -473,6 +547,7 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
         return () => {
             isMounted = false;
             clearRetryTimer();
+            releaseAbortController(cacheKey);
         };
     }, [url, staleTime, retry, retryDelay, cacheKey]);
 

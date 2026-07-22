@@ -305,3 +305,27 @@ describe('DroppableWidget', () => {
         }
     });
 });
+
+describe('Group isolation', () => {
+    it('a drag active in one group does not affect another group\'s state', () => {
+        const onDropA = vi.fn();
+        const onDropB = vi.fn();
+
+        const draggableA = new DraggableWidget({ id: 'item-a', group: 'a' });
+        const draggableB = new DraggableWidget({ id: 'item-b', group: 'b' });
+        const droppableA = new DroppableWidget({ id: 'target-a', group: 'a', onDrop: onDropA });
+        const droppableB = new DroppableWidget({ id: 'target-b', group: 'b', onDrop: onDropB });
+
+        draggableA.handleKey(keyEvent('space'));
+        draggableB.handleKey(keyEvent('space'));
+
+        // Dropping in group 'b' must only resolve group 'b's drag.
+        droppableB.handleKey(keyEvent('enter'));
+        expect(onDropB).toHaveBeenCalledWith('item-b');
+        expect(onDropA).not.toHaveBeenCalled();
+
+        // Group 'a's drag must still be active — group 'b' resolving did not clear it.
+        droppableA.handleKey(keyEvent('enter'));
+        expect(onDropA).toHaveBeenCalledWith('item-a');
+    });
+});
