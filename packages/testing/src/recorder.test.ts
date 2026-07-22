@@ -63,6 +63,37 @@ describe('ScreenRecorder', () => {
         expect(recorder.getFrames()[0].timestamp).toBe(0);
     });
 
+    it('supports an injected clock for deterministic timestamps', () => {
+        let currentTime = 10_000;
+        const recorder = new ScreenRecorder({ now: () => currentTime });
+
+        recorder.recordFrame('first');
+        currentTime += 250;
+        recorder.recordFrame('second');
+
+        expect(recorder.getFrames()).toEqual([
+            { timestamp: 0, buffer: 'first' },
+            { timestamp: 250, buffer: 'second' },
+        ]);
+
+        const header = JSON.parse(recorder.toAsciicast({ title: 'Stable' }).split('\n')[0]);
+        expect(header.timestamp).toBe(10);
+    });
+
+    it('resets the injected clock baseline on clear()', () => {
+        let currentTime = 1_000;
+        const recorder = new ScreenRecorder({ now: () => currentTime });
+
+        recorder.recordFrame('before');
+        currentTime = 1_500;
+        recorder.clear();
+        recorder.recordFrame('after');
+
+        expect(recorder.getFrames()).toEqual([
+            { timestamp: 0, buffer: 'after' },
+        ]);
+    });
+
     it('respects enabled flag and environment variable RECORD_DISABLED', () => {
         // Disabled via option
         const recorder1 = new ScreenRecorder({ enabled: false });
