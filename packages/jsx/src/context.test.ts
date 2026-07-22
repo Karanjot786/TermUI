@@ -2,10 +2,10 @@
 // Tests — Context API (createContext / useContext)
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, beforeEach } from 'vitest';
-import { createContext, useContext } from './context.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createContext, useContext, useContextSelector } from './context.js';
 import {
-    createFiber, setCurrentFiber, clearCurrentFiber,
+    createFiber, setCurrentFiber, clearCurrentFiber, setRequestRender,
     type Fiber,
 } from './hooks.js';
 
@@ -32,6 +32,7 @@ describe('useContext', () => {
     });
 
     afterEach(() => {
+        setRequestRender(null);
         clearCurrentFiber();
     });
 
@@ -103,6 +104,38 @@ describe('useContext', () => {
         ctx.Provider({ value: 'custom', children: undefined as any });
 
         expect(fiber.contextValues.get(ctx._id)).toBe('custom');
+    });
+
+    it('useContextSelector returns a selected value', () => {
+        const ctx = createContext({ count: 0, label: 'idle' });
+        fiber.contextValues.set(ctx._id, { count: 2, label: 'ready' });
+
+        expect(useContextSelector(ctx, value => value.label)).toBe('ready');
+    });
+
+    it('selector subscriptions skip updates when the selected value is unchanged', async () => {
+        const ctx = createContext({ count: 0, label: 'idle' });
+        const provider = createFiber();
+        const consumer = createFiber(provider);
+        const render = vi.fn();
+        setRequestRender(render);
+
+        setCurrentFiber(provider);
+        ctx.Provider({ value: { count: 0, label: 'idle' }, children: undefined as any });
+
+        setCurrentFiber(consumer);
+        expect(useContextSelector(ctx, value => value.count)).toBe(0);
+
+        setCurrentFiber(provider);
+        ctx.Provider({ value: { count: 0, label: 'busy' }, children: undefined as any });
+        await Promise.resolve();
+
+        expect(render).not.toHaveBeenCalled();
+
+        ctx.Provider({ value: { count: 1, label: 'busy' }, children: undefined as any });
+        await Promise.resolve();
+
+        expect(render).toHaveBeenCalledOnce();
     });
 });
 

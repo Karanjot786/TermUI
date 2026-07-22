@@ -20,6 +20,14 @@ export interface ChildFiberEntry {
     component: FC<any>;
 }
 
+export interface ContextSubscription {
+    fiber: Fiber;
+    providerSubscribers: Set<ContextSubscription>;
+    selector?: (value: any) => any;
+    selectedValue?: any;
+    equalityFn?: (a: any, b: any) => boolean;
+}
+
 export interface Fiber {
     id: number;
     hooks: HookState[];
@@ -32,8 +40,8 @@ export interface Fiber {
     intervals: ReturnType<typeof setInterval>[];
     /** Context values provided by this fiber's component */
     contextValues: Map<symbol, any>;
-    contextSubscribers?: Map<symbol, Set<Fiber>>;
-    contextDependencies?: Set<Set<Fiber>>;
+    contextSubscribers?: Map<symbol, Set<ContextSubscription>>;
+    contextDependencies?: Set<ContextSubscription>;
     /** Parent fiber for context lookup */
     parent?: Fiber;
     // ── ErrorBoundary fields ──
@@ -669,8 +677,8 @@ export function destroyFiber(fiber: Fiber): void {
     fiber.contextValues.clear();
     
     if (fiber.contextDependencies) {
-        for (const subs of fiber.contextDependencies) {
-            subs.delete(fiber);
+        for (const sub of fiber.contextDependencies) {
+            sub.providerSubscribers.delete(sub);
         }
         fiber.contextDependencies.clear();
     }

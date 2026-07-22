@@ -54,8 +54,8 @@ export type { SuspenseProps } from './Suspense.js';
 export { lazy } from './lazy.js';
 
 // ── Context ──
-export { createContext, useContext } from './context.js';
-export type { Context } from './context.js';
+export { createContext, useContext, useContextSelector } from './context.js';
+export type { Context, ContextEqualityFn, ContextSelector } from './context.js';
 
 // ── Memoization ──
 export { memo } from './memo.js';
