@@ -25,6 +25,13 @@ export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThe
 // Design Tokens
 export { systemTheme, defaultDark, defaultLight, detectDark, tokensToTSS } from './tokens.js';
 export type { ThemeTokens } from './tokens.js';
+export { compileThemeTokens, validateThemeTokens } from './token-compiler.js';
+export type {
+  CompiledThemeTokens,
+  ThemeTokenCompileOptions,
+  ThemeTokenDiagnostic,
+  ThemeTokenName,
+} from './token-compiler.js';
 
 // Named ThemeTokens
 export {
