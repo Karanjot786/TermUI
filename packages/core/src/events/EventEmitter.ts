@@ -1,4 +1,4 @@
-// ─────────────────────────────────────────────────────
+﻿// ─────────────────────────────────────────────────────
 // @termuijs/core — Typed Event Emitter
 // ─────────────────────────────────────────────────────
 
@@ -10,6 +10,8 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
     private _handlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
     private _onceHandlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
     private _emitting: Set<keyof TEventMap> = new Set();
+    private _emitStack: Array<keyof TEventMap> = [];
+    private _reentrantQueue: Array<{ event: keyof TEventMap; data: any }> = [];
 
     /** Optional error handler for event handler errors. Called when a handler throws. */
     onError?: (event: keyof TEventMap, error: unknown) => void;
@@ -69,19 +71,27 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
      * so that re-entrant `emit()` calls on the same event cannot re-fire them.
      */
     emit<K extends keyof TEventMap>(event: K, data: TEventMap[K]): void {
-        // Snap-shot and remove once handlers before firing anything
-        const onceSet = this._onceHandlers.get(event);
-        const onceSnapshot: ((data: any) => void)[] = [];
-        if (onceSet) {
-            for (const handler of onceSet) {
-                onceSnapshot.push(handler);
+        if (this._emitting.has(event)) {
+            if (this._emitStack[this._emitStack.length - 1] === event) {
+                return;
             }
-            this._onceHandlers.delete(event);
+            this._reentrantQueue.push({ event, data });
+            return;
         }
 
-        // Regular handlers — iterate over a snapshot to prevent concurrent modification issues
-        if (!this._emitting.has(event)) {
-            this._emitting.add(event);
+        this._emitting.add(event);
+        this._emitStack.push(event);
+
+        try {
+            const onceSet = this._onceHandlers.get(event);
+            const onceSnapshot: ((data: any) => void)[] = [];
+            if (onceSet) {
+                for (const handler of onceSet) {
+                    onceSnapshot.push(handler);
+                }
+                this._onceHandlers.delete(event);
+            }
+
             const handlers = this._handlers.get(event);
             if (handlers) {
                 for (const handler of [...handlers]) {
@@ -90,14 +100,24 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
                     }
                 }
             }
+
+            for (const handler of onceSnapshot) {
+                try { handler(data); } catch (err) {
+                    this.onError?.(event, err);
+                }
+            }
+        } finally {
+            this._emitStack.pop();
             this._emitting.delete(event);
         }
 
-        // Once handlers — fire removed handlers
-        for (const handler of onceSnapshot) {
-            try { handler(data); } catch (err) {
-                this.onError?.(event, err);
-            }
+        this._drainQueue();
+    }
+
+    private _drainQueue(): void {
+        while (this._reentrantQueue.length > 0) {
+            const queued = this._reentrantQueue.shift()!;
+            this.emit(queued.event, queued.data);
         }
     }
 
