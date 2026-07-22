@@ -204,6 +204,22 @@ describe('App', () => {
         });
     });
 
+    describe('mount()', () => {
+        it('restores terminal state and rethrows when interactive setup throws (#2014)', async () => {
+            const root = createMockRootWidget();
+            root.mount = () => {
+                throw new Error('boom');
+            };
+            const app = new App(root, createInteractiveTestOptions());
+            const restoreSpy = vi.spyOn(app.terminal, 'restore');
+
+            await expect(app.mount()).rejects.toThrow('boom');
+
+            expect(restoreSpy).toHaveBeenCalledTimes(1);
+            expect((app as any)._mounted).toBe(false);
+        });
+    });
+
     describe('exit()', () => {
         afterEach(() => vi.restoreAllMocks());
 
@@ -541,6 +557,73 @@ describe('App', () => {
             expect(root.renderCount).toBe(rootRenderBefore);
 
             app.exit(0);
+            await mountPromise.catch(() => {});
+        });
+    });
+
+    describe('runtime hit-grid population', () => {
+        it('populates the layer hit-grid from the mounted widget tree', async () => {
+            const { root, first } = createFocusTestRoot();
+            const app = new App(root, createInteractiveTestOptions());
+
+            const mountPromise = app.mount();
+            await new Promise(r => setImmediate(r));
+
+            expect(app.layers.hitTest(0, 0)).toBe(first.id);
+
+            app.unmount();
+            await mountPromise.catch(() => {});
+        });
+
+        it('rebuilds the hit-grid when geometry changes without a full widget render pass', async () => {
+            const widget = {
+                id: 'moved',
+                rect: { x: 0, y: 0, width: 4, height: 4 },
+                style: { visible: true, zIndex: 0 },
+                parent: null,
+                events: { emit() {} },
+            };
+            const root = {
+                id: 'root',
+                rect: { x: 0, y: 0, width: 0, height: 0 },
+                style: { visible: true, zIndex: 0 },
+                children: [widget],
+                _children: [widget],
+                isDirty: false,
+                getLayoutNode() {
+                    return {
+                        id: 'root',
+                        style: {},
+                        children: [],
+                        computed: { x: 0, y: 0, width: 20, height: 20 },
+                    };
+                },
+                syncLayout() {},
+                render() {},
+                mount() {},
+                unmount() {},
+                clearDirty() { this.isDirty = false; },
+                markDirty() { this.isDirty = true; },
+            };
+            const app = new App(root as any, createInteractiveTestOptions());
+
+            const mountPromise = app.mount();
+            await new Promise(r => setImmediate(r));
+
+            (app as any)._hitGridDirty = true;
+            (app as any).requestRender();
+            await new Promise(r => setImmediate(r));
+
+            expect(app.layers.hitTest(1, 1)).toBe(widget.id);
+
+            widget.rect = { x: 10, y: 10, width: 4, height: 4 };
+            (app as any)._hitGridDirty = true;
+            (app as any).requestRender();
+            await new Promise(r => setImmediate(r));
+
+            expect(app.layers.hitTest(1, 1)).toBeNull();
+
+            app.unmount();
             await mountPromise.catch(() => {});
         });
     });

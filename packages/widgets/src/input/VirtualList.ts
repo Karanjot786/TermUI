@@ -121,6 +121,21 @@ export class VirtualList extends Widget {
         this.markDirty();
     }
 
+    /**
+     * Invalidate the render cache without replacing the render function.
+     *
+     * The cache only tracks index, selection, and focus state, so if
+     * `renderItem` closes over mutable data (e.g., an external array) and
+     * that data changes, previously rendered rows are reused unchanged.
+     * Call this after mutating that backing data so the next `render()`
+     * re-invokes `renderItem` for every visible row instead of serving
+     * stale cached content.
+     */
+    invalidateCache(): void {
+        this._clearCache();
+        this.markDirty();
+    }
+
     /** Move selection up by one */
     selectPrev(): void {
         if (this._selectedIndex > 0) {
@@ -321,6 +336,9 @@ export class VirtualList extends Widget {
 
         // Only render items in the visible window
         for (let idx = startIdx; idx < endIdx; idx++) {
+            // Bounds check: ensure index is within valid range
+            if (idx < 0 || idx >= this._totalItems) continue;
+
             const rowY = y + (idx - this._scrollOffset) * this._itemHeight;
 
             // Skip if outside the visible rect

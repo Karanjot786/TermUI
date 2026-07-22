@@ -64,8 +64,8 @@ describe('ANSI Escape Constants', () => {
     });
 
     it('should define mouse tracking constants', () => {
-        expect(enableMouse).toBe('\x1b[?1000h\x1b[?1002h\x1b[?1006h');
-        expect(disableMouse).toBe('\x1b[?1000l\x1b[?1002l\x1b[?1006l');
+        expect(enableMouse).toBe('\x1b[?1000h\x1b[?1003h\x1b[?1015h\x1b[?1006h');
+        expect(disableMouse).toBe('\x1b[?1000l\x1b[?1003l\x1b[?1015l\x1b[?1006l');
     });
 
     it('should define bracketed paste constants', () => {

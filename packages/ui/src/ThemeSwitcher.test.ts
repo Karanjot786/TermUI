@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 import { ThemeSwitcher } from './ThemeSwitcher.js';
 
 function rowText(screen: Screen, row: number): string {
@@ -131,5 +131,19 @@ describe('ThemeSwitcher', () => {
         expect(row1).toContain('*> Light');
         
         vi.restoreAllMocks();
+    });
+
+    it('clips wide theme names to the widget width', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const ts = new ThemeSwitcher({ themes: ['你好你好'], activeTheme: '你好你好' });
+        const screen = new Screen(6, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        ts.updateRect({ x: 0, y: 0, width: 6, height: 1 });
+        ts.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(6);
+        }
     });
 });

@@ -4,6 +4,8 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { BrailleCanvas } from './BrailleCanvas.js';
+import { filterFinite } from './utils.js';
 
 export interface LineChartOptions {
     /** Color of the plotted points/lines */
@@ -18,6 +20,8 @@ export interface LineChartOptions {
     max?: number;
     /** Minimum Y value (auto if not set) */
     min?: number;
+    /** Whether to use Braille canvas for high-resolution plotting */
+    useBraille?: boolean;
 }
 
 // Unicode point character; ASCII fallback
@@ -38,25 +42,27 @@ export class LineChart extends Widget {
     private _yLabel: string;
     private _max?: number;
     private _min?: number;
+    private _useBraille: boolean;
 
     constructor(data: number[], style: Partial<Style> = {}, opts: LineChartOptions = {}) {
         super(style);
-        this._data = data;
+        this._data = filterFinite(data);
         this._color = opts.color ?? { type: 'named', name: 'cyan' };
         this._showYAxis = opts.showYAxis ?? false;
         this._showXAxis = opts.showXAxis ?? false;
         this._yLabel = opts.yLabel ?? '';
         this._max = opts.max;
         this._min = opts.min;
+        this._useBraille = opts.useBraille ?? false;
     }
 
     setData(data: number[]): void {
-        this._data = data;
+        this._data = filterFinite(data);
         this.markDirty();
     }
 
     pushValue(value: number): void {
-        this._data.push(value);
+        this._data.push(Number.isFinite(value) ? value : 0);
         this.markDirty();
     }
 
@@ -106,28 +112,60 @@ export class LineChart extends Widget {
             }
         }
 
-        // Render points and connectors
-        const pointChar = caps.unicode ? POINT_CHAR_UNICODE : POINT_CHAR_ASCII;
+        if (this._useBraille) {
+            const pixelWidth = plotWidth * 2;
+            const pixelHeight = plotHeight * 4;
+            const canvas = new BrailleCanvas({
+                width: pixelWidth,
+                height: pixelHeight,
+                color: this._color,
+            });
 
-        let prevRow: number | null = null;
-        for (let col = 0; col < samples.length; col++) {
-            const val = samples[col];
-            if (val === undefined) continue;
-            const row = toRow(val);
-
-            // Draw vertical connector from prev point to current
-            if (prevRow !== null && Math.abs(row - prevRow) > 1) {
-                const top = Math.min(prevRow, row) + 1;
-                const bottom = Math.max(prevRow, row);
-                for (let r = top; r < bottom; r++) {
-                    screen.setCell(plotX + col, y + r, { char: '│', fg: this._color, dim: true });
+            let prevPixelY: number | null = null;
+            for (let px = 0; px < pixelWidth; px++) {
+                const idx = Math.floor((px / pixelWidth) * this._data.length);
+                const val = this._data[Math.min(idx, this._data.length - 1)];
+                if (val === undefined) continue;
+                const py = Math.max(0, Math.min(pixelHeight - 1, Math.round((1 - (val - min) / range) * (pixelHeight - 1))));
+                if (prevPixelY !== null) {
+                    canvas.drawLine(px - 1, prevPixelY, px, py);
+                } else {
+                    canvas.drawPixel(px, py);
                 }
+                prevPixelY = py;
             }
 
-            // Draw point
-            screen.setCell(plotX + col, y + row, { char: pointChar, fg: this._color });
+            canvas.updateRect({
+                x: plotX,
+                y: y,
+                width: plotWidth,
+                height: plotHeight,
+            });
+            canvas.render(screen);
+        } else {
+            // Render points and connectors
+            const pointChar = caps.unicode ? POINT_CHAR_UNICODE : POINT_CHAR_ASCII;
 
-            prevRow = row;
+            let prevRow: number | null = null;
+            for (let col = 0; col < samples.length; col++) {
+                const val = samples[col];
+                if (val === undefined) continue;
+                const row = toRow(val);
+
+                // Draw vertical connector from prev point to current
+                if (prevRow !== null && Math.abs(row - prevRow) > 1) {
+                    const top = Math.min(prevRow, row) + 1;
+                    const bottom = Math.max(prevRow, row);
+                    for (let r = top; r < bottom; r++) {
+                        screen.setCell(plotX + col, y + r, { char: '│', fg: this._color, dim: true });
+                    }
+                }
+
+                // Draw point
+                screen.setCell(plotX + col, y + row, { char: pointChar, fg: this._color });
+
+                prevRow = row;
+            }
         }
 
         // X axis

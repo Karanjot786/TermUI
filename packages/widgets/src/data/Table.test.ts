@@ -130,4 +130,75 @@ describe('Table', () => {
         });
     });
 
+    describe('page and jump navigation', () => {
+        // 50 rows, viewport height 10, showHeader disabled so pageSize === height (10)
+        // and row 0 is unambiguously the "first row" (no header-focus state at -1).
+        const manyRows = Array.from({ length: 50 }).map((_, i) => ({ name: `Row${i}`, age: i }));
+
+        function makePagedTable() {
+            const table = new Table(COLUMNS, manyRows, {}, { showHeader: false });
+            table.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+            return table;
+        }
+
+        it('pagedown advances the selected row by a page', () => {
+            const table = makePagedTable();
+            table.handleKey({ key: 'pagedown' } as any);
+            expect(table.selectedRow).toBe(10);
+
+            table.handleKey({ key: 'pagedown' } as any);
+            expect(table.selectedRow).toBe(20);
+        });
+
+        it('pagedown is clamped at the last row', () => {
+            const table = makePagedTable();
+            for (let i = 0; i < 10; i++) {
+                table.handleKey({ key: 'pagedown' } as any);
+            }
+            expect(table.selectedRow).toBe(manyRows.length - 1);
+
+            // One more pagedown past the end stays clamped
+            table.handleKey({ key: 'pagedown' } as any);
+            expect(table.selectedRow).toBe(manyRows.length - 1);
+        });
+
+        it('pageup goes back a page', () => {
+            const table = makePagedTable();
+            table.handleKey({ key: 'end' } as any);
+            expect(table.selectedRow).toBe(manyRows.length - 1); // 49
+
+            table.handleKey({ key: 'pageup' } as any);
+            expect(table.selectedRow).toBe(manyRows.length - 1 - 10); // 39
+        });
+
+        it('pageup is clamped at row 0', () => {
+            const table = makePagedTable();
+            table.handleKey({ key: 'down' } as any); // selectedRow = 1
+            table.handleKey({ key: 'pageup' } as any);
+            expect(table.selectedRow).toBe(0);
+
+            // Another pageup from row 0 stays clamped
+            table.handleKey({ key: 'pageup' } as any);
+            expect(table.selectedRow).toBe(0);
+        });
+
+        it('home jumps to the first row', () => {
+            const table = makePagedTable();
+            table.handleKey({ key: 'down' } as any);
+            table.handleKey({ key: 'down' } as any);
+            expect(table.selectedRow).toBe(2);
+
+            table.handleKey({ key: 'home' } as any);
+            expect(table.selectedRow).toBe(0);
+        });
+
+        it('end jumps to the last row', () => {
+            const table = makePagedTable();
+            expect(table.selectedRow).toBe(0);
+
+            table.handleKey({ key: 'end' } as any);
+            expect(table.selectedRow).toBe(manyRows.length - 1);
+        });
+    });
+
 });

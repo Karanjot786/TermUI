@@ -35,10 +35,16 @@ export type { FPSCounterOptions } from './display/FPSCounter.js';
 export { Pty } from './display/Pty.js';
 export type { PtyOptions } from './display/Pty.js';
 export { PerformanceOverlay } from './display/PerformanceOverlay.js';
+export { Image } from './display/Image.js';
+export type { ImageOptions } from './display/Image.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
 export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
 export type { ScrollRange } from './input/virtual-scroll.js';
+
+// ── Spring Scroll Helper ─────────────────────────────
+export { calculateSpringScroll } from './scroll.js';
+export type { ScrollSpringState } from './scroll.js';
 
 // ─────────────────────────────────────────────────────
 
@@ -91,6 +97,8 @@ export type { BrailleCanvasOptions } from './data/BrailleCanvas.js';
 export { Calendar } from './data/Calendar.js';
 export type { CalendarOptions } from './data/Calendar.js';
 export { Sparkline } from './data/Sparkline.js';
+export { Chart } from './data/Chart.js';
+export type { ChartOptions, ChartSeries } from './data/Chart.js';
 export type { SparklineOptions } from './data/Sparkline.js';
 export { StatusIndicator } from './data/StatusIndicator.js';
 export type { StatusIndicatorOptions } from './data/StatusIndicator.js';
@@ -130,7 +138,14 @@ export type { DraggableOptions, DroppableOptions } from './layout/DragAndDrop.js
 export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { SplitPane } from './layout/SplitPane.js';
-export type { SplitPaneOptions, SplitDirection } from './layout/SplitPane.js';
+export type { SplitPaneOptions } from './layout/SplitPane.js';
+export { Workspace } from './layout/Workspace.js';
+
+export type {
+    WorkspaceLayout,
+    WorkspaceOptions,
+    WorkspaceStorage,
+} from './layout/Workspace.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
@@ -184,6 +199,10 @@ export type { BulletChartOptions, BulletRange } from './data/BulletChart.js';
 // ── New Display Widgets ───────────────────────────────
 export { Breadcrumbs } from './display/Breadcrumbs.js';
 export type { BreadcrumbsOptions } from './display/Breadcrumbs.js';
+export { StatusBar } from './display/StatusBar.js';
+export type { StatusBarOptions } from './display/StatusBar.js';
+export { LoggerPanel } from './display/LoggerPanel.js';
+export type { LoggerPanelOptions, LogEntry, LogLevel } from './display/LoggerPanel.js';
 export { Avatar } from './display/Avatar.js';
 export type { AvatarOptions } from './display/Avatar.js';
 
@@ -217,6 +236,7 @@ export type { TooltipOptions } from './display/Tooltip.js';
 
 
 export { Panel } from './layout/Panel.js';
+export type { PanelOptions } from './layout/Panel.js';
 export { Clock } from './display/Clock.js';
 export type { ClockOptions } from './display/Clock.js';
 
@@ -301,3 +321,5 @@ export { UnorderedList } from './display/UnorderedList.js';
 export type { UnorderedListOptions } from './display/UnorderedList.js';
 export { Rule } from './display/Rule.js';
 export type { RuleOrientation, RuleOptions } from './display/Rule.js';
+export { WorldMap } from './data/WorldMap.js';
+export type { WorldMapOptions, MapMarker } from './data/WorldMap.js';
