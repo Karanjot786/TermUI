@@ -15,3 +15,5 @@ export { getByRole, getByLabel, queryByText } from "./queries.js";
 // ── Screen Recorder ──
 export { ScreenRecorder } from './recorder.js';
 export type { FrameData } from './recorder.js';
+export { ReplaySession } from './event-replay.js';
+export type { ReplayDriver, ReplayEvent, ReplaySessionSnapshot } from './event-replay.js';
