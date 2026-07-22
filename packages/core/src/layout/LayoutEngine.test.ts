@@ -196,6 +196,37 @@ describe('layout cache invalidation', () => {
         expect(root._dirty).toBe(true);
         expect(childA._dirty).toBe(true);
         expect(childB._dirty).toBe(true);
+        expect(root._dirtyReason).toBe('subtree');
+        expect(childA._dirtyReason).toBe('subtree');
+    });
+
+    it('supports local invalidation without dirtying descendants', () => {
+        const leaf = makeNode('leaf');
+        const child = makeNode('child', { height: 10 }, [leaf]);
+        const root = makeNode('root', {}, [child]);
+
+        computeLayout(root, 80, 24);
+        invalidateLayout(child, { reason: 'local' });
+
+        expect(child._dirty).toBe(true);
+        expect(child._dirtyReason).toBe('local');
+        expect(leaf._dirty).toBe(false);
+    });
+
+    it('walks clean ancestors to recompute a dirty nested child', () => {
+        const leaf = makeNode('leaf', { height: 2 });
+        const child = makeNode('child', { height: 10 }, [leaf]);
+        const root = makeNode('root', {}, [child]);
+
+        computeLayout(root, 80, 24);
+        leaf.style.height = 6;
+        invalidateLayout(leaf, { reason: 'local' });
+        computeLayout(root, 80, 24);
+
+        expect(leaf.computed.height).toBe(6);
+        expect(root._dirty).toBe(false);
+        expect(child._dirty).toBe(false);
+        expect(leaf._dirty).toBe(false);
     });
 
     it('clean subtree with dirty parent still recomputes parent', () => {
@@ -208,6 +239,7 @@ describe('layout cache invalidation', () => {
 
         // Mark only the parent dirty
         parent._dirty = true;
+        parent._dirtyReason = 'local';
         computeLayout(parent, 80, 24);
         // After layout, all should be clean again
         expect(parent._dirty).toBe(false);

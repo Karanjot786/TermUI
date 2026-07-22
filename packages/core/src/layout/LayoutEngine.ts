@@ -25,6 +25,7 @@ export interface LayoutNode {
     computed: Rect;
     /** Dirty flag — true when this node needs to be re-laid-out. Foundation for layout caching. */
     _dirty: boolean;
+    _dirtyReason?: LayoutDirtyReason;
     /** Last container dimensions used — separate from computed so manual computed edits don't confuse sizeChanged detection */
     _lastContainerWidth: number;
     _lastContainerHeight: number;
@@ -37,6 +38,13 @@ export interface LayoutNode {
     _dragging?: boolean;
 }
 
+export type LayoutDirtyReason = 'paint' | 'local' | 'children' | 'subtree' | 'container';
+
+export interface LayoutInvalidationOptions {
+    reason?: LayoutDirtyReason;
+    cascade?: boolean;
+}
+
 /**
  * Create a LayoutNode with default values.
  */
@@ -47,6 +55,7 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
         children,
         computed: { x: 0, y: 0, width: 0, height: 0 },
         _dirty: true,
+        _dirtyReason: 'subtree',
         _lastContainerWidth: 0,
         _lastContainerHeight: 0,
         _lastComputedWidth: 0,
@@ -71,6 +80,9 @@ export function createLayoutNode(id: string, style: Style, children: LayoutNode[
  */
 export function computeLayout(root: LayoutNode, containerWidth: number, containerHeight: number): void {
     const sizeChanged = root._lastContainerWidth !== containerWidth || root._lastContainerHeight !== containerHeight;
+    if (sizeChanged) {
+        markLayoutDirty(root, 'container');
+    }
     if (!sizeChanged && !root._dirty && !hasDirtyChild(root)) {
         return;
     }
@@ -82,11 +94,29 @@ export function computeLayout(root: LayoutNode, containerWidth: number, containe
     root.computed.width = containerWidth;
     root.computed.height = containerHeight;
 }
-export function invalidateLayout(node: LayoutNode): void {
-    node._dirty = true;
+export function invalidateLayout(node: LayoutNode, options: LayoutInvalidationOptions = {}): void {
+    const reason = options.reason ?? 'subtree';
+    const cascade = options.cascade ?? (reason === 'subtree' || reason === 'container');
+    markLayoutDirty(node, reason);
+    if (!cascade) return;
     for (const child of node.children) {
-        invalidateLayout(child);
+        invalidateLayout(child, { reason, cascade: true });
     }
+}
+function markLayoutDirty(node: LayoutNode, reason: LayoutDirtyReason): void {
+    node._dirty = true;
+    node._dirtyReason = mergeDirtyReason(node._dirtyReason, reason);
+}
+function mergeDirtyReason(current: LayoutDirtyReason | undefined, next: LayoutDirtyReason): LayoutDirtyReason {
+    const priority: Record<LayoutDirtyReason, number> = {
+        paint: 0,
+        local: 1,
+        children: 2,
+        subtree: 3,
+        container: 4,
+    };
+    if (!current || priority[next] > priority[current]) return next;
+    return current;
 }
 function hasDirtyChild(node: LayoutNode): boolean {
     if (node._dirty) return true;
@@ -100,6 +130,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
     // Note: node.computed.width/height are written by the parent before this call,
     // so comparing against them detects non-dirty nodes whose allocated size changed.
     if (!node._dirty &&
+        !hasDirtyChild(node) &&
         node._lastComputedWidth === node.computed.width &&
         node._lastComputedHeight === node.computed.height) {
         return;
@@ -132,6 +163,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
     if (node.children.length === 0) {
         node._dirty = false;
+        node._dirtyReason = undefined;
         node._lastComputedWidth = node.computed.width;
         node._lastComputedHeight = node.computed.height;
         return;
@@ -334,6 +366,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
         }
 
         node._dirty = false;
+        node._dirtyReason = undefined;
         node._lastComputedWidth = node.computed.width;
         node._lastComputedHeight = node.computed.height;
         return;
@@ -379,6 +412,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
             visibleIndex++;
         }
         node._dirty = false;
+        node._dirtyReason = undefined;
         node._lastComputedWidth = node.computed.width;
         node._lastComputedHeight = node.computed.height;
         return;
@@ -580,6 +614,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
 
     // Mark this node clean after layout is complete (used by future caching logic)
     node._dirty = false;
+    node._dirtyReason = undefined;
     node._lastComputedWidth = node.computed.width;
     node._lastComputedHeight = node.computed.height;
 }

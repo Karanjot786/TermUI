@@ -33,7 +33,7 @@ export type { ChordMatcherOptions, Chord } from './input/ChordMatcher.js';
 export { LiveRender } from './renderer/live-render.js';
 // ── Layout ────────────────────────────────────────────
 export { computeLayout, createLayoutNode, invalidateLayout } from './layout/LayoutEngine.js';
-export type { LayoutNode } from './layout/LayoutEngine.js';
+export type { LayoutDirtyReason, LayoutInvalidationOptions, LayoutNode } from './layout/LayoutEngine.js';
 export { emptyRect, containsPoint, shrinkRect, intersectRect, unionRect } from './layout/Rect.js';
 export type { Rect, Size } from './layout/Rect.js';
 export { Pos } from './layout/pos.js';
