@@ -154,6 +154,42 @@ describe('NotificationStore', () => {
         expect(store.notifications).toEqual([]);
     });
 
+    it('clears an auto-dismiss timer when a timed notification is dismissed manually', () => {
+        const subscriber = vi.fn();
+        store.subscribe(subscriber);
+
+        const id = store.push('Manual', 'info', 1000);
+        store.dismiss(id);
+        subscriber.mockClear();
+
+        vi.advanceTimersByTime(1000);
+
+        expect(store.notifications).toEqual([]);
+        expect(subscriber).not.toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('dismissAll() clears pending auto-dismiss timers', () => {
+        store.push('One', 'info', 1000);
+        store.push('Two', 'success', 2000);
+
+        store.dismissAll();
+        vi.advanceTimersByTime(2000);
+
+        expect(store.notifications).toEqual([]);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('reset() clears pending auto-dismiss timers', () => {
+        store.push('Before reset', 'warning', 1000);
+
+        store.reset();
+        vi.advanceTimersByTime(1000);
+
+        expect(store.notifications).toEqual([]);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
     it('does not schedule auto-dismiss for durationMs 0 or undefined', () => {
         store.push('Zero', 'info', 0);
         store.push('Forever', 'success');
