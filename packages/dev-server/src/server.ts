@@ -344,6 +344,15 @@ export class DevServer {
             `${change.type}: ${change.filename}`
         );
 
+        if (change.invalidation) {
+            this._devtools.logEvent(
+                'invalidate',
+                change.invalidation.restartTargets.length > 0
+                    ? `restart: ${change.invalidation.restartTargets.join(', ')}`
+                    : `modules: ${change.invalidation.invalidated.join(', ')}`
+            );
+        }
+
         this._onReload?.(change);
 
         if (this._reloadTimer) {
@@ -359,7 +368,7 @@ export class DevServer {
                 this._child.exitCode === null
             ) {
                 try {
-                    this._child.send({ type: 'reload' });
+                    this._child.send({ type: 'reload', invalidation: change.invalidation });
                 } catch {
                     // IPC channel closed
                 }

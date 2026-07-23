@@ -4,6 +4,7 @@
 
 import { watch, existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
+import { ModuleGraph, type ModuleInvalidationResult } from './module-graph.js';
 
 const DEFAULT_IGNORED_DIRS = new Set([
     '.git',
@@ -24,6 +25,8 @@ export interface FileChange {
     type: 'tsx' | 'tss' | 'config';
     /** Epoch milliseconds when the change was detected. */
     timestamp: number;
+    /** Module graph invalidation details for targeted reload handling. */
+    invalidation?: ModuleInvalidationResult;
 }
 
 /**
@@ -47,6 +50,7 @@ export class FileWatcher {
     private _onErrorCallbacks: Array<(err: Error) => void> = [];
     private _debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
     private _started = false;
+    readonly moduleGraph = new ModuleGraph();
 
     constructor(dirs: string[]) {
         this._dirs = dirs.map(d => resolve(d));
@@ -56,6 +60,14 @@ export class FileWatcher {
     onChange(fn: (change: FileChange) => void): void { this._onChangeCallbacks.push(fn); }
     /** Register a callback invoked when a watch error occurs. */
     onError(fn: (err: Error) => void): void { this._onErrorCallbacks.push(fn); }
+    /** Register or update a module and its imports for targeted invalidation. */
+    registerModule(id: string, imports: Iterable<string> = [], options: { restartBoundary?: boolean } = {}): void {
+        this.moduleGraph.addModule(id, imports, options);
+    }
+    /** Mark a module as a restart boundary. */
+    markRestartBoundary(id: string, restartBoundary = true): void {
+        this.moduleGraph.markRestartBoundary(id, restartBoundary);
+    }
 
     /** Begin watching all configured directories, debouncing rapid changes. */
     start(): void {
@@ -119,7 +131,12 @@ export class FileWatcher {
         this._debounceTimers.set(resolved, setTimeout(() => {
             this._debounceTimers.delete(resolved);
             const emittedFilename = dir === rootDir ? filename : resolve(dir, filename).slice(rootDir.length + 1);
-            const change: FileChange = { filename: emittedFilename, type: type!, timestamp: Date.now() };
+            const change: FileChange = {
+                filename: emittedFilename,
+                type: type!,
+                timestamp: Date.now(),
+                invalidation: this.moduleGraph.invalidate(emittedFilename),
+            };
             for (const cb of this._onChangeCallbacks) cb(change);
         }, 100));
     }

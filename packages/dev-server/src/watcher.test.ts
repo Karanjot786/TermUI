@@ -50,6 +50,23 @@ describe('FileWatcher', () => {
         expect(changeSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('attaches module invalidation data when a changed module has importers', () => {
+        const watcher = new FileWatcher(['./src']);
+        const changeSpy = vi.fn();
+
+        watcher.registerModule('App.tsx', ['Button.tsx'], { restartBoundary: true });
+        watcher.registerModule('Button.tsx');
+        watcher.onChange(changeSpy);
+        watcher.start();
+
+        mockWatcherEmitter.emit('change', 'change', 'Button.tsx');
+        vi.advanceTimersByTime(100);
+
+        expect(changeSpy).toHaveBeenCalledTimes(1);
+        expect(changeSpy.mock.calls[0][0].invalidation.invalidated).toEqual(['App.tsx', 'Button.tsx']);
+        expect(changeSpy.mock.calls[0][0].invalidation.restartTargets).toEqual(['App.tsx']);
+    });
+
     it('handles multiple rapid changes via debouncing', () => {
         const watcher = new FileWatcher(['./src']);
         const changeSpy = vi.fn();

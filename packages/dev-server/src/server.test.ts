@@ -107,6 +107,38 @@ describe('DevServer', () => {
         expect(server.banner).toBe('Reloaded');
     });
 
+    it('passes invalidation metadata to the child reload message', async () => {
+        mockChild.exited = new Promise(() => {}) as any;
+        const server = new DevServer({
+            rootDir: './project',
+            entry: 'index.ts'
+        });
+
+        server.start();
+
+        server['_handleChange']({
+            filename: 'button.ts',
+            type: 'tsx',
+            timestamp: Date.now(),
+            invalidation: {
+                changed: 'button.ts',
+                invalidated: ['app.ts', 'button.ts'],
+                restartTargets: ['app.ts'],
+            },
+        });
+
+        await vi.advanceTimersByTimeAsync(500);
+
+        expect(mockChild.send).toHaveBeenCalledWith({
+            type: 'reload',
+            invalidation: {
+                changed: 'button.ts',
+                invalidated: ['app.ts', 'button.ts'],
+                restartTargets: ['app.ts'],
+            },
+        });
+    });
+
     it('clears banner after bannerMs timeout', async () => {
         const server = new DevServer({
             rootDir: './project',
