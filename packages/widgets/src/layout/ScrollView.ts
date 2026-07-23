@@ -50,6 +50,13 @@ export class ScrollView extends Widget {
     /** Get current scroll offset */
     get scrollOffset(): number { return this._scrollOffset; }
 
+    override updateRect(rect: { x: number; y: number; width: number; height: number }): void {
+        super.updateRect(rect);
+        if (this._clampOffset()) {
+            this.markDirty();
+        }
+    }
+
     /** Scroll by delta rows */
     scrollBy(delta: number): void {
         this._scrollOffset = Math.round(this._scrollOffset + delta);
@@ -69,10 +76,12 @@ export class ScrollView extends Widget {
         }
     }
 
-    private _clampOffset(): void {
+    private _clampOffset(): boolean {
+        const previousOffset = this._scrollOffset;
         const viewHeight = this._rect.height;
         const maxOffset = Math.max(0, this._contentHeight - viewHeight);
         this._scrollOffset = Math.max(0, Math.min(this._scrollOffset, maxOffset));
+        return previousOffset !== this._scrollOffset;
     }
     
     private getScrollDelta(baseDelta: number): number {
@@ -100,6 +109,7 @@ export class ScrollView extends Widget {
 
     override render(screen: Screen): void {
         if (this._style.visible === false) return;
+        this._clampOffset();
 
         const shouldClip = true;
         if (shouldClip) screen.pushClip(this._rect);
