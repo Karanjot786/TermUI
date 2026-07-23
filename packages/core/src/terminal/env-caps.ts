@@ -3,6 +3,16 @@ import { ColorDepth, detectColorDepth } from '../style/Color.js';
 let mockUnicode: boolean | undefined;
 let mockMotion: boolean | undefined;
 
+export interface TerminalCaps {
+  readonly colorDepth: ColorDepth;
+  readonly color: boolean;
+  unicode: boolean;
+  motion: boolean;
+  readonly ci: boolean;
+  readonly background: 'light' | 'dark';
+  readonly keybindingMode: 'vim' | 'emacs' | 'default';
+}
+
 /**
  * Terminal capability detection hub.
  *
@@ -10,7 +20,7 @@ let mockMotion: boolean | undefined;
  * Widget authors should check these properties before using
  * non-ASCII characters, animations, or color sequences.
  */
-export const caps = {
+export const caps: TerminalCaps = {
   /** Detected color depth (None, ANSI16, ANSI256, TrueColor). */
   get colorDepth(): ColorDepth {
     return detectColorDepth();
@@ -60,7 +70,7 @@ export const caps = {
     if (mode === 'vim' || mode === 'emacs') return mode;
     return 'default';
   },
-} as const;
+};
 
 /**
  * Returns `true` when animation should be suppressed.
