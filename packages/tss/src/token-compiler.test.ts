@@ -22,6 +22,23 @@ describe('compileThemeTokens', () => {
         expect(compiled.variables['--bg']).toBe('#101010');
     });
 
+    it('resolves nested semantic and component aliases', () => {
+        const compiled = compileThemeTokens(
+            { ...defaultDark, buttonBackground: '#181818' },
+            {
+                name: 'semantic-chain',
+                aliases: {
+                    buttonBackground: 'surface',
+                    surface: 'bg',
+                },
+                allowExtraTokens: true,
+            },
+        );
+
+        expect(compiled.tokens.bg).toBe('#181818');
+        expect(compiled.variables['--bg']).toBe('#181818');
+    });
+
     it('throws readable diagnostics for invalid token input', () => {
         expect(() => compileThemeTokens({ bg: '#000' }, { name: 'bad' }))
             .toThrow(/Missing required theme token: fg/);
@@ -43,5 +60,20 @@ describe('validateThemeTokens', () => {
         });
 
         expect(diagnostics.some(diagnostic => diagnostic.code === 'invalid-alias')).toBe(true);
+    });
+
+    it('reports circular aliases with the full cycle path', () => {
+        const diagnostics = validateThemeTokens(defaultDark, {
+            aliases: {
+                surface: 'panel',
+                panel: 'surface',
+            },
+        });
+
+        expect(diagnostics).toContainEqual({
+            code: 'circular-alias',
+            token: 'surface',
+            message: 'Circular alias detected: surface -> panel -> surface',
+        });
     });
 });
