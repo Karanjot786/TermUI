@@ -114,6 +114,20 @@ export class Wizard extends Widget {
     }
 
     complete(): void {
+        const step = this._steps[this._currentStepIndex];
+        if (step && step.validate) {
+            const validationResult = step.validate();
+            if (typeof validationResult === 'string') {
+                this._error = validationResult;
+                this.markDirty();
+                return;
+            } else if (validationResult === false) {
+                this.markDirty();
+                return;
+            }
+        }
+
+        this._error = '';
         this._onComplete?.(this._getStepData());
     }
 
