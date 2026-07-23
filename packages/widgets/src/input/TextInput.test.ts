@@ -245,6 +245,60 @@ describe('TextInput', () => {
         input.moveCursorEnd();
         expect(input.isDirty).toBe(true);
     });
+
+    it('extends selection with shift navigation and replaces the selected text', () => {
+        const onChangeSpy = vi.fn();
+        const input = new TextInput({}, { value: 'hello', onChange: onChangeSpy });
+
+        input.moveCursorLeft(true);
+        input.moveCursorLeft(true);
+
+        expect(input.selectionStart).toBe(3);
+        expect(input.selectionEnd).toBe(5);
+        expect(input.selectedText).toBe('lo');
+
+        input.insertChar('p');
+
+        expect(input.value).toBe('help');
+        expect(input.selectionStart).toBe(input.selectionEnd);
+        expect(onChangeSpy).toHaveBeenLastCalledWith('help');
+    });
+
+    it('supports forward selections from home and deletes the range', () => {
+        const input = new TextInput({}, { value: 'abcd' });
+
+        input.moveCursorHome();
+        input.moveCursorRight(true);
+        input.moveCursorRight(true);
+        input.deleteForward();
+
+        expect(input.value).toBe('cd');
+        expect(input.selectionStart).toBe(0);
+        expect(input.selectionEnd).toBe(0);
+    });
+
+    it('replaces a selection even when the input is already at maxLength', () => {
+        const input = new TextInput({}, { value: 'abcd', maxLength: 4 });
+
+        input.moveCursorLeft(true);
+        input.insertChar('z');
+
+        expect(input.value).toBe('abcz');
+    });
+
+    it('renders selected visible cells with inverse styling', () => {
+        const input = new TextInput({}, { value: 'abcd' });
+        input.isFocused = true;
+        input.moveCursorLeft(true);
+        input.moveCursorLeft(true);
+
+        const screen = renderTextInput(input, 20, 3);
+
+        expect(screen.back[1][3]?.char).toBe('c');
+        expect(screen.back[1][3]?.inverse).toBe(true);
+        expect(screen.back[1][4]?.char).toBe('d');
+        expect(screen.back[1][4]?.inverse).toBe(true);
+    });
 });
 
 describe('handleKey', () => {
