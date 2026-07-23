@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 
 vi.mock('@termuijs/jsx', async () => {
     const actual = await vi.importActual<typeof import('@termuijs/jsx')>('@termuijs/jsx');
@@ -154,6 +154,42 @@ describe('NotificationStore', () => {
         expect(store.notifications).toEqual([]);
     });
 
+    it('clears an auto-dismiss timer when a timed notification is dismissed manually', () => {
+        const subscriber = vi.fn();
+        store.subscribe(subscriber);
+
+        const id = store.push('Manual', 'info', 1000);
+        store.dismiss(id);
+        subscriber.mockClear();
+
+        vi.advanceTimersByTime(1000);
+
+        expect(store.notifications).toEqual([]);
+        expect(subscriber).not.toHaveBeenCalled();
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('dismissAll() clears pending auto-dismiss timers', () => {
+        store.push('One', 'info', 1000);
+        store.push('Two', 'success', 2000);
+
+        store.dismissAll();
+        vi.advanceTimersByTime(2000);
+
+        expect(store.notifications).toEqual([]);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('reset() clears pending auto-dismiss timers', () => {
+        store.push('Before reset', 'warning', 1000);
+
+        store.reset();
+        vi.advanceTimersByTime(1000);
+
+        expect(store.notifications).toEqual([]);
+        expect(vi.getTimerCount()).toBe(0);
+    });
+
     it('does not schedule auto-dismiss for durationMs 0 or undefined', () => {
         store.push('Zero', 'info', 0);
         store.push('Forever', 'success');
@@ -298,6 +334,20 @@ describe('NotificationCenter rendering and lifecycle', () => {
         const lines = renderLines(center, 12, 4, { x: 0, y: 0, width: 12, height: 4 });
         expect(lines[1]).toContain(' i abcdef');
         expect(lines.join('\n')).not.toContain('klmnopqrstuvwxyz');
+    });
+
+    it('truncates and pads wide notification text by terminal cell width', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const center = new NotificationCenter({ width: 10 });
+        const localScreen = new Screen(30, 10);
+        const writeSpy = vi.spyOn(localScreen, 'writeString');
+
+        store.push('部署完成 ok', 'info');
+        center.updateRect({ x: 0, y: 0, width: 30, height: 10 });
+        center.render(localScreen);
+
+        const rowText = String(writeSpy.mock.calls[0][2]);
+        expect(stringWidth(rowText)).toBe(10);
     });
 
     it.each([

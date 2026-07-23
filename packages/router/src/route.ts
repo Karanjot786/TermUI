@@ -4,9 +4,15 @@
 
 export type LazyLoader = () => Promise<any>;
 
-export type BeforeEnterGuard = (to: string) => boolean | string;
+export interface NavigationGuardContext {
+    id: number;
+    signal: AbortSignal;
+    isStale: () => boolean;
+}
 
-export type AfterEnterGuard = (to: string) => void;
+export type BeforeEnterGuard = (to: string, context?: NavigationGuardContext) => boolean | string;
+
+export type AfterEnterGuard = (to: string, context?: NavigationGuardContext) => void;
 
 export type RouteMeta = Record<string, unknown>;
 

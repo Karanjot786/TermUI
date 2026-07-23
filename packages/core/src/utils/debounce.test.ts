@@ -99,4 +99,38 @@ describe('debounce', () => {
 
         vi.useRealTimers();
     });
+
+    it('flushes a pending trailing call immediately', () => {
+        vi.useFakeTimers();
+        const fn = vi.fn();
+        const debounced = debounce(fn, 100);
+
+        debounced('pending');
+        debounced.flush();
+
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fn).toHaveBeenCalledWith('pending');
+
+        vi.advanceTimersByTime(100);
+        expect(fn).toHaveBeenCalledTimes(1);
+
+        vi.useRealTimers();
+    });
+
+    it('does not replay a leading-edge call when flushed', () => {
+        vi.useFakeTimers();
+        const fn = vi.fn();
+        const debounced = debounce(fn, 100, { leading: true });
+
+        debounced('leading');
+        debounced.flush();
+
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fn).toHaveBeenCalledWith('leading');
+
+        vi.advanceTimersByTime(100);
+        expect(fn).toHaveBeenCalledTimes(1);
+
+        vi.useRealTimers();
+    });
 });

@@ -39,8 +39,8 @@ export { Image } from './display/Image.js';
 export type { ImageOptions } from './display/Image.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
-export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
-export type { ScrollRange } from './input/virtual-scroll.js';
+export { computeRange, computeVariableRange, createVariableHeightVirtualizer } from './input/virtual-scroll.js';
+export type { ScrollRange, VariableRangeOptions } from './input/virtual-scroll.js';
 
 // ── Spring Scroll Helper ─────────────────────────────
 export { calculateSpringScroll } from './scroll.js';
