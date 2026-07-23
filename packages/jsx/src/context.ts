@@ -98,8 +98,9 @@ function subscribeToContext<T, S>(
         provider.contextSubscribers.set(id, subs);
     }
 
-    const existing = [...subs].find(sub => sub.fiber === consumer && sub.selector === selector);
+    const existing = [...subs].find(sub => sub.fiber === consumer);
     if (existing) {
+        existing.selector = selector;
         existing.selectedValue = selectedValue;
         existing.equalityFn = equalityFn as ContextEqualityFn<any> | undefined;
         return;

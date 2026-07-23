@@ -137,6 +137,21 @@ describe('useContext', () => {
 
         expect(render).toHaveBeenCalledOnce();
     });
+
+    it('reuses selector subscriptions for the same fiber across renders', () => {
+        const ctx = createContext({ count: 0 });
+        const provider = createFiber();
+        const consumer = createFiber(provider);
+
+        setCurrentFiber(provider);
+        ctx.Provider({ value: { count: 0 }, children: undefined as any });
+
+        setCurrentFiber(consumer);
+        expect(useContextSelector(ctx, value => value.count)).toBe(0);
+        expect(useContextSelector(ctx, value => value.count)).toBe(0);
+
+        expect(provider.contextSubscribers?.get(ctx._id)?.size).toBe(1);
+    });
 });
 
 // Need afterEach import
