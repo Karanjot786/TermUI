@@ -589,11 +589,16 @@ export function useReducer<S, A>(
 export function runEffects(fiber: Fiber): void {
     for (const record of fiber.effects) {
         if (!record.ran) {
-            // Run cleanup from previous effect
-            record.cleanup?.();
-            const cleanup = record.effect();
-            if (typeof cleanup === 'function') {
-                record.cleanup = cleanup;
+            try {
+                // Run cleanup from previous effect
+                record.cleanup?.();
+                const cleanup = record.effect();
+                if (typeof cleanup === 'function') {
+                    record.cleanup = cleanup;
+                }
+            } catch (err) {
+                // Mark as ran to prevent infinite re-execution
+                console.error('[useEffect] Effect threw:', err);
             }
             record.ran = true;
         }
@@ -603,11 +608,15 @@ export function runEffects(fiber: Fiber): void {
 export function runLayoutEffects(fiber: Fiber): void {
     for (const record of fiber.layoutEffects) {
         if (!record.ran) {
-            // Run cleanup from previous effect
-            record.cleanup?.();
-            const cleanup = record.effect();
-            if (typeof cleanup === 'function') {
-                record.cleanup = cleanup;
+            try {
+                // Run cleanup from previous effect
+                record.cleanup?.();
+                const cleanup = record.effect();
+                if (typeof cleanup === 'function') {
+                    record.cleanup = cleanup;
+                }
+            } catch (err) {
+                console.error('[useLayoutEffect] Effect threw:', err);
             }
             record.ran = true;
         }
