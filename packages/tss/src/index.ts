@@ -30,6 +30,7 @@ export type {
   CompiledThemeTokens,
   ThemeTokenCompileOptions,
   ThemeTokenDiagnostic,
+  ThemeTokenInput,
   ThemeTokenName,
 } from './token-compiler.js';
 

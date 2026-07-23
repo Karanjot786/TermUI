@@ -36,4 +36,12 @@ describe('validateThemeTokens', () => {
         const filtered = validateThemeTokens({ ...defaultDark, card: '#111111' }, { allowExtraTokens: true });
         expect(filtered.some(diagnostic => diagnostic.code === 'unknown-token')).toBe(false);
     });
+
+    it('reports aliases without a valid target', () => {
+        const diagnostics = validateThemeTokens(defaultDark, {
+            aliases: { accent: undefined },
+        });
+
+        expect(diagnostics.some(diagnostic => diagnostic.code === 'invalid-alias')).toBe(true);
+    });
 });

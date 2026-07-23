@@ -1,6 +1,7 @@
 import type { ThemeTokens } from './tokens.js';
 
 export type ThemeTokenName = keyof ThemeTokens;
+export type ThemeTokenInput = ThemeTokens | Record<string, string | undefined>;
 
 export interface ThemeTokenCompileOptions {
     name: string;
@@ -35,7 +36,7 @@ const REQUIRED_TOKENS: ThemeTokenName[] = [
 ];
 
 export function validateThemeTokens(
-    input: Record<string, string>,
+    input: ThemeTokenInput,
     options: Pick<ThemeTokenCompileOptions, 'aliases' | 'allowExtraTokens'> = {},
 ): ThemeTokenDiagnostic[] {
     const diagnostics: ThemeTokenDiagnostic[] = [];
@@ -63,7 +64,7 @@ export function validateThemeTokens(
     }
 
     for (const [alias, target] of Object.entries(options.aliases ?? {})) {
-        if (!REQUIRED_TOKENS.includes(target)) {
+        if (!target || !REQUIRED_TOKENS.includes(target)) {
             diagnostics.push({
                 code: 'invalid-alias',
                 token: alias,
@@ -78,7 +79,7 @@ export function validateThemeTokens(
 }
 
 export function compileThemeTokens(
-    input: Record<string, string>,
+    input: ThemeTokenInput,
     options: ThemeTokenCompileOptions,
 ): CompiledThemeTokens {
     const diagnostics = validateThemeTokens(input, options);
@@ -103,11 +104,12 @@ export function compileThemeTokens(
 }
 
 function normalizeTokenKeys(
-    input: Record<string, string>,
+    input: ThemeTokenInput,
     aliases: Partial<Record<string, ThemeTokenName>>,
 ): Partial<ThemeTokens> {
     const output: Partial<ThemeTokens> = {};
     for (const [key, value] of Object.entries(input)) {
+        if (value === undefined) continue;
         const mapped = aliases[key] ?? key;
         if (REQUIRED_TOKENS.includes(mapped as ThemeTokenName)) {
             output[mapped as ThemeTokenName] = value;
