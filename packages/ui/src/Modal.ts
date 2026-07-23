@@ -20,7 +20,7 @@ export class Modal extends Widget {
     private _content: Widget | null = null;
 
     constructor(options: ModalOptions = {}, style?: Partial<Style>) {
-        super(mergeStyles(defaultStyle(), style ?? {}));
+        super(mergeStyles(defaultStyle(), { zIndex: 1000, ...style }));
         this._title = options.title ?? '';
         this._modalWidth = options.width ?? 50;
         this._modalHeight = options.height ?? 15;

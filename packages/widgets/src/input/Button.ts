@@ -2,7 +2,7 @@
 // @termuijs/widgets — Button widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, type KeyEvent, stringWidth, caps, prefersReducedMotion } from '@termuijs/core';
+import { type Screen, type Style, type Color, type KeyEvent, stringWidth, caps, prefersReducedMotion, truncate } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import { Widget } from '../base/Widget.js';
 import { SPINNER_FRAMES } from '../feedback/Spinner.js';
@@ -180,9 +180,11 @@ export class Button extends Widget {
         if (height >= 2) {
             screen.setCell(x, y + 1, { char: vt, fg: borderFg, bg });
             const startX = x + 1;
-            const textStartX = startX + Math.floor((innerWidth - textWidth) / 2);
-            screen.writeString(textStartX, y + 1, padded, { fg: borderFg, bg });
-            for (let c = textStartX + textWidth; c < startX + innerWidth; c++) {
+            const visibleText = truncate(padded, innerWidth, '');
+            const visibleWidth = stringWidth(visibleText);
+            const textStartX = startX + Math.max(0, Math.floor((innerWidth - visibleWidth) / 2));
+            screen.writeString(textStartX, y + 1, visibleText, { fg: borderFg, bg });
+            for (let c = textStartX + visibleWidth; c < startX + innerWidth; c++) {
                 screen.setCell(c, y + 1, { char: ' ', fg: borderFg, bg });
             }
             if (innerWidth + 1 < width) {

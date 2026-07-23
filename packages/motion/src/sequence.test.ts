@@ -160,4 +160,27 @@ describe('parallel()', () => {
         expect(cancelSpy1).toHaveBeenCalledTimes(1);
         expect(cancelSpy2).toHaveBeenCalledTimes(1);
     });
+
+    it('ignores late completion callbacks after cancellation', () => {
+        const onComplete = vi.fn();
+        let finish1: () => void = () => {};
+        let finish2: () => void = () => {};
+
+        const anim1: AnimationRunner = (done) => {
+            finish1 = done;
+            return () => {};
+        };
+        const anim2: AnimationRunner = (done) => {
+            finish2 = done;
+            return () => {};
+        };
+
+        const cancelMaster = parallel([anim1, anim2], onComplete);
+        cancelMaster();
+
+        finish1();
+        finish2();
+
+        expect(onComplete).not.toHaveBeenCalled();
+    });
 });

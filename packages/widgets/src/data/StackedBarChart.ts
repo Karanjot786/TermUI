@@ -1,6 +1,7 @@
 import { type Color, type Screen, type Style, caps, truncate } from "@termuijs/core";
 import { Widget } from "../base/Widget.js";
 import { BrailleCanvas } from "./BrailleCanvas.js";
+import { filterFinite } from "./utils.js";
 
 export interface StackedSeries {
     label: string;
@@ -25,7 +26,7 @@ export class StackedBarChart extends Widget {
     }
 
     setSeries(series: StackedSeries[]): void {
-        this._series = series;
+        this._series = series.map(s => ({ ...s, data: filterFinite(s.data) }));
         this.markDirty();
     }
 

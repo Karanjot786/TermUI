@@ -210,6 +210,28 @@ describe('Renderer profiling hooks', () => {
         vi.restoreAllMocks();
     });
 
+    it('does not deadlock rendering if flush encounters an error', () => {
+        const renderer = new Renderer(terminal, screen);
+        screen.setCell(0, 0, { char: 'x' });
+        
+        let callCount = 0;
+        vi.spyOn(terminal, 'writeSync').mockImplementation(() => {
+            callCount++;
+            if (callCount === 1) {
+                throw new Error('transient write error');
+            }
+        });
+        
+        // First flush throws inside writeSync, should be caught
+        renderer.renderNow();
+        
+        // Second flush: Should attempt to writeSync again because flushEpoch was rolled back
+        renderer.renderNow();
+        
+        expect(callCount).toBeGreaterThanOrEqual(2);
+        vi.restoreAllMocks();
+    });
+
     it('does not emit cursor movement for a diff span starting at a wide-char continuation cell', () => {
         const narrowScreen = new Screen(10, 2);
         const renderer = new Renderer(terminal, narrowScreen);
@@ -261,5 +283,83 @@ describe('Renderer profiling hooks', () => {
         // Verify reset appears at least twice (once for row 0 first cell, once for row 1)
         const resetCount = (output.match(/\x1b\[0m/g) || []).length;
         expect(resetCount).toBeGreaterThanOrEqual(2);
+    });
+
+    it('reuses the current style state for identical adjacent cells', () => {
+        const screen = new Screen(5, 1);
+        const renderer = new Renderer(terminal, screen);
+
+        screen.setCell(0, 0, { char: 'A', bold: true, fg: { type: 'named', name: 'red' } });
+        screen.setCell(1, 0, { char: 'B', bold: true, fg: { type: 'named', name: 'red' } });
+        renderer.renderNow();
+
+        const output = fakeStdout.writes;
+        const resetCount = (output.match(/\x1b\[0m/g) || []).length;
+        expect(resetCount).toBeGreaterThanOrEqual(1);
+    });
+
+    it('correctly adjusts span start backwards and renders from adjustedStart', () => {
+        const narrowScreen = new Screen(10, 2);
+        const renderer = new Renderer(terminal, narrowScreen);
+
+        // First frame: write a wide character at col 0 and 'A' at col 2
+        narrowScreen.setCell(0, 0, { char: '中', width: 2 });
+        narrowScreen.setCell(1, 0, { char: '', width: 0 });
+        narrowScreen.setCell(2, 0, { char: 'A', width: 1 });
+        renderer.renderNow();
+
+        // Second frame: Keep col 0 unchanged, change col 1 style (continuation) and col 2 char
+        narrowScreen.setCell(0, 0, { char: '中', width: 2 });
+        narrowScreen.setCell(1, 0, { char: '', width: 0, fg: { type: 'named', name: 'red' } });
+        narrowScreen.setCell(2, 0, { char: 'B', width: 1 });
+
+        fakeStdout.writes = '';
+        renderer.renderNow();
+
+        // Verify that the output has redrawn the wide character at col 0
+        const outputStr = fakeStdout.writes;
+        // It should move to col 0, not col 1 or 2, to start rendering
+        expect(outputStr).toContain('\x1b[1;1H');
+        // It should render '中'
+        expect(outputStr).toContain('中');
+        // It should render 'B'
+        expect(outputStr).toContain('B');
+    });
+
+    it('preserves and requeues buffered logs when a frame write fails', () => {
+        const renderer = new Renderer(terminal, screen);
+        renderer.hook.start();
+
+        try {
+            console.log('test log recovery');
+
+            // Spy on terminal writeSync to throw an error on the first write call
+            let writeCallsCount = 0;
+            const originalWriteSync = terminal.writeSync;
+            vi.spyOn(terminal, 'writeSync').mockImplementation((data: string) => {
+                writeCallsCount++;
+                if (writeCallsCount === 1) {
+                    throw new Error('write failure simulation');
+                }
+                return originalWriteSync.call(terminal, data);
+            });
+
+            // This render should fail to write the frame and logs, but should not throw, and should requeue the log
+            expect(() => renderer.renderNow()).not.toThrow();
+            expect(writeCallsCount).toBe(1); // Only the first writeSync was called and failed
+            
+            // Restore writeSync mock so it succeeds now
+            vi.restoreAllMocks();
+
+            // Trigger another render
+            fakeStdout.writes = '';
+            renderer.renderNow();
+
+            // The log should be present in the output
+            expect(fakeStdout.writes).toContain('test log recovery');
+        } finally {
+            vi.restoreAllMocks();
+            renderer.hook.stop();
+        }
     });
 });
