@@ -12,6 +12,7 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
     private _emitting: Set<keyof TEventMap> = new Set();
     private _emitStack: Array<keyof TEventMap> = [];
     private _reentrantQueue: Array<{ event: keyof TEventMap; data: any }> = [];
+    private _draining: Set<keyof TEventMap> = new Set();
 
     /** Optional error handler for event handler errors. Called when a handler throws. */
     onError?: (event: keyof TEventMap, error: unknown) => void;
@@ -72,7 +73,7 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
      */
     emit<K extends keyof TEventMap>(event: K, data: TEventMap[K]): void {
         if (this._emitting.has(event)) {
-            if (this._emitStack[this._emitStack.length - 1] === event) {
+            if (this._draining.has(event)) {
                 return;
             }
             this._reentrantQueue.push({ event, data });
@@ -117,7 +118,12 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
     private _drainQueue(): void {
         while (this._reentrantQueue.length > 0) {
             const queued = this._reentrantQueue.shift()!;
-            this.emit(queued.event, queued.data);
+            this._draining.add(queued.event);
+            try {
+                this.emit(queued.event, queued.data);
+            } finally {
+                this._draining.delete(queued.event);
+            }
         }
     }
 

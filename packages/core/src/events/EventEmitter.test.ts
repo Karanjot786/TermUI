@@ -172,7 +172,7 @@ describe('EventEmitter', () => {
         expect(regularHandler).toHaveBeenCalled();
     });
 
-    it('re-entrant emit from regular handler does not fire once handlers early', () => {
+    it('re-entrant emit from regular handler queues same-event re-emit and does not fire once handlers early', () => {
         const emitter = new EventEmitter<TestEvents>();
         const log: string[] = [];
 
@@ -187,7 +187,7 @@ describe('EventEmitter', () => {
 
         emitter.emit('message', 'outer');
 
-        expect(log).toEqual(['reenter', 'once']);
+        expect(log).toEqual(['reenter', 'once', 'reenter']);
         expect(onceHandler).toHaveBeenCalledTimes(1);
     });
 
@@ -275,5 +275,69 @@ describe('EventEmitter', () => {
         expect(handlerA).toHaveBeenCalledTimes(2);
         expect(handlerB).toHaveBeenCalledTimes(1); // Not called again
         expect(handlerC).toHaveBeenCalledTimes(2);
+    });
+
+    it('same-event re-emit from handler is queued and delivered after current dispatch', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const log: string[] = [];
+
+        emitter.on('message', (data) => {
+            log.push(`handler1:${data}`);
+            if (data === 'outer') {
+                emitter.emit('message', 're-emitted');
+            }
+        });
+        emitter.on('message', (data) => {
+            log.push(`handler2:${data}`);
+        });
+
+        emitter.emit('message', 'outer');
+
+        expect(log).toEqual([
+            'handler1:outer',
+            'handler2:outer',
+            'handler1:re-emitted',
+            'handler2:re-emitted',
+        ]);
+    });
+
+    it('nested re-entrancy (A->B->C->emit(A)) terminates without hanging', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const log: string[] = [];
+
+        emitter.on('message', () => {
+            log.push('A');
+            emitter.emit('count', 1);
+        });
+        emitter.on('count', () => {
+            log.push('B');
+            emitter.emit('empty');
+        });
+        emitter.on('empty', () => {
+            log.push('C');
+            emitter.emit('message', 'nested');
+        });
+
+        emitter.emit('message', 'start');
+
+        expect(log).toEqual(['A', 'B', 'C']);
+    });
+
+    it('cross-event re-entrant emit runs inline when target is not currently emitting', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const log: string[] = [];
+
+        emitter.on('message', () => {
+            log.push('message-start');
+            emitter.emit('count', 1);
+            log.push('message-end');
+        });
+        emitter.on('count', () => {
+            log.push('count');
+        });
+
+        emitter.emit('message', 'test');
+
+        expect(log).toEqual(['message-start', 'count', 'message-end']);
     });
 });

@@ -298,4 +298,64 @@ describe('Router', () => {
         expect(r.current).toBeNull();
         expect(navFn).not.toHaveBeenCalled();
     });
+
+    it('redirect target with its own beforeEnter guard still runs', () => {
+        const r = new Router();
+        const targetGuard = vi.fn().mockReturnValue(true);
+        r.addRoute('/login', () => 'Login', undefined, { beforeEnter: targetGuard });
+        r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => '/login' });
+
+        r.push('/admin');
+
+        expect(targetGuard).toHaveBeenCalled();
+        expect(r.currentPath).toBe('/login');
+    });
+
+    it('back() with guard redirect runs redirect target guard', () => {
+        const r = new Router();
+        const targetGuard = vi.fn().mockReturnValue(true);
+        r.addRoute('/login', () => 'Login', undefined, { beforeEnter: targetGuard });
+        r.addRoute('/admin', () => 'Admin', undefined, { beforeEnter: () => '/login' });
+        r.addRoute('/settings', () => 'Settings');
+
+        r.push('/login');
+        r.push('/admin');
+        r.push('/settings');
+
+        r.back();
+
+        expect(targetGuard).toHaveBeenCalled();
+        expect(r.currentPath).toBe('/login');
+    });
+
+    it('forward() with guard redirect runs redirect target guard', () => {
+        const r = new Router();
+        const targetGuard = vi.fn().mockReturnValue(true);
+        r.addRoute('/login', () => 'Login', undefined, { beforeEnter: targetGuard });
+        r.addRoute('/guarded', () => 'Guarded', undefined, { beforeEnter: () => '/login' });
+
+        r.push('/login');
+        r.push('/guarded');
+        r.back();
+
+        targetGuard.mockClear();
+        r.forward();
+
+        expect(targetGuard).toHaveBeenCalled();
+        expect(r.currentPath).toBe('/login');
+    });
+
+    it('parent guard runs only once per navigation (not duplicated on redirect)', () => {
+        const r = new Router();
+        const parentGuard = vi.fn().mockReturnValue('/login');
+        r.addRoute('/login', () => 'Login');
+        r.addRoute('/admin', () => 'Admin', undefined, [
+            { path: 'users', component: () => 'Users' },
+        ], undefined, { beforeEnter: parentGuard });
+
+        r.push('/admin/users');
+
+        expect(parentGuard).toHaveBeenCalledTimes(1);
+        expect(r.currentPath).toBe('/login');
+    });
 });

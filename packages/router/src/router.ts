@@ -226,12 +226,16 @@ export class Router {
         return path;
     }
 
-    private _runBeforeEnterGuards(match: RouteMatch, path: string): boolean | string {
+    private _runBeforeEnterGuards(match: RouteMatch, path: string, guardedPaths?: Set<string>): boolean | string {
         for (const route of match.chain) {
+            if (guardedPaths?.has(route.path)) {
+                continue;
+            }
             const result = route.beforeEnter?.(path);
             if (result === false || typeof result === 'string') {
                 return result;
             }
+            guardedPaths?.add(route.path);
         }
         return true;
     }
@@ -246,6 +250,7 @@ export class Router {
             modifyHistory?: 'push' | 'replace' | 'none';
             clearForwardStack?: boolean;
             direction?: 'push' | 'replace' | 'back' | 'forward';
+            guardedPaths?: Set<string>;
         } = {},
     ): void {
         const resolvedPath = this._resolveRedirect(path);
@@ -294,14 +299,16 @@ export class Router {
             this._forwardStack = [];
         }
 
-        const guardResult = this._runBeforeEnterGuards(match, resolvedPath);
+        const guardedPaths = options.guardedPaths ?? new Set<string>();
+
+        const guardResult = this._runBeforeEnterGuards(match, resolvedPath, guardedPaths);
 
         if (guardResult === false) {
             return;
         }
 
         if (typeof guardResult === 'string') {
-            this._executeNavigation(guardResult, { ...options, clearForwardStack: false });
+            this._executeNavigation(guardResult, { ...options, clearForwardStack: false, guardedPaths });
             return;
         }
 
@@ -385,7 +392,8 @@ export class Router {
             return;
         }
 
-        const guardResult = this._runBeforeEnterGuards(match, prevPath);
+        const guardedPaths = new Set<string>();
+        const guardResult = this._runBeforeEnterGuards(match, prevPath, guardedPaths);
 
         if (guardResult === false) {
             return;
@@ -396,7 +404,7 @@ export class Router {
             if (poppedPath) {
                 this._forwardStack.push(poppedPath);
             }
-            this._executeNavigation(guardResult, { clearForwardStack: false, direction: 'back' });
+            this._executeNavigation(guardResult, { clearForwardStack: false, direction: 'back', guardedPaths });
             return;
         }
 
@@ -438,7 +446,8 @@ export class Router {
             return;
         }
 
-        const guardResult = this._runBeforeEnterGuards(match, nextPath);
+        const guardedPaths = new Set<string>();
+        const guardResult = this._runBeforeEnterGuards(match, nextPath, guardedPaths);
 
         if (guardResult === false) {
             return;
@@ -450,6 +459,7 @@ export class Router {
                 modifyHistory: 'push',
                 clearForwardStack: false,
                 direction: 'forward',
+                guardedPaths,
             });
             return;
         }
