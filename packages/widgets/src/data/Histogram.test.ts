@@ -44,6 +44,13 @@ describe("Histogram", () => {
         expect(nonSpaceCells(renderHistogram(histogram))).toBe(0);
     });
 
+    it("rejects invalid bin counts", () => {
+        expect(() => new Histogram({}, { bins: 0 })).toThrow(/bins/);
+        expect(() => new Histogram({}, { bins: -1 })).toThrow(/bins/);
+        expect(() => new Histogram({}, { bins: 1.5 })).toThrow(/bins/);
+        expect(() => new Histogram({}, { bins: Number.NaN })).toThrow(/bins/);
+    });
+
     it("setData triggers markDirty", () => {
         const histogram = new Histogram();
         const markDirtySpy = vi.spyOn(histogram, "markDirty");

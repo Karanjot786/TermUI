@@ -9,7 +9,7 @@ import {
     TextColumn,
     PercentageColumn,
 } from './ProgressColumn.js';
-import type { Screen, Style } from '@termuijs/core';
+import { type Screen, type Style, truncate } from '@termuijs/core';
 export interface ProgressTask {
     label?: string;
     value?: number;
@@ -169,7 +169,7 @@ this._columns =
         screen.writeString(
             x,
             y + index,
-            parts.join(' '),
+            truncate(parts.join(' '), width, ''),
             this.style,
         );
     });

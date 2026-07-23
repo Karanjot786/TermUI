@@ -34,6 +34,7 @@ export class Wizard extends Widget {
     private _error = '';
     private _onComplete?: (stepData: unknown[]) => void;
     focusable = true;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
 
     constructor(steps: WizardStep[], options: WizardOptions = {}) {
         const topPadding = 2;
@@ -62,7 +63,13 @@ export class Wizard extends Widget {
         }
 
         // Register default key listener
-        this.events.on('key', (event) => this.handleKey(event));
+        this.events.on('key', this._keyHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
     }
 
     get currentStepIndex(): number {
@@ -219,22 +226,25 @@ export class Wizard extends Widget {
             { ...attrs, bold: true }
         );
 
-        // Write validation error if present on row 1 of the content area
-        if (this._error) {
-            screen.writeString(
-                x + border,
-                y + border + 1,
-                truncate(this._error, contentWidth),
-                { ...attrs, fg: { type: 'named', name: 'red' } }
-            );
-        } else {
-            // Write blank line to clear any old error
-            screen.writeString(
-                x + border,
-                y + border + 1,
-                ' '.repeat(contentWidth),
-                attrs
-            );
+        const errorRow = y + border + 1;
+        if (errorRow < y + height) {
+            // Write validation error if present on row 1 of the content area
+            if (this._error) {
+                screen.writeString(
+                    x + border,
+                    errorRow,
+                    truncate(this._error, contentWidth),
+                    { ...attrs, fg: { type: 'named', name: 'red' } }
+                );
+            } else {
+                // Write blank line to clear any old error
+                screen.writeString(
+                    x + border,
+                    errorRow,
+                    ' '.repeat(contentWidth),
+                    attrs
+                );
+            }
         }
     }
 }

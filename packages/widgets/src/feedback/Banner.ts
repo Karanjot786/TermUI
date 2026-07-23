@@ -53,6 +53,10 @@ export class Banner extends Widget {
         this.markDirty();
     }
 
+    getTitle(): string {
+        return this._title;
+    }
+
     setBody(body: string): void {
         if (this._body === body) return;
 
@@ -60,11 +64,19 @@ export class Banner extends Widget {
         this.markDirty();
     }
 
+    getBody(): string {
+        return this._body;
+    }
+
     setVariant(variant: StatusVariant): void {
         if (this._variant === variant) return;
         
         this._variant = variant;
         this.markDirty();
+    }
+
+    getVariant(): StatusVariant {
+        return this._variant;
     }
 
     protected _renderSelf(screen: Screen): void {

@@ -26,7 +26,9 @@
   },
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
   },
   "dependencies": {
     "@standard-schema/spec": "^1.1.0",
@@ -40,7 +42,7 @@
     "@termuijs/testing": "workspace:*",
     "tsup": "^8.0.0",
     "typescript": "^5.4.0",
-     "zod": "^4.4.3"
+    "zod": "^4.4.3"
   },
   "keywords": [
     "terminal",

@@ -30,6 +30,13 @@ const ROLE_CONFIG: Record<MessageRole, { badge: string; colorName: string }> = {
     tool:      { badge: '[Tool]',      colorName: 'magenta' },
 };
 
+const ROLE_LABELS: Record<MessageRole, string> = {
+    user: 'User message',
+    assistant: 'Assistant message',
+    system: 'System message',
+    tool: 'Tool message',
+};
+
 // ── ChatMessage widget ────────────────────────────────
 
 /**
@@ -44,19 +51,41 @@ export class ChatMessage extends Widget {
     private _role: MessageRole;
     private _content: string;
     private _timestamp?: Date;
+    private _badgeWidth: number;
+    private _formattedTimestamp = '';
+
+    private _wrappedLines: string[] = [];
+    private _cachedContentWidth = -1;
 
     constructor(options: ChatMessageOptions, style: Partial<Style> = {}) {
         super(style);
         this._role = options.role;
+        this._badgeWidth = stringWidth(ROLE_CONFIG[this._role].badge);
         this._content = options.content;
         this._timestamp = options.timestamp;
+
+        if (this._timestamp) {
+            this._formattedTimestamp = this._timestamp.toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false,
+            });
+        }
+
         this.focusable = false;
+        this.setA11y({
+            role: 'log',
+            label: ROLE_LABELS[this._role],
+        });
     }
 
     /** Update the message content and mark dirty. */
     setContent(content: string): void {
-        if (this._content === content) return; 
+        if (this._content === content) return;
         this._content = content;
+        this._wrappedLines = [];
+        this._cachedContentWidth = -1;
         this.markDirty();
     }
 
@@ -64,6 +93,11 @@ export class ChatMessage extends Widget {
     setRole(role: MessageRole): void {
         if (this._role === role) return;
         this._role = role;
+        this._badgeWidth = stringWidth(ROLE_CONFIG[role].badge);
+        this.setA11y({
+            role: 'log',
+            label: ROLE_LABELS[role],
+        });
         this.markDirty();
     }
 
@@ -83,18 +117,12 @@ export class ChatMessage extends Widget {
         screen.writeString(x, y, config.badge, badgeAttrs);
 
         if (this._timestamp) {
-            const ts = this._timestamp.toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false,
-            });
-            const tsWidth = stringWidth(ts);
+            const tsWidth = stringWidth(this._formattedTimestamp);
             const tsX = x + width - tsWidth;
             // Only draw if it fits without overlapping the badge
-            if (tsX > x + stringWidth(config.badge)) {
+            if (tsX > x + this._badgeWidth) {
                 const dimAttrs = { ...baseAttrs, dim: true };
-                screen.writeString(tsX, y, ts, dimAttrs);
+                screen.writeString(tsX, y, this._formattedTimestamp, dimAttrs);
             }
         }
 
@@ -103,7 +131,16 @@ export class ChatMessage extends Widget {
 
         const indent = '  ';
         const contentWidth = Math.max(0, width - indent.length);
-        const lines = contentWidth > 0 ? wordWrap(this._content, contentWidth).split('\n') : [];
+
+        if (contentWidth !== this._cachedContentWidth) {
+            this._wrappedLines =
+                contentWidth > 0
+                    ? wordWrap(this._content, contentWidth).split('\n')
+                    : [];
+            this._cachedContentWidth = contentWidth;
+        }
+
+        const lines = this._wrappedLines;
         const maxContentRows = height - 1;
 
         for (let i = 0; i < Math.min(lines.length, maxContentRows); i++) {

@@ -88,6 +88,17 @@ describe('SearchableSelect', () => {
         expect(widget.filteredOptions[1].label).toBe('Alpine');
     });
 
+    it('backspace removes one grapheme from searchQuery', () => {
+        const widget = new SearchableSelect([
+            { label: 'Cafe', value: 'cafe' },
+        ]);
+
+        typeQuery(widget, 'Cafe\u0301');
+        widget.handleKey(makeKey('backspace'));
+
+        expect(widget.searchQuery).toBe('Caf');
+    });
+
     it('typing characters appends to searchQuery', () => {
         const widget = new SearchableSelect(sampleOptions);
         widget.handleKey(makeKey('h'));

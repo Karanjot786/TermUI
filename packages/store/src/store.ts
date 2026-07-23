@@ -117,10 +117,21 @@ function flushBatch(threw: boolean, immediate = false) {
             if (_batchEpoch !== epochAtFlush) return;
             const stores = Array.from(_batchStores.entries());
             _batchStores.clear();
-            for (const [listeners, { prevState, commit }] of stores) {
-                const newState = commit();
-                for (const listener of listeners) {
-                    listener(newState, prevState);
+            const newStates = new Map<Set<any>, any>();
+            for (const [listeners, { commit }] of stores) {
+                newStates.set(listeners, commit());
+            }
+            for (const [listeners, { prevState }] of stores) {
+                const newState = newStates.get(listeners);
+                try {
+                    for (const listener of listeners) {
+                        listener(newState, prevState);
+                    }
+                } catch (e) {
+                    for (const [, entry] of stores) {
+                        entry.rollback();
+                    }
+                    throw e;
                 }
             }
         };
@@ -410,6 +421,8 @@ export function createStore<T extends object>(
                     } else {
                         Object.assign(existing.changes, finalPartial);
                         existing.nextState = nextState;
+                        existing.commit = () => { state = { ...state, ...existing.changes } as T; persistState(); return state; };
+                        existing.rollback = () => { state = existing.prevState; };
                     }
                 } else {
                     state = nextState; 
@@ -607,17 +620,28 @@ export function createStore<T extends object>(
         equalityRef.current = equalityFn as EqualityFn<U> | undefined;
 
         useEffect(() => {
-            let prevSelected = selectorRef.current(store.getState());
+            let latestSelected = selectorRef.current(store.getState());
+
             const unsubscribe = store.subscribe((newState) => {
                 const newSelected = selectorRef.current(newState);
                 const areEqual = equalityRef.current
-                    ? equalityRef.current(prevSelected as U, newSelected as U)
-                    : Object.is(prevSelected, newSelected);
+                    ? equalityRef.current(latestSelected as U, newSelected as U)
+                    : Object.is(latestSelected, newSelected);
                 if (!areEqual) {
-                    prevSelected = newSelected;
+                    latestSelected = newSelected;
                     setSelectedState(newSelected);
                 }
             });
+
+            // Tearing check: did the store change between render and this effect?
+            const areEqual = equalityRef.current
+                ? equalityRef.current(latestSelected as U, selectedState as U)
+                : Object.is(latestSelected, selectedState);
+                
+            if (!areEqual) {
+                setSelectedState(latestSelected);
+            }
+
             return unsubscribe;
         }, []);
 

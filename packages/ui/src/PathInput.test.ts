@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from '@termuijs/testing';
 import { createElement, useRef } from '@termuijs/jsx';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 import { PathInput } from './PathInput.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -314,6 +314,18 @@ describe('PathInput — backspace', () => {
         input.deleteBack();
         expect(input.value).toBe('abc');
     });
+
+    it('removes one grapheme cluster at a time', () => {
+        const input = new PathInput();
+        input.value = 'e\u0301👍🏽';
+        input.moveCursorEnd();
+
+        input.deleteBack();
+        expect(input.value).toBe('e\u0301');
+
+        input.deleteBack();
+        expect(input.value).toBe('');
+    });
 });
 
 // ─────────────────────────────────────────────────────
@@ -345,6 +357,17 @@ describe('PathInput — delete key', () => {
         input.moveCursorEnd();
         input.deleteForward();
         expect(input.value).toBe('abc');
+    });
+
+    it('deletes the grapheme cluster under the cursor', () => {
+        const input = new PathInput();
+        input.value = 'a👍🏽b';
+        input.moveCursorHome();
+        input.moveCursorRight();
+
+        input.deleteForward();
+
+        expect(input.value).toBe('ab');
     });
 });
 
@@ -952,6 +975,20 @@ describe('PathInput — width clipping', () => {
         const input = new PathInput({}, { cwd: '/mock' });
         input.value = 'src';
         expect(() => renderWidget(input, 1, 5)).not.toThrow();
+    });
+
+    it('clips wide path text by terminal cell width', () => {
+        const input = new PathInput({}, { cwd: '/mock' });
+        input.value = '你好/path';
+        const screen = new Screen(3, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        input.updateRect({ x: 0, y: 0, width: 3, height: 1 });
+        input.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(3);
+        }
     });
 });
 
