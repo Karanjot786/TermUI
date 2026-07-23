@@ -298,7 +298,7 @@ export class LayerManager {
             for (let c = startX; c < startX + width; c++) {
                 if (c < 0 || c >= this._cols) continue;
 
-                if (zVal > this._hitZGrid[r][c]) {
+                if (zVal >= this._hitZGrid[r][c]) {
                     this._hitWidgetGrid[r][c] = widgetId;
                     this._hitZGrid[r][c] = zVal;
                 }
