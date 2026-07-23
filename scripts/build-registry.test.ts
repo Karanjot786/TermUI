@@ -152,6 +152,7 @@ describe('registry build utilities', () => {
     expect(detectCategory('packages/widgets/src/data/HeatMap.ts')).toBe('data');
     expect(detectCategory('packages/widgets/src/input/TextInput.ts')).toBe('input');
     expect(detectCategory('packages/jsx/src/hooks/usePackageManager.ts')).toBe('hook');
+    expect(detectCategory('packages\\jsx\\src\\hooks\\usePackageManager.ts')).toBe('hook');
     expect(detectCategory('packages/ui/src/WelcomeScreen.ts')).toBe('template');
   });
 

@@ -55,22 +55,24 @@ export function toSlug(name: string): string {
 }
 
 export function detectCategory(filePath: string): RegistryEntry['category'] {
-  if (filePath.includes('/hooks/')) return 'hook';
-  if (filePath.includes('/display/')) return 'display';
-  if (filePath.includes('/input/')) return 'input';
-  if (filePath.includes('/feedback/')) return 'feedback';
-  if (filePath.includes('/layout/')) return 'layout';
-  if (filePath.includes('/data/')) return 'data';
-  if (filePath.includes('packages/ui/')) return 'template';
+  const normPath = filePath.replace(/\\/g, '/');
+  if (normPath.includes('/hooks/')) return 'hook';
+  if (normPath.includes('/display/')) return 'display';
+  if (normPath.includes('/input/')) return 'input';
+  if (normPath.includes('/feedback/')) return 'feedback';
+  if (normPath.includes('/layout/')) return 'layout';
+  if (normPath.includes('/data/')) return 'data';
+  if (normPath.includes('packages/ui/')) return 'template';
   return 'display';
 }
 
 function detectPackage(filePath: string): string {
-  if (filePath.includes('packages/widgets/')) return '@termuijs/widgets';
-  if (filePath.includes('packages/jsx/')) return '@termuijs/jsx';
-  if (filePath.includes('packages/ui/')) return '@termuijs/ui';
-  if (filePath.includes('packages/tss/')) return '@termuijs/tss';
-  if (filePath.includes('packages/core/')) return '@termuijs/core';
+  const normPath = filePath.replace(/\\/g, '/');
+  if (normPath.includes('packages/widgets/')) return '@termuijs/widgets';
+  if (normPath.includes('packages/jsx/')) return '@termuijs/jsx';
+  if (normPath.includes('packages/ui/')) return '@termuijs/ui';
+  if (normPath.includes('packages/tss/')) return '@termuijs/tss';
+  if (normPath.includes('packages/core/')) return '@termuijs/core';
   return '@termuijs/widgets';
 }
 
@@ -359,6 +361,7 @@ export function extractApi(content: string, name: string): ComponentApi | null {
 
 function scanDirectory(dir: string, entries: { path: string; content: string }[]): void {
   if (!statSync(dir, { throwIfNoEntry: false })) return;
+  const normRoot = ROOT.replace(/\\/g, '/');
   for (const file of readdirSync(dir)) {
     const full = join(dir, file);
     const stat = statSync(full);
@@ -368,7 +371,9 @@ function scanDirectory(dir: string, entries: { path: string; content: string }[]
         scanDirectory(full, entries);
       }
     } else if (file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.endsWith('.d.ts')) {
-      entries.push({ path: full.replace(ROOT + '/', ''), content: readFileSync(full, 'utf-8') });
+      const normFull = full.replace(/\\/g, '/');
+      const relPath = normFull.replace(normRoot + '/', '');
+      entries.push({ path: relPath, content: readFileSync(full, 'utf-8') });
     }
   }
 }
