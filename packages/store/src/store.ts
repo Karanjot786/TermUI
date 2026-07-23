@@ -417,13 +417,13 @@ export function createStore<T extends object>(
                             nextState,
                             changes,
                             commit: () => { state = { ...state, ...changes } as T; persistState(); return state; },
-                            rollback: () => { state = prevState; },
+                            rollback: () => { state = prevState; persistState(); },
                         });
                     } else {
                         Object.assign(existing.changes, finalPartial);
                         existing.nextState = nextState;
                         existing.commit = () => { state = { ...state, ...existing.changes } as T; persistState(); return state; };
-                        existing.rollback = () => { state = existing.prevState; };
+                        existing.rollback = () => { state = existing.prevState; persistState(); };
                     }
                 } else {
                     state = nextState; 
@@ -528,13 +528,13 @@ export function createStore<T extends object>(
                     nextState,
                     changes,
                     commit: () => { state = { ...state, ...changes } as T; persistState(); return state; },
-                    rollback: () => { state = prevState; },
+                    rollback: () => { state = prevState; persistState(); },
                 });
             } else {
                 Object.assign(existing.changes, changes);
                 existing.nextState = nextState;
                 existing.commit = () => { state = nextState; persistState(); };
-                existing.rollback = () => { state = existing.prevState; };
+                existing.rollback = () => { state = existing.prevState; persistState(); };
             }
         } else {
             state = nextState;
