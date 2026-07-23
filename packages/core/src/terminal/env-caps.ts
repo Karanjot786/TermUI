@@ -1,5 +1,8 @@
 import { ColorDepth, detectColorDepth } from '../style/Color.js';
 
+let mockUnicode: boolean | undefined;
+let mockMotion: boolean | undefined;
+
 /**
  * Terminal capability detection hub.
  *
@@ -20,11 +23,19 @@ export const caps = {
   },
   /** Whether Unicode characters are supported. Disabled by NO_UNICODE or TERM=dumb. */
   get unicode(): boolean {
+    if (mockUnicode !== undefined) return mockUnicode;
     return !process.env.NO_UNICODE && process.env.TERM !== 'dumb';
+  },
+  set unicode(val: boolean) {
+    mockUnicode = val;
   },
   /** Whether animations are enabled. Disabled by NO_MOTION or CI environments. */
   get motion(): boolean {
+    if (mockMotion !== undefined) return mockMotion;
     return !process.env.NO_MOTION && !process.env.CI;
+  },
+  set motion(val: boolean) {
+    mockMotion = val;
   },
   /** Whether running inside a CI system (CI=1). */
   ci:      !!process.env.CI,
