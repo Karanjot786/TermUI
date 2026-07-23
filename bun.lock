@@ -214,6 +214,18 @@
         "typescript": "^5.9.3",
       },
     },
+    "examples/json-explorer": {
+      "name": "@termuijs/example-json-explorer",
+      "version": "0.1.0",
+      "dependencies": {
+        "@termuijs/core": "workspace:*",
+        "@termuijs/ui": "workspace:*",
+        "@termuijs/widgets": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "^5.9.3",
+      },
+    },
     "examples/jsx-dashboard": {
       "name": "@termuijs/example-jsx-dashboard",
       "version": "0.1.0",
@@ -862,6 +874,8 @@
     "@termuijs/example-git-client": ["@termuijs/example-git-client@workspace:examples/git-client"],
 
     "@termuijs/example-hello-world": ["@termuijs/example-hello-world@workspace:examples/01-hello-world"],
+
+    "@termuijs/example-json-explorer": ["@termuijs/example-json-explorer@workspace:examples/json-explorer"],
 
     "@termuijs/example-jsx-dashboard": ["@termuijs/example-jsx-dashboard@workspace:examples/jsx-dashboard"],
 
