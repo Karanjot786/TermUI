@@ -210,7 +210,18 @@ describe('layout cache invalidation', () => {
 
         expect(child._dirty).toBe(true);
         expect(child._dirtyReason).toBe('local');
+        expect(root._hasDirtyDescendant).toBe(true);
         expect(leaf._dirty).toBe(false);
+    });
+
+    it('ignores paint-only invalidation for layout work', () => {
+        const root = makeNode('root');
+        computeLayout(root, 80, 24);
+
+        invalidateLayout(root, { reason: 'paint' });
+
+        expect(root._dirty).toBe(false);
+        expect(root._dirtyReason).toBeUndefined();
     });
 
     it('walks clean ancestors to recompute a dirty nested child', () => {
@@ -225,6 +236,7 @@ describe('layout cache invalidation', () => {
 
         expect(leaf.computed.height).toBe(6);
         expect(root._dirty).toBe(false);
+        expect(root._hasDirtyDescendant).toBe(false);
         expect(child._dirty).toBe(false);
         expect(leaf._dirty).toBe(false);
     });
