@@ -1,6 +1,16 @@
 import { ColorDepth } from '../style/Color.js';
 import { getTerminalCapabilities } from './capabilities.js';
 
+const capsOverrides: Partial<{
+  colorDepth: ColorDepth;
+  color: boolean;
+  unicode: boolean;
+  motion: boolean;
+  ci: boolean;
+  background: 'light' | 'dark';
+  keybindingMode: 'vim' | 'emacs' | 'default';
+}> = {};
+
 /**
  * Terminal capability detection hub.
  *
@@ -11,33 +21,67 @@ import { getTerminalCapabilities } from './capabilities.js';
 export const caps = {
   /** Detected color depth (None, ANSI16, ANSI256, TrueColor). */
   get colorDepth(): ColorDepth {
+    if (capsOverrides.colorDepth !== undefined) return capsOverrides.colorDepth;
     return getTerminalCapabilities().color.depth;
+  },
+  set colorDepth(value: ColorDepth) {
+    capsOverrides.colorDepth = value;
   },
   /** Whether color output is enabled. Returns false when NO_COLOR or TERM=dumb. */
   get color(): boolean {
+    if (capsOverrides.color !== undefined) return capsOverrides.color;
     return getTerminalCapabilities().color.enabled;
+  },
+  set color(value: boolean) {
+    capsOverrides.color = value;
   },
   /** Whether Unicode characters are supported. Disabled by NO_UNICODE or TERM=dumb. */
   get unicode(): boolean {
+    if (capsOverrides.unicode !== undefined) return capsOverrides.unicode;
     return getTerminalCapabilities().unicode.enabled;
+  },
+  set unicode(value: boolean) {
+    capsOverrides.unicode = value;
   },
   /** Whether animations are enabled. Disabled by NO_MOTION or CI environments. */
   get motion(): boolean {
+    if (capsOverrides.motion !== undefined) return capsOverrides.motion;
     return getTerminalCapabilities().motion;
+  },
+  set motion(value: boolean) {
+    capsOverrides.motion = value;
   },
   /** Whether running inside a CI system (CI=1). */
   get ci(): boolean {
+    if (capsOverrides.ci !== undefined) return capsOverrides.ci;
     return getTerminalCapabilities().ci;
+  },
+  set ci(value: boolean) {
+    capsOverrides.ci = value;
   },
   /** Terminal background color (light/dark). Checks TERM_BACKGROUND then COLORFGBG. */
   get background(): 'light' | 'dark' {
+    if (capsOverrides.background !== undefined) return capsOverrides.background;
     return getTerminalCapabilities().background;
+  },
+  set background(value: 'light' | 'dark') {
+    capsOverrides.background = value;
   },
   /** Keyboard navigation mode: 'default' (arrow keys), 'vim' (hjkl), or 'emacs' (C-n/p). */
   get keybindingMode(): 'vim' | 'emacs' | 'default' {
+    if (capsOverrides.keybindingMode !== undefined) return capsOverrides.keybindingMode;
     return getTerminalCapabilities().keybindingMode;
   },
+  set keybindingMode(value: 'vim' | 'emacs' | 'default') {
+    capsOverrides.keybindingMode = value;
+  },
 } as const;
+
+export function resetCapsOverridesForTests(): void {
+  for (const key of Object.keys(capsOverrides) as Array<keyof typeof capsOverrides>) {
+    delete capsOverrides[key];
+  }
+}
 
 /**
  * Returns `true` when animation should be suppressed.

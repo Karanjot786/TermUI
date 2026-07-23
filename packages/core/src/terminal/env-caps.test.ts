@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { caps, prefersReducedMotion } from './env-caps.js';
+import { caps, prefersReducedMotion, resetCapsOverridesForTests } from './env-caps.js';
 
 // caps is evaluated at module load time, so each test must:
 // 1. vi.stubEnv() to set env vars
@@ -14,6 +14,7 @@ describe('env-caps', () => {
     beforeEach(() => {
         vi.unstubAllEnvs();
         vi.resetModules();
+        resetCapsOverridesForTests();
     });
 
     it('caps.color is false when NO_COLOR=1', async () => {
@@ -88,6 +89,12 @@ describe('env-caps', () => {
         const { ColorDepth } = await import('../style/Color.js');
         expect(caps.colorDepth).toBe(ColorDepth.None);
         expect(caps.color).toBe(false);
+    });
+
+    it('caps.unicode remains assignable for tests that force ASCII fallback', () => {
+        caps.unicode = false;
+        expect(caps.unicode).toBe(false);
+        resetCapsOverridesForTests();
     });
 });
 

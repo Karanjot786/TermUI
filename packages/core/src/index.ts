@@ -11,7 +11,7 @@ export { Renderer } from './terminal/Renderer.js';
 export type { FrameStats } from './terminal/Renderer.js';
 export { LayerManager } from './terminal/LayerManager.js';
 export type { Layer } from './terminal/LayerManager.js';
-export { caps, prefersReducedMotion, shouldUseColor, prefersHighContrast } from './terminal/env-caps.js';
+export { caps, prefersReducedMotion, shouldUseColor, prefersHighContrast, resetCapsOverridesForTests } from './terminal/env-caps.js';
 export {
     detectTerminalCapabilities,
     getTerminalCapabilities,
