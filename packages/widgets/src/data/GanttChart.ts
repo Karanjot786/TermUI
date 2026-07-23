@@ -130,25 +130,62 @@ export class GanttChart extends Widget {
         // Clamp it to 0 just in case start < minT
         const startOffsetVal = Math.max(0, task.start - minT);
         const startCols = (startOffsetVal / timeSpan) * barAreaWidth;
-        const startColInt = Math.floor(startCols);
         
         // Find duration width
         const durWidth = (task.duration / timeSpan) * barAreaWidth;
         
-        // Total sub-cells scaled (8 levels per cell)
-        let remainingSubCells = Math.round(durWidth * 8);
+        // Compute start and end in sub-cells (8 per cell)
+        const startSub = Math.round(startCols * 8);
+        const endSub = Math.round((startCols + durWidth) * 8);
 
-        const barStartX = x + labelColWidth + startColInt;
+        const barStartX = x + labelColWidth;
 
-        for (let col = 0; col < barAreaWidth - startColInt; col++) {
-          if (remainingSubCells <= 0) break;
-          const level = Math.min(remainingSubCells, 8);
-          let symbol = HORIZONTAL_BAR_SYMBOLS[level] ?? " ";
-          if (!caps.unicode && level > 0) {
-            symbol = level === 8 ? "=" : "-";
+        for (let col = 0; col < barAreaWidth; col++) {
+          const cellSubStart = col * 8;
+          const cellSubEnd = (col + 1) * 8;
+
+          const s = Math.max(startSub, cellSubStart);
+          const e = Math.min(endSub, cellSubEnd);
+
+          if (s < e) {
+            const cellStart = s - cellSubStart;
+            const cellEnd = e - cellSubStart;
+
+            let symbol = " ";
+            if (cellStart === 0) {
+              if (caps.unicode) {
+                symbol = HORIZONTAL_BAR_SYMBOLS[cellEnd] ?? " ";
+              } else {
+                symbol = cellEnd === 8 ? "=" : "-";
+              }
+            } else {
+              // cellStart > 0
+              if (cellEnd === 8) {
+                const width = 8 - cellStart;
+                if (caps.unicode) {
+                  if (width <= 2) {
+                    symbol = "\u2595"; // Right 1/8 block ▕
+                  } else if (width <= 5) {
+                    symbol = "\u2590"; // Right half block ▐
+                  } else {
+                    symbol = "\u2588"; // Full block █
+                  }
+                } else {
+                  symbol = width >= 6 ? "=" : "-";
+                }
+              } else {
+                // Middle block
+                const width = cellEnd - cellStart;
+                if (caps.unicode) {
+                  symbol = HORIZONTAL_BAR_SYMBOLS[width] ?? " ";
+                } else {
+                  symbol = width >= 6 ? "=" : "-";
+                }
+              }
+            }
+
+            screen.setCell(barStartX + col, cellY, { char: symbol, fg: color });
           }
-          screen.setCell(barStartX + col, cellY, { char: symbol, fg: color });
-          remainingSubCells -= 8;
         }
       }
 
