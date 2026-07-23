@@ -199,8 +199,8 @@ export type { BulletChartOptions, BulletRange } from './data/BulletChart.js';
 // ── New Display Widgets ───────────────────────────────
 export { Breadcrumbs } from './display/Breadcrumbs.js';
 export type { BreadcrumbsOptions } from './display/Breadcrumbs.js';
-export { StatusBar } from './display/StatusBar.js';
-export type { StatusBarOptions } from './display/StatusBar.js';
+export { StatusBar, createApiStatusBar, formatApiStatusBar } from './display/StatusBar.js';
+export type { ApiStatusBarOptions, StatusBarOptions } from './display/StatusBar.js';
 export { LoggerPanel } from './display/LoggerPanel.js';
 export type { LoggerPanelOptions, LogEntry, LogLevel } from './display/LoggerPanel.js';
 export { Avatar } from './display/Avatar.js';

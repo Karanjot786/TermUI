@@ -18,6 +18,15 @@ export interface StatusBarOptions {
     right?: string;
 }
 
+export interface ApiStatusBarOptions {
+    method?: string;
+    endpoint?: string;
+    status?: number | string;
+    latencyMs?: number;
+    environment?: string;
+    requestId?: string;
+}
+
 export class StatusBar extends Widget {
     private _left: string;
     private _center: string;
@@ -88,4 +97,40 @@ export class StatusBar extends Widget {
             attrs,
         );
     }
+}
+
+export function createApiStatusBar(
+    options: ApiStatusBarOptions,
+    style: Partial<Style> = {},
+): StatusBar {
+    return new StatusBar(style, formatApiStatusBar(options));
+}
+
+export function formatApiStatusBar(options: ApiStatusBarOptions): StatusBarOptions {
+    const method = options.method?.trim().toUpperCase();
+    const endpoint = options.endpoint?.trim();
+    const status = options.status;
+    const latencyMs = options.latencyMs;
+
+    const left = [method, endpoint].filter(Boolean).join(' ') || 'API';
+    const center = status === undefined ? 'Pending' : formatStatus(status);
+    const right = [
+        latencyMs === undefined ? undefined : `${Math.max(0, Math.round(latencyMs))}ms`,
+        options.environment?.trim(),
+        options.requestId ? `#${options.requestId.trim()}` : undefined,
+    ].filter(Boolean).join(' ');
+
+    return { left, center, right };
+}
+
+function formatStatus(status: number | string): string {
+    if (typeof status === 'number') {
+        if (status >= 200 && status < 300) return `${status} OK`;
+        if (status >= 300 && status < 400) return `${status} Redirect`;
+        if (status >= 400 && status < 500) return `${status} Client Error`;
+        if (status >= 500) return `${status} Server Error`;
+        return String(status);
+    }
+
+    return status.trim() || 'Pending';
 }
