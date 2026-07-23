@@ -264,11 +264,8 @@ describe('VirtualList', () => {
             // Offset must have started moving toward the target (43)
             expect(list.scrollOffset).toBeGreaterThan(0);
 
-            // Drive the animation to completion.
-            // The spring (stiffness=0.15, damping=0.8, dt=16ms) converges in
-            // roughly 1600 frames — run 2000 to be safe.  We check only the
-            // public scrollOffset getter; no private fields are accessed.
-            for (let i = 0; i < 2000; i++) {
+            // Drive the animation to completion with a safety iteration limit.
+            for (let i = 0; i < 1500 && list.scrollOffset < 43; i++) {
                 mockTime += 16;
                 list.render(screen);
             }
