@@ -116,7 +116,7 @@ describe("GanttChart", () => {
     const row0 = screen.back[0].map(c => c.char).join("");
     const row2 = screen.back[2].map(c => c.char).join("");
 
-    expect(row0[1]).toBe("=");
+    expect(row0[1]).toBe("-");
     expect(row0[2]).toBe("=");
     expect(row0[3]).toBe("-");
 

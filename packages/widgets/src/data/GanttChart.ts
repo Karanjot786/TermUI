@@ -151,40 +151,34 @@ export class GanttChart extends Widget {
             const cellStart = s - cellSubStart;
             const cellEnd = e - cellSubStart;
 
-            let symbol = " ";
-            if (cellStart === 0) {
-              if (caps.unicode) {
-                symbol = HORIZONTAL_BAR_SYMBOLS[cellEnd] ?? " ";
-              } else {
-                symbol = cellEnd === 8 ? "=" : "-";
+            let bestSymbol = " ";
+            if (caps.unicode) {
+              const candidates: { symbol: string; start: number; end: number }[] = [];
+              for (let w = 0; w <= 8; w++) {
+                candidates.push({ symbol: HORIZONTAL_BAR_SYMBOLS[w] ?? " ", start: 0, end: w });
+              }
+              candidates.push({ symbol: "\u2595", start: 7, end: 8 }); // Right 1/8 block ▕
+              candidates.push({ symbol: "\u2590", start: 4, end: 8 }); // Right half block ▐
+
+              let minError = Infinity;
+              for (const cand of candidates) {
+                const overlap = Math.max(0, Math.min(cellEnd, cand.end) - Math.max(cellStart, cand.start));
+                const error = (cellEnd - cellStart) + (cand.end - cand.start) - 2 * overlap;
+                if (error < minError) {
+                  minError = error;
+                  bestSymbol = cand.symbol;
+                }
               }
             } else {
-              // cellStart > 0
-              if (cellEnd === 8) {
-                const width = 8 - cellStart;
-                if (caps.unicode) {
-                  if (width <= 2) {
-                    symbol = "\u2595"; // Right 1/8 block ▕
-                  } else if (width <= 5) {
-                    symbol = "\u2590"; // Right half block ▐
-                  } else {
-                    symbol = "\u2588"; // Full block █
-                  }
-                } else {
-                  symbol = width >= 6 ? "=" : "-";
-                }
-              } else {
-                // Middle block
-                const width = cellEnd - cellStart;
-                if (caps.unicode) {
-                  symbol = HORIZONTAL_BAR_SYMBOLS[width] ?? " ";
-                } else {
-                  symbol = width >= 6 ? "=" : "-";
-                }
+              const width = cellEnd - cellStart;
+              if (width === 8) {
+                bestSymbol = "=";
+              } else if (width > 0) {
+                bestSymbol = "-";
               }
             }
 
-            screen.setCell(barStartX + col, cellY, { char: symbol, fg: color });
+            screen.setCell(barStartX + col, cellY, { char: bestSymbol, fg: color });
           }
         }
       }
