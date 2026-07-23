@@ -54,13 +54,15 @@ class JsonExplorerApp extends Widget {
         // ── Main area: either FilePicker or ScrollView+JSONView ─────────────
         this.mainArea = new Box({ flexGrow: 1, border: 'single' });
 
-        this.jsonView = new JSONView(SAMPLE_DATA, { flexGrow: 1 });
+        this.jsonView = new JSONView({ data: SAMPLE_DATA }, { flexGrow: 1 });
         this.scrollView = new ScrollView({ flexGrow: 1 });
         this.scrollView.addChild(this.jsonView);
 
         this.picker = new FilePicker({
             startPath: process.cwd(),
-            filter: (entry) => entry.isDirectory || entry.name.endsWith('.json'),
+            filter: ['.json'],
+            onSelect: (filePath) => this.loadFile(filePath),
+            onCancel: () => this.showJson(SAMPLE_DATA, 'sample data'),
         });
         this.mainArea.addChild(this.picker);   // start in picking state
 
@@ -78,11 +80,13 @@ class JsonExplorerApp extends Widget {
 
     // ── Switch from FilePicker to JSON tree view ──────────────────────────
     private showJson(data: unknown, label: string): void {
-        this.titleText.setText(`  ${label}`);
-        this.jsonView.setData(data);
+        this.titleText.setContent(`  ${label}`);
+        this.jsonView = new JSONView({ data }, { flexGrow: 1 });
+        this.scrollView.clearChildren();
+        this.scrollView.addChild(this.jsonView);
         this.mainArea.clearChildren();
         this.mainArea.addChild(this.scrollView);
-        this.statusText.setText(
+        this.statusText.setContent(
             '  [↑↓] scroll   [enter] expand/collapse   [q] quit',
         );
         this.state = 'browsing';
@@ -117,9 +121,9 @@ class JsonExplorerApp extends Widget {
             }
             // enter on a .json file → load it
             if (event.key === 'enter' || event.key === 'return') {
-                const selected = this.picker.getSelected?.();
-                if (selected && !selected.isDirectory && selected.name.endsWith('.json')) {
-                    this.loadFile(selected.path);
+                const selected = this.picker.selectedEntry;
+                if (selected && !selected.isDir && selected.name.endsWith('.json')) {
+                    this.loadFile(selected.fullPath);
                     return true;
                 }
             }
