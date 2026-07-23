@@ -160,4 +160,21 @@ describe('parallel()', () => {
         expect(cancelSpy1).toHaveBeenCalledTimes(1);
         expect(cancelSpy2).toHaveBeenCalledTimes(1);
     });
+
+    it('does not invoke onComplete if cancelled before animations finish', () => {
+        const onComplete = vi.fn();
+        let trigger1: () => void = () => {};
+
+        const anim1: AnimationRunner = (done) => {
+            trigger1 = done;
+            return () => {};
+        };
+
+        const cancelMaster = parallel([anim1], onComplete);
+        cancelMaster();
+
+        // Late completion after cancellation
+        trigger1();
+        expect(onComplete).not.toHaveBeenCalled();
+    });
 });
