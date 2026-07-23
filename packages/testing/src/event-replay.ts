@@ -4,6 +4,12 @@ export type ReplayEvent =
     | { type: 'resize'; at: number; width: number; height: number }
     | { type: 'wait'; at: number; ms: number };
 
+export type ReplayEventInput = ReplayEvent extends infer Event
+    ? Event extends ReplayEvent
+        ? Omit<Event, 'at'> & { at?: number }
+        : never
+    : never;
+
 export interface ReplayDriver {
     input?: (key: string) => void | Promise<void>;
     frame?: (buffer: string) => void | Promise<void>;
@@ -20,7 +26,7 @@ export class ReplaySession {
     private events: ReplayEvent[] = [];
     private start = Date.now();
 
-    record(event: Omit<ReplayEvent, 'at'> & { at?: number }): ReplayEvent {
+    record(event: ReplayEventInput): ReplayEvent {
         const replayEvent = {
             ...event,
             at: event.at ?? Date.now() - this.start,
