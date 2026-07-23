@@ -9,12 +9,13 @@ export interface SequenceStep {
   duration?: number
 }
 
-export type AnimationRunner = (done: () => void) => () => void
+export type AnimationCancel = (reason?: string) => void
+export type AnimationRunner = (done: () => void) => AnimationCancel
 
 export function sequence(
   runners: AnimationRunner[],
   onComplete?: () => void
-): () => void
+): AnimationCancel
 export function sequence(
   runners: SequenceStep[],
   onComplete?: () => void
@@ -22,7 +23,7 @@ export function sequence(
 export function sequence(
   runners: AnimationRunner[] | SequenceStep[],
   onComplete?: () => void
-): (() => void) | SequenceStep[] {
+): AnimationCancel | SequenceStep[] {
   // 1. Handle empty runners (always returns dummy cancel function)
   if (runners.length === 0) {
     onComplete?.()
@@ -39,7 +40,7 @@ export function sequence(
   const fns = runners as AnimationRunner[]
 
   let cancelled = false
-  let cancelCurrent: () => void = () => {}
+  let cancelCurrent: AnimationCancel = () => {}
 
   function runNext(index: number) {
     if (cancelled || index >= fns.length) {
@@ -51,16 +52,16 @@ export function sequence(
 
   runNext(0)
 
-  return () => {
+  return (reason?: string) => {
     cancelled = true
-    cancelCurrent()
+    cancelCurrent(reason)
   }
 }
 
 export function parallel(
   runners: AnimationRunner[],
   onComplete?: () => void
-): () => void {
+): AnimationCancel {
   if (runners.length === 0) {
     onComplete?.()
     return () => {}
@@ -68,7 +69,7 @@ export function parallel(
 
   let remaining = runners.length
   let cancelled = false
-  const cancellers: Array<() => void> = []
+  const cancellers: AnimationCancel[] = []
 
   for (const runner of runners) {
     const cancel = runner(() => {
@@ -79,9 +80,9 @@ export function parallel(
     cancellers.push(cancel)
   }
 
-  return () => {
+  return (reason?: string) => {
     cancelled = true
-    cancellers.forEach(c => c())
+    cancellers.forEach(c => c(reason))
   }
 }
 
@@ -111,7 +112,7 @@ export function repeat(
     }
 
     let cancelled = false
-    let cancelCurrent: () => void = () => {}
+    let cancelCurrent: AnimationCancel = () => {}
 
     function runNext(index: number) {
       if (cancelled || index >= count) {
@@ -131,9 +132,9 @@ export function repeat(
 
     runNext(0)
 
-    return () => {
+    return (reason?: string) => {
       cancelled = true
-      cancelCurrent()
+      cancelCurrent(reason)
     }
   }
 }

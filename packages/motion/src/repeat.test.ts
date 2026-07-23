@@ -63,6 +63,18 @@ describe('repeat()', () => {
     expect(calls).toBe(1);
   });
 
+  it('passes a cancellation reason to the active pass', () => {
+    const cancelSpy = vi.fn();
+    const runner: AnimationRunner = () => cancelSpy;
+
+    const repeated = repeat(runner, { count: 3 });
+    const cancel = repeated(vi.fn());
+
+    cancel('component-unmounted');
+
+    expect(cancelSpy).toHaveBeenCalledWith('component-unmounted');
+  });
+
   it('infinite loop does not call done', () => {
     let calls = 0;
     let cancel: (() => void) | null = null;

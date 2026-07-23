@@ -103,6 +103,16 @@ describe('sequence()', () => {
         expect(order).toEqual(['start1']); // Anim2 never started
         expect(onComplete).not.toHaveBeenCalled();
     });
+
+    it('passes a cancellation reason to the active animation', () => {
+        const cancelSpy = vi.fn();
+        const anim: AnimationRunner = () => cancelSpy;
+
+        const cancelMaster = sequence([anim]);
+        cancelMaster('interrupted');
+
+        expect(cancelSpy).toHaveBeenCalledWith('interrupted');
+    });
 });
 
 describe('parallel()', () => {
@@ -159,6 +169,20 @@ describe('parallel()', () => {
 
         expect(cancelSpy1).toHaveBeenCalledTimes(1);
         expect(cancelSpy2).toHaveBeenCalledTimes(1);
+    });
+
+    it('passes a cancellation reason to each active animation', () => {
+        const cancelSpy1 = vi.fn();
+        const cancelSpy2 = vi.fn();
+
+        const anim1: AnimationRunner = () => cancelSpy1;
+        const anim2: AnimationRunner = () => cancelSpy2;
+
+        const cancelMaster = parallel([anim1, anim2]);
+        cancelMaster('route-change');
+
+        expect(cancelSpy1).toHaveBeenCalledWith('route-change');
+        expect(cancelSpy2).toHaveBeenCalledWith('route-change');
     });
 
     it('ignores late completion callbacks after cancellation', () => {
