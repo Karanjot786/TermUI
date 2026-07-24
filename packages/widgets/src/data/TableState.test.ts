@@ -96,4 +96,30 @@ describe('useTableState', () => {
         state.scrollPrev(); // already at 0
         expect(state.scrollOffset).toBe(0);
     });
+
+    // ── setFilter ─────────────────────────────────────
+
+    it('setFilter() updates filterText and filterColumn', () => {
+        const state = useTableState({ rows: makeRows() });
+        state.setFilter('Ali', 'name');
+        expect(state.filterText).toBe('Ali');
+        expect(state.filterColumn).toBe('name');
+    });
+
+    it('setFilter() with no column key filters all columns', () => {
+        const state = useTableState({ rows: makeRows() });
+        state.setFilter('li');
+        expect(state.filterText).toBe('li');
+        expect(state.filterColumn).toBeUndefined();
+    });
+
+    // ── resetFilter ───────────────────────────────────
+
+    it('resetFilter() clears filterText and filterColumn', () => {
+        const state = useTableState({ rows: makeRows() });
+        state.setFilter('Ali', 'name');
+        state.resetFilter();
+        expect(state.filterText).toBeUndefined();
+        expect(state.filterColumn).toBeUndefined();
+    });
 });

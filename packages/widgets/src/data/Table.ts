@@ -37,6 +37,10 @@ export interface TableOptions {
     onSort?: (colIndex: number, direction: 'asc' | 'desc') => void;
     /** Whether columns can be resized by dragging separators */
     resizable?: boolean;
+    /** Initial filter text */
+    filterText?: string;
+    /** Initial column key to filter on (undefined = all columns) */
+    filterColumn?: string;
 }
 
 export interface TableProps {
@@ -90,6 +94,11 @@ export class Table extends Widget {
     private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
     private readonly _mouseHandler = (event: MouseEvent): void => this.handleMouse(event);
 
+    private _filterText?: string;
+    private _filterColumn?: string;
+    private _filterOpen = false;
+    private _allRows: TableRow[] = [];
+
     constructor(
         columnsOrProps: TableColumn[] | TableProps,
         rows: TableRow[] = [],
@@ -124,6 +133,14 @@ export class Table extends Widget {
         this._state = state;
         this._onStateChange = onStateChange;
         this._tableOnSort = options.onSort;
+        this._filterText = options.filterText;
+        this._filterColumn = options.filterColumn;
+        if (this._filterText !== undefined && this._filterText !== '') {
+            this._allRows = [...rows];
+            this._rows = this._getFilteredRows(rows);
+        } else {
+            this._allRows = [];
+        }
 
         this.events.on('key', this._keyHandler);
         if (this._resizable) {
@@ -149,6 +166,10 @@ export class Table extends Widget {
 
     setRows(rows: TableRow[]): void {
         this._rows = rows;
+        this._allRows = rows;
+        if (this._filterText !== undefined && this._filterText !== '') {
+            this._rows = this._getFilteredRows(this._allRows);
+        }
         this._clampScroll();
         this.markDirty();
         this._pushState();
@@ -180,11 +201,37 @@ export class Table extends Widget {
         if (this._tableOnSort) {
             this._tableOnSort(colIndex, this._sortState.direction);
         } else {
-            // Fallback to internal sort if no callback provided
             const key = this._columns[colIndex].key;
             this.sortByColumn(key, this._sortState.direction);
         }
         this.markDirty();
+    }
+
+    setFilter(text: string, columnKey?: string): void {
+        this._filterText = text;
+        this._filterColumn = columnKey;
+        if (this._allRows.length === 0) {
+            this._allRows = [...this._rows];
+        }
+        this._rows = this._getFilteredRows(this._allRows);
+        this._selectedRow = Math.min(this._selectedRow, Math.max(0, this._rows.length - 1));
+        this._clampScroll();
+        this.markDirty();
+        this._pushState();
+    }
+
+    resetFilters(): void {
+        this._filterText = undefined;
+        this._filterColumn = undefined;
+        this._filterOpen = false;
+        if (this._allRows.length > 0) {
+            this._rows = [...this._allRows];
+            this._allRows = [];
+        }
+        this._selectedRow = Math.min(this._selectedRow, Math.max(0, this._rows.length - 1));
+        this._clampScroll();
+        this.markDirty();
+        this._pushState();
     }
 
     // ── External state sync ───────────────────────────
@@ -192,6 +239,8 @@ export class Table extends Widget {
     private _pushState(): void {
         if (this._state) {
             this._state.rows = this._rows;
+            this._state.filterText = this._filterText;
+            this._state.filterColumn = this._filterColumn;
             this._onStateChange?.(this._state);
         }
     }
@@ -245,6 +294,26 @@ export class Table extends Widget {
     }
 
     handleKey(event: KeyEvent): void {
+        if (this._filterOpen) {
+            switch (event.key) {
+                case 'escape':
+                    this.resetFilters();
+                    return;
+                case 'backspace':
+                    if (this._filterText && this._filterText.length > 0) {
+                        this.setFilter(this._filterText.slice(0, -1), this._filterColumn);
+                    } else {
+                        this.resetFilters();
+                    }
+                    return;
+                default:
+                    if (event.key.length === 1 && !event.ctrl && !event.alt) {
+                        this.setFilter((this._filterText ?? '') + event.key, this._filterColumn);
+                    }
+                    return;
+            }
+        }
+
         const minRow = this._showHeader ? -1 : 0;
 
         if (event.key === 'up') {
@@ -287,6 +356,11 @@ export class Table extends Widget {
             if (event.key === 'enter') {
                 this.toggleSort(this._focusedHeaderIndex);
             }
+            if (event.key === '/' || (event.key === 'f' && event.ctrl)) {
+                this._filterOpen = true;
+                this.setFilter('', this._columns[this._focusedHeaderIndex]?.key);
+                return;
+            }
         }
 
         this._clampScroll();
@@ -313,6 +387,9 @@ export class Table extends Widget {
         let visibleHeight = rect.height;
         if (this._showHeader) {
             visibleHeight -= 2; // header + separator
+            if (this._filterOpen) {
+                visibleHeight -= 1; // filter input row
+            }
         }
         if (visibleHeight <= 0) { this._scrollOffset = 0; return; }
 
@@ -334,6 +411,23 @@ export class Table extends Widget {
         this._scrollOffset = Math.max(0, this._scrollOffset);
     }
 
+    private _getFilteredRows(rows: TableRow[]): TableRow[] {
+        if (!this._filterText) {
+            return rows;
+        }
+        const needle = this._filterText.toLowerCase();
+        return rows.filter(row => {
+            if (this._filterColumn) {
+                const value = row[this._filterColumn];
+                return value !== undefined && String(value).toLowerCase().includes(needle);
+            }
+            return this._columns.some(col => {
+                const value = row[col.key];
+                return value !== undefined && String(value).toLowerCase().includes(needle);
+            });
+        });
+    }
+
     // ── Rendering ─────────────────────────────────────
 
     protected _renderSelf(screen: Screen): void {
@@ -349,6 +443,13 @@ export class Table extends Widget {
 
         let headerOffset = 0;
 
+        // Render filter input row
+        if (this._filterOpen && headerOffset < height) {
+            const filterText = `/${this._filterText ?? ''}`;
+            screen.writeString(x, y + headerOffset, truncate(filterText, width), { ...attrs, dim: true });
+            headerOffset++;
+        }
+
         // Render header
         if (this._showHeader && headerOffset < height) {
             let cx = x;
@@ -360,6 +461,10 @@ export class Table extends Widget {
                     const ascIcon = caps.unicode ? ' ▲' : ' ^';
                     const descIcon = caps.unicode ? ' ▼' : ' v';
                     headerText += this._sortState.direction === 'asc' ? ascIcon : descIcon;
+                }
+
+                if (this._filterText && (this._filterColumn === undefined || this._filterColumn === col.key)) {
+                    headerText += caps.unicode ? ' ◉' : ' *';
                 }
 
                 const cellText = this._alignText(headerText, colWidths[c], col.align ?? 'left');
