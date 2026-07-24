@@ -15,17 +15,19 @@ export interface AddCommandOptions {
 
 interface RegistryComponent {
     name: string;
+    slug?: string;
     category?: string;
     description?: string;
-    files: string[];
+    files: Array<string | { path: string; content: string }>;
+    dependencies?: string[];
     deps?: string[];
     peerDeps?: string[];
     version?: string;
 }
 
-interface RegistrySchema {
-    components: RegistryComponent[];
-}
+type RegistryIndex = RegistryComponent[] | { components: RegistryComponent[] };
+
+type PackageManager = "npm" | "yarn" | "pnpm" | "bun";
 
 export async function runAddCommand(options: AddCommandOptions): Promise<void> {
     const componentName = options.component.trim();
@@ -33,17 +35,21 @@ export async function runAddCommand(options: AddCommandOptions): Promise<void> {
         throw new Error("Component name is required.");
     }
 
-    const schema = await fetchRegistrySchema();
-    const componentEntry = findComponentEntry(schema, componentName);
+    const registry = await fetchRegistryIndex();
+    const indexEntry = findComponentEntry(registry, componentName);
 
-    if (!componentEntry) {
-        printAvailableComponents(schema);
+    if (!indexEntry) {
+        printAvailableComponents(registry);
         throw new Error(`Component "${componentName}" not found in registry.`);
     }
 
+    const componentEntry =
+        await fetchComponentEntry(indexEntry.slug ?? indexEntry.name) ??
+        indexEntry;
     const outputRoot = resolve(process.cwd(), options.dir ?? "src/components");
-    const destinationRoot = join(outputRoot, componentEntry.name);
-    const fileEntries = await downloadComponentFiles(componentEntry);
+    const componentDirName = indexEntry.slug ?? componentEntry.slug ?? indexEntry.name;
+    const destinationRoot = join(outputRoot, componentDirName);
+    const fileEntries = await resolveComponentFiles(componentEntry);
 
     if (options.dryRun) {
         printDryRunPreview(destinationRoot, fileEntries);
@@ -61,7 +67,7 @@ export async function runAddCommand(options: AddCommandOptions): Promise<void> {
         }
     }
 
-    writeComponentFiles(destinationRoot, fileEntries, componentEntry.name);
+    writeComponentFiles(destinationRoot, fileEntries, componentDirName);
     await installPackages(componentEntry);
 
     console.log();
@@ -71,36 +77,60 @@ export async function runAddCommand(options: AddCommandOptions): Promise<void> {
     console.log();
     console.log("  Import it with:");
     console.log(
-        `    import { ${pascalCase(componentEntry.name)} } from './components/${componentEntry.name}';`,
+        `    import { ${pascalCase(componentEntry.name)} } from './components/${componentDirName}';`,
     );
 }
 
-async function fetchRegistrySchema(): Promise<RegistrySchema> {
-    const url = `${REGISTRY_BASE_URL}/registry/schema.json`;
+async function fetchRegistryIndex(): Promise<RegistryIndex> {
+    const url = `${REGISTRY_BASE_URL}/r/registry.json`;
     const response = await fetch(url);
 
     if (!response.ok) {
         throw new Error(
-            `Failed to fetch registry schema from ${url}: ${response.status} ${response.statusText}`,
+            `Failed to fetch registry index from ${url}: ${response.status} ${response.statusText}`,
         );
     }
 
-    return await response.json();
+    return await response.json() as RegistryIndex;
+}
+
+async function fetchComponentEntry(componentSlug: string): Promise<RegistryComponent | undefined> {
+    const url = `${REGISTRY_BASE_URL}/r/${componentSlug}.json`;
+    const response = await fetch(url);
+
+    if (response.status === 404) {
+        return undefined;
+    }
+
+    if (!response.ok) {
+        throw new Error(
+            `Failed to fetch component "${componentSlug}" from ${url}: ${response.status} ${response.statusText}`,
+        );
+    }
+
+    if (typeof response.json !== "function") {
+        return undefined;
+    }
+
+    return await response.json() as RegistryComponent;
 }
 
 function findComponentEntry(
-    schema: RegistrySchema,
+    registry: RegistryIndex,
     componentName: string,
 ): RegistryComponent | undefined {
     const normalized = componentName.toLowerCase();
-    return schema.components.find(
-        (entry) => entry.name.toLowerCase() === normalized,
+    const components = Array.isArray(registry) ? registry : registry.components;
+    return components.find(
+        (entry) => entry.name.toLowerCase() === normalized ||
+            entry.slug?.toLowerCase() === normalized,
     );
 }
 
-function printAvailableComponents(schema: RegistrySchema): void {
-    const names = schema.components
-        .map((entry) => entry.name)
+function printAvailableComponents(registry: RegistryIndex): void {
+    const components = Array.isArray(registry) ? registry : registry.components;
+    const names = components
+        .map((entry) => entry.slug ?? entry.name)
         .sort((a, b) => a.localeCompare(b));
 
     console.log("Available registry components:");
@@ -109,10 +139,20 @@ function printAvailableComponents(schema: RegistrySchema): void {
     }
 }
 
-async function downloadComponentFiles(
+async function resolveComponentFiles(
     entry: RegistryComponent,
 ): Promise<Array<{ path: string; content: string }>> {
+    if (entry.files.every((file): file is { path: string; content: string } => {
+        return typeof file !== "string";
+    })) {
+        return entry.files.map(file => ({ path: file.path, content: file.content }));
+    }
+
     const downloads = entry.files.map(async (filePath) => {
+        if (typeof filePath !== "string") {
+            return filePath;
+        }
+
         const rawUrl = `${REGISTRY_BASE_URL}/${filePath}`;
         const response = await fetch(rawUrl);
 
@@ -178,9 +218,12 @@ function resolveDestinationPath(
     componentName: string,
 ): string {
     const prefix = `registry/components/${componentName}/`;
-    const relativePath = registryFilePath.startsWith(prefix)
+    let relativePath = registryFilePath.startsWith(prefix)
         ? registryFilePath.slice(prefix.length)
         : registryFilePath;
+    if (!relativePath.includes("/") && relativePath === `${componentName}.ts`) {
+        relativePath = "index.ts";
+    }
     const destination = resolve(destinationRoot, relativePath);
 
     const rel = relative(resolve(destinationRoot), destination);
@@ -202,20 +245,41 @@ function getDestinationRelativePath(
         return join(destinationRoot, relativePath);
     }
 
+    if (pathSegments.length === 1 && registryFilePath.endsWith(".ts")) {
+        return join(destinationRoot, "index.ts");
+    }
+
     return join(destinationRoot, registryFilePath);
 }
 
 async function installPackages(entry: RegistryComponent): Promise<void> {
     const deps = [
-        ...new Set([...(entry.deps ?? []), ...(entry.peerDeps ?? [])]),
+        ...new Set([
+            ...(entry.dependencies ?? []),
+            ...(entry.deps ?? []),
+            ...(entry.peerDeps ?? []),
+        ]),
     ];
     if (deps.length === 0) {
         return;
     }
 
-    execFileSync("bun", ["add", ...deps], {
+    const pm = detectPackageManager(process.cwd());
+    execFileSync(pm, installArgs(pm, deps), {
         stdio: "inherit",
     });
+}
+
+function detectPackageManager(cwd: string): PackageManager {
+    if (existsSync(join(cwd, "bun.lock"))) return "bun";
+    if (existsSync(join(cwd, "pnpm-lock.yaml"))) return "pnpm";
+    if (existsSync(join(cwd, "yarn.lock"))) return "yarn";
+    return "npm";
+}
+
+function installArgs(pm: PackageManager, deps: string[]): string[] {
+    if (pm === "npm") return ["install", ...deps];
+    return ["add", ...deps];
 }
 
 function pascalCase(value: string): string {

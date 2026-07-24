@@ -83,19 +83,58 @@ describe('useTemperature', () => {
         expect(stateValues[2]).toBe(false);
     });
 
-    it('sets error when the platform is not supported', async () => {
+    it('fetches data on macOS using osx-cpu-temp', async () => {
         (os.platform as any).mockReturnValue('darwin');
+        (cp.execFile as any).mockImplementation((cmd: string, args: string[], opts: any, cb: any) => {
+            if (cmd === 'osx-cpu-temp') {
+                cb(null, '45.5°C\n', '');
+            } else {
+                cb(new Error('not found'), '', '');
+            }
+        });
 
         useTemperature(1000);
+        if (effectCb) effectCb();
+        await flushPromises();
 
-        if (effectCb) {
-            effectCb();
-        }
+        expect(stateValues[0]).toEqual({ celsius: 45.5, platform: 'darwin' });
+        expect(stateValues[1]).toBeNull();
+        expect(stateValues[2]).toBe(false);
+    });
 
+    it('fetches data on macOS using smc fallback', async () => {
+        (os.platform as any).mockReturnValue('darwin');
+        (cp.execFile as any).mockImplementation((cmd: string, args: string[], opts: any, cb: any) => {
+            if (cmd === 'osx-cpu-temp') {
+                cb(new Error('not found'), '', '');
+            } else if (cmd === 'smc') {
+                cb(null, '  TC0P  [sp78]  46.25 (bytes 2e 40)\n', '');
+            } else {
+                cb(new Error('not found'), '', '');
+            }
+        });
+
+        useTemperature(1000);
+        if (effectCb) effectCb();
+        await flushPromises();
+
+        expect(stateValues[0]).toEqual({ celsius: 46.25, platform: 'darwin' });
+        expect(stateValues[1]).toBeNull();
+        expect(stateValues[2]).toBe(false);
+    });
+
+    it('sets error on macOS when utilities fail', async () => {
+        (os.platform as any).mockReturnValue('darwin');
+        (cp.execFile as any).mockImplementation((cmd: string, args: string[], opts: any, cb: any) => {
+            cb(new Error('not found'), '', '');
+        });
+
+        useTemperature(1000);
+        if (effectCb) effectCb();
         await flushPromises();
 
         expect(stateValues[1]).toBeInstanceOf(Error);
-        expect(stateValues[1].message).toContain('not supported on macOS');
+        expect(stateValues[1].message).toContain('requires osx-cpu-temp or smc on macOS');
         expect(stateValues[2]).toBe(false);
     });
 

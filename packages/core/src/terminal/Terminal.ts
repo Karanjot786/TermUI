@@ -217,9 +217,17 @@ export class Terminal {
      * Writes data to stdout synchronously, bypassing the write queue.
      * Used by the renderer during frame flush to avoid races with the
      * async queue lifecycle. Only use for render-path output.
+     *
+     * Drains any pending queue items first so that ordering is preserved
+     * between async queued writes and synchronous render output.
      */
     writeSync(data: string): void {
         if (!data) return;
+        while (this._writeQueue.length > 0) {
+            const chunk = this._writeQueue.shift()!;
+            this.stdout.write(chunk);
+        }
+        this._isWriting = false;
         this.stdout.write(data);
     }
 

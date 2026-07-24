@@ -136,6 +136,33 @@ describe("render harness", () => {
         });
     });
 
+    describe("findByText", () => {
+        it("returns a matching widget", () => {
+            const screen = render(<Hello />);
+    
+            expect(screen.findByText("Hello")).toBeTruthy();
+        });
+    
+        it("throws when no widget matches", () => {
+            const screen = render(<Hello />);
+    
+            expect(() => {
+                screen.findByText("Missing");
+            }).toThrow('Unable to find widget with text "Missing"');
+        });
+    });
+    
+    describe("queryAllByRole", () => {
+        it("returns an array when no matching roles exist", () => {
+            const screen = render(<MultiText />);
+    
+            const widgets = screen.queryAllByRole("listitem");
+    
+            expect(Array.isArray(widgets)).toBe(true);
+            expect(widgets).toEqual([]);
+        });
+    });
+
     describe("fireKey", () => {
         describe("pressKey", () => {
             it("aliases fireKey", () => {
