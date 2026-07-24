@@ -88,6 +88,11 @@ export class Typewriter extends Widget {
     this.markDirty();
   }
 
+  /** Return current text. */
+  getText(): string {
+    return this._text;
+  }
+
   // ── Rendering ─────────────────────────────────────────────────────────────
 
   protected _renderSelf(screen: Screen): void {

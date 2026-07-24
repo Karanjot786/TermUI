@@ -120,6 +120,7 @@ describe('Typewriter', () => {
     tw.tick();
     tw.tick();
     tw.setText('world');
+    expect(tw.getText()).toBe('world');
     const row = renderRow(tw);
     // Counter reset — no 'w' visible yet.
     expect(row).not.toContain('w');
