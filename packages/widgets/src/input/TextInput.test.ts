@@ -168,6 +168,17 @@ describe('TextInput', () => {
         expect(cell.underline).toBe(true);
     });
 
+    it('renders the focused counter using grapheme length', () => {
+        const input = new TextInput({}, { value: 'a🙂e\u0301', maxLength: 5 });
+        input.isFocused = true;
+
+        const screen = renderTextInput(input, 20, 3);
+        const contentRow = screen.back[1].map(c => c.char).join('');
+
+        expect(contentRow).toContain('3/5');
+        expect(contentRow).not.toContain('5/5');
+    });
+
     it('scrolls value view horizontally when text exceeds viewport width', () => {
         // Content width is 5 (7 - 2 for borders). Visible area leaves 1 cell for cursor, so 4 cells visible.
         const input = new TextInput();

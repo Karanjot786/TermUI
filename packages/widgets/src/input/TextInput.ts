@@ -428,7 +428,7 @@ export class TextInput extends Widget {
             modeIndicator = ` -- ${this._vimMode.toUpperCase()} -- `;
             rightReserved = modeIndicator.length;
         } else if (this.isFocused) {
-            const length = this._value.length;
+            const length = graphemes.length;
             const max = this._maxLength === Infinity ? null : this._maxLength;
             const counterText = max ? `${length}/${max}` : `${length}`;
             const counterWidth = stringWidth(counterText);
@@ -485,7 +485,7 @@ export class TextInput extends Widget {
         if (modeIndicator) {
             screen.writeString(x + width - modeIndicator.length, y, modeIndicator, { ...attrs, dim: true });
         } else if (this.isFocused) {
-            const length = this._value.length;
+            const length = graphemes.length;
             const max = this._maxLength === Infinity ? null : this._maxLength;
             const counterText = max ? `${length}/${max}` : `${length}`;
             const counterWidth = stringWidth(counterText);
