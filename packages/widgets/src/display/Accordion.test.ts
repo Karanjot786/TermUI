@@ -57,6 +57,13 @@ function allText(screen: Screen, rows = 20): string {
 
 describe('Accordion', () => {
 
+    describe('getSections', () => {
+        it('returns a copy of the current sections array', () => {
+            const accordion = makeAccordion();
+            expect(accordion.getSections()).toEqual(SECTIONS);
+        });
+    });
+
     describe('1. Initial render', () => {
         it('renders all section titles', () => {
             const accordion = makeAccordion();
