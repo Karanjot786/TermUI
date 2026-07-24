@@ -1,18 +1,5 @@
 import { ColorDepth, detectColorDepth } from '../style/Color.js';
 
-let mockUnicode: boolean | undefined;
-let mockMotion: boolean | undefined;
-
-export interface TerminalCaps {
-  readonly colorDepth: ColorDepth;
-  readonly color: boolean;
-  unicode: boolean;
-  motion: boolean;
-  readonly ci: boolean;
-  readonly background: 'light' | 'dark';
-  readonly keybindingMode: 'vim' | 'emacs' | 'default';
-}
-
 /**
  * Terminal capability detection hub.
  *
@@ -20,7 +7,7 @@ export interface TerminalCaps {
  * Widget authors should check these properties before using
  * non-ASCII characters, animations, or color sequences.
  */
-export const caps: TerminalCaps = {
+export const caps = {
   /** Detected color depth (None, ANSI16, ANSI256, TrueColor). */
   get colorDepth(): ColorDepth {
     return detectColorDepth();
@@ -32,21 +19,9 @@ export const caps: TerminalCaps = {
     return this.colorDepth !== ColorDepth.None;
   },
   /** Whether Unicode characters are supported. Disabled by NO_UNICODE or TERM=dumb. */
-  get unicode(): boolean {
-    if (mockUnicode !== undefined) return mockUnicode;
-    return !process.env.NO_UNICODE && process.env.TERM !== 'dumb';
-  },
-  set unicode(val: boolean) {
-    mockUnicode = val;
-  },
+  unicode: !process.env.NO_UNICODE && process.env.TERM !== 'dumb',
   /** Whether animations are enabled. Disabled by NO_MOTION or CI environments. */
-  get motion(): boolean {
-    if (mockMotion !== undefined) return mockMotion;
-    return !process.env.NO_MOTION && !process.env.CI;
-  },
-  set motion(val: boolean) {
-    mockMotion = val;
-  },
+  motion:  !process.env.NO_MOTION && !process.env.CI,
   /** Whether running inside a CI system (CI=1). */
   ci:      !!process.env.CI,
   /** Terminal background color (light/dark). Checks TERM_BACKGROUND then COLORFGBG. */
@@ -70,7 +45,7 @@ export const caps: TerminalCaps = {
     if (mode === 'vim' || mode === 'emacs') return mode;
     return 'default';
   },
-};
+} as const;
 
 /**
  * Returns `true` when animation should be suppressed.
