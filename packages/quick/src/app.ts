@@ -434,74 +434,69 @@ export class AppBuilder {
      * Walk the widget tree and update any reactive values.
      */
     private _refreshReactiveWidgets(widget: Widget): void {
-        try {
-            const w = widget as any; // as any: reactive metadata is monkey-patched onto Widget instances in widgets.ts
+        const w = widget as any; // as any: reactive metadata is monkey-patched onto Widget instances in widgets.ts
 
-            // Text — reactive content
-            if (widget instanceof Text && w.__reactiveContent) {
-                widget.setContent(resolve(w.__reactiveContent));
-            }
+        // Text — reactive content
+        if (widget instanceof Text && w.__reactiveContent) {
+            widget.setContent(resolve(w.__reactiveContent));
+        }
 
-            // Gauge — reactive value
-            if (widget instanceof Gauge && w.__reactiveValue) {
-                widget.setValue(resolve(w.__reactiveValue));
-            }
+        // Gauge — reactive value
+        if (widget instanceof Gauge && w.__reactiveValue) {
+            widget.setValue(resolve(w.__reactiveValue));
+        }
 
-            // Table — reactive data
-            if (widget instanceof Table && w.__reactiveData) {
-                const data: Record<string, string | number>[] = resolve(w.__reactiveData);
-                widget.setRows(data);
-            }
+        // Table — reactive data
+        if (widget instanceof Table && w.__reactiveData) {
+            const data: Record<string, string | number>[] = resolve(w.__reactiveData);
+            widget.setRows(data);
+        }
 
-            // Sparkline — reactive data
-            if (widget instanceof Sparkline && w.__reactiveData) {
-                widget.setData(resolve(w.__reactiveData));
-            }
+        // Sparkline — reactive data
+        if (widget instanceof Sparkline && w.__reactiveData) {
+            widget.setData(resolve(w.__reactiveData));
+        }
 
-            // StatusIndicator — reactive status
-            if (widget instanceof StatusIndicator && w.__reactiveStatus) {
-                widget.setStatus(resolve(w.__reactiveStatus));
-            }
+        // StatusIndicator — reactive status
+        if (widget instanceof StatusIndicator && w.__reactiveStatus) {
+            widget.setStatus(resolve(w.__reactiveStatus));
+        }
 
-            // LogView — reactive lines
-            if (widget instanceof LogView && w.__reactiveLines) {
-                widget.setLines(resolve(w.__reactiveLines));
-            }
+        // LogView — reactive lines
+        if (widget instanceof LogView && w.__reactiveLines) {
+            widget.setLines(resolve(w.__reactiveLines));
+        }
 
-            // List — reactive items
-            if (widget instanceof List && w.__reactiveItems) {
-                const items: string[] = resolve(w.__reactiveItems);
-                widget.setItems(items.map(label => ({ label, value: label })));
-            }
+        // List — reactive items
+        if (widget instanceof List && w.__reactiveItems) {
+            const items: string[] = resolve(w.__reactiveItems);
+            widget.setItems(items.map(label => ({ label, value: label })));
+        }
 
-            // BarChart — reactive data
-            if (widget instanceof BarChart && w.__reactiveBarData) {
-                widget.setData(resolve(w.__reactiveBarData));
-            }
+        // BarChart — reactive data
+        if (widget instanceof BarChart && w.__reactiveBarData) {
+            widget.setData(resolve(w.__reactiveBarData));
+        }
 
-            // ProgressBar — reactive value
-            if (widget instanceof ProgressBar && w.__reactiveValue) {
-                widget.setValue(resolve(w.__reactiveValue));
-            }
+        // ProgressBar — reactive value
+        if (widget instanceof ProgressBar && w.__reactiveValue) {
+            widget.setValue(resolve(w.__reactiveValue));
+        }
 
-            // Tree — reactive nodes (if data changes)
-            if (widget instanceof Tree && w.__reactiveTreeNodes) {
-                widget.setNodes(resolve(w.__reactiveTreeNodes));
-            }
+        // Tree — reactive nodes (if data changes)
+        if (widget instanceof Tree && w.__reactiveTreeNodes) {
+            widget.setNodes(resolve(w.__reactiveTreeNodes));
+        }
 
-            // MultiProgress — reactive items
-            if (widget instanceof MultiProgress && w.__reactiveMultiItems) {
-                const items: ProgressItem[] = resolve(w.__reactiveMultiItems);
-                widget.setItems(items);
-            }
+        // MultiProgress — reactive items
+        if (widget instanceof MultiProgress && w.__reactiveMultiItems) {
+            const items: ProgressItem[] = resolve(w.__reactiveMultiItems);
+            widget.setItems(items);
+        }
 
-            // Recurse into children
-            for (const child of widget.children) {
-                this._refreshReactiveWidgets(child);
-            }
-        } catch (err) {
-            // Reactive widget error — don't crash the process
-            console.error('[quick] reactive widget error:', err);
+        // Recurse into children
+        for (const child of widget.children) {
+            this._refreshReactiveWidgets(child);
         }
     }
 }
