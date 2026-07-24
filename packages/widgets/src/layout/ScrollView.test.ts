@@ -16,6 +16,12 @@ const key = (k: string): KeyEvent => ({
     preventDefault: () => {},
 });
 
+const spyKey = (k: string): KeyEvent => ({
+    ...key(k),
+    stopPropagation: vi.fn(),
+    preventDefault: vi.fn(),
+});
+
 afterEach(() => {
     vi.restoreAllMocks();
 });
@@ -142,6 +148,28 @@ describe("ScrollView", () => {
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
         sv.handleKey(key("down"));
         expect(sv.scrollOffset).toBe(1);
+    });
+
+    it("consumes handled navigation keys", () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        const event = spyKey("down");
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+
+        sv.handleKey(event);
+
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
+    });
+
+    it("does not consume unhandled keys", () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        const event = spyKey("x");
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+
+        sv.handleKey(event);
+
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
     });
 
     it("up scrolls up by 1", () => {

@@ -90,11 +90,18 @@ export class ScrollView extends Widget {
     /** Handle keyboard navigation */
     handleKey(event: KeyEvent): void {
         const token = `${event.ctrl ? 'ctrl+' : ''}${event.alt ? 'alt+' : ''}${event.shift ? 'shift+' : ''}${String(event.key).toLowerCase()}`;
+        let handled = true;
         switch (normalizeNavigationKey(token)) {
             case 'up':       this.scrollBy(-this.getScrollDelta(1)); break;
             case 'down':     this.scrollBy(this.getScrollDelta(1)); break;
             case 'pageup':   this.scrollBy(-this.getScrollDelta(Math.max(1, this._rect.height - 1))); break;
             case 'pagedown': this.scrollBy(this.getScrollDelta(Math.max(1, this._rect.height - 1))); break;
+            default:         handled = false; break;
+        }
+
+        if (handled) {
+            event.preventDefault();
+            event.stopPropagation();
         }
     }
 
