@@ -42,6 +42,11 @@ export class Breadcrumbs extends Widget {
         this.markDirty();
     }
 
+    /** Return current trail of segments. */
+    getSegments(): string[] {
+        return [...this._segments];
+    }
+
     protected _renderSelf(screen: Screen): void {
         const { x, y, width, height } = this._getContentRect();
         if (width <= 0 || height <= 0 || this._segments.length === 0) return;

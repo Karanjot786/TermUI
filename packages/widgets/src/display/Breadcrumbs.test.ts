@@ -61,6 +61,7 @@ describe('Breadcrumbs', () => {
         bc.updateRect({ x: 0, y: 0, width: 40, height: 1 });
         
         bc.setSegments(['X', 'Y']);
+        expect(bc.getSegments()).toEqual(['X', 'Y']);
         bc.render(screen);
 
         const row = rowText(screen, 0);
