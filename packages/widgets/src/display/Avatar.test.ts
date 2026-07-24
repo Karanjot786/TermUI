@@ -112,4 +112,15 @@ describe('Avatar', () => {
         const rendered = screen.back[0].map(c => c.char).join('').trim();
         expect(rendered).toBe('[]');
     });
+
+    it('handles multi-byte unicode emoji characters without breaking surrogate pairs', async () => {
+        const { Avatar } = await import('./Avatar.js');
+        const { Screen } = await import('@termuijs/core');
+        const a = new Avatar('👨‍💻 Dev');
+        a.updateRect({ x: 0, y: 0, width: 10, height: 1 });
+        const screen = new Screen(10, 1);
+        a.render(screen);
+        const rendered = screen.back[0].map(c => c.char).join('').trim();
+        expect(rendered).toContain('[👨‍💻D]');
+    });
 });

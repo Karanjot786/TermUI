@@ -65,10 +65,14 @@ export class Avatar extends Widget {
         const parts = name.trim().split(/\s+/);
         if (parts.length === 0 || parts[0] === '') return '';
         let init = '';
+        const segmenter = new Intl.Segmenter();
         if (parts.length === 1) {
-            init = parts[0].substring(0, 2).toUpperCase();
+            const graphemes = Array.from(segmenter.segment(parts[0])).map(s => s.segment);
+            init = graphemes.slice(0, 2).join('').toUpperCase();
         } else {
-            init = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            const gFirst = Array.from(segmenter.segment(parts[0])).map(s => s.segment)[0] ?? '';
+            const gLast = Array.from(segmenter.segment(parts[parts.length - 1])).map(s => s.segment)[0] ?? '';
+            init = (gFirst + gLast).toUpperCase();
         }
         if (!caps.unicode) {
             init = init.replace(/[^\x00-\x7F]/g, '?');
