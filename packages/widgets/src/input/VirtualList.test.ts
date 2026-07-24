@@ -212,6 +212,43 @@ describe('VirtualList', () => {
         });
     });
 
+    describe('empty state', () => {
+        it('renders configured empty text when there are no items', () => {
+            const list = new VirtualList({
+                totalItems: 0,
+                renderItem: (i) => `Item ${i}`,
+                emptyText: 'No results',
+                style: { width: 20, height: 3 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 20, 3);
+            list.syncLayout();
+            const screen = new Screen(20, 3);
+
+            list.render(screen);
+
+            const content = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
+            expect(content).toContain('No results');
+        });
+
+        it('keeps empty lists blank when no empty text is configured', () => {
+            const list = new VirtualList({
+                totalItems: 0,
+                renderItem: (i) => `Item ${i}`,
+                style: { width: 20, height: 3 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 20, 3);
+            list.syncLayout();
+            const screen = new Screen(20, 3);
+
+            list.render(screen);
+
+            const contentRow = screen.back[1].slice(1, -1).map(c => c.char).join('');
+            expect(contentRow.trim()).toBe('');
+        });
+    });
+
     describe('spring scrolling', () => {
         // Helper: set up a VirtualList with a real computed layout so _getContentRect()
         // returns correct values without touching private internals.

@@ -39,6 +39,8 @@ export interface VirtualListOptions {
     showScrollbar?: boolean;
     /** Enable spring scroll animations (default: true, respects prefersReducedMotion) */
     springScroll?: boolean;
+    /** Optional text to render when the list has no items */
+    emptyText?: string;
 }
 
 /**
@@ -61,6 +63,7 @@ export class VirtualList extends Widget {
     private _scrollOffset = 0;
     private _overscan: number;
     private _showScrollbar: boolean;
+    private _emptyText: string;
     
     private _memoizeLayout: boolean;
     private _isScrolling = false;
@@ -93,6 +96,7 @@ export class VirtualList extends Widget {
         this._onSelect = options.onSelect;
         this._overscan = options.overscan ?? 2;
         this._showScrollbar = options.showScrollbar ?? true;
+        this._emptyText = options.emptyText ?? '';
         this._springScroll = options.springScroll ?? !prefersReducedMotion();
         this.focusable = true;
     }
@@ -277,7 +281,15 @@ export class VirtualList extends Widget {
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
-        if (width <= 0 || height <= 0 || this._totalItems === 0) return;
+        if (width <= 0 || height <= 0) return;
+
+        const attrs = styleToCellAttrs(this._style);
+        if (this._totalItems === 0) {
+            if (this._emptyText) {
+                screen.writeString(x, y, truncate(this._emptyText, width), { ...attrs, dim: true });
+            }
+            return;
+        }
 
         // Update spring animation if active
         if (this._springScroll && this._isAnimating) {
@@ -316,7 +328,6 @@ export class VirtualList extends Widget {
             }
         }
 
-        const attrs = styleToCellAttrs(this._style);
         const visibleItemCount = Math.floor(height / this._itemHeight);
 
         // Calculate the visible window with overscan
