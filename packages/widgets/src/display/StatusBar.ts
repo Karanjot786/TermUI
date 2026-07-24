@@ -56,36 +56,34 @@ export class StatusBar extends Widget {
 
         const attrs = styleToCellAttrs(this._style);
 
-        // Left
-        screen.writeString(
+        const rightText = truncate(this._right, width);
+        const rightWidth = stringWidth(rightText);
+        const rightX = x + width - rightWidth;
+
+        const centerAvailable = Math.max(0, rightX - x);
+        const centerText = truncate(this._center, centerAvailable);
+        const centerWidth = stringWidth(centerText);
+        const desiredCenterX = x + Math.floor((width - centerWidth) / 2);
+        const centerX = Math.max(
             x,
-            y,
-            truncate(this._left, width),
-            attrs,
+            Math.min(desiredCenterX, rightX - centerWidth),
         );
 
-        // Center
-        const centerX = x + Math.max(
-            0,
-            Math.floor((width - stringWidth(this._center)) / 2),
-        );
+        const leftAvailable = centerWidth > 0
+            ? Math.max(0, centerX - x)
+            : Math.max(0, rightX - x);
+        const leftText = truncate(this._left, leftAvailable);
 
-        screen.writeString(
-            centerX,
-            y,
-            truncate(this._center, width),
-            attrs,
-        );
+        if (leftText) {
+            screen.writeString(x, y, leftText, attrs);
+        }
 
-        // Right
-        const rightWidth = stringWidth(this._right);
-        const rightX = Math.max(x, x + width - rightWidth);
+        if (centerText) {
+            screen.writeString(centerX, y, centerText, attrs);
+        }
 
-        screen.writeString(
-            rightX,
-            y,
-            truncate(this._right, width),
-            attrs,
-        );
+        if (rightText) {
+            screen.writeString(rightX, y, rightText, attrs);
+        }
     }
 }
