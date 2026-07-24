@@ -23,6 +23,14 @@ describe('VirtualList', () => {
             expect(list.scrollOffset).toBe(0);
         });
 
+        it('rejects invalid totalItems values', () => {
+            for (const totalItems of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+                expect(() => createList(totalItems)).toThrow(
+                    'VirtualList totalItems must be a non-negative integer',
+                );
+            }
+        });
+
         it('is focusable', () => {
             const list = createList();
             expect(list.focusable).toBe(true);
@@ -183,6 +191,18 @@ describe('VirtualList', () => {
             list.selectNext();
             list.setTotalItems(0);
             expect(list.selectedIndex).toBe(0);
+        });
+
+        it('setTotalItems rejects invalid values', () => {
+            const list = createList(10);
+
+            for (const totalItems of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+                expect(() => list.setTotalItems(totalItems)).toThrow(
+                    'VirtualList totalItems must be a non-negative integer',
+                );
+            }
+
+            expect(list.totalItems).toBe(10);
         });
     });
 

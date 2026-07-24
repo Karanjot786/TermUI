@@ -18,6 +18,14 @@ import { Widget } from '../base/Widget.js';
 import { computeRange } from './virtual-scroll.js';
 import { calculateSpringScroll, type ScrollSpringState } from '../scroll.js';
 
+function validateTotalItems(count: number): number {
+    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 0) {
+        throw new Error('VirtualList totalItems must be a non-negative integer');
+    }
+
+    return count;
+}
+
 export interface VirtualListOptions {
     /** Total number of items (the full dataset size) */
     totalItems: number;
@@ -82,7 +90,7 @@ export class VirtualList extends Widget {
 
     constructor(options: VirtualListOptions) {
         super({ border: 'single', ...options.style });
-        this._totalItems = options.totalItems;
+        this._totalItems = validateTotalItems(options.totalItems);
         const resolvedItemHeight = options.fixedItemHeight ?? options.itemHeight ?? 1;
         if (!Number.isFinite(resolvedItemHeight) || resolvedItemHeight <= 0) {
             throw new Error('VirtualList itemHeight must be a positive number');
@@ -107,9 +115,10 @@ export class VirtualList extends Widget {
 
     /** Update the total item count (e.g., after data refresh) */
     setTotalItems(count: number): void {
+        const nextCount = validateTotalItems(count);
         this._clearCache();
-        this._totalItems = count;
-        this._selectedIndex = Math.min(this._selectedIndex, Math.max(0, count - 1));
+        this._totalItems = nextCount;
+        this._selectedIndex = Math.min(this._selectedIndex, Math.max(0, nextCount - 1));
         this._clampScroll();
         this.markDirty();
     }
