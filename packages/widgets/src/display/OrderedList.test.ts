@@ -119,6 +119,7 @@ describe('OrderedList', () => {
             list.setItems([{ text: 'New Item' }]);
 
             expect(spy).toHaveBeenCalledOnce();
+            expect(list.getItems()).toEqual([{ text: 'New Item' }]);
         });
     });
 

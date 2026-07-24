@@ -106,6 +106,11 @@ export class OrderedList extends Widget {
         this.markDirty();
     }
 
+    /** Returns a copy of current items. */
+    getItems(): OrderedListItem[] {
+        return [...this._items];
+    }
+
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
