@@ -134,7 +134,7 @@ async function queryOSC11BackgroundColor(): Promise<TerminalBackground | null> {
     } catch {
       // setRawMode can throw in some environments — bail out
       clearTimeout(timer)
-      resolve(null)
+      safeResolve(null)
       return
     }
 
