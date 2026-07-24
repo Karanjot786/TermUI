@@ -23,10 +23,10 @@ const assistantMessage = new ChatThread({
 
 ## Message Roles
 
-- **user** — User message (cyan badge)
-- **assistant** — Assistant response (green badge)
-- **system** — System message (yellow badge)
-- **tool** — Tool output (magenta badge)
+- **user** - User message (cyan badge)
+- **assistant** - Assistant response (green badge)
+- **system** - System message (yellow badge)
+- **tool** - Tool output (magenta badge)
 
 ## Features
 
@@ -46,10 +46,10 @@ constructor(options: ChatMessageOptions, style?: Partial<Style>)
 
 ### Methods
 
-- `setContent(content: string): void` — Update the message content
-- `getContent(): string` — Get the current content
-- `getRole(): MessageRole` — Get the message role
-- `getTimestamp(): Date | undefined` — Get the timestamp
+- `setContent(content: string): void` - Update the message content
+- `getContent(): string` - Get the current content
+- `getRole(): MessageRole` - Get the message role
+- `getTimestamp(): Date | undefined` - Get the timestamp
 
 ## Example
 

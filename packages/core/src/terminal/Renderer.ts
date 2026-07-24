@@ -4,7 +4,7 @@
 
 import type { Terminal } from './Terminal.js';
 import { type Cell, cellsEqual, type Screen } from './Screen.js';
-import { type ColorDepth, colorToAnsiFg, colorToAnsiBg } from '../style/Color.js';
+import { type Color, type ColorDepth, colorToAnsiFg, colorToAnsiBg } from '../style/Color.js';
 import { moveTo, beginSyncUpdate, endSyncUpdate, reset as ansiReset, stripAnsiControl } from '../utils/ansi.js';
 import { RenderHook } from '../renderer/render-hook.js';
 
@@ -138,19 +138,19 @@ export class Renderer {
 
             if (this._diffRenderer) {
                 for (let r = 0; r < rows; r++) {
-                    this._lastStyleFingerprint = null;
+                    this._lastStyleState = null;
                     output += this._renderDiffLine(r, front, back, cols);
                 }
 
                 output += ansiReset;
                 output += endSyncUpdate;
 
-                // Write buffered logs wrapped in cursor save/restore so they
-                // don't shift the frame's expected cursor position
+                // Write frame content first (inside synchronized update), then
+                // buffered logs with cursor save/restore to prevent flicker
+                this._terminal.writeSync(output);
                 if (bufferedLogs) {
                     this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
                 }
-                this._terminal.writeSync(output);
 
                 // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
                 const ansiQueue = this._screen.drainAnsiQueue();
@@ -172,10 +172,10 @@ export class Renderer {
             output += ansiReset;
             output += endSyncUpdate;
 
+            this._terminal.writeSync(output);
             if (bufferedLogs) {
                 this._terminal.writeSync(Renderer._CURSOR_SAVE + bufferedLogs + Renderer._CURSOR_RESTORE);
             }
-            this._terminal.writeSync(output);
 
             // Flush any post-frame raw ANSI sequences (e.g. VTE a11y OSC)
             const ansiQueue = this._screen.drainAnsiQueue();
@@ -185,39 +185,54 @@ export class Renderer {
             this._screen.saveLines();
             this._screen.swap();
         } catch (_err) {
+            if (bufferedLogs) {
+                this.hook.requeue(bufferedLogs);
+            }
+            // Reset flushEpoch so the next render attempt isn't skipped by the epoch guard
+            // (a throwing flush must not permanently freeze rendering).
+            this._screen.flushEpoch = -1;
             // Re-request render so the next frame tick retries.
             this._renderRequested = true;
-            // Reset style fingerprint to prevent color bleed on retry.
-            this._lastStyleFingerprint = null;
+            // Reset style state to prevent color bleed on retry.
+            this._lastStyleState = null;
         }
     }
 
-    /** Style fingerprint of the last rendered cell (to suppress redundant ANSI reset/apply). */
-    private _lastStyleFingerprint: string | null = null;
+    /** The last rendered style state for the current row (to suppress redundant ANSI reset/apply). */
+    private _lastStyleState: {
+        bold: boolean;
+        dim: boolean;
+        italic: boolean;
+        underline: boolean;
+        strikethrough: boolean;
+        inverse: boolean;
+        fg: Color;
+        bg: Color;
+    } | null = null;
 
-    /** Build a stable style fingerprint string for a cell (avoids allocation-heavy object comparison). */
-    private _styleFingerprint(cell: Cell): string {
-        const fg = cell.fg;
-        const bg = cell.bg;
-        let fgKey: string;
-        switch (fg.type) {
-            case 'none': fgKey = 'n'; break;
-            case 'named': fgKey = `N:${fg.name}`; break;
-            case 'ansi256': fgKey = `A:${fg.code}`; break;
-            case 'rgb': fgKey = `R:${fg.r},${fg.g},${fg.b}`; break;
-            case 'hex': fgKey = `H:${fg.hex.toLowerCase()}`; break;
-            default: fgKey = 'n';
-        }
-        let bgKey: string;
-        switch (bg.type) {
-            case 'none': bgKey = 'n'; break;
-            case 'named': bgKey = `N:${bg.name}`; break;
-            case 'ansi256': bgKey = `A:${bg.code}`; break;
-            case 'rgb': bgKey = `R:${bg.r},${bg.g},${bg.b}`; break;
-            case 'hex': bgKey = `H:${bg.hex.toLowerCase()}`; break;
-            default: bgKey = 'n';
-        }
-        return `${cell.bold ? 'B' : ''}${cell.dim ? 'D' : ''}${cell.italic ? 'I' : ''}${cell.underline ? 'U' : ''}${cell.strikethrough ? 'S' : ''}${cell.inverse ? 'V' : ''}|${fgKey}|${bgKey}`;
+    private _stylesEqual(cell: Cell): boolean {
+        const last = this._lastStyleState;
+        if (!last) return false;
+
+        return last.bold === cell.bold &&
+            last.dim === cell.dim &&
+            last.italic === cell.italic &&
+            last.underline === cell.underline &&
+            last.strikethrough === cell.strikethrough &&
+            last.inverse === cell.inverse &&
+            this._colorsEqual(last.fg, cell.fg) &&
+            this._colorsEqual(last.bg, cell.bg);
+    }
+
+    private _colorsEqual(a: Color, b: Color): boolean {
+        if (a.type !== b.type) return false;
+
+        if (a.type === 'none') return true;
+        if (a.type === 'named' && b.type === 'named') return a.name === b.name;
+        if (a.type === 'ansi256' && b.type === 'ansi256') return a.code === b.code;
+        if (a.type === 'rgb' && b.type === 'rgb') return a.r === b.r && a.g === b.g && a.b === b.b;
+        if (a.type === 'hex' && b.type === 'hex') return a.hex.toLowerCase() === b.hex.toLowerCase();
+        return false;
     }
 
     /**
@@ -226,9 +241,8 @@ export class Renderer {
      */
     private _renderCell(cell: Cell): string {
         let seq = '';
-        const fp = this._styleFingerprint(cell);
 
-        if (fp !== this._lastStyleFingerprint) {
+        if (!this._stylesEqual(cell)) {
             seq += ansiReset;
             if (cell.bold) seq += '\x1b[1m';
             if (cell.dim) seq += '\x1b[2m';
@@ -238,7 +252,16 @@ export class Renderer {
             if (cell.inverse) seq += '\x1b[7m';
             seq += colorToAnsiFg(cell.fg, this._colorDepth);
             seq += colorToAnsiBg(cell.bg, this._colorDepth);
-            this._lastStyleFingerprint = fp;
+            this._lastStyleState = {
+                bold: cell.bold,
+                dim: cell.dim,
+                italic: cell.italic,
+                underline: cell.underline,
+                strikethrough: cell.strikethrough,
+                inverse: cell.inverse,
+                fg: cell.fg,
+                bg: cell.bg,
+            };
         }
 
         // Write the character (sanitized to prevent escape injection)
@@ -267,18 +290,17 @@ export class Renderer {
         let spanStart = -1;
 
         for (let c = 0; c < cols; c++) {
-            // Skip continuation cells (right half of wide chars) - they are not
-            // independently renderable and their primary cell handles the output.
-            if (back[row][c].width === 0) continue;
-            
             const changed = !cellsEqual(front[row][c], back[row][c]);
+            // Skip continuation cells (right half of wide chars) if they haven't changed.
+            // If they have changed, we must process them so we can adjust the span start back to the primary cell.
+            if (back[row][c].width === 0 && !changed) continue;
             if (changed && spanStart === -1) {
                 spanStart = c; // start a new changed span
             } else if (!changed && spanStart !== -1) {
                 // flush the span
                 const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
                 output += moveTo(adjustedStart, row);
-                for (let sc = spanStart; sc < c; sc++) {
+                for (let sc = adjustedStart; sc < c; sc++) {
                     const cell = back[row][sc];
                     if (cell.width === 0) continue;
                     output += this._renderCell(cell);
@@ -291,7 +313,7 @@ export class Renderer {
         if (spanStart !== -1) {
             const adjustedStart = Renderer._adjustSpanStart(spanStart, back[row]);
             output += moveTo(adjustedStart, row);
-            for (let sc = spanStart; sc < cols; sc++) {
+            for (let sc = adjustedStart; sc < cols; sc++) {
                 const cell = back[row][sc];
                 if (cell.width === 0) continue;
                 output += this._renderCell(cell);

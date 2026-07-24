@@ -12,6 +12,14 @@ export interface SequenceStep {
 export type AnimationRunner = (done: () => void) => () => void
 
 export function sequence(
+  runners: AnimationRunner[],
+  onComplete?: () => void
+): () => void
+export function sequence(
+  runners: SequenceStep[],
+  onComplete?: () => void
+): SequenceStep[]
+export function sequence(
   runners: AnimationRunner[] | SequenceStep[],
   onComplete?: () => void
 ): (() => void) | SequenceStep[] {
@@ -59,10 +67,12 @@ export function parallel(
   }
 
   let remaining = runners.length
+  let cancelled = false
   const cancellers: Array<() => void> = []
 
   for (const runner of runners) {
     const cancel = runner(() => {
+      if (cancelled) return
       remaining--
       if (remaining === 0) onComplete?.()
     })
@@ -70,6 +80,7 @@ export function parallel(
   }
 
   return () => {
+    cancelled = true
     cancellers.forEach(c => c())
   }
 }

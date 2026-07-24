@@ -81,4 +81,17 @@ describe("Progress", () => {
         expect(widget.isDirty).toBe(true);
     });
 
-})
+    it("truncates rendering output to fit available width", () => {
+        const widget = new Progress({
+            tasks: [{ label: 'VeryLongDownloadingLabelTaskTextDescription', value: 0.5 }],
+            columns: [TextColumn(), PercentageColumn()]
+        });
+        const screen = new Screen(12, 1);
+        widget.updateRect({ x: 0, y: 0, width: 12, height: 1 });
+        widget.render(screen);
+
+        const row = screen.back[0].map(c => c.char).join('');
+        expect(row.length).toBeLessThanOrEqual(12);
+        expect(row).toBe('VeryLongDown');
+    });
+});

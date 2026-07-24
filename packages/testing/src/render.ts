@@ -70,6 +70,17 @@ export interface TestInstance {
     queryByText(text: string): Widget | null;
 
     /**
+     * Find a widget whose text content includes the given string.
+     * Throws if nothing matches.
+     */
+    findByText(text: string): Widget;
+    
+    /**
+     * Find all widgets having the specified accessibility role.
+     */
+    queryAllByRole(role: string): Widget[];
+
+    /**
      * Find the first widget of a specific type (by constructor).
      * Returns null instead of throwing when nothing matches.
      */
@@ -394,7 +405,30 @@ export function render(
             return matches.length > 0 ? matches[0] : null;
         },
 
-        queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null { // any[]: required to accept widget constructors with varying signatures
+        findByText(text: string): Widget {
+            const widget = this.queryByText(text);
+        
+            if (!widget) {
+                throw new Error(
+                    `Unable to find widget with text "${text}"`,
+                );
+            }
+        
+            return widget;
+        },
+
+        queryAllByRole(role: string): Widget[] {
+            return walkWidgets(container, (widget) => {
+                const accessibility = (widget as any).accessibility;
+        
+                return (
+                    (widget as any).role === role ||
+                    accessibility?.role === role
+                );
+            });
+        },
+
+        queryByType<T extends Widget>(type: new (...args: any[]) => T): T | null {
             const matches = walkWidgets(container, (w) => w instanceof type) as T[];
             return matches.length > 0 ? matches[0] : null;
         },
@@ -453,29 +487,67 @@ export function render(
 
         fireMouse(x: number, y: number, init?: Partial<MouseEvent>) {
             // Normalize the mouse event
-            const event: MouseEvent = {
+            const event = {
+                ...init,
                 x,
                 y,
                 type: init?.type ?? 'mousedown',
                 button: init?.button ?? 'left',
+                stopPropagation() {
+                    this._propagationStopped = true;
+                },
+                preventDefault() {
+                    this._defaultPrevented = true;
+                },
+            } as MouseEvent & {
+                _propagationStopped?: boolean;
+                _defaultPrevented?: boolean;
+                stopPropagation(): void;
+                preventDefault(): void;
             };
 
             // Hit-test the widget tree
             let target: Widget | undefined;
-            walkWidgets(rootWidget, (w) => {
-                if (w.hitTest(x, y)) {
-                    target = w;
+            let targetDepth = -1;
+
+            const getDepth = (widget: Widget): number => {
+                let depth = 0;
+                let current = widget.parent;
+
+                while (current) {
+                    depth++;
+                    current = current.parent;
                 }
-                return false; // walkWidgets result doesn't matter here
+
+                return depth;
+            };
+
+            walkWidgets(rootWidget, (w) => {
+                if (!w.hitTest(x, y)) {
+                    return false;
+                }
+
+                const depth = getDepth(w);
+
+                if (depth > targetDepth) {
+                    target = w;
+                    targetDepth = depth;
+                }
+
+                return false;
             });
 
-            if (target) {
+            let current: Widget | null | undefined = target;
+            while (current) {
                 // Dispatch to the widget
-                if (typeof (target as any).handleMouse === 'function') { // as any: handleMouse not on Widget base type but implemented on interactive subclasses
-                    (target as any).handleMouse(event); // as any: handleMouse not on Widget base type but implemented on interactive subclasses
+                if (typeof (current as any).handleMouse === 'function') { // as any: handleMouse not on Widget base type but implemented on interactive subclasses
+                    (current as any).handleMouse(event); // as any: handleMouse not on Widget base type but implemented on interactive subclasses
                 } else {
-                    target.events.emit('mouse', event);
+                    current.events.emit('mouse', event);
                 }
+
+                if (event._propagationStopped) break;
+                current = current.parent;
             }
 
             // Re-render and flush any sync state updates

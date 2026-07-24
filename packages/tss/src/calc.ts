@@ -1,3 +1,11 @@
+/**
+ * Evaluate a CSS-like `calc(...)` expression with optional `var(--name)` lookups.
+ *
+ * @param expression - The expression, e.g. `calc(10 + var(gap) * 2)`.
+ * @param variables - Map of variable names to their string values.
+ * @returns The computed numeric result.
+ * @throws Error if the expression is malformed or a variable is missing.
+ */
 export function evalCalc(
     expression: string,
     variables: Record<string, string>,

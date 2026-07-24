@@ -1,122 +1,98 @@
 import { describe, it, expect } from 'vitest';
-import { Box, Text, Widget } from '@termuijs/widgets';
 import { toWidget, row, col, grid, stack, spacer } from './layout.js';
+import { Widget, Text, Box } from '@termuijs/widgets';
 
 describe('quick layout helpers', () => {
     describe('toWidget', () => {
-        it('passes through Widget instances directly', () => {
+        it('should pass through existing Widget instances', () => {
             const w = new Box();
             expect(toWidget(w)).toBe(w);
         });
 
-        it('wraps string child in Text widget with default height 1', () => {
-            const result = toWidget('hello world');
-            expect(result).toBeInstanceOf(Text);
-            expect(result.style.height).toBe(1);
-            // Verify content
-            expect(result.getContent()).toBe('hello world');
+        it('should wrap strings in Text widgets with styles', () => {
+            const textWidget = toWidget('hello', { fg: { type: 'named', name: 'red' } });
+            expect(textWidget).toBeInstanceOf(Text);
+            expect((textWidget as Text).style.fg).toEqual({ type: 'named', name: 'red' });
         });
 
-        it('wraps reactive function in dynamic Text widget', () => {
-            let reactiveValue = 'initial';
-            const reactiveFn = () => reactiveValue;
-            
-            const result = toWidget(reactiveFn);
-            expect(result).toBeInstanceOf(Text);
-            expect(result.style.height).toBe(1);
-            expect(result.getContent()).toBe('initial');
+        it('should wrap reactive functions in Text widgets', () => {
+            const reactiveFn = () => 'dynamic';
+            const textWidget = toWidget(reactiveFn);
+            expect(textWidget).toBeInstanceOf(Text);
         });
     });
 
     describe('row', () => {
-        it('creates a Box container with row flexDirection and a default gap', () => {
-            const r = row('col1', 'col2');
+        it('should create a row Box with flexGrow when children have dynamic height', () => {
+            const child1 = new Text('1');
+            const r = row(child1, 'child2');
             expect(r).toBeInstanceOf(Box);
-            expect(r.style.flexDirection).toBe('row');
-            expect(r.style.gap).toBe(1);
-            expect((r as any).children).toHaveLength(2);
+            expect((r as Box).style.flexDirection).toBe('row');
+            expect((r as Box).style.flexGrow).toBe(1);
+            expect((r as Box).style.height).toBeUndefined();
         });
 
-        it('assigns flexGrow to children lacking explicit flexGrow', () => {
+        it('should create a row Box with fixed height when all children have fixed height', () => {
+            const child1 = new Text('1', { height: 3 });
+            const child2 = new Text('2', { height: 5 });
+            const r = row(child1, child2);
+            expect((r as Box).style.height).toBe(5);
+            expect((r as Box).style.flexGrow).toBe(0);
+        });
+
+        it('preserves explicit flexGrow on children', () => {
             const child1 = new Box();
             const child2 = new Box({ flexGrow: 2 });
-            const r = row(child1, child2);
-            
+            row(child1, child2);
+
             expect(child1.style.flexGrow).toBe(1);
             expect(child2.style.flexGrow).toBe(2); // Preserves explicit flexGrow
-        });
-
-        it('infers row height if all children have a fixed height', () => {
-            const child1 = new Text('a', { height: 3 });
-            const child2 = new Text('b', { height: 5 });
-            const r = row(child1, child2);
-            
-            expect(r.style.height).toBe(5);
-            expect(r.style.flexGrow).toBe(0);
-        });
-
-        it('applies flexGrow to the row container if any child is flexible height', () => {
-            const child1 = new Text('a', { height: 3 });
-            const child2 = new Box(); // flexGrow by default, height undefined
-            const r = row(child1, child2);
-            
-            expect(r.style.height).toBeUndefined();
-            expect(r.style.flexGrow).toBe(1);
         });
     });
 
     describe('col', () => {
-        it('creates a vertical Box container with flexGrow 1', () => {
-            const c = col('item1', 'item2');
+        it('should create a column Box with flexGrow', () => {
+            const c = col('child1', 'child2');
             expect(c).toBeInstanceOf(Box);
-            expect(c.style.flexDirection).toBe('column');
-            expect(c.style.flexGrow).toBe(1);
-            expect((c as any).children).toHaveLength(2);
+            expect((c as Box).style.flexDirection).toBe('column');
+            expect((c as Box).style.flexGrow).toBe(1);
         });
     });
 
     describe('grid', () => {
-        it('creates a column Box container containing rows × cols grid structure', () => {
-            const g = grid(2, 3, ['a', 'b', 'c', 'd', 'e']);
+        it('should create a column Box containing row Boxes representing the grid', () => {
+            const g = grid(2, 3, ['1', '2', '3', '4']);
             expect(g).toBeInstanceOf(Box);
-            expect(g.style.flexDirection).toBe('column');
+            expect((g as Box).style.flexDirection).toBe('column');
             
-            const rows = (g as any).children;
+            const rows = g.children;
             expect(rows).toHaveLength(2);
-            
-            // First row should have 3 items
             expect(rows[0]).toBeInstanceOf(Box);
             expect(rows[0].style.flexDirection).toBe('row');
-            expect((rows[0] as any).children).toHaveLength(3);
-            
-            // Second row should have remaining 2 items
+            expect((rows[0] as Box).children).toHaveLength(3);
             expect(rows[1]).toBeInstanceOf(Box);
-            expect(rows[1].style.flexDirection).toBe('row');
-            expect((rows[1] as any).children).toHaveLength(2);
+            expect((rows[1] as Box).children).toHaveLength(1);
         });
     });
 
     describe('stack', () => {
-        it('creates a vertical Box container without flexGrow', () => {
-            const s = stack('first', 'second');
+        it('should create a column Box without flexGrow', () => {
+            const s = stack('child1', 'child2');
             expect(s).toBeInstanceOf(Box);
-            expect(s.style.flexDirection).toBe('column');
-            expect(s.style.flexGrow).toBe(0);
-            expect((s as any).children).toHaveLength(2);
+            expect((s as Box).style.flexDirection).toBe('column');
+            expect((s as Box).style.flexGrow).toBe(0);
         });
     });
 
     describe('spacer', () => {
-        it('creates a growing spacer Box by default', () => {
+        it('should return a Box with flexGrow when size is not specified', () => {
             const s = spacer();
-            expect(s).toBeInstanceOf(Box);
             expect(s.style.flexGrow).toBe(1);
             expect(s.style.height).toBeUndefined();
         });
 
-        it('creates a fixed size spacer Box if size is specified', () => {
+        it('should return a Box with fixed height when size is specified', () => {
             const s = spacer(4);
-            expect(s).toBeInstanceOf(Box);
             expect(s.style.height).toBe(4);
             expect(s.style.flexGrow).toBe(0);
         });

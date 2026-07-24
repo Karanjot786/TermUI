@@ -4,6 +4,7 @@
 
 import { Widget } from '../base/Widget.js';
 import { type Style, type Color, Screen } from '@termuijs/core';
+import { filterFinite } from './utils.js';
 
 export interface RadarSeries {
     label: string;
@@ -28,7 +29,7 @@ export class RadarChart extends Widget {
     }
 
     setSeries(series: RadarSeries[]): void {
-        this.series = series;
+        this.series = series.map(s => ({ ...s, values: filterFinite(s.values) }));
         this.markDirty();
     }
 

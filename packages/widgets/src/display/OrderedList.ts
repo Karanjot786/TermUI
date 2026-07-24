@@ -109,6 +109,8 @@ export class OrderedList extends Widget {
     /** Returns a copy of current items. */
     getItems(): OrderedListItem[] {
         return [...this._items];
+    getItems(): OrderedListItem[] {
+        return this._items;
     }
 
     protected _renderSelf(screen: Screen): void {
