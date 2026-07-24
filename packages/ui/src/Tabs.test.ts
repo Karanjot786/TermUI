@@ -5,7 +5,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Tabs } from './Tabs.js';
 import { Box, Text, Widget } from '@termuijs/widgets';
-import { Screen, stringWidth } from '@termuijs/core';
+import { Screen, stringWidth, type KeyEvent } from '@termuijs/core';
+
+const key = (key: string, shift = false): KeyEvent => ({
+    key,
+    shift,
+    ctrl: false,
+    alt: false,
+    raw: Buffer.alloc(0),
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
+});
 
 const makeTabs = () => new Tabs([
     { label: 'Home', content: new Box() },
@@ -60,6 +70,41 @@ describe('Tabs', () => {
         const tabs = makeTabs();
         tabs.prevTab(); // wraps to 2
         expect(tabs.activeIndex).toBe(2);
+    });
+
+    it('switches tabs with right and left keys', () => {
+        const tabs = makeTabs();
+        const right = key('right');
+        const left = key('left');
+
+        tabs.handleKey(right);
+        expect(tabs.activeIndex).toBe(1);
+        tabs.handleKey(left);
+        expect(tabs.activeIndex).toBe(0);
+        expect(right.preventDefault).toHaveBeenCalled();
+        expect(right.stopPropagation).toHaveBeenCalled();
+        expect(left.preventDefault).toHaveBeenCalled();
+        expect(left.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('switches tabs with tab and shift+tab', () => {
+        const tabs = makeTabs();
+
+        tabs.handleKey(key('tab'));
+        expect(tabs.activeIndex).toBe(1);
+        tabs.handleKey(key('tab', true));
+        expect(tabs.activeIndex).toBe(0);
+    });
+
+    it('does not consume unrelated keys', () => {
+        const tabs = makeTabs();
+        const event = key('enter');
+
+        tabs.handleKey(event);
+
+        expect(tabs.activeIndex).toBe(0);
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
     });
 
     it('safe with no tabs', () => {

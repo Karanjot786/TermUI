@@ -149,6 +149,7 @@ export class Table extends Widget {
 
     setRows(rows: TableRow[]): void {
         this._rows = rows;
+        this._clampSelectedRow();
         this._clampScroll();
         this.markDirty();
         this._pushState();
@@ -276,6 +277,8 @@ export class Table extends Widget {
             this._selectedRow = Math.max(minRow, this._rows.length - 1);
         }
 
+        this._clampSelectedRow();
+
         // Header Navigation Mode
         if (this._selectedRow === -1) {
             if (event.key === 'left') {
@@ -291,6 +294,12 @@ export class Table extends Widget {
 
         this._clampScroll();
         this.markDirty();
+    }
+
+    private _clampSelectedRow(): void {
+        const minRow = this._showHeader ? -1 : 0;
+        const maxRow = this._rows.length > 0 ? this._rows.length - 1 : minRow;
+        this._selectedRow = Math.max(minRow, Math.min(this._selectedRow, maxRow));
     }
     
     protected _computeRowHeights(colWidths: number[]): number[] {
