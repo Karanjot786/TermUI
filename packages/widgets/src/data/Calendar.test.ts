@@ -204,4 +204,89 @@ describe('Calendar', () => {
         cal.setMonth(2027, 0);
         expect(cal.isDirty).toBe(true);
     });
+
+    it('supports setSelectedDate and updates current month if needed', () => {
+        const cal = new Calendar({ width: 30, height: 10 }, { date: new Date(2026, 5, 2) });
+        const onMonthChange = vi.fn();
+        const cal2 = new Calendar({ width: 30, height: 10 }, { date: new Date(2026, 5, 2), onMonthChange });
+
+        cal.setSelectedDate(new Date(2026, 7, 15));
+        expect(cal.getSelectedDate().getMonth()).toBe(7);
+        expect(cal.getSelectedDate().getDate()).toBe(15);
+
+        cal2.setSelectedDate(new Date(2026, 7, 15));
+        expect(onMonthChange).toHaveBeenCalledWith(2026, 7);
+    });
+
+    it('navigates months with pageup and pagedown keys', () => {
+        const onMonthChange = vi.fn();
+        const cal = new Calendar({ width: 30, height: 10 }, { date: new Date(2026, 5, 15), onMonthChange });
+
+        cal.handleKey(key('pageup'));
+        expect(onMonthChange).toHaveBeenCalledWith(2026, 4);
+
+        cal.handleKey(key('pagedown'));
+        expect(onMonthChange).toHaveBeenCalledWith(2026, 5);
+    });
+
+    it('jumps to start and end of month with home and end keys', () => {
+        const cal = new Calendar({ width: 30, height: 10 }, { date: new Date(2026, 5, 15) });
+
+        cal.handleKey(key('home'));
+        expect(cal.getSelectedDate().getDate()).toBe(1);
+
+        cal.handleKey(key('end'));
+        expect(cal.getSelectedDate().getDate()).toBe(30); // June has 30 days
+    });
+
+    it('renders highlighted dates with highlightColor', () => {
+        const highlightColor = { type: 'named' as const, name: 'yellow' as const };
+        const highlightedDate = new Date(2026, 5, 15);
+        const cal = new Calendar(
+            { width: 30, height: 10 },
+            { date: new Date(2026, 5, 1), highlightedDates: [highlightedDate], highlightColor }
+        );
+        cal.updateRect({ x: 0, y: 0, width: 30, height: 10 });
+        const screen = new Screen(30, 10);
+        cal.render(screen);
+
+        const rows = screen.back.map(row => row.map(cell => cell.char).join(''));
+        expect(rows[0]).toContain('June 2026');
+
+        // Find cell corresponding to 15th
+        let foundCell = false;
+        for (const row of screen.back) {
+            for (let c = 0; c < row.length - 1; c++) {
+                if (row[c].char === '1' && row[c + 1].char === '5') {
+                    expect(row[c + 1].fg).toEqual(highlightColor);
+                    foundCell = true;
+                    break;
+                }
+            }
+        }
+        expect(foundCell).toBe(true);
+    });
+
+    it('respects minDate, maxDate, and disabledDates constraints', () => {
+        const minDate = new Date(2026, 5, 5);
+        const maxDate = new Date(2026, 5, 20);
+        const disabledDate = new Date(2026, 5, 10);
+        const cal = new Calendar(
+            { width: 30, height: 10 },
+            { date: new Date(2026, 5, 5), minDate, maxDate, disabledDates: [disabledDate] }
+        );
+
+        // Trying to move left past minDate should be blocked
+        cal.handleKey(key('left'));
+        expect(cal.getSelectedDate().getDate()).toBe(5);
+
+        // Setting a disabled date should be ignored
+        cal.setSelectedDate(disabledDate);
+        expect(cal.getSelectedDate().getDate()).toBe(5);
+
+        // Trying to set date past maxDate should be ignored
+        cal.setSelectedDate(new Date(2026, 5, 25));
+        expect(cal.getSelectedDate().getDate()).toBe(5);
+    });
 });
+

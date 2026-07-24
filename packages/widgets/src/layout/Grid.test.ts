@@ -151,6 +151,65 @@ describe('Grid layout', () => {
         expect(c.rect.width).toBe(20);
     });
 
+    it('places GridItems by named template areas', () => {
+        const grid = new Grid(
+            { width: 40, height: 20 },
+            {
+                columns: '1fr 3fr',
+                rows: '5 15',
+                areas: [
+                    'header header',
+                    'nav main',
+                ],
+                gap: 0,
+            }
+        );
+
+        const header = new GridItem({}, { area: 'header' });
+        const nav = new GridItem({}, { area: 'nav' });
+        const main = new GridItem({}, { area: 'main' });
+
+        grid.addChild(header);
+        grid.addChild(nav);
+        grid.addChild(main);
+
+        const node = grid.getLayoutNode();
+        computeLayout(node, 40, 20);
+        grid.syncLayout();
+
+        expect(grid.getAreaPlacement('header')).toEqual({
+            columnStart: 1,
+            columnEnd: 3,
+            rowStart: 1,
+            rowEnd: 2,
+        });
+        expect(header.rect).toEqual({ x: 0, y: 0, width: 40, height: 5 });
+        expect(nav.rect).toEqual({ x: 0, y: 5, width: 10, height: 15 });
+        expect(main.rect).toEqual({ x: 10, y: 5, width: 30, height: 15 });
+    });
+
+    it('rejects non-rectangular named template areas', () => {
+        expect(() => new Grid(
+            { width: 40, height: 20 },
+            {
+                columns: 2,
+                areas: [
+                    'a a',
+                    'a b',
+                ],
+            }
+        )).toThrow(/rectangular/);
+    });
+
+    it('throws when a GridItem references an unknown named area', () => {
+        const grid = new Grid(
+            { width: 40, height: 20 },
+            { columns: 2, areas: ['main aside'] }
+        );
+
+        expect(() => grid.addChild(new GridItem({}, { area: 'footer' }))).toThrow(/Unknown grid area/);
+    });
+
     it('respects child margins in layout cells', () => {
         const grid = new Grid(
             { width: 40, height: 20 },

@@ -369,6 +369,75 @@ export interface UseFetchResult<T> {
     loading: boolean;
 }
 
+// Ref-counted AbortControllers keyed by cache key. Multiple useFetch
+// instances requesting the same key share one in-flight fetch (via
+// fetchShared); the underlying request is only aborted once every
+// subscriber for that key has released it (unmounted or moved on to a
+// different url/key).
+interface SharedAbortEntry {
+    controller: AbortController;
+    refCount: number;
+}
+
+const sharedAbortControllers = new Map<string, SharedAbortEntry>();
+
+function acquireAbortController(key: string): AbortController {
+    let entry = sharedAbortControllers.get(key);
+    if (!entry) {
+        entry = { controller: new AbortController(), refCount: 0 };
+        sharedAbortControllers.set(key, entry);
+    }
+    entry.refCount += 1;
+    return entry.controller;
+}
+
+function releaseAbortController(key: string): void {
+    const entry = sharedAbortControllers.get(key);
+    if (!entry) return;
+    entry.refCount -= 1;
+    if (entry.refCount <= 0) {
+        entry.controller.abort();
+        sharedAbortControllers.delete(key);
+    }
+}
+
+/**
+ * Test-only helper to reset the module-scoped shared abort controller
+ * registry between test cases. Not part of the public API — not re-exported
+ * from index.ts. A test that misses an unmount/cleanup step could otherwise
+ * leave a stale refCount behind for later cases in the same process.
+ */
+export function __resetSharedAbortControllersForTests(): void {
+    for (const entry of sharedAbortControllers.values()) {
+        entry.controller.abort();
+    }
+    sharedAbortControllers.clear();
+}
+
+function stringifyFetchCacheKey(key: unknown): string {
+    const seen = new WeakSet<object>();
+    const serialized = JSON.stringify(key, (_property, value) => {
+        if (typeof value === 'bigint') {
+            return `${value.toString()}n`;
+        }
+
+        if (typeof value === 'object' && value !== null) {
+            if (seen.has(value)) {
+                return '[Circular]';
+            }
+            seen.add(value);
+        }
+
+        return value;
+    });
+
+    return serialized ?? String(key);
+}
+
+function getFetchCacheKey(url: string, key: unknown): string {
+    return key === undefined ? url : `${url}::${stringifyFetchCacheKey(key)}`;
+}
+
 /**
  * useFetch — reactive fetch hook with caching.
  *
@@ -379,17 +448,18 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
     const staleTime = options?.staleTime ?? 0;
     const retry = options?.retry ?? 0;
     const retryDelay = options?.retryDelay ?? 300;
+    const cacheKey = getFetchCacheKey(url, options?.key);
     const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [data, setData] = useState<T | null>(() => {
-        if (isFresh(url)) {
-            return getCache<T>(url)?.data ?? null;
+        if (isFresh(cacheKey)) {
+            return getCache<T>(cacheKey)?.data ?? null;
         }
         return null;
     });
 
     const [error, setError] = useState<Error | null>(null);
-    const [loading, setLoading] = useState<boolean>(() => !isFresh(url));
+    const [loading, setLoading] = useState<boolean>(() => !isFresh(cacheKey));
 
     useEffect(() => {
         let isMounted = true;
@@ -406,8 +476,8 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
             }
         };
 
-        if (isFresh(url)) {
-            const entry = getCache<T>(url);
+        if (isFresh(cacheKey)) {
+            const entry = getCache<T>(cacheKey);
             if (entry) {
                 if (isMounted) {
                     clearRetryTimer();
@@ -424,13 +494,15 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
 
         setLoading(true);
 
+        const controller = acquireAbortController(cacheKey);
+
         /**
          * Attempt the fetch and, on failure, schedule a retry using
          * exponential backoff. `attempt` is zero-based and controls the
          * backoff multiplier `retryDelay * 2 ** attempt`.
          */
         const fetchWithRetry = (attempt: number) => {
-            fetchShared<T>(url, () => fetch(url)
+            fetchShared<T>(cacheKey, () => fetch(url, { signal: controller.signal })
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
                     return res.json() as Promise<T>;
@@ -439,13 +511,18 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
             .then(json => {
                 if (!isMounted) return;
                 clearRetryTimer();
-                setCache(url, json, staleTime);
+                setCache(cacheKey, json, staleTime);
                 setData(json);
                 setError(null);
                 setLoading(false);
             })
             .catch(err => {
                 if (!isMounted) return;
+
+                // The request was aborted because this hook instance unmounted
+                // or moved on to a different url/key. There is nothing left to
+                // report — the cleanup below already handles this case.
+                if (err instanceof Error && err.name === 'AbortError') return;
 
                 if (attempt < retry) {
                     clearRetryTimer();
@@ -470,8 +547,9 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
         return () => {
             isMounted = false;
             clearRetryTimer();
+            releaseAbortController(cacheKey);
         };
-    }, [url, staleTime, retry, retryDelay, options?.key]);
+    }, [url, staleTime, retry, retryDelay, cacheKey]);
 
     return { data, error, loading };
 }
@@ -480,7 +558,7 @@ export function useFetch<T = unknown>(url: string, options?: UseFetchOptions): U
 
 export interface InfiniteQueryOptions<T, P> {
     /** Called with a page param; resolves to one page of data. */
-    queryFn: (pageParam: P) => Promise<T>;
+    queryFn: (pageParam: P, signal?: AbortSignal) => Promise<T>;
     /** Param used for the very first page fetch. */
     initialPageParam: P;
     /**
@@ -518,6 +596,7 @@ export function useInfiniteQuery<T, P = number>(
     // Each effect run creates a fresh controller and aborts the previous one on
     // cleanup, so stale promise callbacks see `signal.aborted === true` and bail.
     const abortControllerRef = useRef<AbortController | null>(null);
+    const pageAbortControllerRef = useRef<AbortController | null>(null);
 
     // Generation counter for fetchNextPage: incremented when the main effect
     // re-runs (queryFn / initialPageParam changed), so any in-flight
@@ -531,6 +610,7 @@ export function useInfiniteQuery<T, P = number>(
     useEffect(() => {
         // Abort any previous in-flight fetch from the last effect run.
         abortControllerRef.current?.abort();
+        pageAbortControllerRef.current?.abort();
         const controller = new AbortController();
         abortControllerRef.current = controller;
 
@@ -540,7 +620,7 @@ export function useInfiniteQuery<T, P = number>(
         setLoading(true);
         loadingRef.current = true;
 
-        queryFn(initialPageParam)
+        queryFn(initialPageParam, controller.signal)
             .then(page => {
                 if (controller.signal.aborted) return;
                 setPages([page]);
@@ -558,6 +638,8 @@ export function useInfiniteQuery<T, P = number>(
         return () => {
             generationRef.current += 1;
             controller.abort();
+            pageAbortControllerRef.current?.abort();
+            pageAbortControllerRef.current = null;
         };
     }, [queryFn, initialPageParam]);
 
@@ -577,18 +659,26 @@ export function useInfiniteQuery<T, P = number>(
         // Capture the current generation; if the main effect re-runs before
         // this promise settles, the generation will have changed and we skip.
         const myGeneration = generationRef.current;
+        const controller = new AbortController();
+        pageAbortControllerRef.current = controller;
 
         setLoading(true);
-        queryFn(nextParam)
+        queryFn(nextParam, controller.signal)
             .then(page => {
-                if (myGeneration !== generationRef.current) return;
+                if (myGeneration !== generationRef.current || controller.signal.aborted) return;
+                if (pageAbortControllerRef.current === controller) {
+                    pageAbortControllerRef.current = null;
+                }
                 loadingRef.current = false;
                 setPages(prev => [...prev, page]);
                 setError(null);
                 setLoading(false);
             })
             .catch(err => {
-                if (myGeneration !== generationRef.current) return;
+                if (pageAbortControllerRef.current === controller) {
+                    pageAbortControllerRef.current = null;
+                }
+                if (myGeneration !== generationRef.current || controller.signal.aborted) return;
                 loadingRef.current = false;
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setLoading(false);

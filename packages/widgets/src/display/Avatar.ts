@@ -2,7 +2,7 @@
 // @termuijs/widgets — Avatar widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps, splitGraphemes } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface AvatarOptions {
@@ -65,13 +65,12 @@ export class Avatar extends Widget {
         const parts = name.trim().split(/\s+/);
         if (parts.length === 0 || parts[0] === '') return '';
         let init = '';
-        const segmenter = new Intl.Segmenter();
         if (parts.length === 1) {
-            const graphemes = Array.from(segmenter.segment(parts[0])).map(s => s.segment);
+            const graphemes = splitGraphemes(parts[0]);
             init = graphemes.slice(0, 2).join('').toUpperCase();
         } else {
-            const gFirst = Array.from(segmenter.segment(parts[0])).map(s => s.segment)[0] ?? '';
-            const gLast = Array.from(segmenter.segment(parts[parts.length - 1])).map(s => s.segment)[0] ?? '';
+            const gFirst = splitGraphemes(parts[0])[0] ?? '';
+            const gLast = splitGraphemes(parts[parts.length - 1])[0] ?? '';
             init = (gFirst + gLast).toUpperCase();
         }
         if (!caps.unicode) {

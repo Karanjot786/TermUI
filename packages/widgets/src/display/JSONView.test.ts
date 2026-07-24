@@ -243,4 +243,13 @@ describe('jsonToTree() helper', () => {
         expect(labels).toContain('foo: 1');
         expect(labels).toContain('bar: 2');
     });
+
+    it('handles non-plain objects (e.g. Date) as string fallback', () => {
+        const date = new Date('2026-07-05T08:00:00.000Z');
+        const node = jsonToTree(date, 'created');
+        const data = node.data as JSONNodeData;
+        expect(data.type).toBe('unknown');
+        expect(node.label).toContain('created:');
+        expect(node.label).toContain(date.toString());
+    });
 });

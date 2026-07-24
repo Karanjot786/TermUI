@@ -14,6 +14,7 @@ export function useThrottle<T>(value: T, intervalMs: number): T {
     const latestValueRef = useRef<T>(value);
     const lastEmittedValueRef = useRef<T>(value);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const intervalRef = useRef(intervalMs);
     latestValueRef.current = value;
     const runTimeout = () => {
         timeoutRef.current = setTimeout(() => {
@@ -28,14 +29,28 @@ export function useThrottle<T>(value: T, intervalMs: number): T {
     };
     // Effect to handle value updates and start throttle timer
     useEffect(() => {
+        const intervalChanged = intervalRef.current !== intervalMs;
+        const hasPendingValue = latestValueRef.current !== lastEmittedValueRef.current;
+        intervalRef.current = intervalMs;
+
+        if (intervalChanged && timeoutRef.current !== null) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+
+            if (hasPendingValue) {
+                runTimeout();
+            }
+            return;
+        }
+
         if (!timeoutRef.current) {
             // Emits the initial value change immediately
             lastEmittedValueRef.current = value;
             setThrottledValue(value);
             runTimeout();
         }
-    }, [value]);
-    // Effect to clean up the timer on unmount or interval changes
+    }, [value, intervalMs]);
+    // Effect to clean up the timer on unmount
     useEffect(() => {
         return () => {
             if (timeoutRef.current !== null) {
@@ -43,6 +58,6 @@ export function useThrottle<T>(value: T, intervalMs: number): T {
                 timeoutRef.current = null;
             }
         };
-    }, [intervalMs]);
+    }, []);
     return throttledValue;
 }

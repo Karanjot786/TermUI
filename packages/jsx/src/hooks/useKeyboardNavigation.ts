@@ -14,7 +14,7 @@
 //   }
 // ─────────────────────────────────────────────────────
 
-import { useState, useInput } from '../hooks.js';
+import { useState, useInput, useEffect } from '../hooks.js';
 import { normalizeNavigationKey } from '@termuijs/core';
 
 export interface KeyboardNavigationOptions {
@@ -72,6 +72,11 @@ export function useKeyboardNavigation({
     onSelect,
 }: KeyboardNavigationOptions): KeyboardNavigationResult {
     const [selectedIndex, setSelectedIndex] = useState(0);
+
+    // If the list shrinks, ensure the selected index doesn't stay out of bounds
+    useEffect(() => {
+        setSelectedIndex((prev) => Math.max(0, Math.min(Math.max(0, itemCount - 1), prev)));
+    }, [itemCount]);
 
     useInput((key, event) => {
         if (itemCount === 0) return;
