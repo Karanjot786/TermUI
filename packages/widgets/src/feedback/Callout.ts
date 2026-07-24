@@ -84,7 +84,7 @@ export class Callout extends Widget {
         const msgStr = msgPrefix + this._message;
         const avail = width - cursor;
         if (avail > 0) {
-            screen.writeString(cursor, y, msgStr.slice(0, avail), { ...attrs, fg: color });
+            screen.writeString(cursor, y, truncate(msgStr, avail), { ...attrs, fg: color });
         }
     }
 }

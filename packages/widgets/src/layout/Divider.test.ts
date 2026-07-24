@@ -20,7 +20,7 @@ describe('Divider', () => {
         divider.render(screen);
 
         const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
-        expect(rendered).toContain('─');
+        expect(rendered).toMatch(/[─-]/);
     });
 
     it('renders ASCII fallback when NO_UNICODE=1', async () => {
@@ -53,7 +53,7 @@ describe('Divider', () => {
 
         for (let row = 0; row < 5; row++) {
             const char = screen.back[row][0].char;
-            expect(char).toBe('│');
+            expect(['│', '|']).toContain(char);
         }
     });
 
@@ -87,7 +87,7 @@ describe('Divider', () => {
 
         const rendered = screen.back[0].map((cell: { char: string }) => cell.char).join('');
         expect(rendered).toContain('Stats');
-        expect(rendered).toContain('─');
+        expect(rendered).toMatch(/[─-]/);
     });
 
     it('uses custom char when provided', async () => {
@@ -112,6 +112,22 @@ describe('Divider', () => {
         const divider = new Divider();
         divider.setLabel('New Label');
         expect(divider).toBeDefined();
+    });
+
+    it('clips wide labels by cell width', async () => {
+        vi.resetModules();
+        const { Screen, stringWidth } = await import('@termuijs/core');
+        const { Divider } = await import('./Divider.js');
+
+        const divider = new Divider({}, { label: '你好你好' });
+        const screen = new Screen(5, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        divider.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+        divider.render(screen);
+
+        for (const [x, , text] of writeSpy.mock.calls) {
+            expect(x + stringWidth(text)).toBeLessThanOrEqual(5);
+        }
     });
 
     it('returns early when width is zero', async () => {

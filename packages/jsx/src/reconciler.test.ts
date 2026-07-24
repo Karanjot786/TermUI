@@ -4,6 +4,7 @@ import { Screen } from '@termuijs/core';
 import type { VNode } from './vnode.js';
 import { reconcile, reRenderComponent, unmountAll, _pruneInstancesForWidget } from './reconciler.js';
 import { destroyFiber } from './hooks.js';
+import { instanceMap } from './globals.js';
 
 // ── Helper: make a functional component VNode ──
 
@@ -36,7 +37,7 @@ function ReturnsTextVNode(): VNode {
 }
 
 function getInstanceMap(): Map<any, any> {
-    return (globalThis as any).__termuijs_instances;
+    return instanceMap;
 }
 
 describe('_instanceMap leak prevention', () => {
@@ -173,5 +174,67 @@ describe('re-render dirty propagation', () => {
         const widget = new Box();
         (widget as any)._children = [null, undefined, 'string', 42];
         expect(() => _pruneInstancesForWidget(widget)).not.toThrow();
+    });
+});
+
+describe('ref prop', () => {
+    beforeEach(() => {
+        getInstanceMap()?.clear();
+    });
+
+    afterEach(() => {
+        unmountAll();
+    });
+
+    it('sets ref.current to the created widget for an intrinsic element', () => {
+        const ref: { current: Box | null } = { current: null };
+        const vnode = h('box', { ref, width: 10 });
+
+        const widget = reconcile(vnode);
+
+        expect(widget).toBeInstanceOf(Box);
+        expect(ref.current).toBe(widget);
+    });
+
+    it('does not leak ref onto the intrinsic widget style', () => {
+        const ref: { current: Box | null } = { current: null };
+        const vnode = h('box', { ref, width: 10 });
+
+        const widget = reconcile(vnode) as Box;
+
+        expect('ref' in widget.style).toBe(false);
+        expect(widget.style.width).toBe(10);
+    });
+
+    it('sets ref.current to the rendered widget for a functional component', () => {
+        function Comp(): VNode {
+            return h('box', { width: 20 });
+        }
+
+        const ref: { current: Box | null } = { current: null };
+        const vnode = h(Comp, { ref });
+
+        const widget = reconcile(vnode);
+
+        expect(widget).toBeInstanceOf(Box);
+        expect(ref.current).toBe(widget);
+    });
+
+    it('strips ref before it reaches the widget style even when a component forwards its props', () => {
+        // Component that spreads its own props (including ref) onto the intrinsic
+        // element it returns — the ref must still resolve to the rendered widget,
+        // and must never leak into that widget's style.
+        function ForwardingComp(props: Record<string, any>): VNode {
+            return h('box', { ...props });
+        }
+
+        const ref: { current: Box | null } = { current: null };
+        const vnode = h(ForwardingComp, { ref, width: 15 });
+
+        const widget = reconcile(vnode) as Box;
+
+        expect(ref.current).toBe(widget);
+        expect(widget.style.width).toBe(15);
+        expect('ref' in widget.style).toBe(false);
     });
 });

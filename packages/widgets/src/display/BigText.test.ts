@@ -187,4 +187,9 @@ describe('BigText – mutation regression tests', () => {
 
         expect(widget.isDirty).toBe(true);
     });
+
+    it('returns the uppercase text via getText()', () => {
+        const widget = new BigText('hello');
+        expect(widget.getText()).toBe('HELLO');
+    });
 });

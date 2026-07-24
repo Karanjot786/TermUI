@@ -103,4 +103,17 @@ describe('FPSCounter', () => {
         expect(fps.getFPS()).toBe(0);
     });
 
+    it('resets fps statistics via reset()', () => {
+        const fps = new FPSCounter();
+        fps.updateFPS(60);
+        fps.updateFPS(30);
+
+        expect(fps.getFPS()).toBe(30);
+        expect(fps.getAverageFPS()).toBe(45);
+
+        fps.reset();
+
+        expect(fps.getFPS()).toBe(0);
+        expect(fps.getAverageFPS()).toBe(0);
+    });
 });

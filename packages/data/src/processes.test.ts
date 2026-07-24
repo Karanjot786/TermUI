@@ -154,4 +154,20 @@ describe('processes provider', () => {
         expect(top2[0].pid).toBe(101);
         expect(top2[1].pid).toBe(102);
     });
+
+    it('reports total process count separately from the capped list', () => {
+        const rows = Array.from({ length: 75 }, (_, index) => {
+            const pid = 1000 + index;
+            return `pro       ${pid}  1.0  0.1   1000   100 ?        S    12:00   0:00 proc${index}`;
+        });
+        const mockOutput =
+            'USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\n' +
+            rows.join('\n') +
+            '\n';
+
+        mockExecFileSync.mockReturnValue(mockOutput);
+
+        expect(processes.list).toHaveLength(50);
+        expect(processes.count).toBe(75);
+    });
 });

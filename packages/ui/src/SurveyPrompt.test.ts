@@ -34,6 +34,17 @@ describe("SurveyPrompt", () => {
         expect(text).toContain("1 / 2");
     });
 
+    it("renders content inside the content rect", () => {
+        const prompt = new SurveyPrompt(QUESTIONS, { border: "single" });
+        const screen = new Screen(40, 10);
+
+        prompt.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        prompt.render(screen);
+
+        expect(screen.back[1][0].char).not.toBe("1");
+        expect(screen.back[1][1].char).toBe("1");
+    });
+
     it("enter on a text question advances to question 2", () => {
         const prompt = new SurveyPrompt(QUESTIONS);
 
@@ -102,6 +113,20 @@ describe("SurveyPrompt", () => {
 
         expect(prompt.getAnswers()).toEqual({
             name: "Bob",
+        });
+    });
+
+    it("backspace removes one grapheme from text answers", () => {
+        const prompt = new SurveyPrompt(QUESTIONS);
+
+        for (const key of "Cafe\u0301") {
+            prompt.handleKey({ key, ctrl: false, alt: false } as any);
+        }
+        prompt.handleKey({ key: "backspace", ctrl: false, alt: false } as any);
+        prompt.handleKey({ key: "enter", ctrl: false, alt: false } as any);
+
+        expect(prompt.getAnswers()).toEqual({
+            name: "Caf",
         });
     });
 });
