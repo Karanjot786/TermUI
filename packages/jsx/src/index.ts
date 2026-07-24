@@ -31,6 +31,8 @@ export {
     useReducer,
 } from './hooks.js';
 export { useToggle } from './hooks/useToggle.js';
+export { useAnimation } from './hooks/useAnimation.js';
+export type { UseAnimationConfig } from './hooks/useAnimation.js';
 export type { AsyncState, KeyBinding, MotionPreferences } from './hooks.js';
 export { useCounter } from './hooks/useCounter.js';
 export type { UseCounterActions, UseCounterOptions } from './hooks/useCounter.js';
@@ -111,4 +113,5 @@ export { useSet } from './hooks/useSet.js';
 export type { UseSetActions } from './hooks/useSet.js';
 export { useThrottle } from './hooks/useThrottle.js';
 export { useViewMeta } from './hooks/useViewMeta.js';
+export { usePrevious } from './hooks/usePrevious.js';
 export type { ViewMeta, ViewMetaCursor, ViewMetaMouseMode } from './hooks/useViewMeta.js';

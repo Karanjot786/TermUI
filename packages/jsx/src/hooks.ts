@@ -11,6 +11,7 @@ import { caps } from '@termuijs/core';
 import { timerPoolSubscribe } from '@termuijs/motion';
 import type { Widget } from '@termuijs/widgets';
 import type { FC } from './vnode.js';
+import { suspendedFibers, fiberToWidgetMap, instanceMap } from './globals.js';
 
 // ── Fiber — per-component-instance state ──
 
@@ -588,11 +589,16 @@ export function useReducer<S, A>(
 export function runEffects(fiber: Fiber): void {
     for (const record of fiber.effects) {
         if (!record.ran) {
-            // Run cleanup from previous effect
-            record.cleanup?.();
-            const cleanup = record.effect();
-            if (typeof cleanup === 'function') {
-                record.cleanup = cleanup;
+            try {
+                // Run cleanup from previous effect
+                record.cleanup?.();
+                const cleanup = record.effect();
+                if (typeof cleanup === 'function') {
+                    record.cleanup = cleanup;
+                }
+            } catch (err) {
+                // Mark as ran to prevent infinite re-execution
+                console.error('[useEffect] Effect threw:', err);
             }
             record.ran = true;
         }
@@ -602,11 +608,15 @@ export function runEffects(fiber: Fiber): void {
 export function runLayoutEffects(fiber: Fiber): void {
     for (const record of fiber.layoutEffects) {
         if (!record.ran) {
-            // Run cleanup from previous effect
-            record.cleanup?.();
-            const cleanup = record.effect();
-            if (typeof cleanup === 'function') {
-                record.cleanup = cleanup;
+            try {
+                // Run cleanup from previous effect
+                record.cleanup?.();
+                const cleanup = record.effect();
+                if (typeof cleanup === 'function') {
+                    record.cleanup = cleanup;
+                }
+            } catch (err) {
+                console.error('[useLayoutEffect] Effect threw:', err);
             }
             record.ran = true;
         }
@@ -616,13 +626,13 @@ export function runLayoutEffects(fiber: Fiber): void {
 /** Clean up all effects and intervals for a fiber, including child fibers */
 export function destroyFiber(fiber: Fiber): void {
     for (const record of fiber.effects) {
-        record.cleanup?.();
+        try { record.cleanup?.(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const record of fiber.layoutEffects) {
-        record.cleanup?.();
+        try { record.cleanup?.(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const cleanup of fiber.cleanups) {
-        cleanup();
+        try { cleanup(); } catch { /* ignore cleanup errors during destroy */ }
     }
     for (const timer of fiber.intervals) {
         clearInterval(timer);
@@ -652,22 +662,13 @@ export function destroyFiber(fiber: Fiber): void {
         fiber.portalChildren = undefined;
     }
     // Clean up suspended promises (SuspenseBoundary tracking)
-    const _suspendedFibers: Map<number, any> | undefined = (globalThis as any).__termuijs_suspendedFibers;
-    if (_suspendedFibers instanceof Map) {
-        _suspendedFibers.delete(fiber.id);
-    }
+    suspendedFibers.delete(fiber.id);
 
-    // Clean up global _instanceMap via reverse fiber→widget mapping (O(1))
-    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
-    if (_fiberToWidget instanceof Map) {
-        const widget = _fiberToWidget.get(fiber);
-        if (widget) {
-            const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
-            if (termuiInstances instanceof Map) {
-                termuiInstances.delete(widget);
-            }
-            _fiberToWidget.delete(fiber);
-        }
+    // Clean up global instanceMap via reverse fiber→widget mapping (O(1))
+    const widget = fiberToWidgetMap.get(fiber);
+    if (widget) {
+        instanceMap.delete(widget);
+        fiberToWidgetMap.delete(fiber);
     }
     fiber.hooks = [];
     fiber.effects = [];
@@ -702,15 +703,9 @@ export function resetHooksGlobals(): void {
     }
     
     // Clear global instance map
-    const termuiInstances: Map<any, any> | undefined = (globalThis as any).__termuijs_instances;
-    if (termuiInstances instanceof Map) {
-        termuiInstances.clear();
-    }
+    instanceMap.clear();
     // Clear reverse fiber→widget map
-    const _fiberToWidget: Map<any, any> | undefined = (globalThis as any).__termuijs_fiberToWidget;
-    if (_fiberToWidget instanceof Map) {
-        _fiberToWidget.clear();
-    }
+    fiberToWidgetMap.clear();
 }
 
 /**
@@ -767,13 +762,16 @@ export function useAsync<T>(
 
     // Track a version counter to ignore stale responses
     const versionRef = useRef(0);
+    // Always call the latest asyncFn to avoid stale closure
+    const asyncFnRef = useRef(asyncFn);
+    asyncFnRef.current = asyncFn;
 
     const refetch = useCallback(() => {
         const version = ++versionRef.current;
         setLoading(true);
         setError(null);
 
-        asyncFn()
+        asyncFnRef.current()
             .then((result) => {
                 // Only update if this is still the latest request
                 if (versionRef.current === version) {

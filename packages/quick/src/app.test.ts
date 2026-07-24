@@ -22,6 +22,7 @@ describe('quick – focus traversal', () => {
 
         await (builder as any)._runWithRoot(root);
         const appInstance = (builder as any)._app;
+        appInstance.focus.start();
 
         const focusables: Array<TextInput | List> = [];
         const collect = (widget: any) => {

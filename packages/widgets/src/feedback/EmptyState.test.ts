@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth, caps } from '@termuijs/core';
 import { EmptyState } from './EmptyState.js';
 
 afterEach(() => {
@@ -12,6 +12,7 @@ function row(screen: Screen, y: number): string {
 
 describe('EmptyState', () => {
     it('renders icon + title centered', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const es = new EmptyState('No items');
         es.updateRect({ x: 0, y: 0, width: 30, height: 5 });
         const screen = new Screen(30, 5);
@@ -163,6 +164,7 @@ describe('EmptyState', () => {
     });
     
     it('setIcon updates rendered icon', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const es = new EmptyState('No data');
     
         es.setIcon('📦');
@@ -174,4 +176,71 @@ describe('EmptyState', () => {
         expect(row(screen, 1).trim()).toBe('📦');
     });
 
+    it('sets a11y role and label on construction', () => {
+        const es = new EmptyState('No items', {}, { description: 'Try again', hint: 'Press F5' });
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'No items. Try again. Press F5',
+        });
+    });
+
+    it('sets a11y label from title alone when no description/hint given', () => {
+        const es = new EmptyState('No items');
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'No items',
+        });
+    });
+
+    it('refreshes a11y label when setTitle is called', () => {
+        const es = new EmptyState('Old title');
+
+        es.setTitle('New title');
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'New title',
+        });
+    });
+
+    it('refreshes a11y label when setDescription is called', () => {
+        const es = new EmptyState('Title');
+
+        es.setDescription('New description');
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'Title. New description',
+        });
+    });
+
+    it('refreshes a11y label when setHint is called', () => {
+        const es = new EmptyState('Title');
+
+        es.setHint('New hint');
+
+        expect(es.a11y).toEqual({
+            role: 'region',
+            label: 'Title. New hint',
+        });
+    });
+
+    it('keeps long content writes inside the widget rect', () => {
+        const es = new EmptyState('Very long empty state title', {}, {
+            description: 'A description that is also too long',
+            hint: 'Press something eventually',
+        });
+        const screen = new Screen(6, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        es.updateRect({ x: 0, y: 0, width: 6, height: 1 });
+        es.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(6);
+            expect(call[1]).toBeLessThan(1);
+        }
+    });
 });

@@ -104,6 +104,23 @@ export class QuizPrompt extends Widget {
         }, 800);
     }
 
+    override destroy(): void {
+        this.clearFeedbackTimeout();
+        super.destroy();
+    }
+
+    override unmount(): void {
+        this.clearFeedbackTimeout();
+        super.unmount();
+    }
+
+    private clearFeedbackTimeout(): void {
+        if (this._feedbackTimeout) {
+            clearTimeout(this._feedbackTimeout);
+            this._feedbackTimeout = null;
+        }
+    }
+
     protected _renderSelf(screen: Screen): void {
         const { x, y, width, height } = this._rect;
         if (width <= 0 || height <= 0) return;
@@ -145,6 +162,8 @@ export class QuizPrompt extends Widget {
         }
         
         // Render feedback message
+        if (row >= height) return;
+
         if (this._feedback === 'correct') {
             screen.writeString(x, y + row, '✓ Correct!'.slice(0, width), { ...attrs, fg: this._correctColor });
         } else if (this._feedback === 'wrong') {

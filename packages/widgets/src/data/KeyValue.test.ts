@@ -187,6 +187,20 @@ describe('KeyValue', () => {
                 kv.handleKey('unknown');
             }).not.toThrow();
         });
+
+        it('handles KeyEvent objects correctly', () => {
+            const kv = new KeyValue({
+                name: 'Alice',
+                age: 30
+            });
+            kv.isFocused = true;
+            
+            kv.handleKey({ key: 'down' } as any);
+            expect((kv as any)._selectedIndex).toBe(1);
+
+            kv.handleKey({ key: 'up' } as any);
+            expect((kv as any)._selectedIndex).toBe(0);
+        });
     });
 
     // Edge cases

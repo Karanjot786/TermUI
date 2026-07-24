@@ -90,7 +90,7 @@ export function jsonToTree(value: unknown, key?: string): TreeNode {
         };
     }
 
-    if (typeof value === 'object') {
+    if (value && typeof value === 'object' && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null)) {
         const obj = value as Record<string, unknown>;
         const children = Object.keys(obj).map(k => jsonToTree(obj[k], k));
         return {

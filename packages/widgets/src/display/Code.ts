@@ -77,7 +77,10 @@ export class Code extends Widget {
         const cellStyle = { fg: borderFg };
 
         // Top edge with language label
-        const label = this._language ? `[${this._language}]` : '';
+        const availableLabelWidth = width - 3;
+        const label = this._language && availableLabelWidth > 0
+            ? `[${this._language}]`.slice(0, availableLabelWidth)
+            : '';
 
         screen.setCell(x, y, { char: chars.topLeft, ...cellStyle });
 
