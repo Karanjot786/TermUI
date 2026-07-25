@@ -32,6 +32,15 @@ describe('Screen', () => {
         // No errors thrown
     });
 
+    it('writeString allows negative local row if pushTranslateY brings it on-screen', () => {
+        const screen = new Screen(10, 5);
+        screen.pushTranslateY(3);
+        // Local row -1, absolute row 2
+        screen.writeString(0, -1, 'Hello');
+        screen.popTranslateY();
+        expect(screen.getLine(2)).toBe('Hello     ');
+    });
+
     it('writes a string to the back buffer', () => {
         const screen = new Screen(10, 5);
         screen.writeString(0, 0, 'Hello');
