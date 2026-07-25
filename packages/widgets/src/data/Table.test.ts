@@ -4,6 +4,17 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { Table } from './Table.js';
+import type { KeyEvent } from '@termuijs/core';
+
+const key = (key: string): KeyEvent => ({
+    key,
+    raw: Buffer.alloc(0),
+    ctrl: false,
+    alt: false,
+    shift: false,
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
+});
 
 const COLUMNS = [
     { header: 'Name', key: 'name' },
@@ -30,6 +41,32 @@ describe('Table', () => {
     it('handles empty rows array', () => {
         const table = new Table(COLUMNS, []);
         expect(() => table).not.toThrow();
+    });
+
+    it('keeps empty no-header tables on a non-header selection', () => {
+        const table = new Table(COLUMNS, [], {}, { showHeader: false });
+
+        table.handleKey(key('down'));
+
+        expect(table.selectedRow).toBe(0);
+    });
+
+    it('allows header selection for empty header-enabled tables', () => {
+        const table = new Table(COLUMNS, [], {}, { showHeader: true });
+
+        table.handleKey(key('up'));
+
+        expect(table.selectedRow).toBe(-1);
+    });
+
+    it('clamps selection when rows are replaced with an empty array', () => {
+        const table = new Table(COLUMNS, ROWS, {}, { showHeader: false });
+        table.handleKey(key('down'));
+        expect(table.selectedRow).toBe(1);
+
+        table.setRows([]);
+
+        expect(table.selectedRow).toBe(0);
     });
 
     it('computes column widths correctly', () => {
@@ -127,6 +164,77 @@ describe('Table', () => {
             const table = new Table(COLUMNS, ROWS, {}, { showHeader: false });
             table.handleKey({ key: 'up' } as any);
             expect(table.selectedRow).toBe(0); // Clamped to 0
+        });
+    });
+
+    describe('page and jump navigation', () => {
+        // 50 rows, viewport height 10, showHeader disabled so pageSize === height (10)
+        // and row 0 is unambiguously the "first row" (no header-focus state at -1).
+        const manyRows = Array.from({ length: 50 }).map((_, i) => ({ name: `Row${i}`, age: i }));
+
+        function makePagedTable() {
+            const table = new Table(COLUMNS, manyRows, {}, { showHeader: false });
+            table.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+            return table;
+        }
+
+        it('pagedown advances the selected row by a page', () => {
+            const table = makePagedTable();
+            table.handleKey({ key: 'pagedown' } as any);
+            expect(table.selectedRow).toBe(10);
+
+            table.handleKey({ key: 'pagedown' } as any);
+            expect(table.selectedRow).toBe(20);
+        });
+
+        it('pagedown is clamped at the last row', () => {
+            const table = makePagedTable();
+            for (let i = 0; i < 10; i++) {
+                table.handleKey({ key: 'pagedown' } as any);
+            }
+            expect(table.selectedRow).toBe(manyRows.length - 1);
+
+            // One more pagedown past the end stays clamped
+            table.handleKey({ key: 'pagedown' } as any);
+            expect(table.selectedRow).toBe(manyRows.length - 1);
+        });
+
+        it('pageup goes back a page', () => {
+            const table = makePagedTable();
+            table.handleKey({ key: 'end' } as any);
+            expect(table.selectedRow).toBe(manyRows.length - 1); // 49
+
+            table.handleKey({ key: 'pageup' } as any);
+            expect(table.selectedRow).toBe(manyRows.length - 1 - 10); // 39
+        });
+
+        it('pageup is clamped at row 0', () => {
+            const table = makePagedTable();
+            table.handleKey({ key: 'down' } as any); // selectedRow = 1
+            table.handleKey({ key: 'pageup' } as any);
+            expect(table.selectedRow).toBe(0);
+
+            // Another pageup from row 0 stays clamped
+            table.handleKey({ key: 'pageup' } as any);
+            expect(table.selectedRow).toBe(0);
+        });
+
+        it('home jumps to the first row', () => {
+            const table = makePagedTable();
+            table.handleKey({ key: 'down' } as any);
+            table.handleKey({ key: 'down' } as any);
+            expect(table.selectedRow).toBe(2);
+
+            table.handleKey({ key: 'home' } as any);
+            expect(table.selectedRow).toBe(0);
+        });
+
+        it('end jumps to the last row', () => {
+            const table = makePagedTable();
+            expect(table.selectedRow).toBe(0);
+
+            table.handleKey({ key: 'end' } as any);
+            expect(table.selectedRow).toBe(manyRows.length - 1);
         });
     });
 

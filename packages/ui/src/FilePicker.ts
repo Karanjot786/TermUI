@@ -111,6 +111,11 @@ export class FilePicker extends Widget {
     /** Current cursor index within `entries`. */
     get cursorIndex(): number { return this._cursor; }
 
+    /** Reload the current directory while preserving the selected entry when possible. */
+    refresh(): void {
+        this._loadEntries({ preserveSelection: true });
+    }
+
     // ── Navigation ───────────────────────────────────
 
     /** Move the cursor one row down. Clamps at the last entry. */
@@ -205,7 +210,9 @@ export class FilePicker extends Widget {
      *  2. Directories — alpha-sorted
      *  3. Files       — alpha-sorted, filtered by `this._filter`
      */
-    private _loadEntries(): void {
+    private _loadEntries(options: { preserveSelection?: boolean } = {}): void {
+        const previousSelection = options.preserveSelection ? this.selectedEntry?.fullPath : undefined;
+        const previousCursor = this._cursor;
         const entries: FileEntry[] = [];
 
         // Parent entry (unless at root)
@@ -252,7 +259,14 @@ export class FilePicker extends Widget {
         }
 
         this._entries = entries;
-        this._cursor = 0;
+        const preservedIndex = previousSelection
+            ? entries.findIndex(entry => entry.fullPath === previousSelection)
+            : -1;
+        this._cursor = !options.preserveSelection
+            ? 0
+            : preservedIndex >= 0
+            ? preservedIndex
+            : Math.min(previousCursor, Math.max(0, entries.length - 1));
         this._scrollTop = 0;
         this.markDirty();
     }

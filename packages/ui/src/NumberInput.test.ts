@@ -94,4 +94,16 @@ describe('NumberInput', () => {
         expect(onChange).toHaveBeenLastCalledWith(10);
         expect(onSubmit).toHaveBeenCalledWith(10);
     });
+
+    it('rejects invalid step options', () => {
+        expect(() => new NumberInput({}, { step: 0 })).toThrow(RangeError);
+        expect(() => new NumberInput({}, { step: -1 })).toThrow(RangeError);
+        expect(() => new NumberInput({}, { step: NaN })).toThrow(RangeError);
+    });
+
+    it('rejects invalid range options', () => {
+        expect(() => new NumberInput({}, { min: NaN })).toThrow(RangeError);
+        expect(() => new NumberInput({}, { max: NaN })).toThrow(RangeError);
+        expect(() => new NumberInput({}, { min: 10, max: 0 })).toThrow(RangeError);
+    });
 });

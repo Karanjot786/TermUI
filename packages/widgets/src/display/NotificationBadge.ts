@@ -1,6 +1,6 @@
 // @termuijs/widgets - NotificationBadge widget
 
-import { type Screen, type Style, type Color, stringWidth } from '@termuijs/core';
+import { type Screen, type Style, type Color, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export type BadgePosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
@@ -31,14 +31,15 @@ export class NotificationBadge extends Widget {
 
     constructor(opts: NotificationBadgeOptions = {}, style: Partial<Style> = {}) {
         super(style);
-        this._count = opts.count ?? 0;
+        this._count = Math.max(0, opts.count ?? 0);
         this._position = opts.position ?? 'top-right';
     }
 
     /** Update the notification count. */
     setCount(count: number): void {
-        if (count === this._count) return;
-        this._count = count;
+        const clamped = Math.max(0, count);
+        if (clamped === this._count) return;
+        this._count = clamped;
         this.markDirty();
     }
 
@@ -96,8 +97,9 @@ export class NotificationBadge extends Widget {
         // Clamp to widget bounds
         bx = Math.max(x, bx);
 
+        const visibleLabel = truncate(label, width, '');
         // Render the label with notification colors
         const attrs = { fg: BADGE_FG, bg: BADGE_BG, bold: true };
-        screen.writeString(bx, by, label, attrs);
+        screen.writeString(bx, by, visibleLabel, attrs);
     }
 }

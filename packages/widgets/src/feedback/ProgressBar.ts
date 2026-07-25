@@ -82,6 +82,12 @@ export class ProgressBar extends Widget {
         this.markDirty();
     }
 
+    /** Reset progress back to 0% (or 0/total when max is provided). Keeps all other settings unchanged. */
+    clear(): void {
+        this.setValue(0);
+    }
+
+
     setMax(max: number): void {
         if (this._max === max) {
             return;

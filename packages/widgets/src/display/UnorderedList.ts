@@ -48,8 +48,15 @@ export class UnorderedList extends Widget {
     }
 
     setItems(items: ListItem[]): void {
+        if (items === this._items) {
+            return;
+        }
         this._items = items;
         this.markDirty();
+    }
+
+    getItems(): ListItem[] {
+        return this._items;
     }
 
     protected _renderSelf(screen: Screen): void {

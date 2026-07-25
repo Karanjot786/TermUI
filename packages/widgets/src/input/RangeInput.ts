@@ -7,12 +7,15 @@ import {
     styleToCellAttrs,
     caps,
     stringWidth,
+    truncate,
 } from '@termuijs/core';
 
 export interface RangeInputOptions {
     min?: number;
     max?: number;
     step?: number;
+    low?: number;
+    high?: number;
     color?: Color;
     showValue?: boolean;
     onChange?: (low: number, high: number) => void;
@@ -43,8 +46,14 @@ export class RangeInput extends Widget {
         this._step = opts.step ?? 1;
         this._color = opts.color ?? { type: 'named', name: 'cyan' };
         this._showValue = opts.showValue ?? true;
-        this._low = this._min;
-        this._high = this._max;
+        
+        const initialLow = opts.low ?? this._min;
+        const initialHigh = opts.high ?? this._max;
+        const lo = Math.min(Math.max(initialLow, this._min), this._max);
+        const hi = Math.min(Math.max(initialHigh, this._min), this._max);
+        this._low = Math.min(lo, hi);
+        this._high = Math.max(lo, hi);
+        
         this._activeHandle = 'low';
         this._onChange = opts.onChange;
 
@@ -123,11 +132,20 @@ export class RangeInput extends Widget {
         const leftCapWidth = stringWidth(leftCap);
         const rightCapWidth = stringWidth(rightCap);
         const valueWidth = stringWidth(valueStr);
+        const fixedWidth = labelWidth + leftCapWidth + rightCapWidth + valueWidth;
 
         const trackWidth = Math.max(
             0,
-            width - labelWidth - leftCapWidth - rightCapWidth - valueWidth,
+            width - fixedWidth,
         );
+
+        if (trackWidth === 0 && fixedWidth > width) {
+            screen.writeString(x, y, truncate(`${labelStr}${leftCap}${rightCap}${valueStr}`, width, ''), {
+                ...attrs,
+                bold: true,
+            });
+            return;
+        }
 
         // Render label
         screen.writeString(x, y, labelStr, { ...attrs, bold: true });

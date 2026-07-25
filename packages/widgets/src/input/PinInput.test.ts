@@ -113,4 +113,14 @@ describe("PinInput", () => {
     expect(rendered).toContain("[ • ]");
     expect(rendered).not.toContain("[ 1 ]");
   });
+
+  it("programmatically sets the value using setValue", async () => {
+    const { PinInput } = await import("./PinInput.js");
+    const pin = new PinInput({}, { length: 4 });
+    pin.setValue("12");
+    expect(pin.value).toBe("12");
+
+    pin.setValue("12345");
+    expect(pin.value).toBe("1234");
+  });
 });
