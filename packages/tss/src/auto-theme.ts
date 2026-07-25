@@ -72,13 +72,8 @@ export async function detectTerminalBackground(): Promise<TerminalBackground> {
   }
 
   if (termProgram === 'Apple_Terminal') {
-    // macOS Terminal.app: "Basic", "Grass", "Homebrew", "Man Page",
-    // "Novel", "Ocean", "Pro", "Red Sands", "Silver Aerogel", "Solid Colors"
-    // Most defaults are dark. "Novel", "Silver Aerogel" are light.
-    const profile = (process.env['TERM_PROGRAM_VERSION'] ?? '').toLowerCase()
-    if (profile.includes('novel') || profile.includes('silver')) {
-      return 'light'
-    }
+    // macOS Terminal.app does not expose the active profile name via environment.
+    // Default profiles are dark; users who want light detection can set TERM_BACKGROUND.
     return 'dark'
   }
 
