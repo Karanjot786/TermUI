@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
+import { Screen, stringWidth } from '@termuijs/core';
 import { Tree } from './Tree.js';
 
 const TREE_DATA = [
@@ -66,5 +67,24 @@ describe('Tree', () => {
         const flat = [{ label: 'Alone', value: 'alone' }];
         const tree = new Tree(flat);
         expect(tree).toBeDefined();
+    });
+
+    it('renders wide-character labels within the tree width', () => {
+        const tree = new Tree([
+            {
+                label: '\u8868\u8868\u8868\u8868',
+                expanded: true,
+                children: [{ label: '\u8868\u8868\u8868\u8868' }],
+            },
+        ]);
+        const screen = new Screen(6, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        tree.updateRect({ x: 0, y: 0, width: 5, height: 3 });
+        tree.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(stringWidth(String(call[2]))).toBeLessThanOrEqual(5);
+        }
     });
 });
