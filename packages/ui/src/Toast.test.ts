@@ -4,7 +4,7 @@
 
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { Toast } from './Toast.js';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 
 afterEach(() => {
     vi.useRealTimers();
@@ -63,5 +63,22 @@ describe('Toast', () => {
         toast.render(screen);
 
         expect(writeSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps mixed-width labels stable during reveal animation', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(0);
+        const toast = new Toast({ durationMs: 1000, animationMs: 300, announce: false });
+        const screen = new Screen(16, 4);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        toast.updateRect({ x: 0, y: 0, width: 12, height: 4 });
+        toast.info('\u8868\u8868\u8868\u8868');
+        vi.setSystemTime(150);
+        toast.render(screen);
+
+        const rendered = String(writeSpy.mock.calls[0][2]);
+        expect(stringWidth(rendered)).toBe(10);
+        expect(rendered).not.toContain('\uFFFD');
     });
 });
