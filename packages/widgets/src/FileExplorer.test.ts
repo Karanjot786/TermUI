@@ -209,8 +209,8 @@ describe('FileExplorer widget behaviour', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const fe = new FileExplorer({ root: tmpRoot });
         fe.reload();
-        const screen = new Screen(60, 10);
-        fe.updateRect({ x: 0, y: 0, width: 60, height: 10 });
+        const screen = new Screen(200, 10);
+        fe.updateRect({ x: 0, y: 0, width: 200, height: 10 });
         fe.render(screen);
 
         // Header row shows the current path
@@ -228,8 +228,8 @@ describe('FileExplorer widget behaviour', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const fe = new FileExplorer({ root: tmpRoot });
         fe.reload();
-        const screen = new Screen(60, 10);
-        fe.updateRect({ x: 0, y: 0, width: 60, height: 10 });
+        const screen = new Screen(200, 10);
+        fe.updateRect({ x: 0, y: 0, width: 200, height: 10 });
         fe.render(screen);
 
         const body = [1, 2, 3].map((r) => rowText(screen, r)).join('\n');
@@ -244,8 +244,8 @@ describe('FileExplorer widget behaviour', () => {
         fe.reload();
         fe.next(); // select the first file row (index 1, after the directory)
         fe.isFocused = true;
-        const screen = new Screen(60, 10);
-        fe.updateRect({ x: 0, y: 0, width: 60, height: 10 });
+        const screen = new Screen(200, 10);
+        fe.updateRect({ x: 0, y: 0, width: 200, height: 10 });
         fe.render(screen);
 
         const selectedRow = [1, 2, 3].find((r) => rowText(screen, r).includes(FILE));
@@ -278,8 +278,8 @@ describe('FileExplorer widget behaviour', () => {
     it('expands and collapses a directory with Enter', () => {
         const fe = new FileExplorer({ root: tmpRoot });
         fe.reload();
-        const screen = new Screen(60, 10);
-        fe.updateRect({ x: 0, y: 0, width: 60, height: 10 });
+        const screen = new Screen(200, 10);
+        fe.updateRect({ x: 0, y: 0, width: 200, height: 10 });
         const childBase = basename(CHILD_A);
         fe.render(screen);
         expect(rowText(screen, 1)).not.toContain(childBase);
@@ -300,8 +300,8 @@ describe('FileExplorer widget behaviour', () => {
         const fe = new FileExplorer({ root: tmpRoot });
         fe.reload();
         fe.handleKey(keyEvent('enter')); // expand sub/
-        const screen = new Screen(60, 10);
-        fe.updateRect({ x: 0, y: 0, width: 60, height: 10 });
+        const screen = new Screen(200, 10);
+        fe.updateRect({ x: 0, y: 0, width: 200, height: 10 });
         fe.render(screen);
         // The child row should be indented relative to the directory row.
         const dirRow = rowText(screen, 1);
@@ -334,8 +334,8 @@ describe('FileExplorer widget behaviour', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
         const fe = new FileExplorer({ root: tmpRoot });
         fe.reload();
-        const screen = new Screen(60, 10);
-        fe.updateRect({ x: 0, y: 0, width: 60, height: 10 });
+        const screen = new Screen(200, 10);
+        fe.updateRect({ x: 0, y: 0, width: 200, height: 10 });
         fe.render(screen);
         const body = [1, 2, 3, 4].map((r) => rowText(screen, r)).join('\n');
         expect(body).not.toContain(SECRET);
@@ -351,8 +351,8 @@ describe('FileExplorer widget behaviour', () => {
         const fe = new FileExplorer({ root: tmpRoot, hiddenFiles: true });
         fe.reload();
         expect(fe.showHidden).toBe(true);
-        const screen = new Screen(60, 10);
-        fe.updateRect({ x: 0, y: 0, width: 60, height: 10 });
+        const screen = new Screen(200, 10);
+        fe.updateRect({ x: 0, y: 0, width: 200, height: 10 });
         fe.render(screen);
         const body = [1, 2, 3, 4].map((r) => rowText(screen, r)).join('\n');
         expect(body).toContain(SECRET);

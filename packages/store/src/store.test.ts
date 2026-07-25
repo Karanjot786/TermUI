@@ -970,23 +970,34 @@ describe('useStore selector memoization', () => {
 })
 
 describe('persist – symlink resolution', () => {
-    const testRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'termuijs-symtest-')));
-    const storeDir = path.join(testRoot, 'termuijs-stores');
-    const realDir = path.join(storeDir, 'real');
-    const linkDir = path.join(storeDir, 'link');
-
-    afterAll(() => {
-        try { fs.rmSync(storeDir, { recursive: true }); } catch { /* ok */ }
-        try { fs.rmdirSync(testRoot); } catch { /* ok */ }
-    });
-
-    const origAppData = process.env.APPDATA;
-    const origXdgConfig = process.env.XDG_CONFIG_HOME;
-    const symlinkType: any = process.platform === 'win32' ? 'junction' : 'dir';
+    let testRoot = '';
+    let storeDir = '';
+    let realDir = '';
+    let linkDir = '';
+    const symlinkType = process.platform === 'win32' ? 'junction' : 'dir';
+    let originalPlatform: string;
+    let originalAppData: string | undefined;
+    let originalXdgConfigHome: string | undefined;
 
     beforeEach(() => {
+        testRoot = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'symtest-')));
+        
+        // Force platform to linux so store.ts uses XDG_CONFIG_HOME and we don't have to mock os.homedir (ESM limitation)
+        originalPlatform = process.platform;
+        Object.defineProperty(process, 'platform', { value: 'linux' });
+
+        originalAppData = process.env.APPDATA;
+        originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
         process.env.APPDATA = testRoot;
         process.env.XDG_CONFIG_HOME = testRoot;
+
+        // Since we forced linux, appConfig is testRoot (from XDG_CONFIG_HOME)
+        const appConfig = testRoot;
+
+        storeDir = path.join(appConfig, 'termuijs-stores');
+        realDir = path.join(storeDir, 'real');
+        linkDir = path.join(storeDir, 'link');
+
         fs.mkdirSync(realDir, { recursive: true });
         try { fs.rmdirSync(linkDir); } catch { /* ok */ }
         if (!fs.existsSync(linkDir)) {
@@ -995,10 +1006,16 @@ describe('persist – symlink resolution', () => {
     });
 
     afterEach(() => {
-        process.env.APPDATA = origAppData;
-        process.env.XDG_CONFIG_HOME = origXdgConfig;
+        Object.defineProperty(process, 'platform', { value: originalPlatform });
+        if (originalAppData !== undefined) process.env.APPDATA = originalAppData;
+        else delete process.env.APPDATA;
+        if (originalXdgConfigHome !== undefined) process.env.XDG_CONFIG_HOME = originalXdgConfigHome;
+        else delete process.env.XDG_CONFIG_HOME;
+
         vi.useRealTimers();
-        try { fs.rmSync(storeDir, { recursive: true }); } catch { /* ok */ }
+        if (testRoot) {
+            fs.rmSync(testRoot, { recursive: true, force: true });
+        }
     });
 
     it('resolves symlinks in persist path and writes to real directory', () => {

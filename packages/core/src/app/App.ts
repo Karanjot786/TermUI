@@ -69,6 +69,7 @@ interface FocusAwareWidget {
     id: string;
     isFocused: boolean;
     markDirty?: () => void;
+    a11y?: import('../a11y/index.js').A11yProps;
 }
 
 /**
