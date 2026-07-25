@@ -128,11 +128,15 @@ export function tail(filePath: string, opts: TailOptions = {}): TailStream {
         } else if (curr.size < fileSize) {
             // File was truncated — re-read, again holding back an
             // unterminated trailing line as partialLine (see readInitial).
-            const content = fs.readFileSync(filePath, 'utf-8');
-            const allLines = content.split('\n');
-            partialLine = allLines.pop() ?? '';
-            stream.lines = allLines.filter(l => l.length > 0).slice(-maxLines);
-            fileSize = curr.size;
+            try {
+                const content = fs.readFileSync(filePath, 'utf-8');
+                const allLines = content.split('\n');
+                partialLine = allLines.pop() ?? '';
+                stream.lines = allLines.filter(l => l.length > 0).slice(-maxLines);
+                fileSize = curr.size;
+            } catch {
+                // File may have been deleted between stat and read
+            }
         }
     };
 

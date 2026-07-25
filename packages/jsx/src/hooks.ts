@@ -263,7 +263,7 @@ export function useEffect(effect: () => void | (() => void), deps?: any[]): void
         fiber.effects.push(record);
     } else {
         const prev = fiber.hooks[idx];
-        const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
+        const shouldRun = !deps || !prev.deps || deps.length !== prev.deps.length || deps.some((d, i) => !Object.is(d, prev.deps![i]));
 
         if (shouldRun) {
             prev.deps = deps;
@@ -287,7 +287,7 @@ export function useLayoutEffect(effect: () => void | (() => void), deps?: any[])
         fiber.layoutEffects.push(record);
     } else {
         const prev = fiber.hooks[idx];
-        const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
+        const shouldRun = !deps || !prev.deps || deps.length !== prev.deps.length || deps.some((d, i) => !Object.is(d, prev.deps![i]));
 
         if (shouldRun) {
             prev.deps = deps;

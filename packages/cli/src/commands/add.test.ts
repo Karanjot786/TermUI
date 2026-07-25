@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeComponentFiles } from './add.js';
+import { planComponentFiles, writeComponentFiles } from './add.js';
 
 describe('writeComponentFiles', () => {
     it('writes files under <destRoot>/<slug>/', () => {
@@ -20,6 +20,20 @@ describe('writeComponentFiles', () => {
         writeComponentFiles(root, 'spinner',
             [{ path: 'spinner.ts', content: 'x' }], { dryRun: true });
         expect(existsSync(join(root, 'spinner', 'spinner.ts'))).toBe(false);
+    });
+
+    it('plans dry-run create and overwrite actions', () => {
+        const root = mkdtempSync(join(tmpdir(), 'tcli-'));
+        mkdirSync(join(root, 'spinner'), { recursive: true });
+        writeFileSync(join(root, 'spinner', 'existing.ts'), 'old', 'utf-8');
+
+        expect(planComponentFiles(root, 'spinner', [
+            { path: 'existing.ts', content: 'new' },
+            { path: 'new.ts', content: 'x' },
+        ])).toEqual([
+            { path: join(root, 'spinner', 'existing.ts'), action: 'overwrite' },
+            { path: join(root, 'spinner', 'new.ts'), action: 'create' },
+        ]);
     });
 
     it('strips registry component prefixes before writing files', () => {

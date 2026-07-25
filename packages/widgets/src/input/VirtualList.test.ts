@@ -23,6 +23,14 @@ describe('VirtualList', () => {
             expect(list.scrollOffset).toBe(0);
         });
 
+        it('rejects invalid totalItems values', () => {
+            for (const totalItems of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+                expect(() => createList(totalItems)).toThrow(
+                    'VirtualList totalItems must be a non-negative integer',
+                );
+            }
+        });
+
         it('is focusable', () => {
             const list = createList();
             expect(list.focusable).toBe(true);
@@ -184,6 +192,18 @@ describe('VirtualList', () => {
             list.setTotalItems(0);
             expect(list.selectedIndex).toBe(0);
         });
+
+        it('setTotalItems rejects invalid values', () => {
+            const list = createList(10);
+
+            for (const totalItems of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+                expect(() => list.setTotalItems(totalItems)).toThrow(
+                    'VirtualList totalItems must be a non-negative integer',
+                );
+            }
+
+            expect(list.totalItems).toBe(10);
+        });
     });
 
     describe('confirm', () => {
@@ -209,6 +229,43 @@ describe('VirtualList', () => {
             });
             list.confirm();
             expect(onSelect).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('empty state', () => {
+        it('renders configured empty text when there are no items', () => {
+            const list = new VirtualList({
+                totalItems: 0,
+                renderItem: (i) => `Item ${i}`,
+                emptyText: 'No results',
+                style: { width: 20, height: 3 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 20, 3);
+            list.syncLayout();
+            const screen = new Screen(20, 3);
+
+            list.render(screen);
+
+            const content = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
+            expect(content).toContain('No results');
+        });
+
+        it('keeps empty lists blank when no empty text is configured', () => {
+            const list = new VirtualList({
+                totalItems: 0,
+                renderItem: (i) => `Item ${i}`,
+                style: { width: 20, height: 3 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 20, 3);
+            list.syncLayout();
+            const screen = new Screen(20, 3);
+
+            list.render(screen);
+
+            const contentRow = screen.back[1].slice(1, -1).map(c => c.char).join('');
+            expect(contentRow.trim()).toBe('');
         });
     });
 

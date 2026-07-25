@@ -139,6 +139,8 @@ export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
 export { ToastProvider, toast } from './ToastProvider.js';
 export type { ToastProviderOptions, GlobalToastOptions, GlobalToastType } from './ToastProvider.js';
+export { TooltipOverlay } from './TooltipOverlay.js';
+export type { TooltipOverlayOptions } from './TooltipOverlay.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
 
