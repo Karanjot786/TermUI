@@ -79,4 +79,20 @@ describe('RenderHook', () => {
         console.log('a', 'b', 'c');
         expect(hook.flush()).toBe('a b c\n');
     });
+
+    it('requeues logs back to the front of the buffer', () => {
+        hook.start();
+        console.log('log 1');
+        const flushed = hook.flush();
+        expect(flushed).toBe('log 1\n');
+
+        // Requeue the flushed logs
+        hook.requeue(flushed);
+
+        // Add another log
+        console.log('log 2');
+
+        // Flushed buffer should have requeued logs first, then new logs
+        expect(hook.flush()).toBe('log 1\nlog 2\n');
+    });
 });
