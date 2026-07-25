@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, afterEach, beforeAll, afterAll } from 'vitest';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { join, dirname, basename } from 'node:path';
 import { Screen, caps, type KeyEvent } from '@termuijs/core';
 import { FileExplorer } from './FileExplorer.js';
 import type { FileItem } from './FileExplorer.js';
@@ -280,7 +280,7 @@ describe('FileExplorer widget behaviour', () => {
         fe.reload();
         const screen = new Screen(60, 10);
         fe.updateRect({ x: 0, y: 0, width: 60, height: 10 });
-        const childBase = CHILD_A.split('/').pop() as string;
+        const childBase = basename(CHILD_A);
         fe.render(screen);
         expect(rowText(screen, 1)).not.toContain(childBase);
 
@@ -306,7 +306,7 @@ describe('FileExplorer widget behaviour', () => {
         // The child row should be indented relative to the directory row.
         const dirRow = rowText(screen, 1);
         const childRow = rowText(screen, 2);
-        const childBase = CHILD_A.split('/').pop() as string;
+        const childBase = basename(CHILD_A);
         expect(childRow.indexOf(childBase)).toBeGreaterThan(dirRow.indexOf(SUB));
     });
 

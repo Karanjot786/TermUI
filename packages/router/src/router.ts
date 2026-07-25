@@ -212,9 +212,18 @@ export class Router {
         };
     }
 
-    private _resolveRedirect(path: string, depth = 0): string | null {
-        if (depth > 10) {
-            this.events.emit('error', new Error(`Max redirect depth exceeded for path: ${path}`));
+    private _resolveRedirect(path: string, trail: string[] = []): string | null {
+        const cycleStart = trail.indexOf(path);
+        if (cycleStart !== -1) {
+            const cycle = [...trail.slice(cycleStart), path].join(' -> ');
+            this.events.emit('error', new Error(`Redirect loop detected: ${cycle}`));
+            return null;
+        }
+
+        const nextTrail = [...trail, path];
+
+        if (nextTrail.length > 10) {
+            this.events.emit('error', new Error(`Max redirect depth exceeded: ${nextTrail.join(' -> ')}`));
             return null;
         }
 
@@ -224,7 +233,7 @@ export class Router {
         if (match.route.redirect) {
             const redirectTarget = match.route.redirect;
             const nextPath = typeof redirectTarget === 'function' ? redirectTarget(match.params) : redirectTarget;
-            return this._resolveRedirect(nextPath, depth + 1);
+            return this._resolveRedirect(nextPath, nextTrail);
         }
 
         return path;

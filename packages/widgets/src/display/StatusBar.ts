@@ -18,6 +18,15 @@ export interface StatusBarOptions {
     right?: string;
 }
 
+export interface ApiStatusBarOptions {
+    method?: string;
+    endpoint?: string;
+    status?: number | string;
+    latencyMs?: number;
+    environment?: string;
+    requestId?: string;
+}
+
 export class StatusBar extends Widget {
     private _left: string;
     private _center: string;
@@ -56,36 +65,70 @@ export class StatusBar extends Widget {
 
         const attrs = styleToCellAttrs(this._style);
 
-        // Left
-        screen.writeString(
+        const rightText = truncate(this._right, width);
+        const rightWidth = stringWidth(rightText);
+        const rightX = x + width - rightWidth;
+
+        const centerAvailable = Math.max(0, rightX - x);
+        const centerText = truncate(this._center, centerAvailable);
+        const centerWidth = stringWidth(centerText);
+        const desiredCenterX = x + Math.floor((width - centerWidth) / 2);
+        const centerX = Math.max(
             x,
-            y,
-            truncate(this._left, width),
-            attrs,
+            Math.min(desiredCenterX, rightX - centerWidth),
         );
 
-        // Center
-        const centerX = x + Math.max(
-            0,
-            Math.floor((width - stringWidth(this._center)) / 2),
-        );
+        const leftAvailable = centerWidth > 0
+            ? Math.max(0, centerX - x)
+            : Math.max(0, rightX - x);
+        const leftText = truncate(this._left, leftAvailable);
 
-        screen.writeString(
-            centerX,
-            y,
-            truncate(this._center, width),
-            attrs,
-        );
+        if (leftText) {
+            screen.writeString(x, y, leftText, attrs);
+        }
 
-        // Right
-        const rightWidth = stringWidth(this._right);
-        const rightX = Math.max(x, x + width - rightWidth);
+        if (centerText) {
+            screen.writeString(centerX, y, centerText, attrs);
+        }
 
-        screen.writeString(
-            rightX,
-            y,
-            truncate(this._right, width),
-            attrs,
-        );
+        if (rightText) {
+            screen.writeString(rightX, y, rightText, attrs);
+        }
     }
+}
+
+export function createApiStatusBar(
+    options: ApiStatusBarOptions,
+    style: Partial<Style> = {},
+): StatusBar {
+    return new StatusBar(style, formatApiStatusBar(options));
+}
+
+export function formatApiStatusBar(options: ApiStatusBarOptions): StatusBarOptions {
+    const method = options.method?.trim().toUpperCase();
+    const endpoint = options.endpoint?.trim();
+    const status = options.status;
+    const latencyMs = options.latencyMs;
+
+    const left = [method, endpoint].filter(Boolean).join(' ') || 'API';
+    const center = status === undefined ? 'Pending' : formatStatus(status);
+    const right = [
+        latencyMs === undefined ? undefined : `${Math.max(0, Math.round(latencyMs))}ms`,
+        options.environment?.trim(),
+        options.requestId ? `#${options.requestId.trim()}` : undefined,
+    ].filter(Boolean).join(' ');
+
+    return { left, center, right };
+}
+
+function formatStatus(status: number | string): string {
+    if (typeof status === 'number') {
+        if (status >= 200 && status < 300) return `${status} OK`;
+        if (status >= 300 && status < 400) return `${status} Redirect`;
+        if (status >= 400 && status < 500) return `${status} Client Error`;
+        if (status >= 500) return `${status} Server Error`;
+        return String(status);
+    }
+
+    return status.trim() || 'Pending';
 }
