@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 import { TreeSelect } from './TreeSelect.js';
 
 // KeyEvent stub — tests only need the `key` field; cast avoids importing the full KeyEvent type
@@ -100,5 +100,26 @@ describe('TreeSelect', () => {
         ts.handleKey(key('down'));
         ts.handleKey(key('space'));
         expect(ts.selectedValues).toContain('a');
+    });
+
+    it('renders wide-character option rows within the component width', () => {
+        const roots = [
+            {
+                label: '\u8868\u8868\u8868\u8868',
+                value: 'root',
+                expanded: true,
+                children: [{ label: '\u8868\u8868\u8868\u8868', value: 'child' }],
+            },
+        ];
+        const screen = new Screen(6, 3);
+        const ts = new TreeSelect(roots, { multiple: true });
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        ts.updateRect({ x: 0, y: 0, width: 5, height: 3 });
+        ts.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(stringWidth(String(call[2]))).toBeLessThanOrEqual(5);
+        }
     });
 });
