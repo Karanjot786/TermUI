@@ -18,6 +18,14 @@ import { Widget } from '../base/Widget.js';
 import { computeRange } from './virtual-scroll.js';
 import { calculateSpringScroll, type ScrollSpringState } from '../scroll.js';
 
+function validateTotalItems(count: number): number {
+    if (!Number.isFinite(count) || !Number.isInteger(count) || count < 0) {
+        throw new Error('VirtualList totalItems must be a non-negative integer');
+    }
+
+    return count;
+}
+
 export interface VirtualListOptions {
     /** Total number of items (the full dataset size) */
     totalItems: number;
@@ -39,6 +47,8 @@ export interface VirtualListOptions {
     showScrollbar?: boolean;
     /** Enable spring scroll animations (default: true, respects prefersReducedMotion) */
     springScroll?: boolean;
+    /** Optional text to render when the list has no items */
+    emptyText?: string;
 }
 
 /**
@@ -61,6 +71,7 @@ export class VirtualList extends Widget {
     private _scrollOffset = 0;
     private _overscan: number;
     private _showScrollbar: boolean;
+    private _emptyText: string;
     
     private _memoizeLayout: boolean;
     private _isScrolling = false;
@@ -82,7 +93,7 @@ export class VirtualList extends Widget {
 
     constructor(options: VirtualListOptions) {
         super({ border: 'single', ...options.style });
-        this._totalItems = options.totalItems;
+        this._totalItems = validateTotalItems(options.totalItems);
         const resolvedItemHeight = options.fixedItemHeight ?? options.itemHeight ?? 1;
         if (!Number.isFinite(resolvedItemHeight) || resolvedItemHeight <= 0) {
             throw new Error('VirtualList itemHeight must be a positive number');
@@ -93,6 +104,7 @@ export class VirtualList extends Widget {
         this._onSelect = options.onSelect;
         this._overscan = options.overscan ?? 2;
         this._showScrollbar = options.showScrollbar ?? true;
+        this._emptyText = options.emptyText ?? '';
         this._springScroll = options.springScroll ?? !prefersReducedMotion();
         this.focusable = true;
     }
@@ -107,9 +119,10 @@ export class VirtualList extends Widget {
 
     /** Update the total item count (e.g., after data refresh) */
     setTotalItems(count: number): void {
+        const nextCount = validateTotalItems(count);
         this._clearCache();
-        this._totalItems = count;
-        this._selectedIndex = Math.min(this._selectedIndex, Math.max(0, count - 1));
+        this._totalItems = nextCount;
+        this._selectedIndex = Math.min(this._selectedIndex, Math.max(0, nextCount - 1));
         this._clampScroll();
         this.markDirty();
     }
@@ -277,7 +290,15 @@ export class VirtualList extends Widget {
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
-        if (width <= 0 || height <= 0 || this._totalItems === 0) return;
+        if (width <= 0 || height <= 0) return;
+
+        const attrs = styleToCellAttrs(this._style);
+        if (this._totalItems === 0) {
+            if (this._emptyText) {
+                screen.writeString(x, y, truncate(this._emptyText, width), { ...attrs, dim: true });
+            }
+            return;
+        }
 
         // Update spring animation if active
         if (this._springScroll && this._isAnimating) {
@@ -316,7 +337,6 @@ export class VirtualList extends Widget {
             }
         }
 
-        const attrs = styleToCellAttrs(this._style);
         const visibleItemCount = Math.floor(height / this._itemHeight);
 
         // Calculate the visible window with overscan

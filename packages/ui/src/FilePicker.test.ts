@@ -239,6 +239,57 @@ describe('FilePicker', () => {
             expect(names).not.toContain('..');
         });
 
+        it('refresh preserves the selected entry when it still exists', async () => {
+            readdirSync
+                .mockReturnValueOnce([
+                    makeDirent('a.ts', false),
+                    makeDirent('b.ts', false),
+                    makeDirent('c.ts', false),
+                ] as any)
+                .mockReturnValueOnce([
+                    makeDirent('c.ts', false),
+                    makeDirent('a.ts', false),
+                    makeDirent('b.ts', false),
+                    makeDirent('d.ts', false),
+                ] as any);
+            statSync.mockReturnValue({ isDirectory: () => false } as any);
+
+            const { FilePicker } = await import('./FilePicker.js');
+            const picker = new FilePicker({ startPath: '/project' });
+            picker.selectNext();
+            picker.selectNext();
+
+            expect(picker.selectedEntry?.name).toBe('b.ts');
+
+            picker.refresh();
+
+            expect(picker.selectedEntry?.name).toBe('b.ts');
+        });
+
+        it('refresh clamps selection when the previous entry disappears', async () => {
+            readdirSync
+                .mockReturnValueOnce([
+                    makeDirent('a.ts', false),
+                    makeDirent('b.ts', false),
+                    makeDirent('c.ts', false),
+                ] as any)
+                .mockReturnValueOnce([
+                    makeDirent('a.ts', false),
+                ] as any);
+            statSync.mockReturnValue({ isDirectory: () => false } as any);
+
+            const { FilePicker } = await import('./FilePicker.js');
+            const picker = new FilePicker({ startPath: '/project' });
+            picker.selectNext();
+            picker.selectNext();
+            picker.selectNext();
+
+            picker.refresh();
+
+            expect(picker.cursorIndex).toBe(1);
+            expect(picker.selectedEntry?.name).toBe('a.ts');
+        });
+
         it('treats symlink directories as directories', async () => {
             // Dirent says it is a symlink; statSync says the target is a directory
             readdirSync.mockReturnValue([makeDirent('linked-dir', false, true)] as any);
