@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { invalidate, clearCache, getCache, isFresh, setCache } from "./cache.js";
 import { render } from "@termuijs/testing";
 import { h, useState } from "@termuijs/jsx";
-import { useFetch, UseFetchOptions, __resetSharedAbortControllersForTests } from "./hooks.js";
+import { useFetch, useInfiniteQuery, UseFetchOptions, __resetSharedAbortControllersForTests } from "./hooks.js";
 
 const flushPromises = () => new Promise(resolve => setTimeout(resolve, 0));
 
@@ -340,5 +340,64 @@ describe("useFetch caching", () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
 
     unmount();
+  });
+
+  it("accepts circular cache keys", async () => {
+    const key: Record<string, unknown> = { scope: "dashboard" };
+    key.self = key;
+
+    const { unmount } = renderFetch("test-url-circular-key", {
+      key,
+      staleTime: 1000,
+    });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    await flushPromises();
+
+    expect(isFresh('test-url-circular-key::{"scope":"dashboard","self":"[Circular]"}')).toBe(true);
+
+    unmount();
+  });
+});
+
+describe("useInfiniteQuery", () => {
+  it("aborts a pending next-page request on unmount", async () => {
+    const signals: AbortSignal[] = [];
+    let currentResult: ReturnType<typeof useInfiniteQuery<number, number>>;
+
+    const queryFn = vi.fn((page: number, signal?: AbortSignal) => {
+      if (signal) signals.push(signal);
+
+      if (page === 1) {
+        return Promise.resolve(page);
+      }
+
+      return new Promise<number>(() => {
+        // The cleanup path should abort this pending next-page request.
+      });
+    });
+
+    function TestComponent() {
+      currentResult = useInfiniteQuery({
+        queryFn,
+        initialPageParam: 1,
+        getNextPageParam: page => page + 1,
+      });
+
+      return h("text", null, currentResult.loading ? "loading" : "done");
+    }
+
+    const screen = render(h(TestComponent, {}));
+
+    await flushPromises();
+    currentResult!.fetchNextPage();
+
+    expect(signals).toHaveLength(2);
+    expect(signals[1].aborted).toBe(false);
+
+    screen.unmount();
+
+    expect(signals[1].aborted).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { useState, useEffect ,useRef } from '@termuijs/jsx';
+import { AdaptivePollingController, type AdaptivePollingOptions } from './adaptive-polling.js';
 
 export interface UsePollingResult<T> {
     data: T | null;
@@ -10,6 +11,10 @@ export interface UsePollingResult<T> {
     refresh: () => void;
 }
 
+export interface UsePollingOptions {
+    adaptive?: AdaptivePollingOptions;
+}
+
 /**
  * usePolling — repeatedly execute an async function on a configurable interval.
  * Supports pause, resume, and manual refresh without restarting the timer or resetting state.
@@ -17,7 +22,8 @@ export interface UsePollingResult<T> {
 export function usePolling<T>(
     fn: () => Promise<T>,
     interval: number,
-    deps: unknown[] = []
+    deps: unknown[] = [],
+    options: UsePollingOptions = {},
 ): UsePollingResult<T> {
     const [data, setData] = useState<T | null>(null);
     const [error, setError] = useState<Error | null>(null);
@@ -31,15 +37,23 @@ export function usePolling<T>(
 
     const inFlightRef = useRef(false);
     const requestIdRef = useRef(0);
+    const adaptiveRef = useRef<AdaptivePollingController | null>(null);
 
     const execute = async () => {
+        const startedAt = Date.now();
         if (inFlightRef.current) {
+            adaptiveRef.current?.begin();
+            return;
+        }
+        if (adaptiveRef.current && !adaptiveRef.current.begin()) {
             return;
         }
         inFlightRef.current = true;
         const requestId = ++requestIdRef.current;
+        let succeeded = false;
         try {
             const result = await fnRef.current();
+            succeeded = true;
             if (mountedRef.current && requestId === requestIdRef.current) {
                 setData(result);
                 setError(null);
@@ -51,6 +65,13 @@ export function usePolling<T>(
                 setLoading(false);
             }
         } finally {
+            if (adaptiveRef.current) {
+                if (succeeded) {
+                    adaptiveRef.current.success(Date.now() - startedAt);
+                } else {
+                    adaptiveRef.current.failure();
+                }
+            }
             if (requestId === requestIdRef.current) {
                 inFlightRef.current = false;
             }
@@ -75,7 +96,27 @@ export function usePolling<T>(
     useEffect(() => {
         mountedRef.current = true;
         setLoading(true);
+        adaptiveRef.current = options.adaptive ? new AdaptivePollingController(options.adaptive) : null;
         execute();
+
+        if (adaptiveRef.current) {
+            let timeout: ReturnType<typeof setTimeout> | undefined;
+            const tick = async () => {
+                if (!pausedRef.current) {
+                    await execute();
+                }
+                if (mountedRef.current && adaptiveRef.current) {
+                    timeout = setTimeout(tick, adaptiveRef.current.nextDelay());
+                }
+            };
+            timeout = setTimeout(tick, adaptiveRef.current.nextDelay());
+            return () => {
+                mountedRef.current = false;
+                inFlightRef.current = false;
+                requestIdRef.current++;
+                if (timeout) clearTimeout(timeout);
+            };
+        }
 
         const timer = setInterval(() => {
             if (!pausedRef.current) {
@@ -90,7 +131,7 @@ export function usePolling<T>(
             clearInterval(timer);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [interval, ...deps]);
+    }, [interval, options.adaptive, ...deps]);
 
     return { data, error, loading, paused, pause, resume, refresh };
 }

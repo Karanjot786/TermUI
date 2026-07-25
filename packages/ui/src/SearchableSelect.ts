@@ -51,12 +51,17 @@ export class SearchableSelect extends Widget {
     handleKey(event: KeyEvent): void {
         if (event._propagationStopped || event._defaultPrevented) return;
         const char = event.key;
+        const consume = () => {
+            event.preventDefault();
+            event.stopPropagation();
+        };
 
         if (char.length === 1 && !event.ctrl && !event.alt) {
             this._searchQuery += char;
             this._filterOptions();
             this._selectedIndex = 0;
             this.markDirty();
+            consume();
             return;
         }
 
@@ -65,21 +70,25 @@ export class SearchableSelect extends Widget {
             this._filterOptions();
             this._selectedIndex = 0;
             this.markDirty();
+            consume();
             return;
         }
 
         if (event.key === 'down') {
             this.selectNext();
+            consume();
             return;
         }
 
         if (event.key === 'up') {
             this.selectPrev();
+            consume();
             return;
         }
 
         if (event.key === 'enter' || event.key === 'return') {
             this.confirm();
+            consume();
             return;
         }
     }

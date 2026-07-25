@@ -6,6 +6,7 @@ import { Terminal, type TerminalOptions } from '../terminal/Terminal.js';
 import { Screen } from '../terminal/Screen.js';
 import { Renderer } from '../terminal/Renderer.js';
 import { LayerManager } from '../terminal/LayerManager.js';
+import { TooltipManager } from './TooltipManager.js';
 import { InputParser } from '../input/InputParser.js';
 import { FocusManager } from '../events/FocusManager.js';
 import { EventEmitter } from '../events/EventEmitter.js';
@@ -81,6 +82,7 @@ export class App {
     readonly focus: FocusManager;
     readonly events: EventEmitter<EventMap>;
     readonly layers: LayerManager;
+    readonly tooltip: TooltipManager;
 
     private _rootWidget: RootWidget;
     private _options: AppOptions;
@@ -113,6 +115,7 @@ export class App {
 
     // Core fix patch: Track if a paint task has been queued for the next event loop tick
     private _isRenderPending = false;
+    private _tooltipHoverTimer: ReturnType<typeof setTimeout> | null = null;
 
     constructor(rootWidget: RootWidget, options: AppOptions = {}) {
         this._rootWidget = rootWidget;
@@ -135,6 +138,7 @@ export class App {
         this.focus = new FocusManager();
         this.events = new EventEmitter();
         this.layers = new LayerManager(this.terminal.cols, this.terminal.rows);
+        this.tooltip = new TooltipManager();
     }
 
     /**
@@ -272,6 +276,12 @@ export class App {
                     const hitId = hitWidget?.id ?? null;
 
                     if (hitId !== this._hoveredWidgetId) {
+                        if (this._tooltipHoverTimer) {
+                            clearTimeout(this._tooltipHoverTimer);
+                            this._tooltipHoverTimer = null;
+                        }
+                        this.tooltip.close();
+
                         const prevWidget = this._hoveredWidgetId
                             ? this._widgetById.get(this._hoveredWidgetId)
                             : null;
@@ -285,6 +295,22 @@ export class App {
                             const enterEvent = { ...event, type: 'mouseenter' as const };
                             hitWidget.events.emit('mouseenter' as any, enterEvent);
                             hitWidget.onMouseEnter?.(enterEvent);
+                        }
+
+                        let tooltipText: string | undefined;
+                        let tooltipTarget = hitWidget;
+                        while (tooltipTarget) {
+                            if (tooltipTarget.tooltip) {
+                                tooltipText = tooltipTarget.tooltip;
+                                break;
+                            }
+                            tooltipTarget = tooltipTarget.parent;
+                        }
+
+                        if (tooltipText) {
+                            this._tooltipHoverTimer = setTimeout(() => {
+                                this.tooltip.open(tooltipText!, event.x + 1, event.y + 1);
+                            }, 500);
                         }
 
                         this._hoveredWidgetId = hitId;
@@ -681,6 +707,33 @@ export class App {
     private _handleFocusEvent(event: FocusEvent): void {
         const focused = event.type === 'focus';
         const changed = this._setWidgetFocused(event.targetId, focused);
+
+        if (focused) {
+            const widget = this._widgetById.get(event.targetId);
+            let tooltipText: string | undefined;
+            let tooltipTarget = widget;
+            while (tooltipTarget) {
+                if (tooltipTarget.tooltip) {
+                    tooltipText = tooltipTarget.tooltip;
+                    break;
+                }
+                tooltipTarget = tooltipTarget.parent;
+            }
+
+            if (tooltipText) {
+                const rect = widget?.rect ?? widget?._rect;
+                if (rect) {
+                    this.tooltip.open(tooltipText, rect.x + 1, rect.y + rect.height);
+                }
+            }
+        } else {
+            this.tooltip.close();
+            if (this._tooltipHoverTimer) {
+                clearTimeout(this._tooltipHoverTimer);
+                this._tooltipHoverTimer = null;
+            }
+        }
+
         if (changed === null) {
             // The first focus event can arrive before requestRender() builds
             // _widgetById, so hold it until the next completed map rebuild.

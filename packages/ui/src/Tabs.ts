@@ -1,6 +1,6 @@
 // Tabs — tabbed container with keyboard switching
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps, stringWidth, truncate } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps, stringWidth, truncate } from '@termuijs/core';
 
 export interface Tab { label: string; content: Widget; }
 export interface TabsOptions {
@@ -15,6 +15,7 @@ export class Tabs extends Widget {
     private _activeColor: NonNullable<Style['fg']>;
     private _inactiveColor: NonNullable<Style['fg']>;
     private _contentMounted = false;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
     focusable = true;
 
     constructor(tabs: Tab[], options: TabsOptions = {}) {
@@ -22,6 +23,7 @@ export class Tabs extends Widget {
         this._tabs = tabs;
         this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
         this._inactiveColor = options.inactiveColor ?? { type: 'named', name: 'brightBlack' };
+        this.events.on('key', this._keyHandler);
     }
 
     get activeIndex(): number { return this._activeIndex; }
@@ -43,8 +45,27 @@ export class Tabs extends Widget {
     }
     get activeContent(): Widget | undefined { return this._tabs[this._activeIndex]?.content; }
 
+    handleKey(event: KeyEvent): void {
+        let handled = false;
+
+        if (event.key === 'left' || (event.key === 'tab' && event.shift)) {
+            this.prevTab();
+            handled = true;
+        } else if (event.key === 'right' || event.key === 'tab') {
+            this.nextTab();
+            handled = true;
+        }
+
+        if (handled) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }
+
     override mount(): void {
         super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
         if (!this._contentMounted) {
             this.activeContent?.mount();
             this._contentMounted = true;

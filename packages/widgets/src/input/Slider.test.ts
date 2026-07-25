@@ -13,6 +13,21 @@ describe("Slider", () => {
     expect(slider.getValue()).toBe(0);
   });
 
+  it("clips fixed text when no track fits", async () => {
+    const { Screen, stringWidth } = await import("@termuijs/core");
+    const { Slider } = await import("./Slider.js");
+
+    const slider = new Slider("VeryLongLabel", {}, { showValue: true, value: 50 });
+    const screen = new Screen(6, 1);
+    const writeSpy = vi.spyOn(screen, "writeString");
+    slider.updateRect({ x: 0, y: 0, width: 6, height: 1 });
+    slider.render(screen);
+
+    for (const [x, , text] of writeSpy.mock.calls) {
+      expect(x + stringWidth(text)).toBeLessThanOrEqual(6);
+    }
+  });
+
   it("constructs with custom initial value and clamps it", async () => {
     const { Slider } = await import("./Slider.js");
 

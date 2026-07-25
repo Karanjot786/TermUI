@@ -98,6 +98,40 @@ describe('Popover Widget', () => {
         expect(rows).toContain('anchored');
     });
 
+    it('clamps bottom placement when the anchor is near the bottom-right edge', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const pop = new Popover(
+            new Text('edge text'),
+            {},
+            { anchor: { x: 29, y: 9 }, placement: 'bottom' }
+        );
+
+        pop.updateRect({ x: 0, y: 0, width: 30, height: 10 });
+        pop.open();
+        pop.render(screen);
+
+        const rows = getScreenText();
+        expect(rows).toContain('edge');
+        expect(rows.split('\n')[9]).toContain('+');
+    });
+
+    it('clamps top placement when the anchor is above the available panel height', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const pop = new Popover(
+            new Text('top edge'),
+            {},
+            { anchor: { x: 2, y: 0 }, placement: 'top' }
+        );
+
+        pop.updateRect({ x: 0, y: 0, width: 30, height: 10 });
+        pop.open();
+        pop.render(screen);
+
+        const rows = getScreenText();
+        expect(rows).toContain('top edge');
+        expect(rows.split('\n')[0]).toContain('+');
+    });
+
     it('clips long titles to the popover border width', () => {
         const pop = new Popover(new Text('x'), {}, {
             title: 'A very long title that should not widen the border',
