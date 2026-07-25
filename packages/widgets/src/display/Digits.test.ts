@@ -17,6 +17,11 @@ describe('Digits', () => {
         expect(rows.some(row => row.includes('|'))).toBe(true);
     });
 
+    it('constructs with custom value option inside opts', () => {
+        const widget = new Digits({}, { value: '45' });
+        expect(widget.getValue()).toBe('45');
+    });
+
     it('renders multiple digits', () => {
         const widget = new Digits({ value: '42', width: 20, height: 3 } as never);
         widget.updateRect({ x: 0, y: 0, width: 20, height: 3 });

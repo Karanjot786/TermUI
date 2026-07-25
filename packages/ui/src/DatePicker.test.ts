@@ -487,20 +487,14 @@ describe('DatePicker', () => {
 
     // ── Test 24: Value getter immutability ────────────────────────────────────
 
-    it('(24) value getter returns the internal reference — mutating it modifies internal state (documented behaviour)', () => {
-        // NOTE: The current implementation returns `this._selectedDate` directly
-        // without copying. This test documents that behaviour. If the impl is ever
-        // changed to return a defensive copy, the second assertion should flip.
+    it('(24) value getter returns a defensive copy', () => {
         const picker = new DatePicker({ value: new Date(2026, 5, 15) });
-        const ref = picker.value;
+        const returned = picker.value;
 
-        // Mutate the returned reference
-        ref.setFullYear(1999);
+        returned.setFullYear(1999);
 
-        // Because value getter returns the raw reference, internal state is now 1999
-        expect(picker.value.getFullYear()).toBe(1999);
-        // Document: callers should NOT rely on mutating the returned Date.
-        // A defensive copy in the getter would make this fail — update test if fixed.
+        expect(picker.value.getFullYear()).toBe(2026);
+        expect(returned.getFullYear()).toBe(1999);
     });
 
     // ── Test 25: Consecutive confirm calls ────────────────────────────────────

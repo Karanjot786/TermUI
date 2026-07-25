@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ScrollView } from './ScrollView.js';
-import { Screen, caps, type KeyEvent } from '@termuijs/core';
+import { Screen, type KeyEvent } from '@termuijs/core';
 
 const key = (k: string): KeyEvent => ({
     key: k,
@@ -14,6 +14,12 @@ const key = (k: string): KeyEvent => ({
     shift: false,
     stopPropagation: () => {},
     preventDefault: () => {},
+});
+
+const spyKey = (k: string): KeyEvent => ({
+    ...key(k),
+    stopPropagation: vi.fn(),
+    preventDefault: vi.fn(),
 });
 
 afterEach(() => {
@@ -97,6 +103,32 @@ describe("ScrollView", () => {
         expect(sv.scrollOffset).toBe(5);
     });
 
+    it("clamps offset when viewport height grows", () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollTo(15);
+        sv.clearDirty();
+
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+
+        expect(sv.scrollOffset).toBe(10);
+        expect(sv.isDirty).toBe(true);
+    });
+
+    it("clamps stale offsets before rendering", () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        const screen = new Screen(40, 10);
+
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollTo(15);
+        sv.setContentHeight(12);
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        (sv as any)._scrollOffset = 15;
+        sv.render(screen);
+
+        expect(sv.scrollOffset).toBe(2);
+    });
+
     it("initial scrollOffset is 0", () => {
         const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
         expect(sv.scrollOffset).toBe(0);
@@ -142,6 +174,28 @@ describe("ScrollView", () => {
         sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
         sv.handleKey(key("down"));
         expect(sv.scrollOffset).toBe(1);
+    });
+
+    it("consumes handled navigation keys", () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        const event = spyKey("down");
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+
+        sv.handleKey(event);
+
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
+    });
+
+    it("does not consume unhandled keys", () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        const event = spyKey("x");
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+
+        sv.handleKey(event);
+
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
     });
 
     it("up scrolls up by 1", () => {
@@ -205,13 +259,87 @@ describe("ScrollView", () => {
         expect(view.isDirty).toBe(false);
     });
 
+    it('scrollTo same offset does not mark dirty', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollTo(3);
+        sv.clearDirty();
+
+        sv.scrollTo(3);
+
+        expect(sv.isDirty).toBe(false);
+    });
+
+    it('scrollTo different offset marks dirty', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollTo(2);
+        sv.clearDirty();
+
+        sv.scrollTo(4);
+
+        expect(sv.isDirty).toBe(true);
+    });
+
+    it('setContentHeight below current offset clamps offset and marks dirty', () => {
+        const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
+        sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+        sv.scrollTo(10);
+        sv.clearDirty();
+
+        sv.setContentHeight(8);
+
+        expect(sv.scrollOffset).toBeLessThanOrEqual(3); // maxOffset = 8 - 5 = 3
+        expect(sv.isDirty).toBe(true);
+    });
+
+    it('scrollbar cells appear when contentHeight exceeds viewport height', () => {
+        // Use width=12 and border='single' so content rect is 10 wide.
+        // scrollX = contentRect.x(1) + contentRect.width(10) = 11, inside the 12-col screen.
+        const sv = new ScrollView(
+            { width: 12, height: 5, border: 'single' },
+            { contentHeight: 20, showScrollbar: true },
+        );
+        const screen = new Screen(12, 5);
+        sv.updateRect({ x: 0, y: 0, width: 12, height: 5 });
+        sv.render(screen);
+
+        // Scrollbar occupies col 11 (right edge of content rect)
+        const rightCol = screen.back.map((row) => row[11].char);
+        const hasScrollbar = rightCol.some((ch) => ch !== ' ');
+        expect(hasScrollbar).toBe(true);
+    });
+
+    it('scrollbar not rendered when contentHeight does not exceed viewport height', () => {
+        const sv = new ScrollView(
+            { width: 10, height: 5 },
+            { contentHeight: 3, showScrollbar: true },
+        );
+        const screen = new Screen(10, 5);
+        sv.updateRect({ x: 0, y: 0, width: 10, height: 5 });
+        sv.render(screen);
+
+        const rightCol = screen.back.map((row) => row[9].char);
+        const hasScrollbar = rightCol.some((ch) => ch !== ' ');
+        expect(hasScrollbar).toBe(false);
+    });
+
+
+
     describe('keybindingMode integration', () => {
+        const originalKeybindings = process.env.TERMUI_KEYBINDINGS;
+
         afterEach(() => {
             vi.restoreAllMocks();
+            if (originalKeybindings === undefined) {
+                delete process.env.TERMUI_KEYBINDINGS;
+            } else {
+                process.env.TERMUI_KEYBINDINGS = originalKeybindings;
+            }
         });
 
         it('down scrolls down by 1 in vim mode using j', () => {
-            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('vim');
+            process.env.TERMUI_KEYBINDINGS = 'vim';
             const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
             sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
             sv.handleKey(key('j'));
@@ -219,7 +347,7 @@ describe("ScrollView", () => {
         });
 
         it('up scrolls up by 1 in emacs mode using ctrl+p', () => {
-            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('emacs');
+            process.env.TERMUI_KEYBINDINGS = 'emacs';
             const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
             sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
             sv.scrollBy(5);
@@ -228,7 +356,7 @@ describe("ScrollView", () => {
         });
 
         it('j does not scroll down in default mode', () => {
-            vi.spyOn(caps, 'keybindingMode', 'get').mockReturnValue('default');
+            delete process.env.TERMUI_KEYBINDINGS;
             const sv = new ScrollView({ height: 5 }, { contentHeight: 20 });
             sv.updateRect({ x: 0, y: 0, width: 40, height: 5 });
             sv.handleKey(key('j'));

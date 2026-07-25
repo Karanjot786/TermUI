@@ -43,6 +43,31 @@ describe('ProgressBar', () => {
         expect(pb.value).toBe(0);
     });
 
+    it('clear() resets value to 0 without changing max', () => {
+        const pb = new ProgressBar({}, { max: 50 });
+        pb.setValue(25);
+        expect(pb.value).toBe(25);
+        expect(pb.percentage).toBe(0.5);
+
+        pb.clear();
+        expect(pb.value).toBe(0);
+        expect(pb.percentage).toBe(0);
+
+        // max should remain unchanged
+        pb.setValue(50);
+        expect(pb.percentage).toBe(1);
+    });
+
+    it('clear() does not mark dirty when already cleared', () => {
+        const pb = new ProgressBar({}, { value: 0 });
+        pb.clearDirty();
+
+        pb.clear();
+
+        expect(pb.isDirty).toBe(false);
+    });
+
+
     it('handles value above 1 by clamping to 1', () => {
         const pb = new ProgressBar({}, { value: 1.5 });
         expect(pb.value).toBe(1);

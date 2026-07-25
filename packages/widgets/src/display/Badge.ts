@@ -2,7 +2,7 @@
 // @termuijs/widgets — Badge widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, stringWidth, caps, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export type BadgeVariant = 'info' | 'success' | 'warning' | 'error' | 'neutral';
@@ -108,7 +108,7 @@ export class Badge extends Widget {
             screen.setCell(x, y + 1, { char: vt, ...borderAttrs });
 
             // Write padded text with colored background
-            const visibleText = padded.slice(0, innerWidth);
+            const visibleText = truncate(padded, innerWidth, '');
             screen.writeString(x + 1, y + 1, visibleText, contentAttrs);
 
             // Fill remaining inner space with background

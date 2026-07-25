@@ -142,4 +142,10 @@ describe('Breadcrumbs', () => {
 
         expect(row.length).toBeLessThanOrEqual(3);
     });
+
+    it('returns the segments via getSegments API', () => {
+        const segments = ['Home', 'Docs'];
+        const bc = new Breadcrumbs(segments);
+        expect(bc.getSegments()).toBe(segments);
+    });
 });
