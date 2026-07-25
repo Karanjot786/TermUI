@@ -2,7 +2,7 @@
 // @termuijs/widgets — LoadingDots widget
 // ─────────────────────────────────────────────────────
 
-import { type Style, type Color, type Screen, caps, styleToCellAttrs, stringWidth, prefersReducedMotion } from '@termuijs/core';
+import { type Style, type Color, type Screen, caps, styleToCellAttrs, stringWidth, truncate, prefersReducedMotion } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface LoadingDotsOptions {
@@ -50,14 +50,18 @@ export class LoadingDots extends Widget {
         let currentX = x;
 
         if (this._label) {
-            screen.writeString(currentX, y, this._label, attrs);
-            currentX += stringWidth(this._label);
+            const truncatedLabel = truncate(this._label, width);
+            screen.writeString(currentX, y, truncatedLabel, attrs);
+            currentX += stringWidth(truncatedLabel);
         }
+
+        const avail = width - (currentX - x);
+        if (avail <= 0) return;
 
         const dotChar = caps.unicode ? '·' : '.';
         const dots = dotChar.repeat(this._dotCount);
         const padding = ' '.repeat(this._maxDots - this._dotCount);
 
-        screen.writeString(currentX, y, dots + padding, { ...attrs, fg: this._color });
+        screen.writeString(currentX, y, truncate(dots + padding, avail, ''), { ...attrs, fg: this._color });
     }
 }
