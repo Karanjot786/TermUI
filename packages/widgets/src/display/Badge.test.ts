@@ -120,6 +120,13 @@ describe('Badge', () => {
         expect(() => renderBadge('test', {}, {}, 0, 0)).not.toThrow();
     });
 
+    it('truncates double-width characters by display column width without overflowing box', () => {
+        const { screen } = renderBadge('测试badge', {}, {}, 6, 3);
+        expect(() => renderBadge('测试badge', {}, {}, 6, 3)).not.toThrow();
+        const contentRow = rowText(screen, 1);
+        expect(contentRow.length).toBeLessThanOrEqual(6);
+    });
+
     // ── 6. Constructor signature ────────────────────────────────────────────
     it('canonical signature Badge(text, style, opts) works correctly', () => {
         const { badge } = renderBadge('test', {}, { variant: 'info' });
