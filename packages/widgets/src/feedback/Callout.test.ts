@@ -72,4 +72,10 @@ describe('Callout', () => {
         expect(callout.isDirty).toBe(false);
     });
 
+    it('truncates double-width emoji message text without overflowing available width', () => {
+        const callout = new Callout('🌟🌟🌟🌟🌟');
+        expect(() => render(callout, 5, 1)).not.toThrow();
+        const output = render(callout, 5, 1);
+        expect(output.length).toBeLessThanOrEqual(5);
+    });
 });
