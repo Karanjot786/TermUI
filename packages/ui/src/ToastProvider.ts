@@ -52,6 +52,17 @@ export class ToastProvider extends Widget {
         }, 16);
     }
 
+    unmount(): void {
+        if (this._timer) {
+            clearInterval(this._timer);
+            this._timer = null;
+        }
+        if (globalToastProvider === this) {
+            globalToastProvider = null;
+        }
+        super.unmount();
+    }
+
     show(options: GlobalToastOptions): void {
         const type = options.type || 'info';
         const fgColor = type === 'success' ? 'green' : type === 'error' ? 'red' : type === 'warning' ? 'yellow' : 'cyan';
@@ -162,13 +173,19 @@ export class ToastProvider extends Widget {
             for (let i = 0; i < r.width; i++) {
                 const x = r.x + i;
                 if (x >= 0 && x < screen.cols && r.y >= 0 && r.y < screen.rows) {
-                    let char = ' ';
-                    // Draw text in middle
-                    if (i > 0 && i <= t.width) {
-                        char = graphemes[i - 1] || ' '; 
-                    }
+                    screen.setCell(x, r.y, { char: ' ', ...attrs });
+                }
+            }
+
+            // Draw text
+            let colOffset = 1;
+            for (const char of graphemes) {
+                const cw = stringWidth(char);
+                const x = r.x + colOffset;
+                if (x >= 0 && x < screen.cols && r.y >= 0 && r.y < screen.rows) {
                     screen.setCell(x, r.y, { char, ...attrs });
                 }
+                colOffset += cw;
             }
         }
     }
