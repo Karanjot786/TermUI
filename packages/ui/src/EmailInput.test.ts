@@ -46,6 +46,25 @@ function renderRow(input: EmailInput, width = 40): string {
 // ─────────────────────────────────────────────────────
 
 describe('EmailInput', () => {
+
+    it('backspace removes one complete grapheme cluster', () => {
+        const input = new EmailInput();
+        input.insertChar('e\u0301');
+
+        input.deleteBack();
+
+        expect(input.getValue()).toBe('');
+    });
+
+    it('deleteForward removes one complete grapheme cluster', () => {
+        const input = new EmailInput();
+        input.insertChar('👨‍👩‍👧‍👦');
+        input.moveCursorHome();
+
+        input.deleteForward();
+
+        expect(input.getValue()).toBe('');
+    });
     afterEach(() => {
         vi.restoreAllMocks();
     });

@@ -22,6 +22,15 @@ export class Pty extends Widget {
     private _process: ChildProcessWithoutNullStreams | null = null;
     private _lines: string[] = [];
     private _autoScroll = true;
+    private readonly _onStdoutData = (data: Buffer): void => {
+        this._handleOutput(data.toString());
+    };
+    private readonly _onStderrData = (data: Buffer): void => {
+        this._handleOutput(data.toString());
+    };
+    private readonly _onClose = (): void => {
+        this._handleOutput('\n[Process Exited]');
+    };
 
     constructor(style: Partial<Style> = {}, opts: PtyOptions = {}) {
         super(style);
@@ -33,17 +42,11 @@ export class Pty extends Widget {
         try {
             this._process = spawn(cmd, args);
             
-            this._process.stdout.on('data', (data) => {
-                this._handleOutput(data.toString());
-            });
+            this._process.stdout.on('data', this._onStdoutData);
             
-            this._process.stderr.on('data', (data) => {
-                this._handleOutput(data.toString());
-            });
+            this._process.stderr.on('data', this._onStderrData);
             
-            this._process.on('close', () => {
-                this._handleOutput('\n[Process Exited]');
-            });
+            this._process.on('close', this._onClose);
         } catch (err) {
             this._lines.push(`Failed to spawn ${cmd}`);
         }
@@ -102,10 +105,14 @@ export class Pty extends Widget {
     /**
      * Terminate the spawned process
      */
-    public destroy(): void {
+    override destroy(): void {
         if (this._process) {
+            this._process.stdout.removeListener('data', this._onStdoutData);
+            this._process.stderr.removeListener('data', this._onStderrData);
+            this._process.removeListener('close', this._onClose);
             this._process.kill();
             this._process = null;
         }
+        super.destroy();
     }
 }

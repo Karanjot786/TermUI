@@ -115,4 +115,11 @@ describe('Clock', () => {
         clock.setTime(new Date());
         expect(spy).toHaveBeenCalled();
     });
+
+    it('destroy() destroys the internal Digits widget', () => {
+        const clock = new Clock({ width: 50, height: 3 });
+        const spy = vi.spyOn((clock as any)._digits, 'destroy');
+        clock.destroy();
+        expect(spy).toHaveBeenCalled();
+    });
 });

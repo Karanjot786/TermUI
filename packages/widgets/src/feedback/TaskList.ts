@@ -80,6 +80,11 @@ export class TaskList extends Widget {
         this.markDirty();
     }
 
+    /** Retrieve the current task list. */
+    getTasks(): TaskItem[] {
+        return this._tasks;
+    }
+
     /**
      * Advance the spinner animation by `dt` milliseconds.
      * Only has an effect when `wheelspin` is enabled and there is at least

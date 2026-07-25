@@ -136,29 +136,29 @@ describe('MaskedInput — Digit Input', () => {
         expect(input.getValue()).toBe('1');
     });
 
-    it('letter keys are ignored', () => {
+    it('letter keys fill editable slots', () => {
         const input = new MaskedInput({}, { mask: '__/__/____' });
         press(input, 'a');
         press(input, 'z');
-        expect(input.getValue()).toBe('__/__/____');
+        expect(input.getValue()).toBe('az/__/____');
     });
 
-    it('minus sign is ignored', () => {
+    it('minus sign fills editable slots', () => {
         const input = new MaskedInput({}, { mask: '__' });
         press(input, '-');
-        expect(input.getValue()).toBe('__');
+        expect(input.getValue()).toBe('-_');
     });
 
-    it('slash is ignored', () => {
+    it('slash fills editable slots', () => {
         const input = new MaskedInput({}, { mask: '__' });
         press(input, '/');
-        expect(input.getValue()).toBe('__');
+        expect(input.getValue()).toBe('/_');
     });
 
-    it('space is ignored', () => {
+    it('space fills editable slots', () => {
         const input = new MaskedInput({}, { mask: '__' });
         press(input, ' ');
-        expect(input.getValue()).toBe('__');
+        expect(input.getValue()).toBe(' _');
     });
 });
 
@@ -338,27 +338,25 @@ describe('MaskedInput — onChange', () => {
         expect(onChange).toHaveBeenCalledTimes(1);
     });
 
-    it('does NOT fire for ignored letter key', () => {
+    it('fires for letter keys', () => {
         const onChange = vi.fn();
-        const input = new MaskedInput({}, { mask: '__' }, onChange);
-        // Pass onChange via options
-        const input2 = new MaskedInput({}, { mask: '__', onChange });
-        press(input2, 'a');
-        expect(onChange).not.toHaveBeenCalled();
+        const input = new MaskedInput({}, { mask: '__', onChange });
+        press(input, 'a');
+        expect(onChange).toHaveBeenCalledWith('a_');
     });
 
-    it('does NOT fire for minus', () => {
+    it('fires for minus', () => {
         const onChange = vi.fn();
         const input = new MaskedInput({}, { mask: '__', onChange });
         press(input, '-');
-        expect(onChange).not.toHaveBeenCalled();
+        expect(onChange).toHaveBeenCalledWith('-_');
     });
 
-    it('does NOT fire for space', () => {
+    it('fires for space', () => {
         const onChange = vi.fn();
         const input = new MaskedInput({}, { mask: '__', onChange });
         press(input, ' ');
-        expect(onChange).not.toHaveBeenCalled();
+        expect(onChange).toHaveBeenCalledWith(' _');
     });
 
     it('does NOT fire for backspace at slot 0', () => {
@@ -630,13 +628,13 @@ describe('MaskedInput — markDirty()', () => {
         expect(spy).toHaveBeenCalled();
     });
 
-    it('markDirty NOT called for invalid/ignored input', () => {
+    it('markDirty called for non-digit slot input', () => {
         const input = freshInput();
         const spy = vi.spyOn(input as any, 'markDirty');
         press(input, 'a');
         press(input, '-');
         press(input, ' ');
-        expect(spy).not.toHaveBeenCalled();
+        expect(spy).toHaveBeenCalledTimes(3);
     });
 
     it('markDirty NOT called for backspace at slot 0', () => {
@@ -894,13 +892,13 @@ describe('MaskedInput (original tests)', () => {
         expect(onChange).toHaveBeenCalledWith('__/__/____');
     });
 
-    it('ignores non-digit characters', () => {
+    it('accepts non-digit characters in editable slots', () => {
         const input = new MaskedInput({}, { mask: '__/__/____' });
 
         input.handleKey({ key: 'a', ctrl: false, alt: false } as any);
         input.handleKey({ key: '-', ctrl: false, alt: false } as any);
 
-        expect(input.getValue()).toBe('__/__/____');
+        expect(input.getValue()).toBe('a-/__/____');
     });
 
     it('handles arrow keys for cursor navigation', () => {
@@ -953,12 +951,12 @@ describe('MaskedInput (original tests)', () => {
     it('getValue returns correctly formatted string', () => {
         const input = new MaskedInput({}, { mask: '__-__' });
 
-        input.handleKey({ key: 'a', ctrl: false, alt: false } as any); // ignored
+        input.handleKey({ key: 'a', ctrl: false, alt: false } as any);
         input.handleKey({ key: '1', ctrl: false, alt: false } as any);
         input.handleKey({ key: '2', ctrl: false, alt: false } as any);
         input.handleKey({ key: '3', ctrl: false, alt: false } as any);
 
-        expect(input.getValue()).toBe('12-3_');
+        expect(input.getValue()).toBe('a1-23');
     });
 
     it('home key moves cursor to first slot', () => {
