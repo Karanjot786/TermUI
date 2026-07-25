@@ -19,4 +19,10 @@ describe('parseArgs', () => {
     it('parses list', () => {
         expect(parseArgs(['list']).command).toBe('list');
     });
+    it('rejects --dir without a value', () => {
+        expect(() => parseArgs(['add', 'spinner', '--dir'])).toThrow('--dir requires a path value');
+    });
+    it('rejects --dir followed by another flag', () => {
+        expect(() => parseArgs(['add', 'spinner', '--dir', '--dry-run'])).toThrow('--dir requires a path value');
+    });
 });

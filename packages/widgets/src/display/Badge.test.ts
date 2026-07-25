@@ -125,6 +125,10 @@ describe('Badge', () => {
         expect(() => renderBadge('测试badge', {}, {}, 6, 3)).not.toThrow();
         const contentRow = rowText(screen, 1);
         expect(contentRow.length).toBeLessThanOrEqual(6);
+    it('truncates double-width characters correctly to fit within layout width', () => {
+        const { screen } = renderBadge('测试试', {}, {}, 6, 3);
+        const row = rowText(screen, 1);
+        expect(row.length).toBeLessThanOrEqual(6);
     });
 
     // ── 6. Constructor signature ────────────────────────────────────────────

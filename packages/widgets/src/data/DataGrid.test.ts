@@ -139,6 +139,22 @@ describe('DataGrid', () => {
         expect(text).toContain('Carol');
     });
 
+    it('backspace removes one grapheme from the filter', () => {
+        const onFilter = vi.fn();
+        const grid = new DataGrid(COLUMNS, ROWS, {}, { onFilter });
+        grid.handleKey(keyOf('/'));
+        grid.handleKey(keyOf('C'));
+        grid.handleKey(keyOf('a'));
+        grid.handleKey(keyOf('f'));
+        grid.handleKey(keyOf('e'));
+        grid.handleKey(keyOf('\u0301'));
+
+        grid.handleKey(keyOf('backspace'));
+
+        expect(grid.filter).toBe('Caf');
+        expect(onFilter).toHaveBeenLastCalledWith('Caf');
+    });
+
     it('calls onSort callback with key and direction', () => {
         const onSort = vi.fn();
         const grid = new DataGrid(COLUMNS, ROWS, {}, { onSort });

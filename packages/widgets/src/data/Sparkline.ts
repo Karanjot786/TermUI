@@ -5,6 +5,7 @@
 import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { BrailleCanvas } from './BrailleCanvas.js';
+import { filterFinite } from './utils.js';
 
 export interface SparklineOptions {
     /** Color of the sparkline */
@@ -43,12 +44,12 @@ export class Sparkline extends Widget {
     }
 
     setData(data: number[]): void {
-        this._data = data;
+        this._data = filterFinite(data);
         this.markDirty();
     }
 
     pushValue(value: number): void {
-        this._data.push(value);
+        this._data.push(Number.isFinite(value) ? value : 0);
         this.markDirty();
     }
 

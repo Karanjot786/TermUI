@@ -4,6 +4,7 @@ import { TextInput } from '@termuijs/widgets';
 import { PasswordInput } from '@termuijs/ui';
 import { useAuthStore } from './authStore.js';
 
+
 function TextInputJSX({ value, onChange, placeholder, isFocused }: { value: string, onChange: (val: string) => void, placeholder?: string, isFocused: boolean }) {
     const ref = useRef<TextInput | null>(null);
     if (!ref.current) {
@@ -62,14 +63,31 @@ function LoginScreen() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [focusedIndex, setFocusedIndex] = useState(0); // 0 = username, 1 = password
-    
+
+    // 0 = username, 1 = password, 2 = visibility toggle
+    const [focusedIndex, setFocusedIndex] = useState(0);
+
     const login = useAuthStore(state => state.login);
+
+    const passwordRef = useRef<PasswordInput | null>(null);
 
     useKeymap([
         { key: 'c', ctrl: true, action: () => process.exit(0) },
-        { key: 'tab', action: () => setFocusedIndex(prev => (prev === 0 ? 1 : 0)) },
+        { key: 'tab', action: () => setFocusedIndex(prev => (prev === 0 ? 1 : prev === 1 ? 2 : 0)) },
+        {
+            key: 'v',
+            action: () => {
+                // Only allow toggle when visibility toggle is focused.
+                if (focusedIndex !== 2) return;
+                passwordRef.current?.toggleVisibility();
+            },
+        },
         { key: 'enter', action: () => {
+            if (focusedIndex === 2) {
+                passwordRef.current?.toggleVisibility();
+                return;
+            }
+
             if (username !== '' && password !== '') {
                 login(username);
             } else {
@@ -77,6 +95,11 @@ function LoginScreen() {
             }
         } },
         { key: 'return', action: () => {
+            if (focusedIndex === 2) {
+                passwordRef.current?.toggleVisibility();
+                return;
+            }
+
             if (username !== '' && password !== '') {
                 login(username);
             } else {
@@ -85,36 +108,46 @@ function LoginScreen() {
         } }
     ]);
 
+    const isVisible = passwordRef.current?.showText ?? false;
+
     return (
         <box flexDirection="column" padding={2} border="round" borderColor="cyan" gap={1} width={50}>
             <text bold color="cyan">Login</text>
-            
+
             <box flexDirection="row" gap={1}>
                 <text color={focusedIndex === 0 ? "cyan" : undefined}>Username: </text>
-                <TextInputJSX 
-                    value={username} 
+                <TextInputJSX
+                    value={username}
                     onChange={setUsername}
-                    placeholder="Enter username..." 
+                    placeholder="Enter username..."
                     isFocused={focusedIndex === 0}
                 />
             </box>
-            
+
             <box flexDirection="row" gap={1}>
                 <text color={focusedIndex === 1 ? "cyan" : undefined}>Password: </text>
-                <PasswordInputJSX 
-                    value={password} 
+                <PasswordInputJSX
+                    value={password}
                     onChange={setPassword}
-                    placeholder="Enter password..." 
+                    placeholder="Enter password..."
                     isFocused={focusedIndex === 1}
                 />
             </box>
 
+            <box flexDirection="row" gap={1}>
+                <text color={focusedIndex === 2 ? "cyan" : undefined}>Toggle:</text>
+                <text bold
+                    color={focusedIndex === 2 ? 'cyan' : undefined}
+                >{isVisible ? '[Hide]' : '[Show]'} </text>
+            </box>
+
             {error ? <text color="red">{error}</text> : null}
 
-            <text dim margin={1}>Press Tab to switch fields, Enter to login, Ctrl+C to quit</text>
+            <text dim margin={1}>Tab: fields, Enter: login, Enter on toggle: show/hide, Ctrl+C to quit</text>
         </box>
     );
 }
+
 
 function ProtectedScreen() {
     const username = useAuthStore(state => state.username);
