@@ -60,4 +60,17 @@ describe('interpolate and mapRange', () => {
         expect(() => interpolate(5, [0, 1], [0, 1, 2])).toThrow();
         expect(() => interpolate(5, [0], [0])).toThrow();
     });
+
+    it('throws when interpolate input stops are duplicated', () => {
+        expect(() => interpolate(0.5, [0, 0, 1], [0, 10, 20])).toThrow(/strictly increasing/);
+    });
+
+    it('throws when interpolate input stops are descending', () => {
+        expect(() => interpolate(0.5, [0, 1, 0.5], [0, 10, 20])).toThrow(/strictly increasing/);
+    });
+
+    it('throws when interpolate input stops are not finite', () => {
+        expect(() => interpolate(0.5, [0, Number.NaN, 1], [0, 10, 20])).toThrow(/finite/);
+        expect(() => interpolate(0.5, [0, Infinity, 1], [0, 10, 20])).toThrow(/finite/);
+    });
 });
