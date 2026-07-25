@@ -16,10 +16,13 @@ export class AnimatedAccordionItem extends Widget {
     private _heightSpring: SpringState;
     private _headerHeight = 1;
 
+    public onToggle?: () => void;
+
     constructor(options: AnimatedAccordionItemOptions) {
         super(mergeStyles(defaultStyle(), options.style || {}));
         this.title = options.title;
         this.content = options.content;
+        this.focusable = true;
         
         // Setup spring for height animation
         this._heightSpring = {
@@ -33,7 +36,17 @@ export class AnimatedAccordionItem extends Widget {
         
         this.events.on('click', () => {
             this.toggle();
+            this.onToggle?.();
         });
+    }
+
+    handleKey(event: any): void {
+        if (event.key === 'enter' || event.key === 'space') {
+            this.toggle();
+            this.onToggle?.();
+            if (event.preventDefault) event.preventDefault();
+            if (event.stopPropagation) event.stopPropagation();
+        }
     }
 
     toggle(): void {
@@ -99,37 +112,23 @@ export class AnimatedAccordion extends Widget {
     constructor(options: AnimatedAccordionOptions = {}) {
         super(mergeStyles(defaultStyle(), options.style || {}));
         this._allowMultiple = options.allowMultiple ?? false;
-
-        this.events.on('click', (event) => {
-            // Find which item was clicked
-            let clickedItem: AnimatedAccordionItem | null = null;
-            
-            for (const item of this._items) {
-                if (event.y === item.rect.y) { // Clicked on header
-                    clickedItem = item;
-                    break;
-                }
-            }
-
-            if (clickedItem) {
-                if (!this._allowMultiple) {
-                    for (const item of this._items) {
-                        if (item !== clickedItem && item.isOpen) {
-                            item.isOpen = false;
-                            item.markDirty();
-                        }
-                    }
-                }
-                // Toggle is handled by the item itself since it listens to its own click,
-                // but we might need to intercept it. Actually the item will get its own click event.
-                // We just need to handle the exclusive logic here.
-            }
-        });
     }
 
     addItem(item: AnimatedAccordionItem): void {
         this._items.push(item);
         this.addChild(item);
+        
+        item.onToggle = () => {
+            if (!this._allowMultiple && item.isOpen) {
+                for (const other of this._items) {
+                    if (other !== item && other.isOpen) {
+                        other.isOpen = false;
+                        other.markDirty();
+                    }
+                }
+            }
+        };
+
         this.markDirty();
     }
 

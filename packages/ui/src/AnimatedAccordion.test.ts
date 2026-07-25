@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { describe, it, expect, vi } from 'vitest';
+import { Screen, createKeyEvent } from '@termuijs/core';
 import { Box } from '@termuijs/widgets';
 import { AnimatedAccordion, AnimatedAccordionItem } from './AnimatedAccordion.js';
 
@@ -22,7 +22,7 @@ describe('AnimatedAccordion', () => {
         expect(row).toContain('▶ Section 1');
     });
 
-    it('should toggle an item and respect allowMultiple', () => {
+    it('should toggle an item and respect allowMultiple via real clicks', () => {
         const accordion = new AnimatedAccordion({ allowMultiple: false });
         
         const item1 = new AnimatedAccordionItem({ title: 'Section 1', content: new Box() });
@@ -31,21 +31,31 @@ describe('AnimatedAccordion', () => {
         accordion.addItem(item1);
         accordion.addItem(item2);
 
-        item1.isOpen = true; // simulate open
-        
-        // simulate click on item 2 header (y=1 normally when item1 is open if animation finishes)
-        // For testing we can just call the logic
-        accordion.events.emit('click' as any, { x: 0, y: 1 } as any);
-        
-        // Let's manually manipulate and see if we can trigger the exclusive logic
-        // We'll mock the internal click handler behavior directly by changing state to see if it responds correctly.
-        item2.isOpen = true;
-        // In real usage, clicking item 2 while item 1 is open should close item 1.
-        // We'll simulate the event emission
-        item2.updateRect({ x: 0, y: 1, width: 20, height: 1 });
-        accordion.events.emit('click' as any, { x: 0, y: 1, type: 'click' } as any);
-        
-        expect(item1.isOpen).toBe(false);
+        // Click item 1
+        item1.events.emit('click' as any, { type: 'click' } as any);
+        expect(item1.isOpen).toBe(true);
+
+        // Click item 2
+        item2.events.emit('click' as any, { type: 'click' } as any);
+        expect(item1.isOpen).toBe(false); // Should close item1
         expect(item2.isOpen).toBe(true);
+    });
+
+    it('should allow keyboard toggle', () => {
+        const accordion = new AnimatedAccordion({ allowMultiple: false });
+        
+        const item1 = new AnimatedAccordionItem({ title: 'Section 1', content: new Box() });
+        accordion.addItem(item1);
+
+        const enterEvent = createKeyEvent({
+            key: 'enter',
+            raw: Buffer.from([]),
+            ctrl: false,
+            alt: false,
+            shift: false
+        });
+
+        item1.handleKey(enterEvent);
+        expect(item1.isOpen).toBe(true);
     });
 });
