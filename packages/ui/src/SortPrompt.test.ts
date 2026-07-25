@@ -154,4 +154,32 @@ describe('SortPrompt', () => {
 
         expect(onSubmit).toHaveBeenCalled();
     });
+
+    it('consumes handled keyboard events', () => {
+        const prompt = new SortPrompt(['A', 'B']);
+        const event = {
+            key: 'enter',
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as any;
+
+        prompt.handleKey(event);
+
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not consume unhandled keyboard events', () => {
+        const prompt = new SortPrompt(['A', 'B']);
+        const event = {
+            key: 'tab',
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as any;
+
+        prompt.handleKey(event);
+
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
+    });
 });

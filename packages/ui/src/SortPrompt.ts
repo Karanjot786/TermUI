@@ -63,14 +63,20 @@ export class SortPrompt extends Widget {
         switch (event.key) {
             case 'shift+up':
                 this.moveItemUp();
+                event.preventDefault?.();
+                event.stopPropagation?.();
                 break;
 
             case 'shift+down':
                 this.moveItemDown();
+                event.preventDefault?.();
+                event.stopPropagation?.();
                 break;
 
             case 'enter':
                 this.submit();
+                event.preventDefault?.();
+                event.stopPropagation?.();
                 break;
         }
     }
