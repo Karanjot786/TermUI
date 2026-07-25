@@ -19,6 +19,7 @@ interface ToastInternal {
     slideSpring: SpringState;
     widget: Text;
     width: number;
+    graphemes: { char: string; width: number }[];
 }
 
 let toastIdCounter = 0;
@@ -73,6 +74,7 @@ export class ToastProvider extends Widget {
         });
         
         const tWidth = stringWidth(options.message);
+        const graphemes = splitGraphemes(options.message).map(char => ({ char, width: stringWidth(char) }));
 
         const newToast: ToastInternal = {
             id: `toast-${++toastIdCounter}`,
@@ -87,7 +89,8 @@ export class ToastProvider extends Widget {
                 done: false
             },
             widget,
-            width: tWidth
+            width: tWidth,
+            graphemes
         };
 
         this._toasts.push(newToast);
@@ -167,7 +170,6 @@ export class ToastProvider extends Widget {
             const fg = t.widget.style.fg || 'white';
             const bg = t.widget.style.bg || 'blue';
             const attrs = styleToCellAttrs({ fg: fg as any, bg: bg as any });
-            const graphemes = splitGraphemes(t.message);
 
             // Draw padded background
             for (let i = 0; i < r.width; i++) {
@@ -179,13 +181,12 @@ export class ToastProvider extends Widget {
 
             // Draw text
             let colOffset = 1;
-            for (const char of graphemes) {
-                const cw = stringWidth(char);
+            for (const { char, width } of t.graphemes) {
                 const x = r.x + colOffset;
                 if (x >= 0 && x < screen.cols && r.y >= 0 && r.y < screen.rows) {
                     screen.setCell(x, r.y, { char, ...attrs });
                 }
-                colOffset += cw;
+                colOffset += width;
             }
         }
     }
