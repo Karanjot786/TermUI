@@ -17,6 +17,34 @@ export interface WorkspaceOptions {
     defaultWorkspace?: string;
 }
 
+function isWorkspaceLayout(value: unknown): value is WorkspaceLayout {
+    return typeof value === "object"
+        && value !== null
+        && typeof (value as WorkspaceLayout).id === "string"
+        && Array.isArray((value as WorkspaceLayout).panels);
+}
+
+function parseLayouts(data: string): Map<string, WorkspaceLayout> | null {
+    try {
+        const parsed = JSON.parse(data);
+        if (!Array.isArray(parsed)) return null;
+
+        const layouts = new Map<string, WorkspaceLayout>();
+        for (const entry of parsed) {
+            if (!Array.isArray(entry) || entry.length !== 2) return null;
+
+            const [name, layout] = entry;
+            if (typeof name !== "string" || !isWorkspaceLayout(layout)) return null;
+
+            layouts.set(name, layout);
+        }
+
+        return layouts;
+    } catch {
+        return null;
+    }
+}
+
 export class Workspace {
     private layouts = new Map<string, WorkspaceLayout>();
     private activeWorkspace: string;
@@ -67,8 +95,9 @@ export class Workspace {
 
         if (!data) return;
 
-        this.layouts = new Map(
-            JSON.parse(data)
-        );
+        const layouts = parseLayouts(data);
+        if (!layouts) return;
+
+        this.layouts = layouts;
     }
 }

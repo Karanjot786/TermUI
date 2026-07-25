@@ -82,4 +82,46 @@ describe('Workspace', () => {
 
         expect(workspace.getWorkspaceNames()).toEqual([]);
     });
+
+    it('restores layouts from storage', () => {
+        const saved = new Map<string, string>();
+        const storage = {
+            save: (name: string, data: string) => saved.set(name, data),
+            load: (name: string) => saved.get(name) ?? null,
+        };
+        const source = new Workspace();
+        source.saveLayout('default', { id: 'default', panels: [{ id: 'main' }] });
+        source.save(storage);
+
+        const restored = new Workspace();
+        restored.restore(storage);
+
+        expect(restored.loadLayout('default')).toEqual({ id: 'default', panels: [{ id: 'main' }] });
+    });
+
+    it('ignores corrupt stored layout data without throwing', () => {
+        const workspace = new Workspace();
+        workspace.saveLayout('default', { id: 'default', panels: [] });
+        const storage = {
+            save: () => {},
+            load: () => '{',
+        };
+
+        expect(() => workspace.restore(storage)).not.toThrow();
+        expect(workspace.loadLayout('default')).toEqual({ id: 'default', panels: [] });
+    });
+
+    it('ignores stored layout data with the wrong shape', () => {
+        const workspace = new Workspace();
+        workspace.saveLayout('default', { id: 'default', panels: [] });
+        const storage = {
+            save: () => {},
+            load: () => JSON.stringify([['broken', { id: 'broken' }]]),
+        };
+
+        workspace.restore(storage);
+
+        expect(workspace.getWorkspaceNames()).toEqual(['default']);
+        expect(workspace.loadLayout('broken')).toBeUndefined();
+    });
 });

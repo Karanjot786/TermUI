@@ -8,6 +8,7 @@ import {
     type Color,
     styleToCellAttrs,
     stringWidth,
+    truncate,
     caps,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
@@ -107,7 +108,7 @@ export class Divider extends Widget {
 
         if (labelWidth >= width) {
             // Not enough room — just write the label truncated
-            screen.writeString(x, y, labelWithPad.slice(0, width), attrs);
+            screen.writeString(x, y, truncate(labelWithPad, width, ''), attrs);
             return;
         }
 

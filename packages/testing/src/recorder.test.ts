@@ -63,6 +63,37 @@ describe('ScreenRecorder', () => {
         expect(recorder.getFrames()[0].timestamp).toBe(0);
     });
 
+    it('supports an injected clock for deterministic timestamps', () => {
+        let currentTime = 10_000;
+        const recorder = new ScreenRecorder({ now: () => currentTime });
+
+        recorder.recordFrame('first');
+        currentTime += 250;
+        recorder.recordFrame('second');
+
+        expect(recorder.getFrames()).toEqual([
+            { timestamp: 0, buffer: 'first' },
+            { timestamp: 250, buffer: 'second' },
+        ]);
+
+        const header = JSON.parse(recorder.toAsciicast({ title: 'Stable' }).split('\n')[0]);
+        expect(header.timestamp).toBe(10);
+    });
+
+    it('resets the injected clock baseline on clear()', () => {
+        let currentTime = 1_000;
+        const recorder = new ScreenRecorder({ now: () => currentTime });
+
+        recorder.recordFrame('before');
+        currentTime = 1_500;
+        recorder.clear();
+        recorder.recordFrame('after');
+
+        expect(recorder.getFrames()).toEqual([
+            { timestamp: 0, buffer: 'after' },
+        ]);
+    });
+
     it('respects enabled flag and environment variable RECORD_DISABLED', () => {
         // Disabled via option
         const recorder1 = new ScreenRecorder({ enabled: false });
@@ -131,6 +162,17 @@ describe('ScreenRecorder', () => {
         expect(svg).toContain('line1');
         expect(svg).toContain('line2');
         expect(svg).toContain('</svg>');
+    });
+
+    it('preserves repeated spaces in SVG text rows', () => {
+        const recorder = new ScreenRecorder();
+        recorder.recordFrame('Name    Value\nleft      right');
+
+        const svg = recorder.toSVG();
+
+        expect(svg).toContain('xml:space="preserve"');
+        expect(svg).toContain('Name    Value');
+        expect(svg).toContain('left      right');
     });
 
     it('validates maxFrames option as a positive integer', () => {
