@@ -484,7 +484,7 @@ examples/
 
 ```bash
 bun install
-bun run build      # Build all 14 packages
+bun run build      # Build all 15 packages
 bun run test        # Run all 5018 tests
 bun run coverage    # Generate test coverage report
 bun run typecheck  # Type-check all packages
