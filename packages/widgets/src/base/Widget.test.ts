@@ -472,3 +472,46 @@ describe('Widget.layoutTransition', () => {
 });
 
 
+
+
+describe('z-index styling and rendering order', () => {
+    it('supports zIndex getter and setter', () => {
+        const w = new TestWidget();
+        expect(w.zIndex).toBe(0);
+        w.zIndex = 5;
+        expect(w.zIndex).toBe(5);
+        expect(w.style.zIndex).toBe(5);
+    });
+
+    it("renders children sorted by zIndex (Painter's Algorithm)", () => {
+        const parent = new TestWidget();
+        const order: string[] = [];
+
+        class OrderedWidget extends Widget {
+            private _name: string;
+            constructor(name: string, z: number) {
+                super({ zIndex: z });
+                this._name = name;
+            }
+            protected _renderSelf(): void {
+                order.push(this._name);
+            }
+        }
+
+        const w1 = new OrderedWidget('first', 10);
+        const w2 = new OrderedWidget('second', 5);
+        const w3 = new OrderedWidget('third', 20);
+        const w4 = new OrderedWidget('fourth', 5);
+
+        parent.addChild(w1);
+        parent.addChild(w2);
+        parent.addChild(w3);
+        parent.addChild(w4);
+
+        const screen = new Screen(10, 5);
+        parent.render(screen);
+
+        expect(order).toEqual(['second', 'fourth', 'first', 'third']);
+    });
+});
+
