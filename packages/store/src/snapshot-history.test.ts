@@ -41,4 +41,77 @@ describe('createSnapshotHistory', () => {
 
         expect(history.list().map(snapshot => snapshot.label)).toEqual(['b', 'c']);
     });
+    it('captures state that includes action functions without throwing', () => {
+        // Regression test: state created via the (set) => ({...}) pattern
+        // always includes action methods. structuredClone() throws on
+        // functions, so capture() must strip them before cloning.
+        const store = createStore((set) => ({
+            count: 0,
+            increment: () => set((s) => ({ count: s.count + 1 })),
+        }));
+        const history = createSnapshotHistory(store);
+
+        expect(() => history.capture('initial')).not.toThrow();
+
+        store.getState().increment();
+        store.getState().increment();
+        history.capture('after increments');
+
+        history.undo();
+        expect(store.getState().count).toBe(0);
+        // action functions must survive a restore, not just data fields
+        expect(typeof store.getState().increment).toBe('function');
+    });
+
+    it('restore() with an unknown id throws without moving the cursor', () => {
+        const store = createStore(() => ({ count: 0 }));
+        const history = createSnapshotHistory(store);
+
+        history.capture('a');
+        store.setState({ count: 1 });
+        history.capture('b');
+
+        expect(() => history.restore(9999)).toThrow(/Unknown store snapshot/);
+        // cursor should be exactly where it was before the failed restore
+        expect(history.undo()?.state.count).toBe(0);
+    });
+
+    it('capture() after undo() discards the redo branch', () => {
+        const store = createStore(() => ({ count: 0 }));
+        const history = createSnapshotHistory(store);
+
+        history.capture('a');
+        store.setState({ count: 1 });
+        history.capture('b');
+        history.undo();
+
+        store.setState({ count: 99 });
+        history.capture('c');
+
+        expect(history.redo()).toBeNull();
+    });
+
+    it('clear() empties history without touching current state', () => {
+        const store = createStore(() => ({ count: 0 }));
+        const history = createSnapshotHistory(store);
+        history.capture('a');
+        store.setState({ count: 5 });
+        history.capture('b');
+
+        history.clear();
+
+        expect(history.list()).toEqual([]);
+        expect(history.undo()).toBeNull();
+        expect(store.getState().count).toBe(5);
+    });
+
+    it('returns defensive copies — mutating a returned snapshot does not affect stored history', () => {
+        const store = createStore(() => ({ nested: { count: 0 } }));
+        const history = createSnapshotHistory(store);
+        const snap = history.capture('a');
+
+        (snap.state.nested as any).count = 999;
+
+        expect(history.list()[0].state.nested.count).toBe(0);
+    });
 });

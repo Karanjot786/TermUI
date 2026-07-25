@@ -173,9 +173,16 @@ export interface PersistOptions {
     debounceMs?: number;
 }
 
+export interface HistoryOptions {
+    limit?: number;
+    coalesceMs?: number;
+}
+
+
 export interface StoreOptions<T> {
     middleware?: Middleware<T>[];
     persist?: PersistOptions;
+    history?: HistoryOptions;
 }
 
 export interface Computed<U> {
@@ -203,6 +210,10 @@ export interface Store<T> {
     
     /** Read the state captured at creation */
     getInitialState(): T;
+    undo(): void;
+    redo(): void;
+    getHistory(): { past: T[]; future: T[] };
+    resetHistory(): void;
 }
 
 // ── Safe Deep Clone Helper ──
@@ -591,6 +602,8 @@ export function createStore<T extends object>(
             }
         });
 
+
+
         return {
             get: () => cachedValue,
             subscribe: (listener) => {
@@ -604,7 +617,78 @@ export function createStore<T extends object>(
         };
     };
 
-    const store: Store<T> = { getState, setState, mutate, subscribe, subscribeOnce, destroy, computed, reset, getInitialState };
+                // ── History (undo/redo) ──
+        const historyOpts = options?.history;
+        const historyLimit = historyOpts?.limit ?? 50;
+        const coalesceMs = historyOpts?.coalesceMs ?? 0;
+        let past: T[] = [];
+        let future: T[] = [];
+        let lastRecordAt = 0;
+        let isApplyingHistory = false;
+
+        if (historyOpts) {
+            // Piggybacks on the store's own listener set. This fires exactly once
+            // per immediate setState/mutate call AND exactly once per batch()
+            // (flushBatch's notify() only calls each listener once per flush),
+            // so batch() automatically collapses to a single history entry.
+            subscribe((_newState, prevState) => {
+                if (isApplyingHistory) return;
+                future = []; // any new forward change invalidates the redo branch
+                const now = Date.now();
+                if (past.length > 0 && coalesceMs > 0 && now - lastRecordAt < coalesceMs) {
+                    lastRecordAt = now; // merge into the in-flight coalesced step
+                    return;
+                }
+                past.push(prevState);
+                if (past.length > historyLimit) past.splice(0, past.length - historyLimit);
+                lastRecordAt = now;
+            });
+        }
+
+        // Bypasses setState/middleware entirely so undo/redo restores the exact
+        // captured object rather than re-running middleware transforms on it.
+        const applyHistoryState = (target: T) => {
+            const prevState = state;
+            isApplyingHistory = true;
+            state = target;
+            for (const listener of listeners) listener(state, prevState);
+            persistState();
+            isApplyingHistory = false;
+        };
+
+        const undo = (): void => {
+            if (!historyOpts) {
+                throw new Error('undo() requires the "history" option to be set on CreativeStore()');
+            }
+            if (_batchDepth > 0) throw new Error('undo() cannot be called inside batch()');
+            if (past.length === 0) return;
+            const target = past.pop()!;
+            future.push(state);
+            if (future.length > historyLimit) future.shift();
+            applyHistoryState(target);
+        };
+
+        const redo = (): void => {
+            if (!historyOpts) {
+                throw new Error ('redo() requires the "history" option to be set on CreateStore()');
+            }
+            if (_batchDepth > 0) throw new Error('redo() cannot be called inside batch()');
+            if (future.length === 0) return;
+            const target = future.pop()!;
+            past.push(state);
+            if (past.length > historyLimit) past.shift();
+            applyHistoryState(target);
+        };
+
+        const getHistory = (): { past: T[]; future: T[] } => ({ past: [...past], future: [...future] });
+
+        const resetHistory = (): void => {
+            past = [];
+            future = [];
+            lastRecordAt = 0;
+        };
+
+    const store: Store<T> = { getState, setState, mutate, subscribe, subscribeOnce, destroy, computed, reset, getInitialState, undo, redo, getHistory, resetHistory  };
 
     // Create the hook function
     function useStore(): T;
@@ -661,6 +745,10 @@ export function createStore<T extends object>(
     (useStore as any).computed = computed;
     (useStore as any).reset = reset;
     (useStore as any).getInitialState = getInitialState;
+    (useStore as any).undo = undo;
+    (useStore as any).redo = redo;
+    (useStore as any).getHistory = getHistory;
+    (useStore as any).resetHistory = resetHistory;
 
     return useStore as UseStore<T>;
 }
@@ -679,5 +767,9 @@ export interface UseStore<T> {
     computed<U>(selector: Selector<T, U>): Computed<U>;
     reset(): void;
     getInitialState(): T;
+    undo(): void;
+    redo(): void;
+    getHistory(): { past: T[]; future: T[] };
+    resetHistory(): void;
 }
 
