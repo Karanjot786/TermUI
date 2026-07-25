@@ -142,15 +142,43 @@ export class FocusManager {
             // The focused widget is being removed — emit blur for it, then
             // move focus to the next available widget if one exists.
             this._emitOrQueue('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
-            if (this._focusables.length > 0) {
-                this._currentIndex = Math.min(this._currentIndex, this._focusables.length - 1);
+            
+            this._currentIndex = -1;
+            const candidates = this._getActiveFocusables().filter(f => f.focusable);
+            
+            if (candidates.length > 0) {
+                let nextTargetId: string | null = null;
+                
+                // Try to find the element that took its place or after it
+                for (const candidate of candidates) {
+                    const cIdx = this._focusables.findIndex(f => f.id === candidate.id);
+                    if (cIdx >= idx) {
+                        nextTargetId = candidate.id;
+                        break;
+                    }
+                }
+                
+                // If none found (it was at the end), try to find the last candidate before it
+                if (!nextTargetId) {
+                    for (let i = candidates.length - 1; i >= 0; i--) {
+                        const candidate = candidates[i];
+                        const cIdx = this._focusables.findIndex(f => f.id === candidate.id);
+                        if (cIdx < idx) {
+                            nextTargetId = candidate.id;
+                            break;
+                        }
+                    }
+                }
+                
+                // Fallback (should never happen if candidates > 0, but just in case)
+                if (!nextTargetId) nextTargetId = candidates[0].id;
+                
+                this._currentIndex = this._focusables.findIndex(f => f.id === nextTargetId);
                 this._emitOrQueue('focus', {
-                    targetId: this._focusables[this._currentIndex].id,
+                    targetId: nextTargetId,
                     type: 'focus',
                     epoch: this._epoch++,
                 });
-            } else {
-                this._currentIndex = -1;
             }
         } else if (idx < this._currentIndex) {
             // A non-focused widget before the focused one was removed —
