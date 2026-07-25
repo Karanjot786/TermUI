@@ -25,7 +25,7 @@ export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS, normalizeNavigationKey } fro
 export { parseMouseEvent, isMouseSequence } from './input/MouseParser.js';
 export { MouseGestures } from './input/MouseGestures.js';
 export { ContextMenuManager } from './app/ContextMenuManager.js';
-export type { ContextMenuState, ContextMenuManagerEventMap } from './app/ContextMenuManager.js';
+export type { ContextMenuState, ContextMenuManagerEventMap, ContextMenuItem } from './app/ContextMenuManager.js';
 export { HotkeyManager } from './input/HotkeyManager.js';
 export type { HotkeyHandler } from './input/HotkeyManager.js';
 export { splitGraphemes } from './input/grapheme.js';

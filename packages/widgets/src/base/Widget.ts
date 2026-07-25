@@ -9,6 +9,7 @@ import {
     type Rect,
     type KeyEvent,
     type MouseEvent as TermMouseEvent,
+    type ContextMenuItem,
     defaultStyle,
     mergeStyles,
     createLayoutNode,
@@ -141,7 +142,7 @@ export abstract class Widget {
     public layoutTransition: Partial<SpringConfig> | SpringPresetName | boolean = false;
 
     /** Context menu items. If provided, right click will open it. */
-    public contextMenu?: any[];
+    public contextMenu?: ContextMenuItem[];
 
     private _layoutCancel: (() => void) | null = null;
     private _targetRect: Rect | null = null;

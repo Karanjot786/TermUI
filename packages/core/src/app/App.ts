@@ -15,7 +15,7 @@ import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
 import { mergeBorders } from '../renderer/border-merge.js';
 import { renderInlineToTerminal } from '../inline-viewport.js';
-import { ContextMenuManager } from './ContextMenuManager.js';
+import { ContextMenuManager, type ContextMenuItem } from './ContextMenuManager.js';
 
 type HitGridEntry = {
     x: number;
@@ -249,9 +249,9 @@ export class App {
 
                 if (event.type === 'mousedown') {
                     if (event.button === 'right') {
-                        const hitWidget = this._findWidgetAt(event.x, event.y);
-                        if (hitWidget && (hitWidget as any).contextMenu && (hitWidget as any).contextMenu.length > 0) {
-                            this.contextMenu.open(event.x, event.y, (hitWidget as any).contextMenu);
+                        const hitWidget = this._findWidgetAt(event.x, event.y) as { contextMenu?: ContextMenuItem[] } | null;
+                        if (hitWidget && hitWidget.contextMenu && hitWidget.contextMenu.length > 0) {
+                            this.contextMenu.open(event.x, event.y, hitWidget.contextMenu);
                         } else {
                             this.contextMenu.close();
                         }

@@ -1,10 +1,16 @@
 import { EventEmitter } from '../events/EventEmitter.js';
 
+export interface ContextMenuItem {
+    label: string;
+    value: string;
+    disabled?: boolean;
+}
+
 export interface ContextMenuState {
     x: number;
     y: number;
-    items: any[];
-    onSelect?: (item: any, index: number) => void;
+    items: ContextMenuItem[];
+    onSelect?: (item: ContextMenuItem, index: number) => void;
 }
 
 export interface ContextMenuManagerEventMap {
@@ -23,7 +29,7 @@ export class ContextMenuManager extends EventEmitter<ContextMenuManagerEventMap>
         return this._state;
     }
 
-    open(x: number, y: number, items: any[], onSelect?: (item: any, index: number) => void): void {
+    open(x: number, y: number, items: ContextMenuItem[], onSelect?: (item: ContextMenuItem, index: number) => void): void {
         this._state = { x, y, items, onSelect };
         this.emit('open', this._state);
     }

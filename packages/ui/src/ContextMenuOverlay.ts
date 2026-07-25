@@ -1,5 +1,6 @@
 import { Widget, ContextMenu } from '@termuijs/widgets';
-import type { App } from '@termuijs/core';
+import type { App, ContextMenuItem } from '@termuijs/core';
+import { stringWidth } from '@termuijs/core';
 
 export interface ContextMenuOverlayOptions {
     app: App;
@@ -24,11 +25,11 @@ export class ContextMenuOverlay extends Widget {
         });
     }
 
-    private _showMenu(x: number, y: number, items: any[], onSelect?: (item: any, index: number) => void): void {
+    private _showMenu(x: number, y: number, items: ContextMenuItem[], onSelect?: (item: ContextMenuItem, index: number) => void): void {
         this._hideMenu(); // Ensure previous is closed
 
         // Estimate width (ContextMenu measures it on render anyway, but we set a rect)
-        const maxWidth = Math.max(...items.map(i => (i.label || '').length)) + 4;
+        const maxWidth = Math.max(...items.map(i => stringWidth(i.label || ''))) + 4;
         const height = items.length + 2;
 
         // Position it avoiding screen edges if possible
