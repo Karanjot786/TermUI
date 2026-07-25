@@ -1,6 +1,6 @@
 // SortPrompt — sortable item list
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps, truncate } from '@termuijs/core';
 
 export interface SortPromptOptions {
     activeColor?: Style['fg'];
@@ -89,7 +89,7 @@ export class SortPrompt extends Widget {
             screen.writeString(
                 x,
                 y + i,
-                line.slice(0, width),
+                truncate(line, width, ''),
                 {
                     ...attrs,
                     fg: active ? this._activeColor : attrs.fg,
