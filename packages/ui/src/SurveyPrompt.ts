@@ -74,11 +74,13 @@ export class SurveyPrompt extends Widget {
                 case "backspace":
                     this._textBuffer = splitGraphemes(this._textBuffer).slice(0, -1).join("");
                     this.markDirty();
+                    consumeKey(event);
                     break;
 
                 case "enter":
                     this._answers[question.id] = this._textBuffer;
                     this._advance();
+                    consumeKey(event);
                     break;
 
                 default:
@@ -90,6 +92,7 @@ export class SurveyPrompt extends Widget {
                     ) {
                         this._textBuffer += event.key;
                         this.markDirty();
+                        consumeKey(event);
                     }
             }
 
@@ -102,6 +105,7 @@ export class SurveyPrompt extends Widget {
                     this._choiceIndex--;
                     this.markDirty();
                 }
+                consumeKey(event);
                 break;
 
             case "down":
@@ -112,6 +116,7 @@ export class SurveyPrompt extends Widget {
                     this._choiceIndex++;
                     this.markDirty();
                 }
+                consumeKey(event);
                 break;
 
             case "enter":
@@ -120,6 +125,7 @@ export class SurveyPrompt extends Widget {
                         question.options[this._choiceIndex];
                     this._advance();
                 }
+                consumeKey(event);
                 break;
         }
     }
@@ -187,4 +193,9 @@ export class SurveyPrompt extends Widget {
             row++;
         }
     }
+}
+
+function consumeKey(event: KeyEvent): void {
+    event.preventDefault?.();
+    event.stopPropagation?.();
 }

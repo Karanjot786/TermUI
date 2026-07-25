@@ -129,4 +129,53 @@ describe("SurveyPrompt", () => {
             name: "Caf",
         });
     });
+
+    it("consumes handled text input events", () => {
+        const prompt = new SurveyPrompt(QUESTIONS);
+        const event = {
+            key: "A",
+            ctrl: false,
+            alt: false,
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as any;
+
+        prompt.handleKey(event);
+
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    });
+
+    it("consumes handled choice navigation events", () => {
+        const prompt = new SurveyPrompt(QUESTIONS);
+        prompt.handleKey({ key: "enter", ctrl: false, alt: false } as any);
+        const event = {
+            key: "down",
+            ctrl: false,
+            alt: false,
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as any;
+
+        prompt.handleKey(event);
+
+        expect(event.preventDefault).toHaveBeenCalledTimes(1);
+        expect(event.stopPropagation).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not consume unhandled text events", () => {
+        const prompt = new SurveyPrompt(QUESTIONS);
+        const event = {
+            key: "tab",
+            ctrl: false,
+            alt: false,
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        } as any;
+
+        prompt.handleKey(event);
+
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
+    });
 });
