@@ -89,6 +89,8 @@ export type { TestScreen } from './terminal/TestBackend.js';
 // ── App ───────────────────────────────────────────────
 export { App } from './app/App.js';
 export type { AppOptions, RootWidget } from './app/App.js';
+export { TooltipManager } from './app/TooltipManager.js';
+export type { TooltipManagerEventMap, TooltipState } from './app/TooltipManager.js';
 export { shouldUseFallback, renderFallback } from './app/Fallback.js';
 export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.js';
 
