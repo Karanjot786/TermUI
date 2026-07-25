@@ -2,8 +2,14 @@
 // @termuijs/motion — Tests for Transitions (easing functions)
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect, vi, beforeEach, test } from 'vitest';
-import { easings, cubicBezier } from './transitions.js';
+import { describe, it, expect, vi, beforeEach, afterEach, test } from 'vitest';
+import { easings, cubicBezier, fadeIn, pulse, transition } from './transitions.js';
+import { unsubscribeAll as timerPoolUnsubscribeAll } from './timer-pool.js';
+
+afterEach(() => {
+    vi.restoreAllMocks();
+    timerPoolUnsubscribeAll();
+});
 
 describe('Easing Functions', () => {
     it('linear(0) = 0 and linear(1) = 1', () => {
@@ -130,4 +136,37 @@ describe("cubicBezier easing", () => {
     expect(midValue).toBeGreaterThan(0);
     expect(midValue).toBeLessThan(1);
   });
+});
+
+describe('transition cancellation reasons', () => {
+    it('passes the cancellation reason to transition onCancel', () => {
+        const onCancel = vi.fn();
+        const cancel = transition({
+            durationMs: 300,
+            onFrame: () => {},
+            onCancel,
+        });
+
+        cancel('route-change');
+
+        expect(onCancel).toHaveBeenCalledWith('route-change');
+    });
+
+    it('passes the cancellation reason through pre-built transitions', () => {
+        const onCancel = vi.fn();
+        const cancel = fadeIn(300, () => {}, undefined, onCancel);
+
+        cancel('component-unmounted');
+
+        expect(onCancel).toHaveBeenCalledWith('component-unmounted');
+    });
+
+    it('passes the cancellation reason through pulse', () => {
+        const onCancel = vi.fn();
+        const cancel = pulse(1000, () => {}, onCancel);
+
+        cancel('screen-hidden');
+
+        expect(onCancel).toHaveBeenCalledWith('screen-hidden');
+    });
 });

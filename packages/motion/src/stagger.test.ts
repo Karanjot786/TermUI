@@ -111,4 +111,16 @@ describe('stagger()', () => {
 
         expect(parallelSpy).toHaveBeenCalledTimes(1);
     });
+
+    it('passes cancellation reasons to already-started delayed animations', () => {
+        vi.useFakeTimers();
+        const cancelStarted = vi.fn();
+        const animation: AnimationRunner = () => cancelStarted;
+
+        const cancel = stagger([animation, animation], 100);
+        vi.advanceTimersByTime(100);
+        cancel('route-change');
+
+        expect(cancelStarted).toHaveBeenCalledWith('route-change');
+    });
 });

@@ -2,7 +2,7 @@
 // Animation Staggering — delayed parallel starts
 // ─────────────────────────────────────────────────────
 
-import type { AnimationRunner } from './sequence.js';
+import type { AnimationCancel, AnimationRunner } from './sequence.js';
 import * as sequencing from './sequence.js';
 
 /**
@@ -10,7 +10,7 @@ import * as sequencing from './sequence.js';
  * item 0 starts immediately, item 1 after delayMs, item 2 after 2*delayMs, etc.
  * Returns a master cancel function to stop pending and active animations.
  */
-export function stagger(animations: AnimationRunner[], delayMs: number, onComplete?: () => void): () => void {
+export function stagger(animations: AnimationRunner[], delayMs: number, onComplete?: () => void): AnimationCancel {
     const normalizedDelayMs = Math.max(0, delayMs);
     const delayedAnimations = animations.map((runner, index) => withDelay(runner, index * normalizedDelayMs));
     return sequencing.parallel(delayedAnimations, onComplete);
@@ -28,7 +28,7 @@ function withDelay(runner: AnimationRunner, delayMs: number): AnimationRunner {
             return runner(done);
         }
 
-        let cancelStarted: (() => void) | null = null;
+        let cancelStarted: AnimationCancel | null = null;
         let isStarted = false;
 
         const timeoutId = setTimeout(() => {
@@ -36,10 +36,10 @@ function withDelay(runner: AnimationRunner, delayMs: number): AnimationRunner {
             cancelStarted = runner(done);
         }, delayMs);
 
-        return () => {
+        return (reason?: string) => {
             clearTimeout(timeoutId);
             if (isStarted) {
-                cancelStarted?.();
+                cancelStarted?.(reason);
             }
             cancelStarted = null;
         };
