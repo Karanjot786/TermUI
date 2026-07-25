@@ -60,6 +60,12 @@ export class Digits extends Widget {
         return this._value;
     }
 
+    /** Returns the character stride used by Digits (glyph width + 1-column gap).
+     *  Callers (e.g. Clock) can use this to correctly position content after Digits. */
+    charWidth(): number {
+        return DIGIT_WIDTH + 1;
+    }
+
     setColor(color: Color): void {
         if (this._color === color) return;
         this._color = color;
