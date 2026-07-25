@@ -6,6 +6,7 @@ import { type Screen, type Style, type Color, styleToCellAttrs } from '@termuijs
 import { Widget } from '../base/Widget.js';
 
 export interface DigitsOptions {
+    value?: string;
     color?: Color;
 }
 
@@ -36,7 +37,7 @@ const DIGIT_WIDTH = 4;
  * Similar to a 7-segment display. 
  *
  * Example:
- *   new Digits({ value: '42', color: 'cyan', width: 20, height: 3 })
+ *   new Digits({}, { value: '42', color: 'cyan' })
  */
 export class Digits extends Widget {
     private _value: string;
@@ -44,7 +45,7 @@ export class Digits extends Widget {
 
     constructor(style: Partial<Style> = {}, opts: DigitsOptions = {}) {
         super({ height: DIGIT_HEIGHT, ...style });
-        this._value = String((style as Record<string, unknown>).value ?? '0');
+        this._value = String(opts.value ?? (style as Record<string, unknown>).value ?? '0');
         this._color = opts.color ?? { type: 'named', name: 'white' };
     }
 
