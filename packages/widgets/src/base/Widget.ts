@@ -335,12 +335,7 @@ export abstract class Widget {
         this._renderBorder(screen);
 
         // Render children
-        const sortedChildren = [...this._children].sort((a, b) => {
-            const az = a.style.zIndex ?? 0;
-            const bz = b.style.zIndex ?? 0;
-            return az - bz;
-        });
-        for (const child of sortedChildren) {
+        for (const child of this._children) {
             child.render(screen);
         }
 
