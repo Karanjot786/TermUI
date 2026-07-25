@@ -16,6 +16,7 @@ import {
     truncate,
     caps,
     stringWidth,
+    splitGraphemes,
 } from '@termuijs/core';
 
 export interface SearchInputOptions {
@@ -65,7 +66,9 @@ export class SearchInput extends Widget {
                 break;
             case 'backspace':
                 if (this._value.length > 0) {
-                    this._value = this._value.slice(0, -1);
+                    const graphemes = splitGraphemes(this._value);
+                    graphemes.pop();
+                    this._value = graphemes.join('');
                     this.markDirty();
                     this._scheduleSearch();
                 }
@@ -115,6 +118,7 @@ export class SearchInput extends Widget {
         const icon = caps.unicode ? '🔍' : '/';
         const prefix = `${icon} `;
         const prefixWidth = stringWidth(prefix);
+        const visiblePrefix = truncate(prefix, width, '');
 
         const valueOrPlaceholder = this._value.length > 0
             ? this._value
@@ -127,8 +131,10 @@ export class SearchInput extends Widget {
         const available = Math.max(0, width - prefixWidth);
         const valueText = truncate(valueOrPlaceholder, available);
 
-        screen.writeString(x, y, prefix, attrs);
-        if (valueText.length > 0) {
+        if (visiblePrefix.length > 0) {
+            screen.writeString(x, y, visiblePrefix, attrs);
+        }
+        if (stringWidth(visiblePrefix) === prefixWidth && valueText.length > 0) {
             screen.writeString(x + prefixWidth, y, valueText, valueAttrs);
         }
     }

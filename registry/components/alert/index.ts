@@ -1,2 +1,2 @@
-export { NotificationBadge as Alert } from '../../../packages/widgets/src/display/NotificationBadge';
-export type { NotificationBadgeOptions, BadgePosition } from '../../../packages/widgets/src/display/NotificationBadge';
+export { Alert } from '@termuijs/widgets';
+export type { AlertOptions } from '@termuijs/widgets';

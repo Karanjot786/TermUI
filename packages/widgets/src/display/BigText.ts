@@ -84,6 +84,10 @@ export class BigText extends Widget {
         this.markDirty();
     }
 
+    getText(): string {
+        return this._text;
+    }
+
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;

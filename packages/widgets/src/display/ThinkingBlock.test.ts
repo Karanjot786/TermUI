@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import * as core from '@termuijs/core';
 import * as motion from '@termuijs/motion';
-import { Screen, type KeyEvent, caps } from '@termuijs/core';
+import { Screen, type KeyEvent, caps, stringWidth } from '@termuijs/core';
 import { ThinkingBlock } from './ThinkingBlock.js';
 
 const key = (k: string): KeyEvent => ({ key: k, ctrl: false, alt: false, shift: false, raw: Buffer.alloc(0), stopPropagation: () => {}, preventDefault: () => {} });
@@ -167,6 +167,36 @@ describe('ThinkingBlock', () => {
         const screen = render(block);
 
         expect(screen.back[0]?.[0]?.char).toBe('[');
+    });
+
+    it('clips collapsed text to the widget width', () => {
+        const block = new ThinkingBlock();
+        const screen = new Screen(4, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        block.updateRect({ x: 0, y: 0, width: 4, height: 1 });
+        block.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(4);
+        }
+    });
+
+    it('keeps expanded rendering inside a narrow widget', () => {
+        const block = new ThinkingBlock({
+            thinking: 'Narrow content should stay inside the available box',
+        });
+        const screen = new Screen(3, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        block.handleKey(key('enter'));
+        block.updateRect({ x: 0, y: 0, width: 3, height: 3 });
+        block.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(3);
+            expect(call[1]).toBeLessThan(3);
+        }
     });
 
 });

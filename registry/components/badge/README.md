@@ -34,10 +34,10 @@ constructor(text: string, style?: Partial<Style>, opts?: BadgeOptions)
 
 ### Methods
 
-- `setText(text: string): void` — Update the badge text
-- `getText(): string` — Get the current badge text
-- `setVariant(variant: BadgeVariant): void` — Update the badge variant
-- `getVariant(): BadgeVariant` — Get the current badge variant
+- `setText(text: string): void` - Update the badge text
+- `getText(): string` - Get the current badge text
+- `setVariant(variant: BadgeVariant): void` - Update the badge variant
+- `getVariant(): BadgeVariant` - Get the current badge variant
 
 ## Example
 

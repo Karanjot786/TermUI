@@ -5,6 +5,7 @@ import {
   type KeyEvent,
   styleToCellAttrs,
   stringWidth,
+  truncate,
   caps,
 } from "@termuijs/core";
 import { Widget } from "../base/Widget.js";
@@ -13,6 +14,7 @@ export interface SliderOptions {
   min?: number;
   max?: number;
   step?: number;
+  value?: number;
   color?: Color;
   showValue?: boolean;
 }
@@ -40,6 +42,7 @@ export class Slider extends Widget {
     this._step = opts.step ?? 1;
     this._color = opts.color ?? { type: "named", name: "cyan" };
     this._showValue = opts.showValue ?? true;
+    this._value = Math.max(this._min, Math.min(this._max, opts.value ?? this._min));
   }
 
   getValue(): number {
@@ -89,6 +92,14 @@ export class Slider extends Widget {
       0,
       width - prefixWidth - suffixWidth
     );
+
+    if (trackWidth === 0 && prefixWidth + suffixWidth > width) {
+      screen.writeString(x, y, truncate(`${prefix}${suffix}`, width, ""), {
+        ...attrs,
+        bold: true,
+      });
+      return;
+    }
 
     const ratio =
       (this._value - this._min) /
