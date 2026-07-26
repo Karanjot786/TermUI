@@ -44,4 +44,14 @@ describe('FormBuilder', () => {
         expect(triggerSubmit).toBeDefined();
         expect(() => triggerSubmit?.()).not.toThrow();
     });
+
+    it("renders a reset button when showResetButton is true", () => {
+      const screen = render(
+        <FormBuilder showResetButton={true} resetButtonText="Clear Form">
+          <text>Child content</text>
+        </FormBuilder>
+      );
+
+      expect(screen.getByText("Clear Form")).toBeTruthy();
+    });
 });

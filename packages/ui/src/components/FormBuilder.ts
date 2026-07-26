@@ -12,14 +12,29 @@ export const FormContext = createContext<FormContextValue>({
 export interface FormBuilderProps {
     onSubmit?: () => void;
     children?: VNode | VNode[];
+    showResetButton?: boolean;
+    resetButtonText?: string;
 }
 
-export function FormBuilder({ onSubmit, children }: FormBuilderProps) {
+export function FormBuilder({ onSubmit,
+   children,
+   showResetButton = false,
+   resetButtonText = "Reset"
+ }: FormBuilderProps) {
     const value = {
         submit: () => {
             if (onSubmit) onSubmit();
         }
     };
+    const childrenArray = Array.isArray(children) ? [...children] : [children];
+    
+    if (showResetButton) {
+      childrenArray.push(
+        createElement("button", {
+          type: "reset"
+        }, resetButtonText)
+      );
+    }
     return createElement(FormContext.Provider, { value }, children);
 }
 
