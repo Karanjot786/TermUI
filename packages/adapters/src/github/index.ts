@@ -88,6 +88,16 @@ export interface PullRequest {
     login: string
   }
   draft?: boolean
+  merged?: boolean
+  merged_at?: string | null
+  body?: string | null
+  labels?: Array<{ id: number; name: string; color: string }>
+  assignees?: Array<{ login: string }>
+  head: { ref: string; sha: string }
+  base: { ref: string; sha: string }
+  created_at: string
+  updated_at: string
+  closed_at: string | null
 }
 
 export interface ReleasesListParams {
