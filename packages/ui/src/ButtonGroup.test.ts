@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Screen, type KeyEvent } from '@termuijs/core';
+import { Screen, stringWidth, type KeyEvent } from '@termuijs/core';
 import { ButtonGroup } from './ButtonGroup.js';
 
 function makeKey(key: string): KeyEvent {
@@ -85,5 +85,21 @@ describe('ButtonGroup', () => {
         buttonGroup.handleKey(makeKey('right'));
 
         expect(buttonGroup.getActiveValue()).toBe('three');
+    });
+
+    it('clips wide-character labels by cell width', () => {
+        const buttonGroup = new ButtonGroup([
+            { label: '\u8868\u8868\u8868\u8868', value: 'wide' },
+            { label: 'Two', value: 'two' },
+        ]);
+        const screen = new Screen(6, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        buttonGroup.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+        buttonGroup.render(screen);
+
+        for (const [x, , text] of writeSpy.mock.calls) {
+            expect(x + stringWidth(String(text))).toBeLessThanOrEqual(5);
+        }
     });
 });

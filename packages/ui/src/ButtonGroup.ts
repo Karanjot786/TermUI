@@ -7,6 +7,8 @@ import {
     mergeStyles,
     defaultStyle,
     styleToCellAttrs,
+    stringWidth,
+    truncate,
 } from '@termuijs/core';
 
 export interface ButtonGroupItem {
@@ -126,10 +128,12 @@ export class ButtonGroup extends Widget {
 
             if (remaining <= 0) return;
 
+            const visibleLabel = truncate(label, remaining, '');
+
             screen.writeString(
                 col,
                 y,
-                label.slice(0, remaining),
+                visibleLabel,
                 {
                     ...attrs,
                     fg: active ? this._activeColor : this._inactiveColor,
@@ -138,7 +142,7 @@ export class ButtonGroup extends Widget {
                 }
             );
 
-            col += label.length;
+            col += stringWidth(visibleLabel);
 
             if (i < this._items.length - 1) {
                 const spacerRemaining = x + width - col;
