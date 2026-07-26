@@ -451,7 +451,7 @@ export function createStore<T extends object>(
                 let res: T | undefined;
                 const mw = options.middleware![i];
                 mw(prevState, currentPartial, (transformed, nextActionName) => {
-                    res = dispatch(i + 1, transformed, nextActionName ?? currentActionName);
+                    res = dispatch(i + 1, transformed, nextActionName !== undefined ? nextActionName : currentActionName);
                     return res;
                 }, currentActionName);
                 return res !== undefined ? res : state;

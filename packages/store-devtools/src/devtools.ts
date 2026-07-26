@@ -80,7 +80,7 @@ export function devtools<T>(options: DevToolsOptions = {}): Middleware<T> & { ap
         const nextState = next(update, actionName);
         
         const action: DevToolsAction<T> = {
-            type: actionName || 'anonymous',
+            type: actionName || (typeof update === 'object' && update && 'type' in update ? String((update as any).type) : 'anonymous'),
             payload: update,
             timestamp: Date.now()
         };
