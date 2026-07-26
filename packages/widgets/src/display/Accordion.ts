@@ -202,6 +202,26 @@ export class Accordion extends Widget {
         return this._sections;
     }
 
+    /** Get the expand indicator character. */
+    getExpandChar(): string {
+        return this._expandChar;
+    }
+
+    /** Get the collapse indicator character. */
+    getCollapseChar(): string {
+        return this._collapseChar;
+    }
+
+    /** Get whether multiple sections can be open simultaneously. */
+    getMultiple(): boolean {
+        return this._multiple;
+    }
+
+    /** Get the currently open section index. */
+    getOpenIndex(): number {
+        return this._openIndex;
+    }
+
     // ── Keyboard ────────────────────────────────────────────────────────
 
     /**
@@ -309,4 +329,4 @@ export class Accordion extends Widget {
         }
         this._style.height = total;
     }
-}
+}
