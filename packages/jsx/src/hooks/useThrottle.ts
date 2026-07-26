@@ -25,7 +25,7 @@ export function useThrottle<T>(value: T, intervalMs: number): T {
             } else {
                 timeoutRef.current = null;
             }
-        }, intervalMs);
+        }, intervalRef.current);
     };
     // Effect to handle value updates and start throttle timer
     useEffect(() => {

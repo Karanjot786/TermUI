@@ -683,7 +683,7 @@ export function useInfiniteQuery<T, P = number>(
                 setError(err instanceof Error ? err : new Error(String(err)));
                 setLoading(false);
             });
-    }, [nextParam, queryFn]);
+    }, [nextParam, queryFn, loadingRef]);
 
     return { pages, error, loading, hasNextPage, fetchNextPage };
 }

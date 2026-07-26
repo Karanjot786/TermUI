@@ -9,12 +9,22 @@ export type SetConfValue<T extends Record<string, unknown>> =
 
 export type UseConfResult<T extends Record<string, unknown>> = readonly [T, SetConfValue<T>]
 
+interface ConfInstance<T extends Record<string, unknown>> {
+  store: T;
+  get<K extends keyof T>(key: K): T[K];
+  set<K extends keyof T>(key: K, value: T[K]): void;
+  set(object: Partial<T>): void;
+  has<K extends keyof T>(key: K): boolean;
+  delete<K extends keyof T>(key: K): void;
+  clear(): void;
+}
+
 type ConfConstructor = new <T extends Record<string, unknown> = Record<string, unknown>>(
   options?: Readonly<Partial<ConfOptions<T>>>
-) => { store: T }
+) => ConfInstance<T>
 
 interface ConfStore<T extends Record<string, unknown>> {
-  config: { store: T }
+  config: ConfInstance<T>
   value: T
   setValue: SetConfValue<T>
 }

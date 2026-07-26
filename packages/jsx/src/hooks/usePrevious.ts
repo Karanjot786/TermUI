@@ -1,4 +1,4 @@
-import { useEffect, useRef } from '../hooks.js';
+import { useLayoutEffect, useRef } from '../hooks.js';
 
 /**
  * usePrevious — returns the value held during the previous render.
@@ -17,7 +17,7 @@ import { useEffect, useRef } from '../hooks.js';
 export function usePrevious<T>(value: T): T | undefined {
     const ref = useRef<T | undefined>(undefined);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         ref.current = value;
     });
 

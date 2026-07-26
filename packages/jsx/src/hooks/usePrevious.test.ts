@@ -4,13 +4,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
     createFiber, setCurrentFiber, clearCurrentFiber,
-    setRequestRender, runEffects, destroyFiber,
+    setRequestRender, runEffects, runLayoutEffects, destroyFiber,
 } from '../hooks.js';
 import { usePrevious } from './usePrevious.js';
 
 function renderWithFiber<T>(fiber: ReturnType<typeof createFiber>, fn: () => T): T {
     setCurrentFiber(fiber);
     const result = fn();
+    runLayoutEffects(fiber);
     clearCurrentFiber();
     runEffects(fiber);
     return result;
