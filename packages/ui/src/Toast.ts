@@ -78,6 +78,8 @@ export class Toast extends Widget {
     this._messages = this._messages.filter(m => m.expireAt > now);
     if (this._messages.length === 0) return;
     const { x, y, width, height } = this._rect;
+    if (width <= 2 || height <= 0) return;
+
     const visible = this._messages.slice(-this._maxVisible);
     const tw = Math.min(40, width - 2);
     const isRight = this._position.includes('right');
