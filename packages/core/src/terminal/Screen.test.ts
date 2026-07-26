@@ -114,6 +114,27 @@ describe('Screen', () => {
         expect(screen.back[0][0].char).toBe(' ');
     });
 
+    it('writeString applies _translateY offset in scrolled containers', () => {
+        const screen = new Screen(20, 10);
+        // Simulate a scrolled container: push a translateY offset
+        // This is how ScrollView offsets content rendering
+        screen.pushTranslateY(-3);
+
+        // Row 2 + (-3) = -1, which is out of bounds, so clipped
+        screen.writeString(0, 2, 'Hello');
+        expect(screen.back[0][0].char).toBe(' ');
+        expect(screen.back[1][0].char).toBe(' ');
+
+        // For positive translateY, content should appear shifted down
+        screen.popTranslateY();
+        screen.pushTranslateY(2);
+        screen.writeString(0, 0, 'Hi');
+        // Row 0 + translateY(2) = 2
+        expect(screen.back[2][0].char).toBe('H');
+        expect(screen.back[2][1].char).toBe('i');
+        screen.popTranslateY();
+    });
+
     it('writeString handles wide CJK characters with unicode support enabled', () => {
         const screen = new Screen(10, 3);
         screen.writeString(0, 0, '你好');

@@ -374,6 +374,8 @@ export class Screen {
     ): void {
         row = Math.floor(row);
         col = Math.floor(col);
+        // Apply Y translation before bounds/clip checks (mirrors setCell behavior)
+        row += this._translateY;
         if (!(row >= 0 && row < this._rows)) return;
 
         // Strip ANSI control sequences from user-supplied content to prevent escape injection
