@@ -76,7 +76,12 @@ export function memo<P extends Record<string, any>>(
 
         if (fiber) {
             const entry = cache.get(fiber);
-            if (entry && compare(entry.prevProps, props as P)) {
+            // Exclude children from comparison — children are new VNode
+            // references every render, so including them means memo() never
+            // skips a re-render for components that receive children.
+            const { children: _prevChildren, ...prevRest } = (entry?.prevProps ?? {}) as any;
+            const { children: _nextChildren, ...nextRest } = (props ?? {}) as any;
+            if (entry && compare(prevRest, nextRest)) {
                 return entry.prevResult;
             }
             const result = component(props);
