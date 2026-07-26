@@ -26,15 +26,16 @@ export class History<T> {
     }
 
     undo(): T | undefined {
-        if (this.undoStack.length <= 1) {
+        if (this.undoStack.length === 0) {
+            return undefined;
+        }
+
+        if (this.undoStack.length === 1) {
             return this.undoStack[0];
         }
 
-        const current = this.undoStack.pop();
-
-        if (current !== undefined) {
-            this.redoStack.push(current);
-        }
+        const current = this.undoStack.pop()!;
+        this.redoStack.push(current);
 
         return this.undoStack[this.undoStack.length - 1];
     }

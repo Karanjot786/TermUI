@@ -11,6 +11,7 @@ export interface InlineViewportOptions {
  * Preserves scrollback by writing lines to stdout rather than taking over the alternate screen.
  */
 export function renderInlineToTerminal(terminal: Terminal, screen: Screen, rows: number): void {
+    if (rows <= 0) return;
     const totalRows = screen.rows;
     const start = Math.max(0, totalRows - rows);
     const lines: string[] = [];
