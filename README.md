@@ -134,6 +134,7 @@ render(
 | [`@termuijs/dev-server`](./packages/dev-server) | Hot-reload dev server with graceful restart in under 200ms |
 | [`@termuijs/quick`](./packages/quick) | Fluent builder API for dashboards in ~20 lines |
 | [`create-termui-app`](./packages/create-termui-app) | Project scaffolding CLI |
+| [`@termuijs/adapters`](./packages/adapters) | Adapters for Git, GitHub, Conf, AI, clipboard, localStorage, and more |
 
 ## Features
 
