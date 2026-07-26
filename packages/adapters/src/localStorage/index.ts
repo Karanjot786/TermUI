@@ -7,6 +7,7 @@ export interface LocalStorageAdapter {
   set<T>(key: string, value: T): void
   remove(key: string): void
   clear(): void
+  has(key: string): boolean
 }
 
 function resolveStorePath(service: string): string {
@@ -44,5 +45,9 @@ export function useLocalStorage(service: string): LocalStorageAdapter {
       writeStore(storePath, s)
     },
     clear(): void { writeStore(storePath, {}) },
+    has(key: string): boolean {
+      const s = readStore(storePath)
+      return key in s
+    },
   }
 }

@@ -31,6 +31,9 @@ describe('useLocalStorage', () => {
     expect(store.get<{ a: number }>('o')).toEqual({ a: 1 })
   })
   it('removes a key',  () => { store.set('r', 'v'); store.remove('r'); expect(store.get('r')).toBeNull() })
+  it('returns false for key that does not exist', () => expect(store.has('missing')).toBe(false))
+  it('returns true after setting a key', () => { store.set('h', 'val'); expect(store.has('h')).toBe(true) })
+  it('returns false after removing a key', () => { store.set('h', 'val'); store.remove('h'); expect(store.has('h')).toBe(false) })
   it('clears all keys', () => {
     store.set('a', 1); store.set('b', 2); store.clear()
     expect(store.get('a')).toBeNull(); expect(store.get('b')).toBeNull()
