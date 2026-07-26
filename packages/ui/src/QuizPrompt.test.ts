@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 import { QuizPrompt } from './QuizPrompt.js';
 
 const SAMPLE_QUESTIONS = [
@@ -129,5 +129,24 @@ describe('QuizPrompt', () => {
         expect(quiz['_currentIndex']).toBe(0);
         expect(onComplete).not.toHaveBeenCalled();
         vi.useRealTimers();
+    });
+
+    it('renders mixed-width rows within the prompt width', () => {
+        const quiz = new QuizPrompt([
+            {
+                question: '\u8868\u8868\u8868\u8868?',
+                options: ['\u8868\u8868\u8868\u8868', 'ok'],
+                correctIndex: 0,
+            },
+        ]);
+        const screen = new Screen(6, 5);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        quiz.updateRect({ x: 0, y: 0, width: 5, height: 5 });
+        quiz.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(stringWidth(String(call[2]))).toBeLessThanOrEqual(5);
+        }
     });
 });
