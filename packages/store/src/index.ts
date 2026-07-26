@@ -21,8 +21,6 @@ export type {
     PersistOptions,
 } from './store.js';
 
-export { slices } from './slices.js';
-export type { SliceDef } from './slices.js';
 
 export { undoRedo } from './middleware/history.js';
 export type { UndoRedoOptions, UndoRedoMiddleware } from './middleware/history.js';
@@ -36,8 +34,6 @@ export type { ThrottleOptions } from './middleware/throttle.js';
 export { validator } from './middleware/validator.js';
 export type { ValidatorOptions } from './middleware/validator.js';
 
-export { signal, mutate } from './mutate.js';
-export type { Signal } from './mutate.js';
 
 export type { EqualityFn } from './shallow.js';
 export { shallow } from './shallow.js';
