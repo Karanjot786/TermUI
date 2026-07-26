@@ -11,6 +11,9 @@ export interface SequenceStep {
 
 export type AnimationRunner = (done: () => void) => () => void
 
+/** Reason why an animation runner was cancelled. */
+export type CancelReason = 'complete' | 'cancel'
+
 export function sequence(
   runners: AnimationRunner[],
   onComplete?: () => void
