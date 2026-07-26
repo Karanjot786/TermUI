@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, caps, createKeyEvent } from '@termuijs/core';
+import { Screen, caps, createKeyEvent, stringWidth } from '@termuijs/core';
 import { Rating } from './Rating.js';
 
 /** Shorthand to build a KeyEvent for a given key name. */
@@ -241,6 +241,25 @@ describe('Rating', () => {
 
         rating.setValue(4);
         expect(onChange).toHaveBeenCalledWith(4);
+    });
+
+    it('keeps custom wide glyphs and labels within the widget width', () => {
+        const rating = new Rating({}, {
+            value: 2,
+            max: 4,
+            filledChar: '\u8868',
+            emptyChar: '\u8868',
+            showLabel: true,
+        });
+        const screen = new Screen(5, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        rating.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+        rating.render(screen);
+
+        for (const [x, , text] of writeSpy.mock.calls) {
+            expect(x + stringWidth(String(text))).toBeLessThanOrEqual(5);
+        }
     });
 });
 
