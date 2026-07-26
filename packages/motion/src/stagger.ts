@@ -11,6 +11,10 @@ import * as sequencing from './sequence.js';
  * Returns a master cancel function to stop pending and active animations.
  */
 export function stagger(animations: AnimationRunner[], delayMs: number, onComplete?: () => void): () => void {
+    if (!animations || animations.length === 0) {
+        onComplete?.();
+        return () => {};
+    }
     const normalizedDelayMs = Math.max(0, delayMs);
     const delayedAnimations = animations.map((runner, index) => withDelay(runner, index * normalizedDelayMs));
     return sequencing.parallel(delayedAnimations, onComplete);

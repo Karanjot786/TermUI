@@ -44,6 +44,15 @@ describe('stagger()', () => {
         expect(onComplete).toHaveBeenCalledTimes(1);
     });
 
+    it('handles undefined and null animations without throwing', () => {
+        const onComplete = vi.fn();
+        expect(() => stagger(undefined as any, 100, onComplete)).not.toThrow();
+        expect(onComplete).toHaveBeenCalledTimes(1);
+        const onComplete2 = vi.fn();
+        expect(() => stagger(null as any, 50, onComplete2)).not.toThrow();
+        expect(onComplete2).toHaveBeenCalledTimes(1);
+    });
+
     it('starts all animations immediately for zero delay', () => {
         const starts: number[] = [];
         const onComplete = vi.fn();
