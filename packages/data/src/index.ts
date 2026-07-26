@@ -17,6 +17,17 @@ export { http } from './http.js';
 export type { HealthResult, Endpoint } from './http.js';
 export { invalidate, setCacheMaxSize, getCache, setCache, isFresh, clearCache, fetchShared } from './cache.js';
 
+export { SWRCacheStore } from './swr-cache.js';
+export type { SWRCacheOptions, SWRCacheEntry, SWRFetchOptions } from './swr-cache.js';
+
+export { ResilientWebSocket } from './resilient-websocket.js';
+export type {
+    ResilientWebSocketOptions,
+    WebSocketConnectionStatus,
+    ResilientWebSocketEvents,
+    ReconnectBackoffOptions,
+} from './resilient-websocket.js';
+
 
 // ── Reactive hooks ────────────────────────────────────
 export {
