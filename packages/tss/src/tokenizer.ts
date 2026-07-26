@@ -86,6 +86,17 @@ export function tokenize(source: string): Token[] {
                 advance();
                 let pseudo = '';
                 while (pos < source.length && /[a-zA-Z-]/.test(peek())) pseudo += advance();
+                if (peek() === '(') {
+                    advance();
+                    pseudo += '(';
+                    let depth = 1;
+                    while (pos < source.length && depth > 0) {
+                        const next = advance();
+                        pseudo += next;
+                        if (next === '(') depth++;
+                        if (next === ')') depth--;
+                    }
+                }
                 tokens.push({ type: TokenType.PseudoClass, value: pseudo, line, col: startCol });
                 continue;
             }
