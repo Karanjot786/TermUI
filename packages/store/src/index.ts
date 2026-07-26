@@ -30,3 +30,11 @@ export type {
     StoreSnapshotHistory,
 } from './snapshot-history.js';
 
+export { TimeTravel, createTimeTravel } from './time-travel.js';
+export type {
+    TimeTravelOptions,
+    TimeTravelSnapshot,
+    TimeTravelController,
+} from './time-travel.js';
+
+
