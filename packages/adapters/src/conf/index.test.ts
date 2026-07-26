@@ -114,4 +114,29 @@ describe('useConf', () => {
       'useConf() requires the optional peer dependency `conf`.'
     )
   })
+
+  it('rejects app names with path traversal or separators', () => {
+    const unsafeNames = [
+      '../outside',
+      '/tmp/outside',
+      'nested/app',
+      'nested\\app',
+      '.hidden',
+    ]
+
+    for (const appName of unsafeNames) {
+      expect(() => useConf(appName, { theme: 'dark' })).toThrow(
+        'useConf() appName must contain only letters, numbers, dots, underscores, and hyphens'
+      )
+    }
+  })
+
+  it('accepts simple app identifiers with dots, underscores, and hyphens', () => {
+    tempHomeDirectory = mkdtempSync(join(tmpdir(), 'termui-conf-'))
+    setHomeDirectory(tempHomeDirectory)
+
+    const [config] = useConf('my-app_1.test', { theme: 'dark' })
+
+    expect(config).toEqual({ theme: 'dark' })
+  })
 })

@@ -49,6 +49,12 @@ export class RenderHook {
         return out;
     }
 
+    /** Requeue previously flushed logs back to the front of the buffer */
+    requeue(logs: string): void {
+        if (!logs) return;
+        this._buffer.unshift(logs);
+    }
+
     /** Write directly to process.stdout, bypassing any buffering */
     writeRaw(text: string): void {
         process.stdout.write(text);
