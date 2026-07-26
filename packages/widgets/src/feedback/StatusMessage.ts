@@ -2,7 +2,7 @@
 // @termuijs/widgets — StatusMessage widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, caps, stringWidth, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export type StatusVariant = 'success' | 'error' | 'warning' | 'info';
@@ -81,10 +81,11 @@ export class StatusMessage extends Widget {
         screen.writeString(x, y, icon, { ...attrs, fg: color, bold: true });
 
         // Space + message
-        const msgX = x + icon.length + 1;
-        const remaining = width - icon.length - 1;
+        const iconWidth = stringWidth(icon);
+        const msgX = x + iconWidth + 1;
+        const remaining = width - iconWidth - 1;
         if (remaining > 0) {
-            screen.writeString(msgX, y, this._message.slice(0, remaining), { ...attrs, fg: color });
+            screen.writeString(msgX, y, truncate(this._message, remaining, ''), { ...attrs, fg: color });
         }
     }
 }

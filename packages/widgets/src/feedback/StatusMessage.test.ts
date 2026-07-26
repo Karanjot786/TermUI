@@ -181,4 +181,12 @@ describe('StatusMessage', () => {
         expect(widget.isDirty).toBe(false);
     });
 
+    it('truncates double-width message text without overflowing width', () => {
+        const screen = renderStatus(
+            new StatusMessage('🌟🌟🌟🌟🌟', {}, { icon: '🚀' }),
+            8,
+            1,
+        );
+        expect(rowText(screen, 0).length).toBeLessThanOrEqual(8);
+    });
 });
