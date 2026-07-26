@@ -48,6 +48,8 @@ export function writeComponentFiles(
 }
 
 function normalizeComponentPath(slug: string, filePath: string): string {
+    // Normalize Windows backslashes to forward slashes for cross-platform compatibility
+    filePath = filePath.replace(/\\/g, '/');
     const prefix = `registry/components/${slug}/`;
     if (filePath.startsWith(prefix)) {
         return filePath.slice(prefix.length);

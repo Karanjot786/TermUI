@@ -52,4 +52,20 @@ describe('writeComponentFiles', () => {
             [{ path: '../../evil.ts', content: 'x' }], { dryRun: false }))
             .toThrow(/outside/);
     });
+
+    it('normalizes Windows backslashes in registry file paths', () => {
+        const root = mkdtempSync(join(tmpdir(), 'tcli-'));
+        // Simulate Windows-style paths from registry
+        const written = writeComponentFiles(root, 'spinner', [
+            { path: 'registry\\components\\spinner\\index.ts', content: 'x' },
+            { path: 'registry\\components\\spinner\\utils\\helper.ts', content: 'y' },
+        ], { dryRun: false });
+
+        const target1 = join(root, 'spinner', 'index.ts');
+        const target2 = join(root, 'spinner', 'utils', 'helper.ts');
+        expect(existsSync(target1)).toBe(true);
+        expect(existsSync(target2)).toBe(true);
+        expect(written).toContain(target1);
+        expect(written).toContain(target2);
+    });
 });
