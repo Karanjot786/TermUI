@@ -6,7 +6,7 @@
 
 import { Widget } from '@termuijs/widgets';
 import { useState, useEffect, registerCleanup } from '@termuijs/jsx';
-import { caps, type Screen } from '@termuijs/core';
+import { caps, stringWidth, truncate, type Screen } from '@termuijs/core';
 import type { Color } from '@termuijs/core';
 
 // Auto-register cleanup for test isolation
@@ -30,6 +30,7 @@ export class NotificationStore {
     private static _instance: NotificationStore;
     private _notifications: Notification[] = [];
     private _subs: Set<(notifications: Notification[]) => void> = new Set();
+    private _dismissTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
     static getInstance(): NotificationStore {
         if (!NotificationStore._instance) {
@@ -45,12 +46,14 @@ export class NotificationStore {
         this._emit();
 
         if (durationMs && durationMs > 0) {
-            setTimeout(() => this.dismiss(id), durationMs);
+            const timer = setTimeout(() => this.dismiss(id), durationMs);
+            this._dismissTimers.set(id, timer);
         }
         return id;
     }
 
     dismiss(id: string): void {
+        this._clearDismissTimer(id);
         const prev = this._notifications;
         this._notifications = this._notifications.filter(n => n.id !== id);
         if (this._notifications.length !== prev.length) {
@@ -60,12 +63,14 @@ export class NotificationStore {
 
     dismissAll(): void {
         if (this._notifications.length > 0) {
+            this._clearAllDismissTimers();
             this._notifications = [];
             this._emit();
         }
     }
 
     reset(): void {
+        this._clearAllDismissTimers();
         this._notifications = [];
         this._subs.clear();
     }
@@ -83,6 +88,21 @@ export class NotificationStore {
         for (const fn of this._subs) {
             fn(this._notifications.map((notification) => ({ ...notification })));
         }
+    }
+
+    private _clearDismissTimer(id: string): void {
+        const timer = this._dismissTimers.get(id);
+        if (!timer) return;
+
+        clearTimeout(timer);
+        this._dismissTimers.delete(id);
+    }
+
+    private _clearAllDismissTimers(): void {
+        for (const timer of this._dismissTimers.values()) {
+            clearTimeout(timer);
+        }
+        this._dismissTimers.clear();
     }
 }
 
@@ -199,7 +219,8 @@ export class NotificationCenter extends Widget {
                 : TYPE_ICONS[notif.type].ascii;
 
             const raw = `${icon} ${notif.message}`;
-            const label = ` ${raw} `.slice(0, tw).padEnd(tw);
+            const clipped = truncate(` ${raw} `, tw, '');
+            const label = clipped + ' '.repeat(Math.max(0, tw - stringWidth(clipped)));
 
             screen.writeString(sx, sy + i, label, {
                 fg: TYPE_COLORS[notif.type],

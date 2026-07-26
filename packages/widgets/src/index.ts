@@ -39,8 +39,8 @@ export { Image } from './display/Image.js';
 export type { ImageOptions } from './display/Image.js';
 
 // ── Virtual Scroll Helpers ────────────────────────────
-export { computeRange, computeVariableRange } from './input/virtual-scroll.js';
-export type { ScrollRange } from './input/virtual-scroll.js';
+export { computeRange, computeVariableRange, createVariableHeightVirtualizer } from './input/virtual-scroll.js';
+export type { ScrollRange, VariableRangeOptions } from './input/virtual-scroll.js';
 
 // ── Spring Scroll Helper ─────────────────────────────
 export { calculateSpringScroll } from './scroll.js';
@@ -138,7 +138,14 @@ export type { DraggableOptions, DroppableOptions } from './layout/DragAndDrop.js
 export { Fill } from './layout/Fill.js';
 export type { FillOptions } from './layout/Fill.js';
 export { SplitPane } from './layout/SplitPane.js';
-export type { SplitPaneOptions, SplitDirection } from './layout/SplitPane.js';
+export type { SplitPaneOptions } from './layout/SplitPane.js';
+export { Workspace } from './layout/Workspace.js';
+
+export type {
+    WorkspaceLayout,
+    WorkspaceOptions,
+    WorkspaceStorage,
+} from './layout/Workspace.js';
 
 // ── Feedback Widgets ──────────────────────────────────
 export { ProgressBar } from './feedback/ProgressBar.js';
@@ -192,6 +199,10 @@ export type { BulletChartOptions, BulletRange } from './data/BulletChart.js';
 // ── New Display Widgets ───────────────────────────────
 export { Breadcrumbs } from './display/Breadcrumbs.js';
 export type { BreadcrumbsOptions } from './display/Breadcrumbs.js';
+export { StatusBar, createApiStatusBar, formatApiStatusBar } from './display/StatusBar.js';
+export type { ApiStatusBarOptions, StatusBarOptions } from './display/StatusBar.js';
+export { LoggerPanel } from './display/LoggerPanel.js';
+export type { LoggerPanelOptions, LogEntry, LogLevel } from './display/LoggerPanel.js';
 export { Avatar } from './display/Avatar.js';
 export type { AvatarOptions } from './display/Avatar.js';
 

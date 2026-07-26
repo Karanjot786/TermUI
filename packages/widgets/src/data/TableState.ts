@@ -1,5 +1,5 @@
 // packages/widgets/src/data/TableState.ts
-import { TableRow } from './Table.js';
+import type { TableRow } from './Table.js';
 
 /** External state object for Table widget. */
 export interface TableState {

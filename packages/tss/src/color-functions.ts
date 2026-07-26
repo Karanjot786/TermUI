@@ -85,7 +85,8 @@ export function alpha(color: string, amount: string | number): string {
  * Returns the resolved color string, or the original value if not matched.
  */
 export function evalColorFunction(value: string): string {
-    const match = value.match(/^(lighten|darken|alpha)\(\s*(#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3}))\s*,\s*([^)]+)\s*\)$/);
+    const trimmed = value.trim();
+    const match = trimmed.match(/^(lighten|darken|alpha)\(\s*(#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3}))\s*,\s*([^)]+)\s*\)$/);
     if (!match) return value;
     const [, fn, color, amount] = match;
     if (fn === 'lighten') return lighten(color, amount.trim());

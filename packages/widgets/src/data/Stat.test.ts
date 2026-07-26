@@ -23,6 +23,21 @@ describe('Stat', () => {
         expect(row1).toBe('Value');
     });
 
+    it('clips label and value to the available width', async () => {
+        const { Screen, stringWidth } = await import('@termuijs/core');
+        const { Stat } = await import('./Stat.js');
+
+        const stat = new Stat('VeryLongLabel', 'VeryLongValue');
+        const screen = new Screen(5, 2);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        stat.updateRect({ x: 0, y: 0, width: 5, height: 2 });
+        stat.render(screen);
+
+        for (const [x, , text] of writeSpy.mock.calls) {
+            expect(x + stringWidth(text)).toBeLessThanOrEqual(5);
+        }
+    });
+
     it('setValue updates rendered output', async () => {
         vi.stubEnv('NO_UNICODE', '');
         vi.stubEnv('TERM', '');

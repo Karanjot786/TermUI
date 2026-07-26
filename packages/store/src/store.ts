@@ -128,8 +128,9 @@ function flushBatch(threw: boolean, immediate = false) {
                         listener(newState, prevState);
                     }
                 } catch (e) {
-                    for (const [, entry] of stores) {
-                        entry.rollback();
+                    const failedEntry = stores.find(([l]) => l === listeners);
+                    if (failedEntry) {
+                        failedEntry[1].rollback();
                     }
                     throw e;
                 }
@@ -416,13 +417,13 @@ export function createStore<T extends object>(
                             nextState,
                             changes,
                             commit: () => { state = { ...state, ...changes } as T; persistState(); return state; },
-                            rollback: () => { state = prevState; },
+                            rollback: () => { state = prevState; persistState(); },
                         });
                     } else {
                         Object.assign(existing.changes, finalPartial);
                         existing.nextState = nextState;
                         existing.commit = () => { state = { ...state, ...existing.changes } as T; persistState(); return state; };
-                        existing.rollback = () => { state = existing.prevState; };
+                        existing.rollback = () => { state = existing.prevState; persistState(); };
                     }
                 } else {
                     state = nextState; 
@@ -494,6 +495,7 @@ export function createStore<T extends object>(
     };
 
     const destroy = (): void => {
+        _batchStores.delete(listeners);
         listeners.clear();
         if (writeTimeout) {
             clearTimeout(writeTimeout);
@@ -526,13 +528,13 @@ export function createStore<T extends object>(
                     nextState,
                     changes,
                     commit: () => { state = { ...state, ...changes } as T; persistState(); return state; },
-                    rollback: () => { state = prevState; },
+                    rollback: () => { state = prevState; persistState(); },
                 });
             } else {
                 Object.assign(existing.changes, changes);
                 existing.nextState = nextState;
-                existing.commit = () => { state = nextState; persistState(); };
-                existing.rollback = () => { state = existing.prevState; };
+                existing.commit = () => { state = { ...state, ...existing.changes } as T; persistState(); return state; };
+                existing.rollback = () => { state = existing.prevState; persistState(); };
             }
         } else {
             state = nextState;
@@ -620,17 +622,28 @@ export function createStore<T extends object>(
         equalityRef.current = equalityFn as EqualityFn<U> | undefined;
 
         useEffect(() => {
-            let prevSelected = selectorRef.current(store.getState());
+            let latestSelected = selectorRef.current(store.getState());
+
             const unsubscribe = store.subscribe((newState) => {
                 const newSelected = selectorRef.current(newState);
                 const areEqual = equalityRef.current
-                    ? equalityRef.current(prevSelected as U, newSelected as U)
-                    : Object.is(prevSelected, newSelected);
+                    ? equalityRef.current(latestSelected as U, newSelected as U)
+                    : Object.is(latestSelected, newSelected);
                 if (!areEqual) {
-                    prevSelected = newSelected;
+                    latestSelected = newSelected;
                     setSelectedState(newSelected);
                 }
             });
+
+            // Tearing check: did the store change between render and this effect?
+            const areEqual = equalityRef.current
+                ? equalityRef.current(latestSelected as U, selectedState as U)
+                : Object.is(latestSelected, selectedState);
+                
+            if (!areEqual) {
+                setSelectedState(latestSelected);
+            }
+
             return unsubscribe;
         }, []);
 
