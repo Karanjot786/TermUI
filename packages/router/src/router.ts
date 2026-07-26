@@ -4,7 +4,7 @@
 
 import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, unmountAll, type VNode, getCurrentApp } from '@termuijs/jsx';
-import { type NavigationGuardContext, type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern, serializeQuery } from './route.js';
+import { type NavigationGuardContext, type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, type DataResolverMap, type RouterMiddleware, type RouterMiddlewareContext, matchRoute, compilePattern, serializeQuery } from './route.js';
 import { RouterContext } from './hooks.js';
 
 function defaultErrorScreen(err: Error): VNode {
@@ -51,6 +51,7 @@ export class Router {
     private _navigationId = 0;
     private _activeNavigationId = 0;
     private _activeNavigationController: AbortController | null = null;
+    private _middlewares: RouterMiddleware[] = [];
     public autoUnmount = true;
     readonly events = new EventEmitter<RouterEvents>();
 
@@ -63,6 +64,12 @@ export class Router {
         }
     }
 
+    /** Register global navigation middleware */
+    use(middleware: RouterMiddleware): this {
+        this._middlewares.push(middleware);
+        return this;
+    }
+
     /** Register a route */
     addRoute(
         path: string,
@@ -72,6 +79,7 @@ export class Router {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            resolve?: DataResolverMap;
             redirect?: RedirectTarget;
         },
     ): void;
@@ -86,6 +94,7 @@ export class Router {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            resolve?: DataResolverMap;
             redirect?: RedirectTarget;
         },
     ): void;
@@ -98,6 +107,7 @@ export class Router {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            resolve?: DataResolverMap;
             redirect?: RedirectTarget;
         },
         meta?: RouteMeta,
@@ -105,6 +115,7 @@ export class Router {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            resolve?: DataResolverMap;
             redirect?: RedirectTarget;
         } | RedirectTarget,
     ): void {
@@ -113,29 +124,36 @@ export class Router {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            resolve?: DataResolverMap;
             redirect?: RedirectTarget;
         } | undefined = undefined;
+
+        let actualLayout = typeof layout === 'function' ? layout : undefined;
+        if (typeof layout === 'object' && layout !== null) {
+            finalOptions = layout as any;
+        }
 
         if (Array.isArray(childrenOrOptions)) {
             children = childrenOrOptions;
         } else if (childrenOrOptions && typeof childrenOrOptions === 'object') {
-            finalOptions = childrenOrOptions as any;
+            finalOptions = { ...finalOptions, ...(childrenOrOptions as any) };
         }
 
         if (typeof options === 'string' || typeof options === 'function') {
             finalOptions = { ...finalOptions, redirect: options };
         } else if (options && typeof options === 'object') {
-            finalOptions = options;
+            finalOptions = { ...finalOptions, ...(options as any) };
         }
 
         let finalMeta = meta ?? {};
-        if (options === undefined && meta && typeof meta === 'object' && ('lazy' in meta || 'beforeEnter' in meta || 'afterEnter' in meta || 'redirect' in meta)) {
+        if (options === undefined && meta && typeof meta === 'object' && ('lazy' in meta || 'beforeEnter' in meta || 'afterEnter' in meta || 'redirect' in meta || 'resolve' in meta)) {
             finalOptions = meta as any;
             const strippedMeta = { ...meta };
             delete (strippedMeta as any).lazy;
             delete (strippedMeta as any).beforeEnter;
             delete (strippedMeta as any).afterEnter;
             delete (strippedMeta as any).redirect;
+            delete (strippedMeta as any).resolve;
             finalMeta = strippedMeta;
         }
 
@@ -146,12 +164,13 @@ export class Router {
             pattern,
             paramNames,
             component,
-            layout,
+            layout: actualLayout,
             children,
             meta: finalMeta,
             lazy: finalOptions?.lazy,
             beforeEnter: finalOptions?.beforeEnter,
             afterEnter: finalOptions?.afterEnter,
+            resolve: finalOptions?.resolve,
             redirect: finalOptions?.redirect,
         });
         this._applyInitialPathIfPending();
@@ -168,6 +187,7 @@ export class Router {
             lazy?: () => Promise<any>;
             beforeEnter?: (to: string) => boolean | string;
             afterEnter?: (to: string) => void;
+            resolve?: DataResolverMap;
             redirect?: RedirectTarget;
         }>,
     ): void {
@@ -176,6 +196,7 @@ export class Router {
                 lazy: r.lazy,
                 beforeEnter: r.beforeEnter,
                 afterEnter: r.afterEnter,
+                resolve: r.resolve,
                 redirect: r.redirect,
             });
         }
@@ -183,12 +204,13 @@ export class Router {
 
     /** Wrap a route match into a VNode with layout chain and providers */
     wrapScreen(match: RouteMatch): VNode {
-        let screen = createElement(match.route.component, match.params);
+        const props = { ...match.params, ...(match.resolvedData ?? {}) };
+        let screen = createElement(match.route.component, props);
 
         for (let i = match.chain.length - 2; i >= 0; i--) {
             const parent = match.chain[i];
             const Wrapper = parent.layout ?? parent.component;
-            screen = createElement(Wrapper, { ...match.params, outlet: screen });
+            screen = createElement(Wrapper, { ...props, outlet: screen });
         }
 
         const withProvider = createElement(RouterContext.Provider, { value: this }, screen);
@@ -253,6 +275,45 @@ export class Router {
         };
     }
 
+    private async _runMiddlewares(to: string, match: RouteMatch, navigation: NavigationGuardContext): Promise<boolean | string> {
+        const from = this.currentPath;
+        const fromMatch = this._currentMatch;
+
+        for (const mw of this._middlewares) {
+            if (navigation.isStale()) return false;
+            const res = await mw(to, from, { to, from, match, fromMatch, navigation });
+            if (navigation.isStale()) return false;
+            if (res === false || typeof res === 'string') {
+                return res;
+            }
+        }
+        return true;
+    }
+
+    private async _runResolvers(match: RouteMatch, navigation: NavigationGuardContext): Promise<Record<string, any> | false> {
+        const resolved: Record<string, any> = {};
+
+        for (const route of match.chain) {
+            if (route.resolve) {
+                const entries = Object.entries(route.resolve);
+                const results = await Promise.all(
+                    entries.map(async ([key, resolver]) => {
+                        const val = await resolver(match, navigation);
+                        return [key, val] as const;
+                    })
+                );
+
+                if (navigation.isStale()) return false;
+
+                for (const [k, v] of results) {
+                    resolved[k] = v;
+                }
+            }
+        }
+
+        return resolved;
+    }
+
     private _runBeforeEnterGuards(match: RouteMatch, path: string, navigation: NavigationGuardContext): boolean | string {
         for (const route of match.chain) {
             const result = route.beforeEnter?.(path, navigation);
@@ -262,6 +323,44 @@ export class Router {
             }
         }
         return true;
+    }
+
+    private _commitNavigation(
+        resolvedPath: string,
+        match: RouteMatch,
+        options: {
+            modifyHistory?: 'push' | 'replace' | 'none';
+            direction?: 'push' | 'replace' | 'back' | 'forward';
+        },
+        navigation: NavigationGuardContext,
+    ): void {
+        const { modifyHistory = 'push', direction = 'push' } = options;
+
+        if (modifyHistory === 'push') {
+            this._history.push(resolvedPath);
+
+            if (this._history.length > this._maxHistory) {
+                this._history = this._history.slice(-this._maxHistory);
+            }
+        } else if (modifyHistory === 'replace') {
+            if (this._history.length > 0) {
+                this._history[this._history.length - 1] = resolvedPath;
+            } else {
+                this._history.push(resolvedPath);
+            }
+        }
+
+        this._currentMatch = match;
+        const app = getCurrentApp();
+        if (app) app.focus.clearFocus();
+        if (this.autoUnmount) unmountAll();
+        const screen = this.wrapScreen(match);
+
+        const emitEvent = direction === 'back' ? 'back' : 'navigate';
+        if (navigation.isStale()) return;
+        this.events.emit(emitEvent, { match, screen, direction, navigation });
+
+        match.route.afterEnter?.(resolvedPath, navigation);
     }
 
     /**
@@ -276,7 +375,7 @@ export class Router {
             direction?: 'push' | 'replace' | 'back' | 'forward';
             navigation?: NavigationGuardContext;
         } = {},
-    ): void {
+    ): Promise<void> | void {
         const navigation = options.navigation ?? this._beginNavigation();
         const resolvedPath = this._resolveRedirect(path);
         if (navigation.isStale()) return;
@@ -335,37 +434,33 @@ export class Router {
         }
 
         if (typeof guardResult === 'string') {
-            this._executeNavigation(guardResult, { ...options, clearForwardStack: false, navigation });
+            return this._executeNavigation(guardResult, { ...options, clearForwardStack: false, navigation });
+        }
+
+        const hasMiddlewares = this._middlewares.length > 0;
+        const hasResolvers = match.chain.some((r) => r.resolve && Object.keys(r.resolve).length > 0);
+
+        if (!hasMiddlewares && !hasResolvers) {
+            this._commitNavigation(resolvedPath, match, options, navigation);
             return;
         }
 
-        const { modifyHistory = 'push', direction = 'push' } = options;
+        return (async () => {
+            const mwResult = await this._runMiddlewares(resolvedPath, match, navigation);
+            if (navigation.isStale()) return;
 
-        if (modifyHistory === 'push') {
-            this._history.push(resolvedPath);
-
-            if (this._history.length > this._maxHistory) {
-                this._history = this._history.slice(-this._maxHistory);
+            if (mwResult === false) return;
+            if (typeof mwResult === 'string') {
+                await this._executeNavigation(mwResult, { ...options, clearForwardStack: false, navigation });
+                return;
             }
-        } else if (modifyHistory === 'replace') {
-            if (this._history.length > 0) {
-                this._history[this._history.length - 1] = resolvedPath;
-            } else {
-                this._history.push(resolvedPath);
-            }
-        }
 
-        this._currentMatch = match;
-        const app = getCurrentApp();
-        if (app) app.focus.clearFocus();
-        if (this.autoUnmount) unmountAll();
-        const screen = this.wrapScreen(match);
+            const resolvedData = await this._runResolvers(match, navigation);
+            if (navigation.isStale() || resolvedData === false) return;
+            match.resolvedData = resolvedData;
 
-        const emitEvent = direction === 'back' ? 'back' : 'navigate';
-        if (navigation.isStale()) return;
-        this.events.emit(emitEvent, { match, screen, direction, navigation });
-
-        match.route.afterEnter?.(resolvedPath, navigation);
+            this._commitNavigation(resolvedPath, match, options, navigation);
+        })();
     }
 
     private _applyInitialPathIfPending(): void {

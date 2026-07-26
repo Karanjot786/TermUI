@@ -58,6 +58,23 @@ export type RedirectTarget =
     | string
     | ((params: RouteParams) => string);
 
+export type DataResolver<T = any> = (match: RouteMatch, context: NavigationGuardContext) => Promise<T> | T;
+export type DataResolverMap = Record<string, DataResolver>;
+
+export interface RouterMiddlewareContext {
+    to: string;
+    from: string;
+    match: RouteMatch;
+    fromMatch: RouteMatch | null;
+    navigation: NavigationGuardContext;
+}
+
+export type RouterMiddleware = (
+    to: string,
+    from: string,
+    context: RouterMiddlewareContext
+) => Promise<boolean | string | void> | boolean | string | void;
+
 export interface Route {
     /** URL-like path, e.g. "/settings/theme" */
     path: string;
@@ -77,6 +94,8 @@ export interface Route {
     beforeEnter?: BeforeEnterGuard;
     /** Hook called after successful navigation */
     afterEnter?: AfterEnterGuard;
+    /** Async data resolvers map pre-fetched before component instantiation */
+    resolve?: DataResolverMap;
     /** Optional metadata object */
     meta?: RouteMeta;
     /** Declarative redirect target */
@@ -89,6 +108,8 @@ export interface RouteMatch {
     params: RouteParams;
     meta: RouteMeta;
     query: QueryParams;
+    /** Pre-fetched data from route resolvers */
+    resolvedData?: Record<string, any>;
 }
 
 /**

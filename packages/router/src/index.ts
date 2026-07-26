@@ -17,6 +17,10 @@ export type {
     AfterEnterGuard,
     RouteMeta,
     RedirectTarget,
+    DataResolver,
+    DataResolverMap,
+    RouterMiddleware,
+    RouterMiddlewareContext,
 } from './route.js';
 
 // Upstream Hooks
