@@ -6,6 +6,8 @@ import {
     caps,
     prefersReducedMotion,
     styleToCellAttrs,
+    stringWidth,
+    truncate,
 } from '@termuijs/core';
 import { fadeIn, fadeOut } from '@termuijs/motion';
 import { Widget } from '../base/Widget.js';
@@ -87,9 +89,7 @@ export class Tooltip extends Widget {
         if (height >= 2) {
             screen.setCell(x, y + 1, { char: vt, ...attrs });
 
-            const content = this._text
-                .slice(0, Math.max(0, width - 2))
-                .padEnd(Math.max(0, width - 2), ' ');
+            const content = padToDisplayWidth(this._text, Math.max(0, width - 2));
 
             screen.writeString(x + 1, y + 1, content, attrs);
 
@@ -169,4 +169,9 @@ export class Tooltip extends Widget {
     getVisible(): boolean {
         return this._visible;
     }
+}
+
+function padToDisplayWidth(text: string, width: number): string {
+    const clipped = truncate(text, width, '');
+    return clipped + ' '.repeat(Math.max(0, width - stringWidth(clipped)));
 }
