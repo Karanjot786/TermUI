@@ -23,6 +23,7 @@ export function toWidget(child: LayoutChild, style: Partial<Style> = {}): Widget
     }
     // Reactive function — create text, will be updated by refresh
     const text = new Text(resolve(child as Reactive<string>), { height: 1, ...style });
+    (text as any).__reactiveContent = child;
     return text;
 }
 
