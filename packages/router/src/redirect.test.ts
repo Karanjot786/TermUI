@@ -56,6 +56,22 @@ describe('Router Redirects', () => {
         router.push('/a');
 
         expect(errorHandler).toHaveBeenCalled();
+        expect(errorHandler.mock.calls[0][0].message).toBe('Redirect loop detected: /a -> /b -> /a');
+    });
+
+    it('includes the redirect trail when max depth is exceeded', () => {
+        const router = new Router();
+        const errorHandler = vi.fn();
+        router.events.on('error', errorHandler);
+
+        for (let i = 0; i < 11; i++) {
+            router.addRoute(`/step-${i}`, DummyComponent, undefined, undefined, undefined, `/step-${i + 1}`);
+        }
+
+        router.push('/step-0');
+
+        expect(errorHandler).toHaveBeenCalled();
+        expect(errorHandler.mock.calls[0][0].message).toContain('/step-0 -> /step-1 -> /step-2');
         expect(errorHandler.mock.calls[0][0].message).toMatch(/Max redirect depth exceeded/);
     });
 });

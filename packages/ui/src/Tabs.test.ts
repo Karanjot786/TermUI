@@ -2,10 +2,20 @@
 // @termuijs/ui — Tests for Tabs component
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Tabs } from './Tabs.js';
 import { Box, Text, Widget } from '@termuijs/widgets';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth, type KeyEvent } from '@termuijs/core';
+
+const key = (key: string, shift = false): KeyEvent => ({
+    key,
+    shift,
+    ctrl: false,
+    alt: false,
+    raw: Buffer.alloc(0),
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
+});
 
 const makeTabs = () => new Tabs([
     { label: 'Home', content: new Box() },
@@ -60,6 +70,41 @@ describe('Tabs', () => {
         const tabs = makeTabs();
         tabs.prevTab(); // wraps to 2
         expect(tabs.activeIndex).toBe(2);
+    });
+
+    it('switches tabs with right and left keys', () => {
+        const tabs = makeTabs();
+        const right = key('right');
+        const left = key('left');
+
+        tabs.handleKey(right);
+        expect(tabs.activeIndex).toBe(1);
+        tabs.handleKey(left);
+        expect(tabs.activeIndex).toBe(0);
+        expect(right.preventDefault).toHaveBeenCalled();
+        expect(right.stopPropagation).toHaveBeenCalled();
+        expect(left.preventDefault).toHaveBeenCalled();
+        expect(left.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('switches tabs with tab and shift+tab', () => {
+        const tabs = makeTabs();
+
+        tabs.handleKey(key('tab'));
+        expect(tabs.activeIndex).toBe(1);
+        tabs.handleKey(key('tab', true));
+        expect(tabs.activeIndex).toBe(0);
+    });
+
+    it('does not consume unrelated keys', () => {
+        const tabs = makeTabs();
+        const event = key('enter');
+
+        tabs.handleKey(event);
+
+        expect(tabs.activeIndex).toBe(0);
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
     });
 
     it('safe with no tabs', () => {
@@ -166,5 +211,23 @@ describe('Tabs', () => {
 
         expect(first.destroys).toBe(1);
         expect(second.destroys).toBe(1);
+    });
+
+    it('clips tab labels and separators to the widget width', () => {
+        const tabs = new Tabs([
+            { label: 'VeryLongHomeLabel', content: new Box() },
+            { label: 'Settings', content: new Box() },
+        ], { border: 'none' });
+        const screen = new Screen(8, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        tabs.updateRect({ x: 0, y: 0, width: 8, height: 3 });
+        tabs.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            if (call[1] === 0) {
+                expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(8);
+            }
+        }
     });
 });

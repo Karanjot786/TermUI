@@ -263,7 +263,7 @@ export function useEffect(effect: () => void | (() => void), deps?: any[]): void
         fiber.effects.push(record);
     } else {
         const prev = fiber.hooks[idx];
-        const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
+        const shouldRun = !deps || !prev.deps || deps.length !== prev.deps.length || deps.some((d, i) => !Object.is(d, prev.deps![i]));
 
         if (shouldRun) {
             prev.deps = deps;
@@ -287,7 +287,7 @@ export function useLayoutEffect(effect: () => void | (() => void), deps?: any[])
         fiber.layoutEffects.push(record);
     } else {
         const prev = fiber.hooks[idx];
-        const shouldRun = !deps || !prev.deps || deps.some((d, i) => !Object.is(d, prev.deps![i]));
+        const shouldRun = !deps || !prev.deps || deps.length !== prev.deps.length || deps.some((d, i) => !Object.is(d, prev.deps![i]));
 
         if (shouldRun) {
             prev.deps = deps;
@@ -589,11 +589,16 @@ export function useReducer<S, A>(
 export function runEffects(fiber: Fiber): void {
     for (const record of fiber.effects) {
         if (!record.ran) {
-            // Run cleanup from previous effect
-            record.cleanup?.();
-            const cleanup = record.effect();
-            if (typeof cleanup === 'function') {
-                record.cleanup = cleanup;
+            try {
+                // Run cleanup from previous effect
+                record.cleanup?.();
+                const cleanup = record.effect();
+                if (typeof cleanup === 'function') {
+                    record.cleanup = cleanup;
+                }
+            } catch (err) {
+                // Mark as ran to prevent infinite re-execution
+                console.error('[useEffect] Effect threw:', err);
             }
             record.ran = true;
         }
@@ -603,11 +608,15 @@ export function runEffects(fiber: Fiber): void {
 export function runLayoutEffects(fiber: Fiber): void {
     for (const record of fiber.layoutEffects) {
         if (!record.ran) {
-            // Run cleanup from previous effect
-            record.cleanup?.();
-            const cleanup = record.effect();
-            if (typeof cleanup === 'function') {
-                record.cleanup = cleanup;
+            try {
+                // Run cleanup from previous effect
+                record.cleanup?.();
+                const cleanup = record.effect();
+                if (typeof cleanup === 'function') {
+                    record.cleanup = cleanup;
+                }
+            } catch (err) {
+                console.error('[useLayoutEffect] Effect threw:', err);
             }
             record.ran = true;
         }
@@ -753,13 +762,16 @@ export function useAsync<T>(
 
     // Track a version counter to ignore stale responses
     const versionRef = useRef(0);
+    // Always call the latest asyncFn to avoid stale closure
+    const asyncFnRef = useRef(asyncFn);
+    asyncFnRef.current = asyncFn;
 
     const refetch = useCallback(() => {
         const version = ++versionRef.current;
         setLoading(true);
         setError(null);
 
-        asyncFn()
+        asyncFnRef.current()
             .then((result) => {
                 // Only update if this is still the latest request
                 if (versionRef.current === version) {

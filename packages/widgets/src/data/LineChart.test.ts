@@ -392,4 +392,19 @@ describe('LineChart', () => {
             expect(magentaCells.length).toBeGreaterThan(0);
         });
     });
+
+    describe('useBraille mode', () => {
+        it('renders braille characters when useBraille is true', async () => {
+            vi.stubEnv('NO_UNICODE', '');
+            vi.stubEnv('TERM', '');
+            vi.resetModules();
+
+            const lines = await renderLineChart([10, 50, 90], { useBraille: true }, 20, 5);
+            const hasBraille = lines.some(row =>
+                [...row].some(ch => ch.charCodeAt(0) >= 0x2800 && ch.charCodeAt(0) <= 0x28FF)
+            );
+            expect(hasBraille).toBe(true);
+        });
+    });
 });
+

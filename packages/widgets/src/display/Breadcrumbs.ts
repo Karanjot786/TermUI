@@ -8,8 +8,12 @@ import { Widget } from '../base/Widget.js';
 export interface BreadcrumbsOptions {
     /** Separator drawn between segments. Default: caps.unicode ? '❯' : '>' */
     separator?: string;
-    /** Color of the last (current) segment. Default: cyan */
+
+    /** Color of the active breadcrumb */
     activeColor?: Color;
+
+    /** Called when a breadcrumb is selected */
+    onSelect?: (index: number, label: string) => void;
 }
 
 /**
@@ -22,12 +26,19 @@ export class Breadcrumbs extends Widget {
     private _segments: string[];
     private _separator?: string;
     private _activeColor?: Color;
+    private _selectedIndex = 0;
+    private _onSelect?: (index: number, label: string) => void;
 
     constructor(segments: string[], style: Partial<Style> = {}, opts: BreadcrumbsOptions = {}) {
         super(style);
         this._segments = segments;
         this._separator = opts.separator;
         this._activeColor = opts.activeColor;
+        this._onSelect = opts.onSelect;
+        this._selectedIndex = Math.max(0, segments.length - 1);
+
+        this.focusable = true;
+        this.events.on('key', (event) => this.handleKey(event));
     }
 
     /** Update the trail of segments. */
@@ -39,12 +50,31 @@ export class Breadcrumbs extends Widget {
             return;
         }
         this._segments = segments;
+        this._selectedIndex = Math.max(0, segments.length - 1);
         this.markDirty();
     }
 
     getSegments(): string[] {
         return this._segments;
     }
+
+    handleKey(event: { key: string }): void {
+    if (event.key === 'left') {
+        this._selectedIndex = Math.max(0, this._selectedIndex - 1);
+        this.markDirty();
+    } else if (event.key === 'right') {
+        this._selectedIndex = Math.min(
+            this._segments.length - 1,
+            this._selectedIndex + 1
+        );
+        this.markDirty();
+    } else if (event.key === 'enter') {
+        this._onSelect?.(
+            this._selectedIndex,
+            this._segments[this._selectedIndex]
+        );
+    }
+}
 
     protected _renderSelf(screen: Screen): void {
         const { x, y, width, height } = this._getContentRect();
@@ -89,7 +119,10 @@ export class Breadcrumbs extends Widget {
             if (i > 0 || (showEllipsis && hasTruncated)) {
                 renderList.push({ type: 'separator', text: sep });
             }
-            const isLast = i === visibleSegments.length - 1;
+            const originalIndex =
+                this._segments.length - visibleSegments.length + i;
+
+            const isLast = originalIndex === this._selectedIndex;
             renderList.push({ 
                 type: isLast ? 'active' : 'normal', 
                 text: visibleSegments[i] 
