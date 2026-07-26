@@ -1,3 +1,4 @@
+import { subscribe } from './timer-pool.js';
 import type { VirtualClock } from './virtual-clock.js';
 
 export type { VirtualClock };
@@ -18,21 +19,36 @@ export function sequence(
 export function sequence(
   runners: SequenceStep[],
   onComplete?: () => void
-): SequenceStep[]
+): () => void
 export function sequence(
   runners: AnimationRunner[] | SequenceStep[],
   onComplete?: () => void
-): (() => void) | SequenceStep[] {
+): () => void {
   // 1. Handle empty runners (always returns dummy cancel function)
   if (runners.length === 0) {
     onComplete?.()
     return () => {}
   }
 
-  // 2. Handle SequenceStep[] path
+  // 2. Handle SequenceStep[] path — convert to AnimationRunner[] and run in sequence
   if (typeof runners[0] !== 'function') {
-    onComplete?.()
-    return runners as SequenceStep[]
+    const steps = runners as SequenceStep[]
+    const createdRunners: AnimationRunner[] = steps.map(step => {
+      return (done: () => void) => {
+        const duration = step.duration ?? 300
+        const startTime = Date.now()
+        const unsub = subscribe(16, () => {
+          const elapsed = Date.now() - startTime
+          const t = Math.min(elapsed / duration, 1)
+          if (t >= 1) {
+            unsub()
+            done()
+          }
+        })
+        return () => unsub()
+      }
+    })
+    return sequence(createdRunners, onComplete)
   }
 
   // 3. Handle AnimationRunner[] path
