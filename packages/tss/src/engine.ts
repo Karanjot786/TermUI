@@ -225,12 +225,14 @@ export class ThemeEngine {
                     const parts = val.split(/\s+/).map(Number);
                     if (parts.length === 1) style.padding = parts[0];
                     else if (parts.length === 2) style.padding = { top: parts[0], bottom: parts[0], left: parts[1], right: parts[1] };
+                    else if (parts.length === 3) style.padding = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
                     else if (parts.length === 4) style.padding = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
                     break;
                 case 'margin':
                     const mparts = val.split(/\s+/).map(Number);
                     if (mparts.length === 1) style.margin = mparts[0];
                     else if (mparts.length === 2) style.margin = { top: mparts[0], bottom: mparts[0], left: mparts[1], right: mparts[1] };
+                    else if (mparts.length === 3) style.margin = { top: mparts[0], right: mparts[1], bottom: mparts[2], left: mparts[1] };
                     else if (mparts.length === 4) style.margin = { top: mparts[0], right: mparts[1], bottom: mparts[2], left: mparts[3] };
                     break;
                 case 'width':
