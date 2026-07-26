@@ -34,3 +34,8 @@ export type { InterpolateOptions } from './interpolate.js';
 export { animateRect } from './layout-transition.js';
 export type { LayoutTransitionOptions } from './layout-transition.js';
 
+// Multi-Track Keyframe Timeline
+export { KeyframeTimeline, parseTimeOffset } from './timeline.js';
+export type { Keyframe, ParsedKeyframe, KeyframeTrack, TimelineOptions, EasingType } from './timeline.js';
+
+
