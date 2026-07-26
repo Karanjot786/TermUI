@@ -18,6 +18,7 @@ import {
     styleToCellAttrs,
     caps,
     stringWidth,
+    truncate,
 } from '@termuijs/core';
 
 export interface MultilineTextInputOptions {
@@ -226,7 +227,7 @@ export class MultilineTextInput extends Widget {
         // Show placeholder when empty and not focused
         const isEmpty = this._lines.length === 1 && this._lines[0] === '';
         if (isEmpty && !this.isFocused && this._placeholder) {
-            screen.writeString(x, y, this._placeholder.slice(0, width), { ...attrs, dim: true });
+            screen.writeString(x, y, padToDisplayWidth(this._placeholder, width), { ...attrs, dim: true });
             return;
         }
 
@@ -245,7 +246,7 @@ export class MultilineTextInput extends Widget {
             const dRow = row + scrollY;
             if (dRow >= displayRows.length) break;
             const { text } = displayRows[dRow];
-            screen.writeString(x, y + row, text.padEnd(width, ' ').slice(0, width), attrs);
+            screen.writeString(x, y + row, padToDisplayWidth(text, width), attrs);
         }
 
         // Render cursor
@@ -380,4 +381,9 @@ export class MultilineTextInput extends Widget {
         }
         return scrollY;
     }
+}
+
+function padToDisplayWidth(text: string, width: number): string {
+    const clipped = truncate(text, width, '');
+    return clipped + ' '.repeat(Math.max(0, width - stringWidth(clipped)));
 }
