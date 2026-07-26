@@ -566,24 +566,27 @@ export abstract class Widget {
             const cellStyle = { fg, bold: true };
 
             const useAscii = (this._style.asciiOnly ?? false) || !caps.unicode;
-            const corner = useAscii ? '+' : '┌';
+            const topLeft = useAscii ? '+' : '┌';
+            const topRight = useAscii ? '+' : '┐';
+            const bottomLeft = useAscii ? '+' : '└';
+            const bottomRight = useAscii ? '+' : '┘';
             const horizontal = useAscii ? '-' : '─';
             const vertical = useAscii ? '|' : '│';
 
             // Top-left corner
-            screen.setCell(x, y, { char: corner, ...cellStyle });
+            screen.setCell(x, y, { char: topLeft, ...cellStyle });
             if (width > 2) screen.setCell(x + 1, y, { char: horizontal, ...cellStyle });
 
             // Top-right corner
-            screen.setCell(x + width - 1, y, { char: corner, ...cellStyle });
+            screen.setCell(x + width - 1, y, { char: topRight, ...cellStyle });
             if (width > 2) screen.setCell(x + width - 2, y, { char: horizontal, ...cellStyle });
 
             // Bottom-left corner
-            screen.setCell(x, y + height - 1, { char: corner, ...cellStyle });
+            screen.setCell(x, y + height - 1, { char: bottomLeft, ...cellStyle });
             if (width > 2) screen.setCell(x + 1, y + height - 1, { char: horizontal, ...cellStyle });
 
             // Bottom-right corner
-            screen.setCell(x + width - 1, y + height - 1, { char: corner, ...cellStyle });
+            screen.setCell(x + width - 1, y + height - 1, { char: bottomRight, ...cellStyle });
             if (width > 2) screen.setCell(x + width - 2, y + height - 1, { char: horizontal, ...cellStyle });
 
             // Short vertical marks if tall enough
