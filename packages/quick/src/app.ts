@@ -320,7 +320,11 @@ export class AppBuilder {
                     appInstance.exit();
                     return;
                 } else if (action === 'refresh') {
-                    this._refreshReactiveWidgets(root);
+                    try {
+                        this._refreshReactiveWidgets(root);
+                    } catch (err) {
+                        this._onError?.(err);
+                    }
                     appInstance.requestRender();
                     return;
                 } else if (typeof action === 'function') {
