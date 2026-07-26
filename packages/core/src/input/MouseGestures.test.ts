@@ -97,12 +97,12 @@ describe('MouseGestures', () => {
         // Move mouse
         const drag1 = g.feed({ x: 2, y: 2, button: 'left', type: 'mousemove' });
         expect(drag1).toEqual([
-            { x: 2, y: 2, button: 'left', type: 'drag' }
+            { x: 2, y: 2, deltaX: 1, deltaY: 1, button: 'left', type: 'mousedrag' }
         ]);
 
         const drag2 = g.feed({ x: 3, y: 3, button: 'left', type: 'mousemove' });
         expect(drag2).toEqual([
-            { x: 3, y: 3, button: 'left', type: 'drag' }
+            { x: 3, y: 3, deltaX: 1, deltaY: 1, button: 'left', type: 'mousedrag' }
         ]);
     });
 
@@ -120,7 +120,7 @@ describe('MouseGestures', () => {
         // Down -> Move -> Up
         expect(g.feed({ x: 1, y: 1, button: 'left', type: 'mousedown' })).toEqual([]);
         expect(g.feed({ x: 2, y: 2, button: 'left', type: 'mousemove' })).toEqual([
-            { x: 2, y: 2, button: 'left', type: 'drag' }
+            { x: 2, y: 2, deltaX: 1, deltaY: 1, button: 'left', type: 'mousedrag' }
         ]);
         expect(g.feed({ x: 2, y: 2, button: 'left', type: 'mouseup' })).toEqual([
             { x: 2, y: 2, button: 'left', type: 'dragend' }

@@ -54,7 +54,7 @@ export function createKeyEvent(base: {
  */
 export type MouseEventType =
     | 'mousedown' | 'mouseup' | 'mousemove' | 'scroll'
-    | 'dblclick' | 'drag' | 'dragend' | 'mouseenter' | 'mouseleave' | 'click';
+    | 'dblclick' | 'mousedrag' | 'dragend' | 'mouseenter' | 'mouseleave' | 'click';
 export type MouseButton = 'left' | 'middle' | 'right' | 'none';
 
 /**
@@ -81,6 +81,10 @@ export interface MouseEvent {
     alt?: boolean;
     /** Shift modifier held during the mouse event. SGR bit 0b100. */
     shift?: boolean;
+    /** The change in the X coordinate since the last drag event */
+    deltaX?: number;
+    /** The change in the Y coordinate since the last drag event */
+    deltaY?: number;
 }
 
 /**

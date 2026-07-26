@@ -4,6 +4,20 @@
 
 import type { MouseEvent, MouseButton } from '../events/types.js';
 
+type SynthesizedMouseEvent = MouseEvent | {
+    type: 'mousedrag';
+    x: number;
+    y: number;
+    deltaX: number;
+    deltaY: number;
+    button: MouseButton;
+} | {
+    type: 'dragend';
+    x: number;
+    y: number;
+    button: MouseButton;
+};
+
 export interface MouseGesturesOptions {
     /** Max ms between two clicks to count as a double-click. Default 300. */
     doubleClickMs?: number;
@@ -14,6 +28,7 @@ export class MouseGestures {
     private lastMouseDown: { x: number; y: number; button: MouseButton; time: number } | null = null;
     private activeDragButton: MouseButton | null = null;
     private wasDragging = false;
+    private lastDragPosition: { x: number; y: number } | null = null;
 
     constructor(opts?: MouseGesturesOptions) {
         this.doubleClickMs = opts?.doubleClickMs ?? 300;
@@ -54,15 +69,24 @@ export class MouseGestures {
 
             this.activeDragButton = event.button;
             this.wasDragging = false;
+            this.lastDragPosition = { x: event.x, y: event.y };
         } else if (event.type === 'mousemove') {
-            if (this.activeDragButton !== null) {
+            if (this.activeDragButton !== null && this.lastDragPosition !== null) {
                 this.wasDragging = true;
+
+                const deltaX = event.x - this.lastDragPosition.x;
+                const deltaY = event.y - this.lastDragPosition.y;
+
                 synthesized.push({
                     x: event.x,
                     y: event.y,
+                    deltaX,
+                    deltaY,
                     button: this.activeDragButton,
-                    type: 'drag',
+                    type: 'mousedrag',
                 });
+
+                this.lastDragPosition = { x: event.x, y: event.y };
             }
         } else if (event.type === 'mouseup') {
             if (this.activeDragButton !== null) {
@@ -76,6 +100,7 @@ export class MouseGestures {
                 }
                 this.activeDragButton = null;
                 this.wasDragging = false;
+                this.lastDragPosition = null;
             }
         }
 

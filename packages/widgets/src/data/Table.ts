@@ -214,7 +214,7 @@ export class Table extends Widget {
         } else if (event.type === 'mouseup' || event.type === 'dragend') {
             this._isDragging = false;
             this._dragColIndex = -1;
-        } else if (event.type === 'drag' && this._isDragging) {
+        } else if (event.type === 'mousedrag' && this._isDragging) {
             let colStartX = rect.x;
             for (let i = 0; i < this._dragColIndex; i++) {
                 colStartX += (this._columnWidths[i] ?? 0) + sepWidth;
