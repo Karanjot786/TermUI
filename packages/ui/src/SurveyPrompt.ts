@@ -7,6 +7,7 @@ import {
     defaultStyle,
     styleToCellAttrs,
     caps,
+    splitGraphemes,
 } from "@termuijs/core";
 
 export interface SurveyQuestion {
@@ -71,7 +72,7 @@ export class SurveyPrompt extends Widget {
         if (question.type === "text") {
             switch (event.key) {
                 case "backspace":
-                    this._textBuffer = this._textBuffer.slice(0, -1);
+                    this._textBuffer = splitGraphemes(this._textBuffer).slice(0, -1).join("");
                     this.markDirty();
                     break;
 
@@ -124,7 +125,7 @@ export class SurveyPrompt extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        const { x, y, width, height } = this._rect;
+        const { x, y, width, height } = this._getContentRect();
 
         if (width <= 0 || height <= 0) return;
 

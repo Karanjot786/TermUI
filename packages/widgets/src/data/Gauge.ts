@@ -4,6 +4,7 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { validateFinite } from './utils.js';
 
 export interface GaugeOptions {
     /** Color of the filled portion */
@@ -32,7 +33,7 @@ export class Gauge extends Widget {
     }
 
     setValue(value: number): void {
-        this._value = Math.max(0, Math.min(1, value));
+        this._value = validateFinite(value, 0, 0, 1);
         this.markDirty();
     }
 

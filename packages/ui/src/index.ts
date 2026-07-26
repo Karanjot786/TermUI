@@ -92,7 +92,7 @@ export { CommandPalette } from './CommandPalette.js';
 export type { Command, CommandPaletteOptions } from './CommandPalette.js';
 
 
-export { prompt, NonInteractiveError } from './prompts.js';
+export { prompt, NonInteractiveError, select, textInput, numberInput, form } from './prompts.js';
 export type { TextPromptOptions, ConfirmPromptOptions, SelectPromptOptions } from './prompts.js';
 
 export { NotificationCenter, NotificationStore, notifications, useNotifications } from './NotificationCenter.js';
@@ -137,6 +137,8 @@ export type { AccordionSection as AccordionItem } from '@termuijs/widgets';
 
 export { AppShell } from './AppShell.js';
 export type { AppShellOptions } from './AppShell.js';
+export { TooltipOverlay } from './TooltipOverlay.js';
+export type { TooltipOverlayOptions } from './TooltipOverlay.js';
 export { Pagination } from './Pagination.js';
 export type { PaginationOptions } from './Pagination.js';
 

@@ -314,6 +314,43 @@ describe('Screen and Cell Hyperlink Support', () => {
         });
     });
 
+    describe('writeFormattedString', () => {
+        it('strips ANSI sequences like writeString', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, '\x1b[31mred\x1b[0m');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('red');
+        });
+
+        it('strips cursor movement sequences but keeps text', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, '\x1b[2Jclear\x1b[5B');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('clear');
+        });
+
+        it('strips OSC sequences', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, '\x1b]0;title\x07text');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('text');
+        });
+
+        it('preserves normal text unchanged', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, 'Hello, World!');
+            const text = screen.back[0].slice(0, 13).map(c => c.char).join('');
+            expect(text).toBe('Hello, World!');
+        });
+
+        it('preserves Unicode and emoji', () => {
+            const screen = new Screen(30, 5);
+            screen.writeFormattedString(0, 0, '你好 🌍');
+            const text = screen.back[0].map(c => c.char).join('').trimEnd();
+            expect(text).toBe('你好 🌍');
+        });
+    });
+
     describe('Backdrop Filters (Compositing)', () => {
         it('cells outside the modal rect are dimmed', () => {
             const screen = new Screen(10, 10);

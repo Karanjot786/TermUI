@@ -88,11 +88,49 @@ describe('SearchableSelect', () => {
         expect(widget.filteredOptions[1].label).toBe('Alpine');
     });
 
+    it('backspace removes one grapheme from searchQuery', () => {
+        const widget = new SearchableSelect([
+            { label: 'Cafe', value: 'cafe' },
+        ]);
+
+        typeQuery(widget, 'Cafe\u0301');
+        widget.handleKey(makeKey('backspace'));
+
+        expect(widget.searchQuery).toBe('Caf');
+    });
+
     it('typing characters appends to searchQuery', () => {
         const widget = new SearchableSelect(sampleOptions);
         widget.handleKey(makeKey('h'));
         widget.handleKey(makeKey('i'));
         expect(widget.searchQuery).toBe('hi');
+    });
+
+    it('consumes handled search input keys', () => {
+        const widget = new SearchableSelect(sampleOptions);
+        const event = makeKey('a', {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        });
+
+        widget.handleKey(event);
+
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('does not consume ignored modifier keys', () => {
+        const widget = new SearchableSelect(sampleOptions);
+        const event = makeKey('a', {
+            ctrl: true,
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        });
+
+        widget.handleKey(event);
+
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
     });
 
     it('typing characters filters options case-insensitively', () => {
@@ -130,6 +168,28 @@ describe('SearchableSelect', () => {
         const widget = new SearchableSelect(sampleOptions);
         widget.handleKey(makeKey('down'));
         expect(widget.selectedIndex).toBe(1);
+    });
+
+    it('consumes handled navigation and confirm keys', () => {
+        const onSelect = vi.fn();
+        const widget = new SearchableSelect(sampleOptions, { onSelect });
+        const down = makeKey('down', {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        });
+        const enter = makeKey('enter', {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        });
+
+        widget.handleKey(down);
+        widget.handleKey(enter);
+
+        expect(down.preventDefault).toHaveBeenCalled();
+        expect(down.stopPropagation).toHaveBeenCalled();
+        expect(enter.preventDefault).toHaveBeenCalled();
+        expect(enter.stopPropagation).toHaveBeenCalled();
+        expect(onSelect).toHaveBeenCalledWith(sampleOptions[1], 1);
     });
 
     it('down and up change the selected option', () => {

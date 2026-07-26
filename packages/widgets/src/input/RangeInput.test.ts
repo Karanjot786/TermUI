@@ -23,6 +23,43 @@ describe('RangeInput', () => {
         expect(r.getHigh()).toBe(100);
     });
 
+    it('clips fixed text when no track fits', async () => {
+        const { Screen, stringWidth } = await import('@termuijs/core');
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('VeryLongLabel', {}, { low: 20, high: 80 });
+        const screen = new Screen(6, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        r.updateRect({ x: 0, y: 0, width: 6, height: 1 });
+        r.render(screen);
+
+        for (const [x, , text] of writeSpy.mock.calls) {
+            expect(x + stringWidth(text)).toBeLessThanOrEqual(6);
+        }
+    });
+
+    it('constructs with custom low and high and clamps them', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price', {}, { min: 10, max: 90, low: 30, high: 70 });
+        expect(r.getLow()).toBe(30);
+        expect(r.getHigh()).toBe(70);
+
+        const clamped = new RangeInput('Price', {}, { min: 10, max: 90, low: 5, high: 95 });
+        expect(clamped.getLow()).toBe(10);
+        expect(clamped.getHigh()).toBe(90);
+    });
+
+    it('clamps low and high into range when both are out of range on the same side', async () => {
+        const { RangeInput } = await import('./RangeInput.js');
+        const r = new RangeInput('Price', {}, { min: 10, max: 90, low: 95, high: 95 });
+        expect(r.getLow()).toBeGreaterThanOrEqual(10);
+        expect(r.getLow()).toBeLessThanOrEqual(90);
+        expect(r.getHigh()).toBeGreaterThanOrEqual(10);
+        expect(r.getHigh()).toBeLessThanOrEqual(90);
+        expect(r.getLow()).toBeLessThanOrEqual(r.getHigh());
+        expect(r.getLow()).toBe(90);
+        expect(r.getHigh()).toBe(90);
+    });
+
     it('setLow and setHigh work', async () => {
         const { RangeInput } = await import('./RangeInput.js');
         const r = new RangeInput('Price');

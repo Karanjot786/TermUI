@@ -4,6 +4,7 @@
 
 import { type Screen, type Style, type Color, styleToCellAttrs, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { validateFinite } from './utils.js';
 
 export interface Candle {
     open: number;
@@ -44,7 +45,12 @@ export class CandlestickChart extends Widget {
     }
 
     setData(candles: Candle[]): void {
-        this._candles = candles;
+        this._candles = candles.map(c => ({
+            open: validateFinite(c.open, 0),
+            high: validateFinite(c.high, 0),
+            low: validateFinite(c.low, 0),
+            close: validateFinite(c.close, 0),
+        }));
         this.markDirty();
     }
 

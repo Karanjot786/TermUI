@@ -15,7 +15,7 @@ export { tail } from './tail.js';
 export type { TailOptions, TailStream } from './tail.js';
 export { http } from './http.js';
 export type { HealthResult, Endpoint } from './http.js';
-export { invalidate } from './cache.js';
+export { invalidate, setCacheMaxSize, getCache, setCache, isFresh, clearCache, fetchShared } from './cache.js';
 
 
 // ── Reactive hooks ────────────────────────────────────
@@ -48,7 +48,9 @@ export { useBattery } from './hooks/useBattery.js';
 export type { BatteryData, UseBatteryResult } from './hooks/useBattery.js';
 
 export { usePolling } from './hooks/usePolling.js';
-export type { UsePollingResult } from './hooks/usePolling.js';
+export type { UsePollingOptions, UsePollingResult } from './hooks/usePolling.js';
+export { AdaptivePollingController } from './hooks/adaptive-polling.js';
+export type { AdaptivePollingOptions, AdaptivePollingState } from './hooks/adaptive-polling.js';
 
 export { useMutation } from './hooks/useMutation.js'
 export type { HttpMethod, UseMutationReturn } from './hooks/useMutation.js'

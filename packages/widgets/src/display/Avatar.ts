@@ -2,7 +2,7 @@
 // @termuijs/widgets — Avatar widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps, splitGraphemes } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface AvatarOptions {
@@ -66,9 +66,12 @@ export class Avatar extends Widget {
         if (parts.length === 0 || parts[0] === '') return '';
         let init = '';
         if (parts.length === 1) {
-            init = parts[0].substring(0, 2).toUpperCase();
+            const graphemes = splitGraphemes(parts[0]);
+            init = graphemes.slice(0, 2).join('').toUpperCase();
         } else {
-            init = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            const gFirst = splitGraphemes(parts[0])[0] ?? '';
+            const gLast = splitGraphemes(parts[parts.length - 1])[0] ?? '';
+            init = (gFirst + gLast).toUpperCase();
         }
         if (!caps.unicode) {
             init = init.replace(/[^\x00-\x7F]/g, '?');

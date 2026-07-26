@@ -1,17 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { FileWatcher } from './watcher.js';
-import { watch, existsSync } from 'node:fs';
+import { watch, existsSync, readdirSync, statSync } from 'node:fs';
 import { EventEmitter } from 'node:events';
 
-const { watch: mockWatch, existsSync: mockExistsSync } = vi.hoisted(() => ({
+const { watch: mockWatch, existsSync: mockExistsSync, readdirSync: mockReaddirSync, statSync: mockStatSync } = vi.hoisted(() => ({
     watch: vi.fn(),
     existsSync: vi.fn(() => true),
+    readdirSync: vi.fn(() => []),
+    statSync: vi.fn(() => ({ isDirectory: () => false })),
 }));
 
 
 vi.mock('node:fs', () => ({
     watch: mockWatch,
     existsSync: mockExistsSync,
+    readdirSync: mockReaddirSync,
+    statSync: mockStatSync,
 }));
 
 describe('FileWatcher', () => {
@@ -22,6 +26,8 @@ describe('FileWatcher', () => {
         mockWatcherEmitter = new EventEmitter();
         vi.mocked(watch).mockReturnValue(mockWatcherEmitter as any);
         vi.mocked(existsSync).mockReturnValue(true);
+        vi.mocked(readdirSync).mockReturnValue([]);
+        vi.mocked(statSync).mockReturnValue({ isDirectory: () => false } as any);
     });
 
     afterEach(() => {
@@ -301,6 +307,25 @@ describe('FileWatcher', () => {
         expect(vi.mocked(watch)).toHaveBeenCalledTimes(dirs.length);
     });
 
+    it('does not register duplicate watchers when start is called twice', () => {
+        const watcher = new FileWatcher(['./src']);
+
+        watcher.start();
+        watcher.start();
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(1);
+    });
+
+    it('can start again after stop', () => {
+        const watcher = new FileWatcher(['./src']);
+
+        watcher.start();
+        watcher.stop();
+        watcher.start();
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(2);
+    });
+
     it('handles events from multiple directories independently', () => {
         // Use separate emitters per directory
         const emitters = [new EventEmitter(), new EventEmitter(), new EventEmitter()];
@@ -357,6 +382,55 @@ describe('FileWatcher', () => {
 
         // Only one call for the existing directory
         expect(vi.mocked(watch)).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to explicit directory watchers when recursive watch is unavailable', () => {
+        const rootEmitter = new EventEmitter();
+        const childEmitter = new EventEmitter();
+        vi.mocked(watch)
+            .mockImplementationOnce(() => {
+                throw new Error('recursive watch unavailable');
+            })
+            .mockImplementationOnce(() => rootEmitter as any)
+            .mockImplementationOnce(() => childEmitter as any);
+        vi.mocked(readdirSync).mockImplementation((dir) => {
+            if (String(dir).endsWith('src')) return ['components'] as any;
+            return [] as any;
+        });
+        vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as any);
+
+        const watcher = new FileWatcher(['./src']);
+        const changeSpy = vi.fn();
+
+        watcher.onChange(changeSpy);
+        watcher.start();
+
+        childEmitter.emit('change', 'change', 'Button.tsx');
+        vi.advanceTimersByTime(100);
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(3);
+        expect(changeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips generated directories during fallback traversal', () => {
+        vi.mocked(watch)
+            .mockImplementationOnce(() => {
+                throw new Error('recursive watch unavailable');
+            })
+            .mockReturnValue(mockWatcherEmitter as any);
+        vi.mocked(readdirSync).mockImplementation((dir) => {
+            if (String(dir).endsWith('src')) return ['components', 'node_modules', 'dist'] as any;
+            return [] as any;
+        });
+        vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as any);
+
+        const watcher = new FileWatcher(['./src']);
+
+        watcher.start();
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(3);
+        expect(vi.mocked(statSync)).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(statSync).mock.calls[0][0]).toEqual(expect.stringContaining('components'));
     });
 
     // ─── 13. Timestamp generation ─────────────────────────────────────────────

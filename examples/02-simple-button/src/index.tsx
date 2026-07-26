@@ -7,12 +7,12 @@ import { Widget, Box, Text, Center } from "@termuijs/widgets";
 
 class Button extends Widget {
     private label: string;
-    private onClick: () => void;
+    private _onClick: () => void;
 
     constructor(label: string, onClick: () => void, style: Partial<Style> = {}) {
         super({ border: "single", height: 3, ...style });
         this.label = label;
-        this.onClick = onClick;
+        this._onClick = onClick;
         this.focusable = true;
     }
 
@@ -38,7 +38,7 @@ class Button extends Widget {
     }
 
     click(): void {
-        this.onClick();
+        this._onClick();
     }
 }
 
