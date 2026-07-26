@@ -1,12 +1,67 @@
-// CommandPalette — fuzzy-search command launcher
+// CommandPalette — fuzzy-search command launcher with sub-menu navigation
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars, caps, splitGraphemes } from '@termuijs/core';
+import {
+    type Style,
+    type Screen,
+    type KeyEvent,
+    mergeStyles,
+    defaultStyle,
+    styleToCellAttrs,
+    getBorderChars,
+    caps,
+    splitGraphemes,
+} from '@termuijs/core';
 
-export interface Command { id: string; label: string; shortcut?: string; action: () => void; category?: string; }
-export interface CommandPaletteOptions { placeholder?: string; borderColor?: Style['fg']; activeColor?: Style['fg']; maxVisible?: number; }
+export interface Command {
+    id: string;
+    label: string;
+    shortcut?: string;
+    action?: () => void;
+    category?: string;
+    children?: Command[];
+}
+
+export interface CommandPaletteOptions {
+    commands?: Command[];
+    placeholder?: string;
+    borderColor?: Style['fg'];
+    activeColor?: Style['fg'];
+    maxVisible?: number;
+    fuzzyMatch?: boolean;
+}
+
+function fuzzyScore(text: string, query: string): number {
+    if (!query) return 1;
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+
+    let score = 0;
+    let textIdx = 0;
+    let prevMatchedIdx = -1;
+
+    for (let i = 0; i < lowerQuery.length; i++) {
+        const char = lowerQuery[i];
+        const foundIdx = lowerText.indexOf(char, textIdx);
+        if (foundIdx === -1) return 0; // No match
+
+        score += 10;
+        if (prevMatchedIdx !== -1 && foundIdx === prevMatchedIdx + 1) {
+            score += 15; // Consecutive bonus
+        }
+        if (foundIdx === 0 || lowerText[foundIdx - 1] === ' ' || lowerText[foundIdx - 1] === ':') {
+            score += 20; // Word start bonus
+        }
+
+        prevMatchedIdx = foundIdx;
+        textIdx = foundIdx + 1;
+    }
+
+    return score;
+}
 
 export class CommandPalette extends Widget {
-    private _commands: Command[];
+    private _rootCommands: Command[];
+    private _menuStack: Array<{ title?: string; commands: Command[] }> = [];
     private _filtered: Command[] = [];
     private _query = '';
     private _cursorPos = 0;
@@ -16,22 +71,67 @@ export class CommandPalette extends Widget {
     private _borderColor: Style['fg'];
     private _activeColor: Style['fg'];
     private _maxVisible: number;
+    private _fuzzyMatch: boolean;
     focusable = true;
 
-    constructor(commands: Command[], options: CommandPaletteOptions = {}) {
+    constructor(
+        commandsOrOptions: Command[] | CommandPaletteOptions = [],
+        options: CommandPaletteOptions = {}
+    ) {
         super(mergeStyles(defaultStyle(), {}));
-        this._commands = commands;
-        this._filtered = [...commands];
-        this._placeholder = options.placeholder ?? 'Type a command...';
-        this._borderColor = options.borderColor ?? { type: 'named', name: 'cyan' };
-        this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
-        this._maxVisible = options.maxVisible ?? 10;
+
+        let cmds: Command[] = [];
+        let opts: CommandPaletteOptions = options;
+
+        if (Array.isArray(commandsOrOptions)) {
+            cmds = commandsOrOptions;
+        } else if (typeof commandsOrOptions === 'object') {
+            cmds = commandsOrOptions.commands ?? [];
+            opts = commandsOrOptions;
+        }
+
+        this._rootCommands = cmds;
+        this._placeholder = opts.placeholder ?? 'Type a command...';
+        this._borderColor = opts.borderColor ?? { type: 'named', name: 'cyan' };
+        this._activeColor = opts.activeColor ?? { type: 'named', name: 'cyan' };
+        this._maxVisible = opts.maxVisible ?? 10;
+        this._fuzzyMatch = opts.fuzzyMatch ?? true;
+
+        this._menuStack = [{ commands: this._rootCommands }];
+        this._filter();
     }
 
-    get visible(): boolean { return this._visible; }
-    show(): void { this._visible = true; this._query = ''; this._cursorPos = 0; this._selectedIndex = 0; this._filtered = [...this._commands]; this.markDirty(); }
-    hide(): void { this._visible = false; this.markDirty(); }
-    toggle(): void { this._visible ? this.hide() : this.show(); }
+    get visible(): boolean {
+        return this._visible;
+    }
+
+    open(): void {
+        this.show();
+    }
+
+    close(): void {
+        this.hide();
+    }
+
+    show(): void {
+        this._visible = true;
+        this._query = '';
+        this._cursorPos = 0;
+        this._selectedIndex = 0;
+        this._menuStack = [{ commands: this._rootCommands }];
+        this._filter();
+        this.markDirty();
+    }
+
+    hide(): void {
+        this._visible = false;
+        this.markDirty();
+    }
+
+    toggle(): void {
+        this._visible ? this.hide() : this.show();
+    }
+
     insertChar(ch: string): void {
         const query = splitGraphemes(this._query);
         const inserted = splitGraphemes(ch);
@@ -41,8 +141,14 @@ export class CommandPalette extends Widget {
         this._filter();
         this.markDirty();
     }
+
     deleteBack(): void {
-        if (this._cursorPos === 0) return;
+        if (this._cursorPos === 0) {
+            if (this._menuStack.length > 1) {
+                this.popMenu();
+            }
+            return;
+        }
         const query = splitGraphemes(this._query);
         query.splice(this._cursorPos - 1, 1);
         this._query = query.join('');
@@ -50,45 +156,67 @@ export class CommandPalette extends Widget {
         this._filter();
         this.markDirty();
     }
-    selectNext(): void { if (this._selectedIndex < this._filtered.length - 1) { this._selectedIndex++; this.markDirty(); } }
-    selectPrev(): void { if (this._selectedIndex > 0) { this._selectedIndex--; this.markDirty(); } }
-    confirm(): void { const c = this._filtered[this._selectedIndex]; if (c) { this.hide(); c.action(); } }
 
-    /**
-     * Handle a KeyEvent from @termuijs/core.
-     *
-     * Wires all palette interactions to a single entry point so callers
-     * only need:
-     *   app.on('key', e => palette.handleKey(e))
-     *
-     * Built-in bindings (only active while the palette is visible):
-     *   Ctrl+P          — open / close (toggle)
-     *   ArrowUp / k     — move selection up
-     *   ArrowDown / j   — move selection down
-     *   Enter           — confirm selected command
-     *   Escape          — close
-     *   Backspace       — delete last character
-     *   any printable   — append character to query
-     *
-     * Ctrl+P is also handled while hidden so the palette can be opened.
-     * All handled events have stopPropagation() called automatically.
-     */
+    selectNext(): void {
+        if (this._selectedIndex < this._filtered.length - 1) {
+            this._selectedIndex++;
+            this.markDirty();
+        }
+    }
+
+    selectPrev(): void {
+        if (this._selectedIndex > 0) {
+            this._selectedIndex--;
+            this.markDirty();
+        }
+    }
+
+    popMenu(): void {
+        if (this._menuStack.length > 1) {
+            this._menuStack.pop();
+            this._query = '';
+            this._cursorPos = 0;
+            this._selectedIndex = 0;
+            this._filter();
+            this.markDirty();
+        }
+    }
+
+    confirm(): void {
+        const c = this._filtered[this._selectedIndex];
+        if (!c) return;
+
+        if (Array.isArray(c.children) && c.children.length > 0) {
+            this._menuStack.push({ title: c.label, commands: c.children });
+            this._query = '';
+            this._cursorPos = 0;
+            this._selectedIndex = 0;
+            this._filter();
+            this.markDirty();
+        } else if (c.action) {
+            this.hide();
+            c.action();
+        }
+    }
+
     handleKey(event: KeyEvent): void {
-        // Ctrl+P toggles the palette regardless of current visibility
         if (event.ctrl && event.key === 'p') {
             event.stopPropagation();
             this.toggle();
             return;
         }
 
-        // Remaining bindings only apply while the palette is open
         if (!this._visible) return;
 
         const { key, ctrl } = event;
 
         if (key === 'escape' || (ctrl && key === 'c')) {
             event.stopPropagation();
-            this.hide();
+            if (this._menuStack.length > 1) {
+                this.popMenu();
+            } else {
+                this.hide();
+            }
             return;
         }
 
@@ -116,8 +244,6 @@ export class CommandPalette extends Widget {
             return;
         }
 
-        // Printable character — append to query
-        // Ignore control sequences (key.length > 1 means special key name)
         if (!ctrl && !event.alt && key.length === 1) {
             event.stopPropagation();
             this.insertChar(key);
@@ -125,11 +251,32 @@ export class CommandPalette extends Widget {
     }
 
     private _filter(): void {
-        const q = this._query.toLowerCase();
-        if (!q) { this._filtered = [...this._commands]; } else {
-            this._filtered = this._commands.filter(c => { 
-                const l =
-    `${c.label} ${c.category ?? ''}`.toLowerCase(); let qi = 0; for (let i = 0; i < l.length && qi < q.length; i++) { if (l[i] === q[qi]) qi++; } return qi === q.length; });
+        const currentCommands = this._menuStack[this._menuStack.length - 1]?.commands ?? [];
+        const q = this._query.trim();
+
+        if (!q) {
+            this._filtered = [...currentCommands];
+        } else if (this._fuzzyMatch) {
+            const scored = currentCommands
+                .map((cmd) => {
+                    const targetText = `${cmd.label} ${cmd.category ?? ''}`;
+                    const score = fuzzyScore(targetText, q);
+                    return { cmd, score };
+                })
+                .filter((item) => item.score > 0)
+                .sort((a, b) => b.score - a.score);
+
+            this._filtered = scored.map((item) => item.cmd);
+        } else {
+            const lowerQ = q.toLowerCase();
+            this._filtered = currentCommands.filter((c) => {
+                const l = `${c.label} ${c.category ?? ''}`.toLowerCase();
+                let qi = 0;
+                for (let i = 0; i < l.length && qi < lowerQ.length; i++) {
+                    if (l[i] === lowerQ[qi]) qi++;
+                }
+                return qi === lowerQ.length;
+            });
         }
         this._selectedIndex = 0;
     }
@@ -138,10 +285,12 @@ export class CommandPalette extends Widget {
         if (!this._visible) return;
         const { x, y, width, height } = this._rect;
         const attrs = styleToCellAttrs(this.style);
-        // Backdrop
+
         const backdropCh = caps.unicode ? '░' : ' ';
-        for (let r = 0; r < height; r++) screen.writeString(x, y + r, backdropCh.repeat(width), { ...attrs, dim: true });
-        // Box
+        for (let r = 0; r < height; r++) {
+            screen.writeString(x, y + r, backdropCh.repeat(width), { ...attrs, dim: true });
+        }
+
         const vis = this._filtered.slice(0, this._maxVisible);
         const grouped = new Map<string, Command[]>();
         for (const cmd of vis) {
@@ -151,6 +300,7 @@ export class CommandPalette extends Widget {
             }
             grouped.get(category)!.push(cmd);
         }
+
         const bw = Math.min(60, width - 4);
         const totalVisRows = grouped.size + vis.length;
         const bh = Math.min(totalVisRows + 3, height - 2);
@@ -159,52 +309,86 @@ export class CommandPalette extends Widget {
         const border = getBorderChars('single');
         if (!border) return;
         const ba = { ...attrs, fg: this._borderColor };
+
         // Top
         screen.writeString(bx, by, border.topLeft + border.top.repeat(bw - 2) + border.topRight, ba);
+
         // Input row
         screen.writeString(bx, by + 1, border.left, ba);
-        const input = this._query || this._placeholder;
-        screen.writeString(bx + 1, by + 1, (` ${caps.unicode ? '🔍' : '[?]'} ` + input).slice(0, bw - 2).padEnd(bw - 2), { ...attrs, dim: !this._query });
-        screen.writeString(bx + bw - 1, by + 1, border.right, ba);
-        // Separator
-        screen.writeString(bx, by + 2, border.left + '─'.repeat(bw - 2) + border.right, ba);
-        // Items
-        let rowOffset = 0;
-
-for (const [category, commands] of grouped) {
-    screen.writeString(
-        bx + 1,
-        by + 3 + rowOffset,
-        `[${category}]`,
-        { ...attrs, bold: true }
-    );
-
-    rowOffset++;
-
-    for (const c of commands) {
-        const active = rowOffset - 1 === this._selectedIndex;
-
-        const prefix = active ? (caps.unicode ? '❯ ' : '> ') : '  ';
-        const shortcutStr = c.shortcut ? `  ${c.shortcut}` : '';
-        const labelFull = prefix + c.label + shortcutStr;
-        const label = labelFull.slice(0, bw - 4).padEnd(bw - 4);
-
+        const activeStack = this._menuStack[this._menuStack.length - 1];
+        const prefixTitle = activeStack?.title ? `[${activeStack.title}] ` : '';
+        const input = prefixTitle + (this._query || this._placeholder);
         screen.writeString(
             bx + 1,
-            by + 3 + rowOffset,
-            label,
-            {
-                ...attrs,
-                fg: active ? this._activeColor : attrs.fg,
-                bold: active,
-            }
+            by + 1,
+            (` ${caps.unicode ? '🔍' : '[?]'} ` + input).slice(0, bw - 2).padEnd(bw - 2),
+            { ...attrs, dim: !this._query }
         );
+        screen.writeString(bx + bw - 1, by + 1, border.right, ba);
 
-        rowOffset++;
-    }
-}
+        // Separator
+        screen.writeString(bx, by + 2, border.left + '─'.repeat(bw - 2) + border.right, ba);
+
+        // Items
+        let rowOffset = 0;
+        let itemIndex = 0;
+
+        for (const [category, commands] of grouped) {
+            if (by + 3 + rowOffset >= by + bh - 1) break;
+
+            screen.writeString(
+                bx + 1,
+                by + 3 + rowOffset,
+                `[${category}]`,
+                { ...attrs, bold: true }
+            );
+
+            rowOffset++;
+
+            for (const c of commands) {
+                if (by + 3 + rowOffset >= by + bh - 1) break;
+
+                const active = itemIndex === this._selectedIndex;
+                const prefix = active ? (caps.unicode ? '❯ ' : '> ') : '  ';
+                const hasChildren = Array.isArray(c.children) && c.children.length > 0;
+                const suffix = hasChildren ? ' ▶' : '';
+                const shortcutStr = c.shortcut ? c.shortcut : '';
+
+                const leftText = prefix + c.label + suffix;
+                const maxLeftLen = bw - 4 - (shortcutStr ? shortcutStr.length + 2 : 0);
+                const truncatedLeft = leftText.slice(0, Math.max(1, maxLeftLen));
+
+                let lineContent: string;
+                if (shortcutStr && maxLeftLen > 0) {
+                    const padLen = Math.max(1, bw - 4 - truncatedLeft.length - shortcutStr.length);
+                    lineContent = truncatedLeft + ' '.repeat(padLen) + shortcutStr;
+                } else {
+                    lineContent = truncatedLeft.padEnd(bw - 4);
+                }
+
+                screen.writeString(
+                    bx + 1,
+                    by + 3 + rowOffset,
+                    lineContent,
+                    {
+                        ...attrs,
+                        fg: active ? this._activeColor : attrs.fg,
+                        bold: active,
+                    }
+                );
+
+                rowOffset++;
+                itemIndex++;
+            }
+        }
+
         // Bottom
         const last = Math.min(by + 3 + totalVisRows, by + bh - 1);
-        screen.writeString(bx, last, border.bottomLeft + border.bottom.repeat(bw - 2) + border.bottomRight, ba);
+        screen.writeString(
+            bx,
+            last,
+            border.bottomLeft + border.bottom.repeat(bw - 2) + border.bottomRight,
+            ba
+        );
     }
 }
