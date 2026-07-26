@@ -84,6 +84,12 @@ export class Alert extends Widget {
         return this._variant;
     }
 
+    /** Get the current icon string for the active variant. */
+    getIcon(): string {
+        const iconMap = caps.unicode ? ICONS_UNICODE : ICONS_ASCII;
+        return iconMap[this._variant];
+    }
+
     protected _renderSelf(screen: Screen): void {
         const { x, y, width, height } = this._rect;
         if (width < 2 || height < 2) return;
