@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 import { CheckboxGroup } from './CheckboxGroup.js';
 
 const OPTIONS = [
@@ -464,6 +464,19 @@ describe('CheckboxGroup', () => {
             for (const row of rows) {
                 expect(row.length).toBeLessThanOrEqual(width);
             }
+        });
+
+        it('clips wide-character labels by cell width', () => {
+            const group = new CheckboxGroup({
+                options: [{ label: '\u8868\u8868\u8868\u8868', value: 'wide' }],
+            });
+            const screen = new Screen(6, 1);
+            const writeSpy = vi.spyOn(screen, 'writeString');
+
+            group.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+            group.render(screen);
+
+            expect(stringWidth(String(writeSpy.mock.calls[0][2]))).toBeLessThanOrEqual(5);
         });
     });
 

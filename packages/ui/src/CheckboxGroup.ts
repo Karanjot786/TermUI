@@ -6,6 +6,7 @@ import {
     defaultStyle,
     styleToCellAttrs,
     caps,
+    truncate,
 } from '@termuijs/core';
 import { nextEnabledIndex, previousEnabledIndex } from './navigation.js';
 
@@ -123,7 +124,7 @@ export class CheckboxGroup extends Widget {
             screen.writeString(
                 x,
                 y + i,
-                text.slice(0, width),
+                truncate(text, width, ''),
                 {
                     ...attrs,
                     bold: focused,
