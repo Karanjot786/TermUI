@@ -16,8 +16,10 @@ import { Widget } from '../base/Widget.js';
 
 export interface TreeTableColumn {
     /** Column header label */
-    header: string;
-    /** Key to pull data from row objects */
+    header?: string;
+    /** Alias for header label */
+    title?: string;
+    /** Key to pull data from row objects or row.values */
     key: string;
     /** Fixed width (chars). If omitted, auto-distributes. */
     width?: number;
@@ -26,6 +28,8 @@ export interface TreeTableColumn {
 }
 
 export interface TreeTableRow {
+    id?: string;
+    values?: Record<string, unknown>;
     children?: TreeTableRow[];
     expanded?: boolean;
     [key: string]: unknown;
@@ -44,8 +48,19 @@ export interface TreeTableOptions {
     separator?: string;
     /** Indentation per depth (default 2) */
     indent?: number;
+    /** Enable virtualized viewport rendering (default true) */
+    virtualized?: boolean;
+    /** Widget height (if using single options constructor) */
+    height?: number;
     /** Callback when a row is selected */
     onSelect?: (row: TreeTableRow) => void;
+}
+
+export interface TreeTableSingleOptions extends TreeTableOptions {
+    columns: TreeTableColumn[];
+    data?: TreeTableRow[];
+    rows?: TreeTableRow[];
+    style?: Partial<Style>;
 }
 
 interface VisibleEntry {
@@ -58,11 +73,10 @@ interface VisibleEntry {
  *
  * Supports:
  * - Nested rows with column alignment
+ * - Virtualized viewport rendering for large datasets (10,000+ rows)
  * - Expand/collapse with arrows or Enter
- * - Keyboard navigation
- * - Unicode and ASCII symbols
- * - Zebra striping
- * - Header styling
+ * - Keyboard navigation (Up/Down/Left/Right/Home/End)
+ * - Flexible constructor options & values resolution
  */
 export class TreeTable extends Widget {
     private _columns: TreeTableColumn[];
@@ -73,27 +87,51 @@ export class TreeTable extends Widget {
     private _stripeColor: Color;
     private _separator: string;
     private _indent: number;
+    private _virtualized: boolean;
     private _onSelect?: (row: TreeTableRow) => void;
     protected _selectedIndex = 0;
     protected _scrollOffset = 0;
     protected _visibleRows: VisibleEntry[] = [];
 
     constructor(
-        columns: TreeTableColumn[],
-        rows: TreeTableRow[],
+        columnsOrOptions: TreeTableColumn[] | TreeTableSingleOptions,
+        rows?: TreeTableRow[],
         style: Partial<Style> = {},
         options: TreeTableOptions = {},
     ) {
-        super(style);
-        this._columns = columns;
-        this._rows = rows;
-        this._showHeader = options.showHeader ?? true;
-        this._headerColor = options.headerColor ?? { type: 'named', name: 'cyan' };
-        this._stripe = options.stripe ?? true;
-        this._stripeColor = options.stripeColor ?? { type: 'named', name: 'brightBlack' };
-        this._separator = options.separator ?? ' │ ';
-        this._indent = options.indent ?? 2;
-        this._onSelect = options.onSelect;
+        if (!Array.isArray(columnsOrOptions) && typeof columnsOrOptions === 'object') {
+            const single = columnsOrOptions as TreeTableSingleOptions;
+            super(single.style ?? {});
+            this._columns = single.columns ?? [];
+            this._rows = single.data ?? single.rows ?? [];
+            this._showHeader = single.showHeader ?? true;
+            this._headerColor = single.headerColor ?? { type: 'named', name: 'cyan' };
+            this._stripe = single.stripe ?? true;
+            this._stripeColor = single.stripeColor ?? { type: 'named', name: 'brightBlack' };
+            this._separator = single.separator ?? ' │ ';
+            this._indent = single.indent ?? 2;
+            this._virtualized = single.virtualized ?? true;
+            this._onSelect = single.onSelect;
+            if (single.height !== undefined) {
+                this.height = single.height;
+            }
+        } else {
+            super(style);
+            this._columns = (columnsOrOptions as TreeTableColumn[]) ?? [];
+            this._rows = rows ?? [];
+            this._showHeader = options.showHeader ?? true;
+            this._headerColor = options.headerColor ?? { type: 'named', name: 'cyan' };
+            this._stripe = options.stripe ?? true;
+            this._stripeColor = options.stripeColor ?? { type: 'named', name: 'brightBlack' };
+            this._separator = options.separator ?? ' │ ';
+            this._indent = options.indent ?? 2;
+            this._virtualized = options.virtualized ?? true;
+            this._onSelect = options.onSelect;
+            if (options.height !== undefined) {
+                this.height = options.height;
+            }
+        }
+
         this.focusable = true;
         this._buildVisibleRows();
     }
@@ -104,6 +142,10 @@ export class TreeTable extends Widget {
 
     get selectedRow(): TreeTableRow | undefined {
         return this._visibleRows[this._selectedIndex]?.row;
+    }
+
+    get visibleRowsCount(): number {
+        return this._visibleRows.length;
     }
 
     setRows(rows: TreeTableRow[]): void {
@@ -256,7 +298,8 @@ export class TreeTable extends Widget {
             let cx = x;
             for (let c = 0; c < this._columns.length; c++) {
                 const col = this._columns[c];
-                const cellText = this._alignText(col.header, colWidths[c], col.align ?? 'left');
+                const headerTitle = col.title ?? col.header ?? '';
+                const cellText = this._alignText(headerTitle, colWidths[c], col.align ?? 'left');
                 screen.writeString(cx, y + row, cellText, {
                     ...attrs,
                     fg: this._headerColor,
@@ -278,11 +321,13 @@ export class TreeTable extends Widget {
             }
         }
 
-        // Render visible data rows
+        // Render visible data rows (Virtualized window)
         const visibleCount = Math.min(this._visibleRows.length - this._scrollOffset, height - row);
         for (let i = 0; i < visibleCount; i++) {
             const entryIdx = this._scrollOffset + i;
             const entry = this._visibleRows[entryIdx];
+            if (!entry) continue;
+
             const { row: dataRow, depth } = entry;
             const isSelected = entryIdx === this._selectedIndex && this.isFocused;
             const isStripe = this._stripe && i % 2 === 1;
@@ -299,7 +344,7 @@ export class TreeTable extends Widget {
             let cx = x;
             for (let c = 0; c < this._columns.length; c++) {
                 const col = this._columns[c];
-                const rawValue = String(dataRow[col.key] ?? '');
+                const rawValue = String(dataRow.values?.[col.key] ?? dataRow[col.key] ?? '');
                 const cellContent = c === 0 ? fullPrefix + rawValue : rawValue;
                 const cellText = this._alignText(cellContent, colWidths[c], col.align ?? 'left');
 

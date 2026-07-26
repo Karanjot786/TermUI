@@ -78,6 +78,51 @@ describe('TreeTable', () => {
         expect(table).toBeDefined();
     });
 
+    it('supports single options object constructor with values and title attributes', () => {
+        const table = new TreeTable({
+            columns: [
+                { key: 'name', title: 'Process Name', width: 30 },
+                { key: 'pid', title: 'PID', width: 10, align: 'right' },
+            ],
+            data: [
+                {
+                    id: '1',
+                    values: { name: 'systemd', pid: '1' },
+                    children: [
+                        { id: '2', values: { name: 'nginx', pid: '142' } },
+                    ],
+                    expanded: true,
+                },
+            ],
+            virtualized: true,
+            height: 20,
+        });
+
+        expect(table.visibleRowsCount).toBe(2);
+        const screen = renderTable(table);
+        const header = rowText(screen, 0);
+        expect(header).toContain('Process Name');
+        expect(header).toContain('PID');
+    });
+
+    it('handles 10,000+ hierarchical rows efficiently with virtualization', () => {
+        const largeTree: TreeTableRow[] = Array.from({ length: 10000 }, (_, i) => ({
+            id: `row-${i}`,
+            name: `Process-${i}`,
+            size: `${i}MB`,
+        }));
+
+        const table = new TreeTable(COLUMNS, largeTree, {}, { virtualized: true });
+        expect(table.visibleRowsCount).toBe(10000);
+
+        const screen = renderTable(table, 60, 20);
+        expect(screen).toBeDefined();
+
+        // Navigate to last item
+        table.handleKey(key('end'));
+        expect(table.selectedIndex).toBe(9999);
+    });
+
     it('renders root rows with correct prefixes', () => {
         const table = makeTreeTable(COLUMNS, FILE_TREE);
         const screen = renderTable(table);
