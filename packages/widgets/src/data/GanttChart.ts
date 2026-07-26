@@ -131,12 +131,14 @@ export class GanttChart extends Widget {
         const startOffsetVal = Math.max(0, task.start - minT);
         const startCols = (startOffsetVal / timeSpan) * barAreaWidth;
         const startColInt = Math.floor(startCols);
-        
+        // Preserve the fractional column offset for precise bar positioning
+        const startColFrac = startCols - startColInt;
+
         // Find duration width
         const durWidth = (task.duration / timeSpan) * barAreaWidth;
-        
-        // Total sub-cells scaled (8 levels per cell)
-        let remainingSubCells = Math.round(durWidth * 8);
+
+        // Total sub-cells scaled (8 levels per cell), subtracting fractional start offset
+        let remainingSubCells = Math.round(durWidth * 8) - Math.round(startColFrac * 8);
 
         const barStartX = x + labelColWidth + startColInt;
 

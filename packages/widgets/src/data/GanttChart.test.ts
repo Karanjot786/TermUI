@@ -75,4 +75,32 @@ describe("GanttChart", () => {
     expect(row0).toContain("="); // ASCII fallback full block
     expect(row0).not.toContain(HORIZONTAL_BAR_SYMBOLS[8]);
   });
+
+  it("preserves fractional start position for precise bar placement", async () => {
+    const { GanttChart } = await import("./GanttChart.js");
+    // minTime=0, maxTime=100, timeSpan=100
+    // Bar area width = 20 (width=40, label=20 cols)
+    // Task start=12.5, duration=30
+    // startCols = (12.5/100)*20 = 2.5
+    const chart = new GanttChart(
+      [{ label: "Task", start: 12.5, duration: 30 }],
+      {},
+      { minTime: 0, maxTime: 100 }
+    );
+
+    chart.updateRect({ x: 0, y: 0, width: 40, height: 5 });
+    const screen = new Screen(40, 5);
+    chart.render(screen);
+
+    // Duration 30/100*20 = 6 cols = 48 sub-cells
+    // Fractional offset: 0.5 * 8 = 4 sub-cells
+    // remaining = 48 - 4 = 44 sub-cells
+    // First cell at level 4 (partial fill due to 0.5 fractional start)
+    const row0 = screen.back[0];
+    const barStartCol = 20 + 2; // label width 20 + int(startCols)=2
+    const firstBarCell = row0[barStartCol];
+    expect(firstBarCell?.char).toBe(HORIZONTAL_BAR_SYMBOLS[4]);
+    const secondBarCell = row0[barStartCol + 1];
+    expect(secondBarCell?.char).toBe(HORIZONTAL_BAR_SYMBOLS[8]);
+  });
 });
