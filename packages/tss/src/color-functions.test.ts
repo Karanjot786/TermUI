@@ -74,4 +74,9 @@ describe('evalColorFunction', () => {
         expect(evalColorFunction('#336699')).toBe('#336699');
         expect(evalColorFunction('cyan')).toBe('cyan');
     });
+
+    it('evaluates color function calls with surrounding whitespace', () => {
+        const result = evalColorFunction('  lighten(#000000, 0.5)  ');
+        expect(result).toBe('#808080');
+    });
 });
