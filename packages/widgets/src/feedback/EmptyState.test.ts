@@ -45,11 +45,12 @@ describe('EmptyState', () => {
         expect(row(screen, titleRow).trim()).not.toContain('Old title');
     });
 
-    it('handles very narrow width gracefully', () => {
-        const es = new EmptyState('Wide title', {}, { description: 'desc' });
-        es.updateRect({ x: 0, y: 0, width: 3, height: 5 });
-        const screen = new Screen(3, 5);
+    it('handles very narrow width gracefully and truncates text', () => {
+        const es = new EmptyState('Very Long Empty State Title', {}, { description: 'Very long description text' });
+        es.updateRect({ x: 0, y: 0, width: 5, height: 5 });
+        const screen = new Screen(5, 5);
         expect(() => es.render(screen)).not.toThrow();
+        expect(row(screen, 2).length).toBeLessThanOrEqual(5);
     });
 
     it('renders hint when provided', () => {
