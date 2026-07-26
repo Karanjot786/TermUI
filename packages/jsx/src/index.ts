@@ -30,6 +30,8 @@ export {
     useInsertBefore,
     useReducer,
 } from './hooks.js';
+export { useConcurrentReducer, Priority } from './hooks/useConcurrentReducer.js';
+export type { ConcurrentReducerOptions, ReducerMiddleware, ConcurrentDispatch } from './hooks/useConcurrentReducer.js';
 export { useToggle } from './hooks/useToggle.js';
 export { useAnimation } from './hooks/useAnimation.js';
 export type { UseAnimationConfig } from './hooks/useAnimation.js';
