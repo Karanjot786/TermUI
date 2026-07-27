@@ -7,6 +7,8 @@ export interface TabsOptions {
     activeColor?: Style['fg'];
     inactiveColor?: Style['fg'];
     border?: Style['border'];
+    /** Initial active tab index. Defaults to 0. */
+    activeIndex?: number;
 }
 
 export class Tabs extends Widget {
@@ -21,6 +23,7 @@ export class Tabs extends Widget {
     constructor(tabs: Tab[], options: TabsOptions = {}) {
         super(mergeStyles(defaultStyle(), { flexGrow: 1, border: options.border ?? 'single' }));
         this._tabs = tabs;
+        this._activeIndex = options.activeIndex ?? 0;
         this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
         this._inactiveColor = options.inactiveColor ?? { type: 'named', name: 'brightBlack' };
         this.events.on('key', this._keyHandler);

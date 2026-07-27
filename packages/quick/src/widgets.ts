@@ -402,14 +402,13 @@ export function tabs(items: Array<[string, Widget]>, opts?: QuickTabsOptions): W
     const formattedTabs = items.map(([label, content]) => ({ label, content }));
     const t = new Tabs(formattedTabs, {
         activeIndex: opts?.active ?? 0,
-        active: opts?.active ?? 0
-    } as any); // as any: Tabs constructor options not exported from @termuijs/ui
+    });
 
     if (opts?.onChange) {
-        if (typeof (t as any).on === 'function') { // as any: Tabs constructor options not exported from @termuijs/ui
-            (t as any).on('change', opts.onChange); // as any: Tabs constructor options not exported from @termuijs/ui
+        if (typeof (t as any).on === 'function') { // as any: Tabs does not expose change event API
+            (t as any).on('change', opts.onChange); // as any: Tabs does not expose change event API
         } else {
-            (t as any).onChange = opts.onChange; // as any: Tabs constructor options not exported from @termuijs/ui
+            (t as any).onChange = opts.onChange; // as any: Tabs does not expose onChange option
         }
     }
 
