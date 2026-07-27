@@ -204,8 +204,10 @@ function rgbToAnsi256(r: number, g: number, b: number): number {
     if (grayIdx < 0) grayIdx = 0;
     if (grayIdx > 23) grayIdx = 23;
     const grayColor = 232 + grayIdx;
-    r_c = ANSI256_RGB[grayColor * 3];
-    const distGray = (r - r_c)**2 + (g - r_c)**2 + (b - r_c)**2;
+    const r_gray = ANSI256_RGB[grayColor * 3];
+    const g_gray = ANSI256_RGB[grayColor * 3 + 1];
+    const b_gray = ANSI256_RGB[grayColor * 3 + 2];
+    const distGray = (r - r_gray)**2 + (g - g_gray)**2 + (b - b_gray)**2;
     if (distGray < bestDist) {
         bestDist = distGray;
         bestColor = grayColor;
