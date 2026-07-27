@@ -42,6 +42,13 @@ export class CheckboxGroup extends Widget {
             (options.defaultValues ?? []).filter(v => knownValues.has(v)),
         );
         this.onChange = options.onChange;
+        this.events.on('key', this.handleKey);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this.handleKey);
+        this.events.on('key', this.handleKey);
     }
 
     get selectedValues(): string[] {
