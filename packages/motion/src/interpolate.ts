@@ -21,6 +21,9 @@ export function mapRange(
     const clamp = options?.clamp ?? true;
 
     if (inMin === inMax) {
+        if (clamp && outMin !== outMax) {
+            return Math.min(outMin, outMax);
+        }
         return outMin;
     }
 
