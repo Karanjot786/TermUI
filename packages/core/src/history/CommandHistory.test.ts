@@ -199,4 +199,29 @@ describe('CommandHistory', () => {
         expect(ch.getAll()).toHaveLength(3);
         expect(ch.getAll()).toEqual(smallHistory);
     });
+
+    it('import() is a no-op for malformed JSON', () => {
+        const ch = new CommandHistory();
+        ch.add('existing');
+        ch.import('not valid json {{{');
+        expect(ch.getAll()).toEqual(['existing']);
+    });
+
+    it('import() is a no-op for non-array JSON values', () => {
+        const ch = new CommandHistory();
+        ch.add('existing');
+        ch.import(JSON.stringify({ commands: ['cmd1', 'cmd2'] }));
+        expect(ch.getAll()).toEqual(['existing']);
+        ch.import(JSON.stringify(42));
+        expect(ch.getAll()).toEqual(['existing']);
+        ch.import(JSON.stringify(null));
+        expect(ch.getAll()).toEqual(['existing']);
+    });
+
+    it('import() is a no-op for arrays containing non-string elements', () => {
+        const ch = new CommandHistory();
+        ch.add('existing');
+        ch.import(JSON.stringify(['valid', 123, 'also valid'] as unknown[]));
+        expect(ch.getAll()).toEqual(['existing']);
+    });
 });
