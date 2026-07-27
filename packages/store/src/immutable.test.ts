@@ -43,6 +43,17 @@ describe('immutable helpers', () => {
             expect(updated).toEqual({ list: [1, 20, 3] });
             expect(original.list).toEqual([1, 2, 3]); // should not mutate
         });
+
+        it('setIn from null builds nested path correctly', () => {
+            const updated = setIn(null, ['a', 'b'], 'value');
+            expect(updated).toEqual({ a: { b: 'value' } });
+        });
+
+        it('setIn from null with numeric index creates array', () => {
+            const updated = setIn(null, ['a', 0, 'b'], 'value');
+            expect(updated).toEqual({ a: [{ b: 'value' }] });
+            expect(Array.isArray((updated as any).a)).toBe(true);
+        });
     });
 
     describe('updateIn', () => {
