@@ -3,7 +3,6 @@
 // ─────────────────────────────────────────────────────
 
 import type { Screen } from '../terminal/Screen.js';
-import { stripAnsi } from '../utils/unicode.js';
 
 /**
  * Detect if the terminal should use fallback (non-interactive) rendering.
