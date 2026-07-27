@@ -27,6 +27,7 @@ export function throttle<T extends (...args: unknown[]) => void>(
     const leading = options?.leading ?? true;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let lastArgs: Parameters<T> | undefined;
+    let hasNewCalls = false;
 
     const throttled = function (...args: Parameters<T>) {
         lastArgs = args;
@@ -34,9 +35,12 @@ export function throttle<T extends (...args: unknown[]) => void>(
             if (leading) func(...args);
             timer = setTimeout(() => {
                 timer = undefined;
-                if (lastArgs !== args || !leading) func(...lastArgs!);
+                if (hasNewCalls || !leading) func(...lastArgs!);
                 lastArgs = undefined;
+                hasNewCalls = false;
             }, wait);
+        } else {
+            hasNewCalls = true;
         }
     } as T & { cancel: () => void };
 
@@ -44,6 +48,7 @@ export function throttle<T extends (...args: unknown[]) => void>(
         clearTimeout(timer);
         timer = undefined;
         lastArgs = undefined;
+        hasNewCalls = false;
     };
 
     return throttled;
