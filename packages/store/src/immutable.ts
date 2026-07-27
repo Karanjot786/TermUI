@@ -24,13 +24,47 @@ export function setIn<T>(obj: T, path: (string | number)[], value: any): T {
         clone = [...obj];
     } else if (obj !== null && typeof obj === 'object') {
         clone = { ...obj };
+        // If clone is effectively empty (from spreading {} or null-ish) and
+        // the next key is numeric, replace with an array so that clone[0] = x
+        // creates a real array element instead of a string-keyed property.
+        if (clone && typeof key === 'number' && Object.keys(clone).length === 0) {
+            clone = [];
+        }
     } else {
+        // obj is null or a primitive; create the appropriate container
+        // based on the type of the next key to construct the nested path
         clone = typeof key === 'number' ? [] : {};
     }
 
-    const nextVal = rest.length > 0
-        ? setIn(clone[key], rest, value)
-        : value;
+    // When recursing, determine the correct container for the next level.
+    // Reuse an existing non-empty object/array to preserve sibling values.
+    // Otherwise create a container matching the key type: array for numeric keys,
+    // object for string keys.
+    const existing = clone[key];
+    const isNonEmptyContainer = existing !== undefined
+        && existing !== null
+        && typeof existing === 'object'
+        && Object.keys(existing).length > 0;
+
+    // For the terminal step (rest.length === 0) with a string key and an empty
+    // container, set the value directly on clone. If clone is an array and the key
+    // is a string, convert to a plain object first so the property survives
+    // JSON serialization; for numeric keys the array form is correct.
+    if (rest.length === 0) {
+        if (typeof key !== 'number' && Array.isArray(clone)) {
+            // Convert array to plain object to preserve the string-keyed property
+            const converted: any = {};
+            for (const k of Object.keys(clone)) converted[k] = clone[k as any];
+            clone = converted;
+        }
+        clone[key] = value;
+        return clone as T;
+    }
+
+    const container = isNonEmptyContainer
+        ? existing
+        : (typeof key === 'number' ? [] : {});
+    const nextVal = setIn(container, rest, value);
 
     clone[key] = nextVal;
     return clone as T;
