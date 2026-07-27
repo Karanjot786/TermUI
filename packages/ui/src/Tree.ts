@@ -1,6 +1,6 @@
 // Tree — expandable/collapsible tree view
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
 
 export interface TreeNode { label: string; children?: TreeNode[]; expanded?: boolean; icon?: string; }
 export interface TreeOptions { activeColor?: Style['fg']; onSelect?: (node: TreeNode, path: number[]) => void; }
@@ -17,6 +17,13 @@ export class Tree extends Widget {
         this._roots = roots;
         this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSelect = options.onSelect;
+        this.events.on('key', this.handleKey);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this.handleKey);
+        this.events.on('key', this.handleKey);
     }
 
     private _flatten(): { node: TreeNode; depth: number; path: number[]; hasChildren: boolean }[] {
@@ -39,6 +46,32 @@ export class Tree extends Widget {
     confirm(): void {
         const f = this._flatten(); const it = f[this._cursorIndex];
         if (it) { it.hasChildren ? this.toggleExpand() : this._onSelect?.(it.node, it.path); }
+    }
+
+    private handleKey(event: KeyEvent): void {
+        switch (event.key) {
+            case 'up':
+            case 'k':
+                this.selectPrev();
+                break;
+            case 'down':
+            case 'j':
+                this.selectNext();
+                break;
+            case 'left':
+            case 'h':
+                this.toggleExpand();
+                break;
+            case 'enter':
+            case 'return':
+            case ' ':
+                this.confirm();
+                break;
+            default:
+                return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
     }
 
     protected _renderSelf(screen: Screen): void {
