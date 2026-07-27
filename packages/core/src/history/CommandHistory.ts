@@ -99,7 +99,15 @@ export class CommandHistory {
 
     /** Restore history from a JSON string produced by {@link export}. */
     import(data: string): void {
-        const parsed: string[] = JSON.parse(data);
+        let parsed: unknown;
+        try {
+            parsed = JSON.parse(data);
+        } catch {
+            return;
+        }
+        if (!Array.isArray(parsed) || !parsed.every(item => typeof item === 'string')) {
+            return;
+        }
         this.commands = parsed.slice(-this.maxSize);
         this.index = this.commands.length;
     }
