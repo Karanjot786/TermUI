@@ -46,6 +46,27 @@ describe('TSS Tokenizer', () => {
         expect(num!.value).toBe('-2');
     });
 
+    it('tokenizes scientific notation with positive exponent', () => {
+        const tokens = tokenize('opacity: 1e5;');
+        const num = tokens.find(t => t.type === TokenType.Number);
+        expect(num).toBeDefined();
+        expect(num!.value).toBe('1e5');
+    });
+
+    it('tokenizes scientific notation with negative exponent', () => {
+        const tokens = tokenize('width: 1.5e-2;');
+        const num = tokens.find(t => t.type === TokenType.Number);
+        expect(num).toBeDefined();
+        expect(num!.value).toBe('1.5e-2');
+    });
+
+    it('tokenizes scientific notation with explicit positive sign', () => {
+        const tokens = tokenize('scale: 2E+3;');
+        const num = tokens.find(t => t.type === TokenType.Number);
+        expect(num).toBeDefined();
+        expect(num!.value).toBe('2E+3');
+    });
+
     it('tokenizes CSS variables --name', () => {
         const tokens = tokenize('--primary: cyan;');
         const variable = tokens.find(t => t.type === TokenType.Variable);

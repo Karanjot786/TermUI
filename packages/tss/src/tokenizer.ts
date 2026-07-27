@@ -141,12 +141,18 @@ export function tokenize(source: string): Token[] {
             continue;
         }
 
-        // Numbers
+        // Numbers (including scientific notation: 1e5, 1.5e-2, 2E+3)
         if (/[0-9]/.test(ch) || (ch === '-' && /[0-9.]/.test(at(pos + 1)))) {
             const startCol = col;
             let num = '';
             if (ch === '-') num += advance();
             while (pos < source.length && /[0-9.]/.test(peek())) num += advance();
+            // Handle exponent: e or E, optionally followed by +/- then digits
+            if (pos < source.length && /[eE]/.test(peek())) {
+                num += advance();
+                if (pos < source.length && /[+-]/.test(peek())) num += advance();
+                while (pos < source.length && /[0-9]/.test(peek())) num += advance();
+            }
             tokens.push({ type: TokenType.Number, value: num, line, col: startCol });
             continue;
         }
