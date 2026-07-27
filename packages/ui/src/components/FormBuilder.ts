@@ -26,16 +26,18 @@ export function FormBuilder({ onSubmit,
             if (onSubmit) onSubmit();
         }
     };
-    const childrenArray = Array.isArray(children) ? [...children] : [children];
-    
+    const allChildren = children
+      ? (Array.isArray(children) ? children : [children])
+      : [];
+
     if (showResetButton) {
-      childrenArray.push(
+      allChildren.push(
         createElement("button", {
           type: "reset"
         }, resetButtonText)
       );
     }
-    return createElement(FormContext.Provider, { value }, children);
+    return createElement(FormContext.Provider, { value }, allChildren);
 }
 
 export function useForm() {
