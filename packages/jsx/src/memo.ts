@@ -76,11 +76,14 @@ export function memo<P extends Record<string, any>>(
 
         if (fiber) {
             const entry = cache.get(fiber);
-            if (entry && compare(entry.prevProps, props as P)) {
+            // Exclude children from the comparison — children changing should not
+            // invalidate a memoized component's cached result.
+            const { children: _children, ...propsWithoutChildren } = props as P & { children?: any };
+            if (entry && compare(entry.prevProps, propsWithoutChildren as P)) {
                 return entry.prevResult;
             }
             const result = component(props);
-            cache.set(fiber, { prevProps: { ...props } as P, prevResult: result });
+            cache.set(fiber, { prevProps: { ...propsWithoutChildren } as P, prevResult: result });
             return result;
         }
 

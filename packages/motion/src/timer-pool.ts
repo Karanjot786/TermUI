@@ -116,6 +116,12 @@ export function subscribe(...args: unknown[]): () => void {
             unsub();
             const idx = clockSubs.indexOf(entry);
             if (idx !== -1) clockSubs.splice(idx, 1);
+            // Also remove from savedSubs so the callback is not restored when clock detaches.
+            const saved = savedSubs.get(delayMs);
+            if (saved) {
+                saved.delete(cb);
+                if (saved.size === 0) savedSubs.delete(delayMs);
+            }
         };
     }
 

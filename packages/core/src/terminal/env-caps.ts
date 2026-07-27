@@ -19,7 +19,7 @@ export const caps = {
     return this.colorDepth !== ColorDepth.None;
   },
   /** Whether Unicode characters are supported. Disabled by NO_UNICODE or TERM=dumb. */
-  unicode: !process.env.NO_UNICODE && process.env.TERM !== 'dumb',
+  unicode: process.env.NO_UNICODE === undefined && process.env.TERM !== 'dumb',
   /** Whether animations are enabled. Disabled by NO_MOTION or CI environments. */
   motion:  !process.env.NO_MOTION && !process.env.CI,
   /** Whether running inside a CI system (CI=1). */

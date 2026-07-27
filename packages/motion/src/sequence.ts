@@ -9,6 +9,14 @@ export interface SequenceStep {
   duration?: number
 }
 
+/**
+ * Reason an animation sequence was stopped.
+ * - `complete`: all steps finished normally.
+ * - `cancelled`: cancelled via the returned cancel function.
+ * - `interrupted`: a step threw or the sequence was otherwise aborted.
+ */
+export type CancelReason = 'complete' | 'cancelled' | 'interrupted';
+
 export type AnimationRunner = (done: () => void) => () => void
 
 export function sequence(
@@ -18,7 +26,7 @@ export function sequence(
 export function sequence(
   runners: SequenceStep[],
   onComplete?: () => void
-): SequenceStep[]
+): () => void
 export function sequence(
   runners: AnimationRunner[] | SequenceStep[],
   onComplete?: () => void
@@ -29,10 +37,26 @@ export function sequence(
     return () => {}
   }
 
-  // 2. Handle SequenceStep[] path
+  // 2. Handle SequenceStep[] path — run steps sequentially with setTimeout delays
   if (typeof runners[0] !== 'function') {
-    onComplete?.()
-    return runners as SequenceStep[]
+    const steps = runners as SequenceStep[]
+    let cancelled = false
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+
+    function runStep(index: number) {
+      if (cancelled || index >= steps.length) {
+        if (!cancelled) onComplete?.()
+        return
+      }
+      const { duration = 0 } = steps[index]
+      timeoutId = setTimeout(() => runStep(index + 1), duration)
+    }
+
+    runStep(0)
+    return () => {
+      cancelled = true
+      if (timeoutId !== null) clearTimeout(timeoutId)
+    }
   }
 
   // 3. Handle AnimationRunner[] path
