@@ -17,6 +17,22 @@ export class Tree extends Widget {
         this._roots = roots;
         this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
         this._onSelect = options.onSelect;
+        this.events.on('key', this.handleKey.bind(this));
+    }
+
+    private handleKey(event: { key: string }): void {
+        switch (event.key) {
+            case 'up':
+                this.selectPrev();
+                break;
+            case 'down':
+                this.selectNext();
+                break;
+            case 'enter':
+            case ' ':
+                this.confirm();
+                break;
+        }
     }
 
     private _flatten(): { node: TreeNode; depth: number; path: number[]; hasChildren: boolean }[] {
@@ -36,6 +52,7 @@ export class Tree extends Widget {
     selectNext(): void { const f = this._flatten(); if (this._cursorIndex < f.length - 1) { this._cursorIndex++; this.markDirty(); } }
     selectPrev(): void { if (this._cursorIndex > 0) { this._cursorIndex--; this.markDirty(); } }
     toggleExpand(): void { const f = this._flatten(); const it = f[this._cursorIndex]; if (it?.hasChildren) { it.node.expanded = !it.node.expanded; this.markDirty(); } }
+    toggleExpandKey(): void { this.toggleExpand(); }
     confirm(): void {
         const f = this._flatten(); const it = f[this._cursorIndex];
         if (it) { it.hasChildren ? this.toggleExpand() : this._onSelect?.(it.node, it.path); }

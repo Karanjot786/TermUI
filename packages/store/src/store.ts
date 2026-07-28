@@ -73,9 +73,7 @@ export function batch<T>(fn: () => T): T {
     } catch (err) {
         threw = true;
         _batchDepth--;
-        if (_batchDepth === 0) {
-            flushBatch(threw);
-        }
+        flushBatch(threw);
         throw err;
     }
 
