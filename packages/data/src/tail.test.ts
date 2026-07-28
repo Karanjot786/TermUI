@@ -120,4 +120,110 @@ describe('tail', () => {
         appendAndWatch('fresh line\n', stream);
         expect(stream.lines).toEqual(['new content', 'fresh line']);
     });
+
+    it('installs a watcher and waits when the file does not exist at start', () => {
+        vi.mocked(fs.existsSync).mockReturnValue(false);
+
+        const stream = tail('/tmp/missing.log', { initialLines: 100 });
+
+        expect(stream.lines).toEqual(['[waiting for /tmp/missing.log]']);
+        expect(stream.active).toBe(true);
+        expect(fs.watchFile).toHaveBeenCalledWith(
+            '/tmp/missing.log',
+            { interval: 500 },
+            expect.any(Function),
+        );
+        expect(watchCallback).not.toBeNull();
+    });
+
+    it('begins tailing once a missing file is created', () => {
+        vi.mocked(fs.existsSync).mockReturnValue(false);
+
+        const stream = tail('/tmp/created-later.log', { initialLines: 100 });
+        expect(stream.lines).toEqual(['[waiting for /tmp/created-later.log]']);
+
+        // File now exists with content.
+        fileContent = 'first line\n';
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+
+        watchCallback!(stats(fileContent.length), stats(0));
+
+        expect(stream.lines).toEqual(['first line']);
+
+        // Subsequent appends continue tailing normally.
+        appendAndWatch('second line\n', stream);
+        expect(stream.lines).toEqual(['first line', 'second line']);
+    });
+
+    it('re-enters a waiting state when the file is deleted, and resumes on recreation', () => {
+        const stream = tail('/tmp/rotated.log', { initialLines: 100 });
+
+        appendAndWatch('before rotation\n', stream);
+        expect(stream.lines).toEqual(['before rotation']);
+
+        // File is deleted.
+        vi.mocked(fs.existsSync).mockReturnValue(false);
+        watchCallback!(stats(0), stats(fileContent.length));
+
+        expect(stream.lines).toEqual(['[waiting for /tmp/rotated.log]']);
+
+        // File reappears with fresh content.
+        fileContent = 'after rotation\n';
+        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+        watchCallback!(stats(fileContent.length), stats(0));
+
+        expect(stream.lines).toEqual(['after rotation']);
+    });
+
+    it('stop() unwatches the file even if it never existed', () => {
+        vi.mocked(fs.existsSync).mockReturnValue(false);
+
+        const stream = tail('/tmp/never-exists.log');
+        stream.stop();
+
+        expect(stream.active).toBe(false);
+        // A listener must be passed — omitting it would remove every watcher
+        // registered for this path, including ones from unrelated tail() calls.
+        expect(fs.unwatchFile).toHaveBeenCalledWith('/tmp/never-exists.log', expect.any(Function));
+    });
+
+    it('preserves an unterminated trailing line across the initial read', () => {
+        fileContent = 'complete line\nincomplete tail';
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+
+        const stream = tail('/tmp/test.log', { initialLines: 100 });
+
+        // "incomplete tail" has no trailing newline yet, so it must be held
+        // back rather than emitted as a finished line.
+        expect(stream.lines).toEqual(['complete line']);
+
+        appendAndWatch(' end\n', stream);
+        expect(stream.lines).toEqual(['complete line', 'incomplete tail end']);
+    });
+
+    it('preserves an unterminated trailing line across truncation', () => {
+        fileContent = 'a long line that will be truncated\n\n\n\n\n';
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+
+        const stream = tail('/tmp/test.log', { initialLines: 100 });
+
+        // Truncate to shorter content with no trailing newline.
+        const prevSize = fileContent.length;
+        fileContent = 'new incomplete';
+        vi.mocked(fs.readFileSync).mockImplementation(() => fileContent);
+        vi.mocked(fs.statSync).mockReturnValue(stats(fileContent.length));
+        watchCallback!(stats(fileContent.length), stats(prevSize));
+
+        // No trailing newline yet — nothing should be emitted as a complete line.
+        expect(stream.lines).toEqual([]);
+
+        appendAndWatch(' line\n', stream);
+        expect(stream.lines).toEqual(['new incomplete line']);
+    });
 });

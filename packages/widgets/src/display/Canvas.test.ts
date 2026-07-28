@@ -109,4 +109,20 @@ describe('Canvas', () => {
         }
         expect(hasContent).toBe(true);
     });
+
+    it('buffers drawing commands before layout and replays them on initial render', () => {
+        const canvas = new Canvas({ width: 5, height: 3 });
+        const screen = new Screen(10, 5);
+
+        // Draw immediately before layout/render
+        canvas.setPixel(0, 0, true);
+        canvas.setPixel(1, 0, true);
+
+        // Layout and render
+        canvas.updateRect({ x: 0, y: 0, width: 5, height: 3 });
+        canvas.render(screen);
+
+        const expectedCharCode = BRAILLE_OFFSET | BRAILLE_DOTS[0][0] | BRAILLE_DOTS[0][1];
+        expect(screen.back[0][0].char).toBe(String.fromCharCode(expectedCharCode));
+    });
 });

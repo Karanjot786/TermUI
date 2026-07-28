@@ -31,6 +31,9 @@ import { animateRect, type SpringConfig, type SpringPresetName } from '@termuijs
 export interface WidgetEvents {
     key: KeyEvent;
     mouse: TermMouseEvent;
+    click: TermMouseEvent;
+    mouseenter: TermMouseEvent;
+    mouseleave: TermMouseEvent;
     focus: void;
     blur: void;
     mount: void;
@@ -110,6 +113,16 @@ export abstract class Widget {
     /** Whether the widget is currently focused */
     isFocused = false;
 
+    /** Optional callback for mouse click events */
+    onClick?: (event: TermMouseEvent) => void;
+    /** Optional callback for mouse enter events */
+    onMouseEnter?: (event: TermMouseEvent) => void;
+    /** Optional callback for mouse leave events */
+    onMouseLeave?: (event: TermMouseEvent) => void;
+
+    /** Extended description shown on hover/focus */
+    tooltip?: string;
+
     /**
      * Dirty flag — true when this widget needs re-rendering.
      * Newly created widgets start dirty.
@@ -163,6 +176,16 @@ export abstract class Widget {
     /** Get the current style */
     get style(): Style { return this._style; }
 
+    /** Get the z-index stacking order */
+    get zIndex(): number {
+        return this._style.zIndex ?? 0;
+    }
+
+    /** Set the z-index stacking order */
+    set zIndex(value: number) {
+        this.setStyle({ zIndex: value });
+    }
+
     get a11y(): A11yProps | undefined { return this._a11y; }
 
     public setA11y(props: A11yProps): this {
@@ -214,10 +237,12 @@ export abstract class Widget {
 
     /**
      * Destroy this widget and all its descendants.
-     * Cleans up event handlers, removes parent references, and clears children.
-     * Fiber-level cleanup is handled by the reconciler's _pruneInstancesForWidget.
+     * Cleans up event handlers, cancels active animations, removes parent references, and clears children.
      */
     destroy(): void {
+        this._layoutCancel?.();
+        this._layoutCancel = null;
+        this._targetRect = null;
         this.unmount();
         const children = [...this._children];
         this._children = [];
@@ -311,7 +336,12 @@ export abstract class Widget {
         this._renderBorder(screen);
 
         // Render children
-        for (const child of this._children) {
+        const sortedChildren = [...this._children].sort((a, b) => {
+            const az = a.style.zIndex ?? 0;
+            const bz = b.style.zIndex ?? 0;
+            return az - bz;
+        });
+        for (const child of sortedChildren) {
             child.render(screen);
         }
 
@@ -601,6 +631,9 @@ export abstract class Widget {
     unmount(): void {
         if (this._unmounted) return;
         this._unmounted = true;
+        this._layoutCancel?.();
+        this._layoutCancel = null;
+        this._targetRect = null;
         for (const child of this._children) {
             child.unmount();
         }

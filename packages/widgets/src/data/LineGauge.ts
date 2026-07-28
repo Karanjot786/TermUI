@@ -1,5 +1,6 @@
 import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
+import { validateFinite } from './utils.js';
 
 export interface LineGaugeOptions {
     /** Filled portion character. Default: '━' with ASCII fallback '=' */
@@ -33,7 +34,7 @@ export class LineGauge extends Widget {
     }
 
     setValue(value: number): void {
-        const clamped = Math.max(0, Math.min(1, value));
+        const clamped = validateFinite(value, 0, 0, 1);
         if (clamped === this._value) return;
         this._value = clamped;
         this.markDirty();

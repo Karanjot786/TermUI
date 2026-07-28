@@ -11,7 +11,7 @@
 // ─────────────────────────────────────────────────────
 
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, stringWidth, truncate, caps, splitGraphemes } from '@termuijs/core';
 
 export interface TagInputOptions {
     placeholder?: string;
@@ -77,7 +77,7 @@ export class TagInput extends Widget {
 
             case 'backspace':
                 if (this._draft.length > 0) {
-                    this._draft = this._draft.slice(0, -1);
+                    this._draft = splitGraphemes(this._draft).slice(0, -1).join('');
                     this.markDirty();
                 } else {
                     this.removeLast();

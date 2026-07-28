@@ -87,4 +87,22 @@ describe('PieChart', () => {
         // The pie portion should be filled with the block char
         expect(allText).toContain('\u2588');
     });
+
+    it('does not render legend rows beyond the widget height', () => {
+        const pie = new PieChart({
+            slices: [
+                { label: 'One', value: 1, color: 'red' },
+                { label: 'Two', value: 1, color: 'blue' },
+                { label: 'Three', value: 1, color: 'green' },
+            ],
+        });
+        pie.updateRect({ x: 0, y: 0, width: 20, height: 2 });
+        const screen = new Screen(20, 4);
+        pie.render(screen);
+
+        const rows = screen.back.map(row => row.map(c => c.char).join(''));
+        expect(rows[0]).toContain('One');
+        expect(rows[1]).toContain('Two');
+        expect(rows[2].trim()).toBe('');
+    });
 });

@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 import { Timer } from './Timer.js';
 
 /** Helper: create a Timer, give it a rect, render to a screen, return both. */
@@ -56,6 +56,34 @@ describe('Timer – rendering', () => {
 
     it('renders nothing when the content rect has zero width', () => {
         expect(() => renderTimer({ duration: 30_000 }, {}, 0, 1)).not.toThrow();
+    });
+
+    it('clips the formatted label to narrow widths', () => {
+        const timer = new Timer({ duration: 61_000 });
+        const screen = new Screen(3, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        timer.updateRect({ x: 0, y: 0, width: 3, height: 1 });
+        timer.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(3);
+        }
+    });
+});
+
+describe('Timer validation', () => {
+    it('rejects invalid durations', () => {
+        expect(() => new Timer({ duration: -1 })).toThrow(/duration/);
+        expect(() => new Timer({ duration: Number.NaN })).toThrow(/duration/);
+        expect(() => new Timer({ duration: Infinity })).toThrow(/duration/);
+    });
+
+    it('rejects invalid intervals', () => {
+        expect(() => new Timer({ duration: 1_000, interval: 0 })).toThrow(/interval/);
+        expect(() => new Timer({ duration: 1_000, interval: -1 })).toThrow(/interval/);
+        expect(() => new Timer({ duration: 1_000, interval: Number.NaN })).toThrow(/interval/);
+        expect(() => new Timer({ duration: 1_000, interval: Infinity })).toThrow(/interval/);
     });
 });
 
@@ -195,5 +223,36 @@ describe('Timer – reset() optimization', () => {
         timer.reset();
 
         expect(timer.isDirty).toBe(false);
+    });
+});
+
+// ── 6. unmount and lifecycle ──────────────────────────────────────────────────
+describe('Timer – unmount and lifecycle', () => {
+    beforeEach(() => { vi.useFakeTimers(); });
+    afterEach(() => { vi.useRealTimers(); });
+
+    it('unmount() pauses the timer, stops it from running, and preserves remaining time', () => {
+        const timer = new Timer({ duration: 5_000, interval: 1_000 });
+        timer.start();
+        vi.advanceTimersByTime(2_000);
+        expect(timer.getRemaining()).toBe(3_000);
+
+        // Unmount
+        timer.unmount();
+        expect((timer as any)._running).toBe(false);
+
+        // Time passes while unmounted - remaining should not change
+        vi.advanceTimersByTime(2_000);
+        expect(timer.getRemaining()).toBe(3_000);
+
+        // Remount and resume
+        timer.mount();
+        timer.start();
+        expect((timer as any)._running).toBe(true);
+
+        vi.advanceTimersByTime(1_000);
+        expect(timer.getRemaining()).toBe(2_000);
+
+        timer.destroy();
     });
 });
