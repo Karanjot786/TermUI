@@ -38,6 +38,7 @@ export class Scheduler {
         const delay = Math.floor(1000 / this._fps);
         
         this._timer = setTimeout(() => {
+            this._timer = null; // Clear handle before flush so follow-up enqueues can schedule a new frame
             this.flush();
         }, delay);
     }
