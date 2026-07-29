@@ -120,6 +120,9 @@ export abstract class Widget {
     /** Optional callback for mouse leave events */
     onMouseLeave?: (event: TermMouseEvent) => void;
 
+    /** Extended description shown on hover/focus */
+    tooltip?: string;
+
     /**
      * Dirty flag — true when this widget needs re-rendering.
      * Newly created widgets start dirty.
@@ -234,10 +237,12 @@ export abstract class Widget {
 
     /**
      * Destroy this widget and all its descendants.
-     * Cleans up event handlers, removes parent references, and clears children.
-     * Fiber-level cleanup is handled by the reconciler's _pruneInstancesForWidget.
+     * Cleans up event handlers, cancels active animations, removes parent references, and clears children.
      */
     destroy(): void {
+        this._layoutCancel?.();
+        this._layoutCancel = null;
+        this._targetRect = null;
         this.unmount();
         const children = [...this._children];
         this._children = [];
@@ -626,6 +631,9 @@ export abstract class Widget {
     unmount(): void {
         if (this._unmounted) return;
         this._unmounted = true;
+        this._layoutCancel?.();
+        this._layoutCancel = null;
+        this._targetRect = null;
         for (const child of this._children) {
             child.unmount();
         }

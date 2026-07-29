@@ -4,7 +4,7 @@
 
 import { EventEmitter } from '@termuijs/core';
 import { createElement, ErrorBoundary, setRouterScope, unmountScoped, type VNode, getCurrentApp } from '@termuijs/jsx';
-import { type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern } from './route.js';
+import { type NavigationGuardContext, type Route, type RouteMatch, type RouteParams, type RouteMeta, type QueryParams, type RedirectTarget, matchRoute, compilePattern, serializeQuery } from './route.js';
 import { RouterContext } from './hooks.js';
 
 let _routerIdCounter = 0;
@@ -24,6 +24,7 @@ export interface NavigateEvent {
     match: RouteMatch;
     screen: VNode;
     direction?: 'push' | 'replace' | 'back' | 'forward';
+    navigation: NavigationGuardContext;
 }
 
 export interface RouterEvents {
@@ -49,6 +50,9 @@ export class Router {
     private _maxHistory: number;
     private _notFound?: (path: string) => VNode;
     private _pendingInitialPath: string | null = null;
+    private _navigationId = 0;
+    private _activeNavigationId = 0;
+    private _activeNavigationController: AbortController | null = null;
     public autoUnmount = false;
     readonly events = new EventEmitter<RouterEvents>();
     private readonly _routerId: string;
@@ -212,9 +216,18 @@ export class Router {
         };
     }
 
-    private _resolveRedirect(path: string, depth = 0): string | null {
-        if (depth > 10) {
-            this.events.emit('error', new Error(`Max redirect depth exceeded for path: ${path}`));
+    private _resolveRedirect(path: string, trail: string[] = []): string | null {
+        const cycleStart = trail.indexOf(path);
+        if (cycleStart !== -1) {
+            const cycle = [...trail.slice(cycleStart), path].join(' -> ');
+            this.events.emit('error', new Error(`Redirect loop detected: ${cycle}`));
+            return null;
+        }
+
+        const nextTrail = [...trail, path];
+
+        if (nextTrail.length > 10) {
+            this.events.emit('error', new Error(`Max redirect depth exceeded: ${nextTrail.join(' -> ')}`));
             return null;
         }
 
@@ -224,10 +237,35 @@ export class Router {
         if (match.route.redirect) {
             const redirectTarget = match.route.redirect;
             const nextPath = typeof redirectTarget === 'function' ? redirectTarget(match.params) : redirectTarget;
-            return this._resolveRedirect(nextPath, depth + 1);
+            return this._resolveRedirect(nextPath, nextTrail);
         }
 
         return path;
+    }
+
+    private _beginNavigation(): NavigationGuardContext {
+        this._activeNavigationController?.abort();
+        const controller = new AbortController();
+        const id = ++this._navigationId;
+        this._activeNavigationId = id;
+        this._activeNavigationController = controller;
+
+        return {
+            id,
+            signal: controller.signal,
+            isStale: () => this._activeNavigationId !== id || controller.signal.aborted,
+        };
+    }
+
+    private _runBeforeEnterGuards(match: RouteMatch, path: string, navigation: NavigationGuardContext): boolean | string {
+        for (const route of match.chain) {
+            const result = route.beforeEnter?.(path, navigation);
+            if (navigation.isStale()) return false;
+            if (result === false || typeof result === 'string') {
+                return result;
+            }
+        }
+        return true;
     }
 
     /**
@@ -240,12 +278,16 @@ export class Router {
             modifyHistory?: 'push' | 'replace' | 'none';
             clearForwardStack?: boolean;
             direction?: 'push' | 'replace' | 'back' | 'forward';
+            navigation?: NavigationGuardContext;
         } = {},
     ): void {
+        const navigation = options.navigation ?? this._beginNavigation();
         const resolvedPath = this._resolveRedirect(path);
+        if (navigation.isStale()) return;
         if (!resolvedPath) return;
 
         const match = matchRoute(resolvedPath, this._routes);
+        if (navigation.isStale()) return;
 
         if (!match) {
             if (this._notFound) {
@@ -279,7 +321,8 @@ export class Router {
                 }
                 const screen = this.wrapScreen(notFoundMatch);
                 const emitEvent = direction === 'back' ? 'back' : 'navigate';
-                this.events.emit(emitEvent, { match: notFoundMatch, screen, direction });
+                if (navigation.isStale()) return;
+                this.events.emit(emitEvent, { match: notFoundMatch, screen, direction, navigation });
                 return;
             }
 
@@ -291,14 +334,15 @@ export class Router {
             this._forwardStack = [];
         }
 
-        const guardResult = match.route.beforeEnter?.(resolvedPath);
+        const guardResult = this._runBeforeEnterGuards(match, resolvedPath, navigation);
+        if (navigation.isStale()) return;
 
         if (guardResult === false) {
             return;
         }
 
         if (typeof guardResult === 'string') {
-            this._executeNavigation(guardResult, { ...options, clearForwardStack: false });
+            this._executeNavigation(guardResult, { ...options, clearForwardStack: false, navigation });
             return;
         }
 
@@ -328,9 +372,10 @@ export class Router {
         const screen = this.wrapScreen(match);
 
         const emitEvent = direction === 'back' ? 'back' : 'navigate';
-        this.events.emit(emitEvent, { match, screen, direction });
+        if (navigation.isStale()) return;
+        this.events.emit(emitEvent, { match, screen, direction, navigation });
 
-        match.route.afterEnter?.(resolvedPath);
+        match.route.afterEnter?.(resolvedPath, navigation);
     }
 
     private _applyInitialPathIfPending(): void {
@@ -344,7 +389,7 @@ export class Router {
     push(path: string, options?: { query?: QueryParams }): void {
         let targetPath = path;
         if (options?.query) {
-            const qs = new URLSearchParams(options.query).toString();
+            const qs = serializeQuery(options.query);
             if (qs) targetPath += (targetPath.includes('?') ? '&' : '?') + qs;
         }
         this._executeNavigation(targetPath, { clearForwardStack: true, direction: 'push' });
@@ -354,7 +399,7 @@ export class Router {
     replace(path: string, options?: { query?: QueryParams }): void {
         let targetPath = path;
         if (options?.query) {
-            const qs = new URLSearchParams(options.query).toString();
+            const qs = serializeQuery(options.query);
             if (qs) targetPath += (targetPath.includes('?') ? '&' : '?') + qs;
         }
         this._executeNavigation(targetPath, { modifyHistory: 'replace', direction: 'replace' });
@@ -366,6 +411,7 @@ export class Router {
 
         const prevPath = this._history[this._history.length - 2];
         const match = prevPath ? matchRoute(prevPath, this._routes) : null;
+        const navigation = this._beginNavigation();
 
         if (!match) {
             if (this._notFound && prevPath) {
@@ -385,7 +431,8 @@ export class Router {
             return;
         }
 
-        const guardResult = match.route.beforeEnter?.(prevPath);
+        const guardResult = this._runBeforeEnterGuards(match, prevPath, navigation);
+        if (navigation.isStale()) return;
 
         if (guardResult === false) {
             return;
@@ -396,7 +443,7 @@ export class Router {
             if (poppedPath) {
                 this._forwardStack.push(poppedPath);
             }
-            this._executeNavigation(guardResult, { clearForwardStack: false, direction: 'back' });
+            this._executeNavigation(guardResult, { clearForwardStack: false, direction: 'back', navigation });
             return;
         }
 
@@ -414,9 +461,10 @@ export class Router {
         }
         const screen = this.wrapScreen(match);
 
-        this.events.emit('back', { match, screen, direction: 'back' });
+        if (navigation.isStale()) return;
+        this.events.emit('back', { match, screen, direction: 'back', navigation });
 
-        match.route.afterEnter?.(prevPath);
+        match.route.afterEnter?.(prevPath, navigation);
     }
 
     /** Move forward one step with full lifecycle (beforeEnter, afterEnter, redirects) */
@@ -424,6 +472,7 @@ export class Router {
         if (this._forwardStack.length === 0) return;
 
         const nextPath = this._forwardStack[this._forwardStack.length - 1];
+        const navigation = this._beginNavigation();
 
         const match = matchRoute(nextPath, this._routes);
         if (!match) {
@@ -441,7 +490,8 @@ export class Router {
             return;
         }
 
-        const guardResult = match.route.beforeEnter?.(nextPath);
+        const guardResult = this._runBeforeEnterGuards(match, nextPath, navigation);
+        if (navigation.isStale()) return;
 
         if (guardResult === false) {
             return;
@@ -453,6 +503,7 @@ export class Router {
                 modifyHistory: 'push',
                 clearForwardStack: false,
                 direction: 'forward',
+                navigation,
             });
             return;
         }
@@ -467,9 +518,10 @@ export class Router {
             unmountScoped(this._routerId);
         }
         const screen = this.wrapScreen(match);
-        this.events.emit('navigate', { match, screen, direction: 'forward' });
+        if (navigation.isStale()) return;
+        this.events.emit('navigate', { match, screen, direction: 'forward', navigation });
 
-        match.route.afterEnter?.(nextPath);
+        match.route.afterEnter?.(nextPath, navigation);
     }
 
     /** Move delta steps: negative is back, positive is forward */
@@ -546,5 +598,11 @@ export class Router {
     /** All registered routes */
     get routes(): Route[] {
         return [...this._routes];
+    }
+
+    cancelPendingNavigation(): void {
+        this._activeNavigationController?.abort();
+        this._activeNavigationController = null;
+        this._activeNavigationId = ++this._navigationId;
     }
 }
