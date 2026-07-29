@@ -64,6 +64,7 @@ export function LiveWrapper() {
         readStream();
 
         proc.exited.then((code) => {
+.catch(err => console.error(err))
             setStatus(`Process exited with code ${code}`);
             if (buffer) {
                 setLines(prev => [...prev, buffer]);
