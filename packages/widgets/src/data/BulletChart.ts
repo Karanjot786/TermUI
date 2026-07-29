@@ -2,7 +2,7 @@
 // @termuijs/widgets — BulletChart widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, truncate, caps } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { validateFinite } from './utils.js';
 
@@ -57,11 +57,11 @@ export class BulletChart extends Widget {
 
         const attrs = styleToCellAttrs(this._style);
 
-        const labelStr = this._label ? this._label + ' ' : '';
+        const labelStr = this._label ? truncate(this._label + ' ', width, '') : '';
         const labelWidth = stringWidth(labelStr);
         const barWidth = Math.max(0, width - labelWidth);
 
-        if (this._label) {
+        if (labelStr.length > 0) {
             screen.writeString(x, y, labelStr, { ...attrs, bold: true });
         }
 
