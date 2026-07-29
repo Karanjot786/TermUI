@@ -50,5 +50,21 @@ describe('execFileAsync', () => {
     it('should reject when an argument contains null bytes', async () => {
         await expect(execFileAsync('test-bin', ['safe', 'malicious\0arg'])).rejects.toThrow('execFileAsync: argument contains null bytes');
     });
+
+    it('should always enforce shell: false even if caller passes shell: true in opts', async () => {
+        // Security invariant: caller must never be able to re-enable shell execution
+        const spy = vi.spyOn(childProcess, 'execFile').mockImplementation(
+            (file, args, opts, callback) => {
+                const cb = typeof opts === 'function' ? opts : callback;
+                cb(null, '', '');
+                return {} as any;
+            }
+        );
+
+        // Even if caller attempts to pass shell: true, it must be overridden to false
+        await execFileAsync('test-bin', [], { shell: true });
+        const calledOpts = spy.mock.calls[0][2] as { shell: boolean };
+        expect(calledOpts.shell).toBe(false);
+    });
 });
 

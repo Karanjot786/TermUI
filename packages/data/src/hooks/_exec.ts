@@ -15,7 +15,7 @@ export const execFileAsync = (file: string, args: string[], opts?: any): Promise
         }
     }
     return new Promise((resolve, reject) => {
-        execFile(file, args, { shell: false, ...opts }, (err, stdout, stderr) => {
+        execFile(file, args, { ...opts, shell: false }, (err, stdout, stderr) => {
             if (err) reject(err);
             else resolve({ stdout: String(stdout), stderr: String(stderr) });
         });
