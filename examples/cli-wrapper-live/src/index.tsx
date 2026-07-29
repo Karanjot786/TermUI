@@ -64,25 +64,4 @@ export function LiveWrapper() {
         readStream();
 
         proc.exited.then((code) => {
-            setStatus(`Process exited with code ${code}`);
-            if (buffer) {
-                setLines(prev => [...prev, buffer]);
-            }
-        });
-
-        return () => {
-            proc.kill();
-        };
-    }, []);
-
-    return (
-        <box width={60} height={20} border="single" flexDirection="column">
-            <StreamingTextWidget text={status} speed={5} style={{ fg: 'cyan', height: 1 }} />
-            <box flexGrow={1} border="top">
-                <LogViewWidget lines={lines} />
-            </box>
-        </box>
-    );
-}
-
-renderApp(LiveWrapper);
+        .catch(err => console.error(err))
