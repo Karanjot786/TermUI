@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 import { MultiSelect } from './MultiSelect.js';
 
 const OPTIONS = [
@@ -778,6 +778,22 @@ describe('MultiSelect — Rendering Bounds', () => {
         ms.updateRect({ x: 0, y: 0, width: 3, height: 3 });
         const screen = new Screen(3, 3);
         expect(() => ms.render(screen)).not.toThrow();
+    });
+
+    it('truncates double-width labels to the terminal width', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const ms = new MultiSelect([
+            { label: '界界界界界', value: 'wide' },
+        ]);
+        const screen = new Screen(8, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        ms.updateRect({ x: 0, y: 0, width: 8, height: 1 });
+        ms.render(screen);
+
+        const rendered = String(writeSpy.mock.calls[0]?.[2] ?? '');
+        expect(stringWidth(rendered)).toBeLessThanOrEqual(8);
+        expect(rendered).not.toContain('\uFFFD');
     });
 
     it('rendering with negative width handled gracefully', () => {

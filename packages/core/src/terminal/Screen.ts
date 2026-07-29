@@ -351,9 +351,15 @@ export class Screen {
 
         const existing = this.back[row][col];
         if (cell.char !== undefined) {
-            cell = { ...cell, char: stripAnsiControl(cell.char) };
+            const sanitizedChar = stripAnsiControl(cell.char);
+            if (sanitizedChar !== cell.char) {
+                Object.assign(existing, cell, { char: sanitizedChar });
+            } else {
+                Object.assign(existing, cell);
+            }
+        } else {
+            Object.assign(existing, cell);
         }
-        Object.assign(existing, cell);
     }
 
     /**

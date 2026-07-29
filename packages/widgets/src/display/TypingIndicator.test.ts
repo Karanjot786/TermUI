@@ -92,4 +92,15 @@ describe('TypingIndicator', () => {
         
         expect(clearIntervalSpy).toHaveBeenCalled();
     });
+
+    it('resets running state on unmount so it can restart', () => {
+        const indicator = new TypingIndicator();
+        indicator.start();
+
+        indicator.unmount();
+        expect(indicator.isRunning()).toBe(false);
+
+        indicator.start();
+        expect(indicator.isRunning()).toBe(true);
+    });
 });

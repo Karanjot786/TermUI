@@ -24,6 +24,8 @@ export { InputParser } from './input/InputParser.js';
 export { ESCAPE_SEQUENCES, CTRL_KEYS, SPECIAL_KEYS, normalizeNavigationKey } from './input/KeyMap.js';
 export { parseMouseEvent, isMouseSequence } from './input/MouseParser.js';
 export { MouseGestures } from './input/MouseGestures.js';
+export { HotkeyManager } from './input/HotkeyManager.js';
+export type { HotkeyHandler } from './input/HotkeyManager.js';
 export { splitGraphemes } from './input/grapheme.js';
 export type { MouseGesturesOptions } from './input/MouseGestures.js';
 export { ChordMatcher } from './input/ChordMatcher.js';
@@ -87,6 +89,8 @@ export type { TestScreen } from './terminal/TestBackend.js';
 // ── App ───────────────────────────────────────────────
 export { App } from './app/App.js';
 export type { AppOptions, RootWidget } from './app/App.js';
+export { TooltipManager } from './app/TooltipManager.js';
+export type { TooltipManagerEventMap, TooltipState } from './app/TooltipManager.js';
 export { shouldUseFallback, renderFallback } from './app/Fallback.js';
 export { renderInlineToTerminal, createInlineViewport } from './inline-viewport.js';
 
@@ -104,6 +108,8 @@ export { throttle } from './utils/throttle.js';
 export type { ThrottleOptions } from './utils/throttle.js';
 export { CommandHistory } from "./history/CommandHistory.js";
 export type { CommandHistoryOptions } from "./history/CommandHistory.js";
+export { History, createHistory } from "./history.js";
+export type { HistoryOptions } from "./history.js";
 export * from './errors.js';
 
 // ── Accessibility ─────────────────────────────────────
