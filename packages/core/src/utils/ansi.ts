@@ -228,10 +228,10 @@ export function notify(text: string): string {
  * to the terminal.
  */
 export function stripAnsiControl(str: string): string {
-    // Remove all ESC-introduced sequences (CSI, OSC, DCS, SS2/SS3, etc.)
+    // Remove all ESC-introduced sequences (OSC, CSI, DCS, SS2/SS3, etc.)
     // eslint-disable-next-line no-control-regex
     let out = str.replace(
-        /\x1b(?:[@-Z\\-_]|\[[0-9;<=>?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[PX^_][^\x1b]*\x1b\\|.)/g,
+        /\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[0-9;<=>?]*[a-zA-Z]|[@-Z\\_]|[PX^_][^\x1b]*\x1b\\|.)/g,
         ''
     );
     // Remove remaining bare C0 controls (keep TAB=0x09, LF=0x0A) and C1/DEL
