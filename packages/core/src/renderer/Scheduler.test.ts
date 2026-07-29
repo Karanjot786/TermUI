@@ -96,4 +96,24 @@ describe('Scheduler', () => {
         expect(() => scheduler.setFPS(NaN)).toThrow();
         expect(() => scheduler.setFPS(Infinity)).toThrow();
     });
+
+    it('should prevent re-entrant flush passes while flushing', () => {
+        let nestedFlushCalls = 0;
+        let task2Run = false;
+
+        scheduler.enqueue(() => {
+            // Attempt to trigger a re-entrant flush while already flushing
+            scheduler.flush();
+            nestedFlushCalls++;
+        });
+        scheduler.enqueue(() => {
+            task2Run = true;
+        });
+
+        scheduler.flush();
+
+        expect(nestedFlushCalls).toBe(1);
+        expect(task2Run).toBe(true);
+    });
 });
+
