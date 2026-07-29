@@ -27,12 +27,12 @@ function decodeEntities(value: string): string {
 
   return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, entity: string) => {
     if (entity.startsWith('#x')) {
-      const codePoint = Number.parseInt(entity.slice(2), 16);
+      const codePoint = Number.parseInt(entity.slice(2, 10), 16);
       return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match;
     }
 
     if (entity.startsWith('#')) {
-      const codePoint = Number.parseInt(entity.slice(1), 10);
+      const codePoint = Number.parseInt(entity.slice(1, 10), 10);
       return Number.isFinite(codePoint) ? String.fromCodePoint(codePoint) : match;
     }
 
