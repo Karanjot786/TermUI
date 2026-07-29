@@ -128,7 +128,7 @@ class ShowcaseApp extends Widget {
         if (event.key === 'q' || (event.ctrl && event.key === 'c')) return false;
 
         // Tab switching: 1-5
-        const num = parseInt(event.key);
+        const num = parseInt(event.key, 10);
         if (num >= 1 && num <= 5) {
             this.switchTab(num - 1);
             return true;
