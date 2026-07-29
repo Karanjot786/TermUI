@@ -27,7 +27,7 @@ describe('execFileAsync', () => {
             stdout: 'hello stdout',
             stderr: 'hello stderr',
         });
-        expect(spy).toHaveBeenCalledWith('test-bin', ['arg1'], { cwd: '/tmp' }, expect.any(Function));
+        expect(spy).toHaveBeenCalledWith('test-bin', ['arg1'], { cwd: '/tmp', shell: false }, expect.any(Function));
     });
 
     it('should reject with error when execution fails', async () => {
@@ -42,4 +42,13 @@ describe('execFileAsync', () => {
 
         await expect(execFileAsync('test-bin', [])).rejects.toThrow('Spawn failed');
     });
+
+    it('should reject when file path contains null bytes', async () => {
+        await expect(execFileAsync('test-bin\0malicious', [])).rejects.toThrow('execFileAsync: file path contains null bytes');
+    });
+
+    it('should reject when an argument contains null bytes', async () => {
+        await expect(execFileAsync('test-bin', ['safe', 'malicious\0arg'])).rejects.toThrow('execFileAsync: argument contains null bytes');
+    });
 });
+

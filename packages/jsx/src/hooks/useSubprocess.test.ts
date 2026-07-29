@@ -105,4 +105,12 @@ describe('useSubprocess', () => {
             'useSubprocess.run requires a command',
         );
     });
-});
+
+    it('throws when command contains null bytes', async () => {
+        const subprocess = useSubprocess();
+
+        await expect(subprocess.run(['ls', 'dir\0malicious'])).rejects.toThrow(
+            'useSubprocess: command contains null bytes',
+        );
+    });
+});
