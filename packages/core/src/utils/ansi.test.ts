@@ -224,12 +224,32 @@ describe('stripAnsiControl', () => {
         expect(stripAnsiControl('Hello World')).toBe('Hello World');
     });
 
-    it('strips OSC sequences truncated by catch-all', () => {
-        expect(stripAnsiControl('\x1b]0;My App\x07')).toBe('0;My App');
+    it('strips OSC sequences including full payload (title, clipboard, etc.)', () => {
+        // OSC with BEL terminator: ESC ] params BEL
+        expect(stripAnsiControl('\x1b]0;My App\x07')).toBe('');
+        // OSC with ST terminator: ESC ] params ESC \\
+        expect(stripAnsiControl('\x1b]0;Title\x1b\\')).toBe('');
     });
 
-    it('strips DCS sequences truncated by catch-all', () => {
-        expect(stripAnsiControl('\x1bPsome data\x1b\\')).toBe('some data');
+    it('strips DCS sequences including full payload (regression: old regex left payload in output)', () => {
+        // DCS: ESC P payload ESC \\  — payload must NOT appear in output
+        expect(stripAnsiControl('\x1bPsome data\x1b\\')).toBe('');
+        // PM: ESC ^ payload ESC \\
+        expect(stripAnsiControl('\x1b^private data\x1b\\')).toBe('');
+        // APC: ESC _ payload ESC \\
+        expect(stripAnsiControl('\x1b_app data\x1b\\')).toBe('');
+    });
+
+    it('strips SS2 and SS3 sequences (ESC N / ESC O + one character)', () => {
+        expect(stripAnsiControl('\x1bNa')).toBe('');
+        expect(stripAnsiControl('\x1bOa')).toBe('');
+    });
+
+    it('strips CSI sequences with numeric final bytes (e.g. ~ for function keys)', () => {
+        // ESC [ 2 ~ = Insert key — final byte is ~ (0x7E), not alpha
+        expect(stripAnsiControl('\x1b[2~')).toBe('');
+        // ESC [ 1 5 ~ = F5
+        expect(stripAnsiControl('\x1b[15~')).toBe('');
     });
 
     it('handles empty string', () => {
