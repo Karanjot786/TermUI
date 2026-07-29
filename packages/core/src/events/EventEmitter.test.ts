@@ -276,4 +276,35 @@ describe('EventEmitter', () => {
         expect(handlerB).toHaveBeenCalledTimes(1); // Not called again
         expect(handlerC).toHaveBeenCalledTimes(2);
     });
+
+    it('once returned unsubscribe removes empty Map entry', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const handler = vi.fn();
+
+        const unsub = emitter.once('message', handler);
+        expect(emitter.hasListeners('message')).toBe(true);
+
+        unsub();
+
+        expect(emitter.hasListeners('message')).toBe(false);
+        expect(emitter['_onceHandlers'].has('message' as any)).toBe(false);
+    });
+
+    it('listenerCount reports exact listener count per event and total', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const h1 = vi.fn();
+        const h2 = vi.fn();
+        const h3 = vi.fn();
+
+        expect(emitter.listenerCount()).toBe(0);
+
+        emitter.on('message', h1);
+        emitter.once('message', h2);
+        emitter.on('count', h3);
+
+        expect(emitter.listenerCount('message')).toBe(2);
+        expect(emitter.listenerCount('count')).toBe(1);
+        expect(emitter.listenerCount()).toBe(3);
+    });
 });
+
