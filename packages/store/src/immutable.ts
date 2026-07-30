@@ -1,3 +1,4 @@
+// Issue #3149: Add variant and shape getters and setters for widget props
 // ─────────────────────────────────────────────────────
 // @termuijs/store — Immutable helpers for deep updates
 // ─────────────────────────────────────────────────────
