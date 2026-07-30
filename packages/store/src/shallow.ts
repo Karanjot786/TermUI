@@ -1,4 +1,5 @@
 // Shallow equality helper
+// Issue #3155: [bug] `memo()` Never Skips Re-Renders for Components with Children
 
 export type EqualityFn<U> = (a: U, b: U) => boolean
 

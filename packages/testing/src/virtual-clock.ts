@@ -8,6 +8,7 @@
 // ─────────────────────────────────────────────────────
 
 import type { VirtualClock } from "@termuijs/motion";
+// Issue #3153: [bug]   fix(widgets): `Tag` text slicing overflows box width for double-width characters
 
 interface PeriodicTimer {
     delayMs: number;
