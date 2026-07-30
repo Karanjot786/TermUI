@@ -52,6 +52,12 @@ export function interpolate(
         throw new Error('inputRange and outputRange must have at least 2 elements.');
     }
 
+    for (let i = 1; i < inputRange.length; i++) {
+        if (inputRange[i] <= inputRange[i - 1]) {
+            throw new Error('inputRange must be monotonically increasing');
+        }
+    }
+
     let index = 0;
     while (index < inputRange.length - 2 && value > inputRange[index + 1]) {
         index++;
