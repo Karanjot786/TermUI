@@ -162,6 +162,9 @@ function matchNested(
             for (let i = 0; i < paramNames.length; i++) {
                 params[paramNames[i]] = match[i + 1] ?? '';
             }
+            if (Object.keys(params).length !== paramNames.length) {
+                return null;
+            }
             const nextChain = [...chain, route];
             return {
                 route,
