@@ -11,11 +11,14 @@ import { InputParser } from '../input/InputParser.js';
 import { FocusManager } from '../events/FocusManager.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import { computeLayout, type LayoutNode } from '../layout/LayoutEngine.js';
+import type { Style } from '../style/Style.js';
+import type { Rect } from '../layout/Rect.js';
 import type { EventMap, FocusEvent, MouseEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
 import { mergeBorders } from '../renderer/border-merge.js';
 import { renderInlineToTerminal } from '../inline-viewport.js';
+import type { WidgetNode } from '../types/WidgetNode.js';
 
 type HitGridEntry = {
     x: number;
@@ -63,12 +66,20 @@ export interface RootWidget {
     isDirty?: boolean;
     /** Clear the dirty flag after rendering */
     clearDirty?(): void;
+    /** Mark this widget as needing re-render (optional) */
+    markDirty?(): void;
+    /** Widget children for traversal */
+    readonly children?: ReadonlyArray<RootWidget>;
+    /** Widget style */
+    style?: Style;
+    /** Computed rect */
+    rect?: Rect;
 }
 
 interface FocusAwareWidget {
     id: string;
     isFocused: boolean;
-    markDirty?: () => void;
+    markDirty?(): void;
 }
 
 /**
@@ -98,7 +109,7 @@ export class App {
     private _unsubSigTerm: (() => void) | null = null;
     private _unsubUncaughtException: (() => void) | null = null;
     private _unsubUnhandledRejection: (() => void) | null = null;
-    private _widgetById = new Map<string, any>(); // any: Widget shape varies; narrowed at retrieval
+    private _widgetById = new Map<string, WidgetNode>();
     private _hoveredWidgetId: string | null = null;
     private _clickedWidgetId: string | null = null;
     private _pendingFocusState = new Map<string, boolean>();
@@ -203,7 +214,7 @@ export class App {
                 this.layers.resize(cols, rows);
                 this._hitGridDirty = true;
                 this.events.emit('resize', { cols, rows });
-                (this._rootWidget as any).markDirty?.(); // as any: RootWidget.markDirty may be absent in some configs
+                (this._rootWidget as RootWidget).markDirty?.();
                 this.requestRender();
             });
 
@@ -298,7 +309,7 @@ export class App {
                         }
 
                         let tooltipText: string | undefined;
-                        let tooltipTarget = hitWidget;
+                        let tooltipTarget: WidgetNode | null = hitWidget;
                         while (tooltipTarget) {
                             if (tooltipTarget.tooltip) {
                                 tooltipText = tooltipTarget.tooltip;
@@ -488,10 +499,10 @@ export class App {
                     this._rootWidget.syncLayout?.();
 
                     // Rebuild the widget ID cache so _buildBubbleChain can do O(1) lookups
-                    this._buildWidgetMap(this._rootWidget);
+                    this._buildWidgetMap(this._rootWidget as WidgetNode);
                 }
 
-                const hitGridSnapshot = this._createHitGridSnapshot(this._rootWidget);
+                const hitGridSnapshot = this._createHitGridSnapshot(this._rootWidget as WidgetNode);
                 const hitGridNeedsRebuild = this._hitGridDirty || this._hasHitGridStateChanged(hitGridSnapshot);
 
                 // Populate the existing spatial hit-grid from the runtime widget tree.
@@ -606,17 +617,17 @@ export class App {
     /**
      * Build the bubble chain for keyboard events.
      */
-    private _buildBubbleChain(widgetId: string): Array<{ events: { emit: (event: string, data: any) => void } }> {
-        const chain: Array<{ events: { emit: (event: string, data: any) => void } }> = [];
+    private _buildBubbleChain(widgetId: string): WidgetNode[] {
+        const chain: WidgetNode[] = [];
         const widget = this._widgetById.get(widgetId);
         if (!widget) return chain;
 
-        let current: any = widget; // any: WidgetNode shape varies; no shared interface at traversal level
+        let current: WidgetNode | null = widget;
         while (current) {
             if (current.events) {
                 chain.push(current);
             }
-            current = current.parent ?? null;
+            current = current.parent;
         }
         return chain;
     }
@@ -624,19 +635,19 @@ export class App {
     /**
      * Rebuild the widget ID cache by walking the entire widget tree.
      */
-    private _buildWidgetMap(root: any): void { // any: Widget tree shape not statically known at traversal
+    private _buildWidgetMap(root: WidgetNode): void {
         this._widgetById.clear();
         this._walkWidget(root);
         // Pending focus events are safe to apply once widget IDs are registered.
         this._applyPendingFocusState();
     }
 
-    private _walkWidget(widget: any): void { // any: Widget tree shape not statically known at traversal
+    private _walkWidget(widget: WidgetNode | null): void {
         if (!widget) return;
         if (widget.id) {
             this._widgetById.set(widget.id, widget);
         }
-        const children = widget._children ?? widget.children ?? [];
+        const children = widget.children;
         if (Array.isArray(children)) {
             for (const child of children) {
                 this._walkWidget(child);
@@ -644,17 +655,18 @@ export class App {
         }
     }
 
-    private _createHitGridSnapshot(root: any): Map<string, HitGridEntry> { // any: Widget tree shape not statically known at traversal
+    private _createHitGridSnapshot(root: WidgetNode): Map<string, HitGridEntry> {
         const snapshot = new Map<string, HitGridEntry>();
-        const stack = [root];
+        const stack: WidgetNode[] = [root];
 
         while (stack.length > 0) {
             const widget = stack.pop();
             if (!widget) continue;
 
-            const rect = widget.rect ?? widget._rect;
-            const style = widget.style ?? widget._style;
-            if (widget.id && rect && style?.visible !== false) {
+            const rect = widget.rect;
+            const style = widget.style;
+            const isVisible = style.visible !== false;
+            if (widget.id && rect && isVisible) {
                 const width = rect.width ?? 0;
                 const height = rect.height ?? 0;
                 snapshot.set(widget.id, {
@@ -662,12 +674,12 @@ export class App {
                     y: rect.y,
                     width,
                     height,
-                    visible: style?.visible !== false,
+                    visible: isVisible,
                     zIndex: style?.zIndex ?? 0,
                 });
             }
 
-            const children = widget._children ?? widget.children ?? [];
+            const children = widget.children;
             if (Array.isArray(children)) {
                 for (let i = children.length - 1; i >= 0; i--) {
                     stack.push(children[i]);
@@ -711,17 +723,17 @@ export class App {
         if (focused) {
             const widget = this._widgetById.get(event.targetId);
             let tooltipText: string | undefined;
-            let tooltipTarget = widget;
+            let tooltipTarget: WidgetNode | undefined = widget;
             while (tooltipTarget) {
                 if (tooltipTarget.tooltip) {
                     tooltipText = tooltipTarget.tooltip;
                     break;
                 }
-                tooltipTarget = tooltipTarget.parent;
+                tooltipTarget = tooltipTarget.parent ?? undefined;
             }
 
-            if (tooltipText) {
-                const rect = widget?.rect ?? widget?._rect;
+            if (tooltipText && widget) {
+                const rect = widget.rect;
                 if (rect) {
                     this.tooltip.open(tooltipText, rect.x + 1, rect.y + rect.height);
                 }
@@ -788,7 +800,7 @@ export class App {
         }
     }
 
-    private _findWidgetAt(x: number, y: number): any { // any: widget shape varies; narrowed at retrieval
+    private _findWidgetAt(x: number, y: number): WidgetNode | null {
         // 1. Use the existing LayerManager hit-grid as the primary lookup path.
         //    This covers both overlays and normal widgets once the runtime tree
         //    has populated the grid during layout/render.
@@ -805,7 +817,7 @@ export class App {
 
         // 2. Fallback scan for safety during the migration window.
         //    This preserves behavior if the hit-grid has not been populated yet.
-        const matches: Array<{ widget: any; zIndex: number }> = [];
+        const matches: Array<{ widget: WidgetNode; zIndex: number }> = [];
         for (const widget of this._widgetById.values()) {
             const r = widget.rect;
             if (!r) continue;
@@ -828,7 +840,7 @@ export class App {
         // 5. Among same z-index, prefer deepest child widget (most specific)
         if (topMatches.length > 1) {
             for (const m of topMatches) {
-                let p = m.widget.parent;
+                let p: WidgetNode | null = m.widget.parent;
                 while (p) {
                     if (topMatches.some(x => x.widget === p)) {
                         return m.widget;

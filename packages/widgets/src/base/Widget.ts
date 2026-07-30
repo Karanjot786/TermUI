@@ -9,6 +9,7 @@ import {
     type Rect,
     type KeyEvent,
     type MouseEvent as TermMouseEvent,
+    type WidgetNode,
     defaultStyle,
     mergeStyles,
     createLayoutNode,
@@ -79,7 +80,7 @@ export function _resetWidgetIdCounter(): void {
  * - Focus support
  * - Event emission
  */
-export abstract class Widget {
+export abstract class Widget implements WidgetNode {
     /** Unique widget identifier */
     readonly id: string;
 

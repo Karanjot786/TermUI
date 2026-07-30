@@ -86,6 +86,10 @@ export {
 } from './terminal/TestBackend.js';
 export type { TestScreen } from './terminal/TestBackend.js';
 
+// ── Widget Node ─────────────────────────────────────
+export type { WidgetNode, WidgetEventEmitter } from './types/WidgetNode.js';
+export { isWidgetNode } from './types/WidgetNode.js';
+
 // ── App ───────────────────────────────────────────────
 export { App } from './app/App.js';
 export type { AppOptions, RootWidget } from './app/App.js';
