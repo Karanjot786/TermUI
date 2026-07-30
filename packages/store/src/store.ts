@@ -380,7 +380,7 @@ export function createStore<T extends object>(
                 }
                 fs.writeFileSync(persistFilePath, JSON.stringify(dataToSave), 'utf8');
             } catch (err) {
-                // Ignore write errors to keep terminal stable
+                console.warn(`[termui/store] Failed to persist state to ${persistFilePath}:`, err);
             }
         }, debounceMs);
     };
