@@ -25,6 +25,8 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import type { EqualityFn } from './shallow.js'
+// Issue #3158: [bug] Store flushBatch Partial Rollback Leaves Cross-Store State Inconsistent
+// Issue #3159: [bug] `toWidget()` Never Sets Reactive Metadata for Function Children
 
 
 // ── Batch Mechanism ──
