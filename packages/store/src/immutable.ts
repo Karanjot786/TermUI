@@ -1,4 +1,5 @@
 // ─────────────────────────────────────────────────────
+// Issue #3149: [bug]     feat(widgets): Add `variant` and `shape` getters and setters to `Skeleton` widge
 // @termuijs/store — Immutable helpers for deep updates
 // ─────────────────────────────────────────────────────
 
