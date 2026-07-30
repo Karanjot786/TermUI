@@ -81,7 +81,8 @@ export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
         messages: [{ role: 'user', content: prompt }],
       })
       const block = response.content[0]
-      return block.type === 'text' ? block.text : ''
+      if (!block || block.type !== 'text') return ''
+      return block.text
     },
 
     async *chat(messages: AIMessage[]): AsyncIterable<string> {
@@ -136,4 +137,4 @@ export function useAI(provider: AIProvider, options: AIOptions): AIAdapter {
 
   return adapter
 }
-
+
