@@ -1,4 +1,5 @@
 import type { ZodType } from 'zod'
+// Issue #3151: [bug]   fix(widgets): `StatusMessage` offset and message truncation overflow for double-wi
 
 export type PromptValidator = (value: string) => true | string
 
