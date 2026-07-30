@@ -1,4 +1,5 @@
 // ─────────────────────────────────────────────────────
+// Issue #3159: Ensure reactive metadata is set for function children in toWidget
 // @termuijs/quick — Layout helpers
 // ─────────────────────────────────────────────────────
 
