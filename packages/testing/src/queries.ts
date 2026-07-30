@@ -12,7 +12,8 @@ function walkWidgets(
   const stack: Widget[] = [root];
 
   while (stack.length > 0) {
-    const widget = stack.pop()!;
+    const widget = stack.pop();
+    if (widget === undefined) continue;
 
     if (predicate(widget)) {
       result.push(widget);
