@@ -11,8 +11,6 @@ import { InputParser } from '../input/InputParser.js';
 import { FocusManager } from '../events/FocusManager.js';
 import { EventEmitter } from '../events/EventEmitter.js';
 import { computeLayout, type LayoutNode } from '../layout/LayoutEngine.js';
-import type { Style } from '../style/Style.js';
-import type { Rect } from '../layout/Rect.js';
 import type { EventMap, FocusEvent, MouseEvent } from '../events/types.js';
 import { createKeyEvent } from '../events/types.js';
 import { renderFallback, shouldUseFallback } from './Fallback.js';
@@ -68,12 +66,12 @@ export interface RootWidget {
     clearDirty?(): void;
     /** Mark this widget as needing re-render (optional) */
     markDirty?(): void;
-    /** Widget children for traversal */
+    /** Widget children for traversal (needed for _walkWidget / _createHitGridSnapshot) */
     readonly children?: ReadonlyArray<RootWidget>;
-    /** Widget style */
-    style?: Style;
-    /** Computed rect */
-    rect?: Rect;
+    /** Widget style (needed for _createHitGridSnapshot) */
+    style?: { visible?: boolean; zIndex?: number };
+    /** Computed rect (needed for _createHitGridSnapshot) */
+    rect?: { x: number; y: number; width: number; height: number };
 }
 
 interface FocusAwareWidget {
@@ -647,11 +645,9 @@ export class App {
         if (widget.id) {
             this._widgetById.set(widget.id, widget);
         }
-        const children = widget.children;
-        if (Array.isArray(children)) {
-            for (const child of children) {
-                this._walkWidget(child);
-            }
+        const { children } = widget;
+        for (const child of children) {
+            this._walkWidget(child);
         }
     }
 
@@ -679,11 +675,9 @@ export class App {
                 });
             }
 
-            const children = widget.children;
-            if (Array.isArray(children)) {
-                for (let i = children.length - 1; i >= 0; i--) {
-                    stack.push(children[i]);
-                }
+            const { children } = widget;
+            for (let i = children.length - 1; i >= 0; i--) {
+                stack.push(children[i]);
             }
         }
 
