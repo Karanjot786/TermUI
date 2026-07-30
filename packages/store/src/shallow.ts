@@ -1,4 +1,5 @@
 // Shallow equality helper
+// Issue #3156: [bug]  Timer Pool Ghost Subscribers from Saved Subscriptions
 
 export type EqualityFn<U> = (a: U, b: U) => boolean
 
