@@ -67,7 +67,7 @@ export async function resolveComponent(slug: string): Promise<ResolvedComponent>
             ...(json.deps ?? []),
             ...(json.peerDeps ?? []),
         ]),
-    ].sort();
+    ].sort((a, b) => a - b);
     return {
         name: json.name ?? slug,
         slug,

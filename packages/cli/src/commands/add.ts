@@ -80,7 +80,7 @@ export async function runAdd(args: CliArgs): Promise<void> {
         }
     }
 
-    const deps = [...allDeps].sort();
+    const deps = [...allDeps].sort((a, b) => a - b);
     if (deps.length === 0) return;
 
     const pm = detectPackageManager();
