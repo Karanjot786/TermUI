@@ -23,6 +23,14 @@ describe('VirtualList', () => {
             expect(list.scrollOffset).toBe(0);
         });
 
+        it('rejects invalid totalItems values', () => {
+            for (const totalItems of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+                expect(() => createList(totalItems)).toThrow(
+                    'VirtualList totalItems must be a non-negative integer',
+                );
+            }
+        });
+
         it('is focusable', () => {
             const list = createList();
             expect(list.focusable).toBe(true);
@@ -184,6 +192,18 @@ describe('VirtualList', () => {
             list.setTotalItems(0);
             expect(list.selectedIndex).toBe(0);
         });
+
+        it('setTotalItems rejects invalid values', () => {
+            const list = createList(10);
+
+            for (const totalItems of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
+                expect(() => list.setTotalItems(totalItems)).toThrow(
+                    'VirtualList totalItems must be a non-negative integer',
+                );
+            }
+
+            expect(list.totalItems).toBe(10);
+        });
     });
 
     describe('confirm', () => {
@@ -209,6 +229,43 @@ describe('VirtualList', () => {
             });
             list.confirm();
             expect(onSelect).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('empty state', () => {
+        it('renders configured empty text when there are no items', () => {
+            const list = new VirtualList({
+                totalItems: 0,
+                renderItem: (i) => `Item ${i}`,
+                emptyText: 'No results',
+                style: { width: 20, height: 3 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 20, 3);
+            list.syncLayout();
+            const screen = new Screen(20, 3);
+
+            list.render(screen);
+
+            const content = screen.back.map(row => row.map(c => c.char).join('')).join('\n');
+            expect(content).toContain('No results');
+        });
+
+        it('keeps empty lists blank when no empty text is configured', () => {
+            const list = new VirtualList({
+                totalItems: 0,
+                renderItem: (i) => `Item ${i}`,
+                style: { width: 20, height: 3 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 20, 3);
+            list.syncLayout();
+            const screen = new Screen(20, 3);
+
+            list.render(screen);
+
+            const contentRow = screen.back[1].slice(1, -1).map(c => c.char).join('');
+            expect(contentRow.trim()).toBe('');
         });
     });
 
@@ -277,6 +334,47 @@ describe('VirtualList', () => {
         });
     });
 
+    describe('invalidateCache', () => {
+        it('rerenders updated row content after mutable data changes', () => {
+            const rows = ['alpha'];
+            const list = new VirtualList({
+                totalItems: rows.length,
+                renderItem: (i) => rows[i],
+                springScroll: false,
+                showScrollbar: false,
+                style: { width: 20, height: 3 },
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 20, 3);
+            list.syncLayout();
+
+            const screen = new Screen(20, 3);
+            list.render(screen);
+            const rowText = (row: number) => screen.back[row].map(c => c.char).join('').trim();
+            expect(rowText(1)).toContain('alpha');
+
+            // Mutate the backing data without replacing the render function.
+            rows[0] = 'beta';
+            list.markDirty();
+            list.render(screen);
+
+            // Cache is keyed by index/selection/focus only, so the stale
+            // "alpha" row is served until the cache is invalidated.
+            expect(rowText(1)).toContain('alpha');
+
+            list.invalidateCache();
+            list.render(screen);
+            expect(rowText(1)).toContain('beta');
+        });
+
+        it('marks the widget dirty so a subsequent render reflects the invalidation', () => {
+            const list = createList(10);
+            const markDirtySpy = vi.spyOn(list, 'markDirty');
+            list.invalidateCache();
+            expect(markDirtySpy).toHaveBeenCalled();
+        });
+    });
+
     describe('render cache eviction', () => {
         it('evicts old entries outside visible range after scroll', () => {
             const list = new VirtualList({
@@ -304,6 +402,146 @@ describe('VirtualList', () => {
             // Cache should not have grown unbounded with 1000 items
             expect(cache.size).toBeLessThanOrEqual(initialSize + 20);
             expect(cache.size).toBeLessThan(100);
+        });
+    });
+
+    describe('bounds-check for renderItem indices', () => {
+        it('does not call renderItem with out-of-bounds index when totalItems decreases', () => {
+            const renderItem = vi.fn((i: number) => `Item ${i}`);
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem,
+                itemHeight: 1,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            // Scroll to end
+            list.selectLast();
+            list.render(screen);
+
+            // Record the indices that were rendered
+            const initialCalls = new Set(renderItem.mock.calls.map(call => call[0]));
+
+            // Decrease totalItems dramatically
+            list.setTotalItems(10);
+            renderItem.mockClear();
+            list.render(screen);
+
+            // Verify no call to renderItem with out-of-bounds index
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                expect(idx).toBeGreaterThanOrEqual(0);
+                expect(idx).toBeLessThan(10);
+            });
+        });
+
+        it('does not call renderItem with negative indices after scroll position changes', () => {
+            const renderItem = vi.fn((i: number) => `Item ${i}`);
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem,
+                itemHeight: 1,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            // Scroll and then decrease totalItems
+            for (let i = 0; i < 50; i++) {
+                list.selectNext();
+            }
+            list.render(screen);
+            renderItem.mockClear();
+
+            list.setTotalItems(20);
+            list.render(screen);
+
+            // Verify no negative indices
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                expect(idx).toBeGreaterThanOrEqual(0);
+            });
+        });
+
+        it('handles totalItems decrease to 0 gracefully', () => {
+            const renderItem = vi.fn((i: number) => `Item ${i}`);
+            const list = new VirtualList({
+                totalItems: 50,
+                renderItem,
+                itemHeight: 1,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            list.selectLast();
+            list.render(screen);
+            renderItem.mockClear();
+
+            // Decrease to zero
+            list.setTotalItems(0);
+            expect(() => list.render(screen)).not.toThrow();
+            expect(renderItem).not.toHaveBeenCalled();
+        });
+
+        it('renders correctly after multiple totalItems changes', () => {
+            const renderItem = vi.fn((i: number) => `Item ${i}`);
+            const list = new VirtualList({
+                totalItems: 100,
+                renderItem,
+                itemHeight: 1,
+                style: { width: 40, height: 10 },
+                springScroll: false,
+            });
+            const node = list.getLayoutNode();
+            computeLayout(node, 40, 10);
+            list.syncLayout();
+            const screen = new Screen(80, 25);
+
+            list.selectLast();
+            list.render(screen);
+
+            // Multiple size changes in sequence
+            list.setTotalItems(80);
+            renderItem.mockClear();
+            list.render(screen);
+            let validIndices = true;
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                if (idx < 0 || idx >= 80) validIndices = false;
+            });
+            expect(validIndices).toBe(true);
+
+            list.setTotalItems(50);
+            renderItem.mockClear();
+            list.render(screen);
+            validIndices = true;
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                if (idx < 0 || idx >= 50) validIndices = false;
+            });
+            expect(validIndices).toBe(true);
+
+            list.setTotalItems(200);
+            renderItem.mockClear();
+            list.render(screen);
+            validIndices = true;
+            renderItem.mock.calls.forEach(call => {
+                const idx = call[0];
+                if (idx < 0 || idx >= 200) validIndices = false;
+            });
+            expect(validIndices).toBe(true);
         });
     });
 

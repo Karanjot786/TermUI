@@ -6,22 +6,31 @@ export interface FrameData {
     buffer: string;
 }
 
+export interface ScreenRecorderOptions {
+    maxFrames?: number;
+    enabled?: boolean;
+    now?: () => number;
+}
+
 /**
  * ScreenRecorder — recording utility for terminal output frames.
  * Can export in asciicast v2 format for asciinema compatibility, or as SVG.
  */
 export class ScreenRecorder {
     private frames: FrameData[] = [];
-    private startTime: number = Date.now();
+    private startTime: number;
     private maxFrames?: number;
     private enabled = true;
+    private now: () => number;
 
-    constructor(options?: { maxFrames?: number; enabled?: boolean }) {
+    constructor(options?: ScreenRecorderOptions) {
         const maxFrames = options?.maxFrames;
         if (maxFrames !== undefined && (!Number.isInteger(maxFrames) || maxFrames <= 0)) {
             throw new Error("maxFrames must be a positive integer");
         }
         this.maxFrames = maxFrames;
+        this.now = options?.now ?? Date.now;
+        this.startTime = this.now();
         // Enabled by default unless set to false or RECORD_DISABLED=1 env is present
         this.enabled = options?.enabled ?? (process.env.RECORD_DISABLED !== '1');
     }
@@ -57,7 +66,7 @@ export class ScreenRecorder {
             this.frames.shift(); // Remove oldest frame
         }
         this.frames.push({
-            timestamp: Date.now() - this.startTime,
+            timestamp: this.now() - this.startTime,
             buffer
         });
     }
@@ -76,7 +85,7 @@ export class ScreenRecorder {
      */
     public clear(): void {
         this.frames = [];
-        this.startTime = Date.now();
+        this.startTime = this.now();
     }
 
     /**
@@ -145,7 +154,7 @@ export class ScreenRecorder {
                 .replace(/>/g, '&gt;')
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&apos;');
-            svgLines += `  <text x="15" y="${yOffset}" fill="#DCDCCC" font-family="Courier, monospace" font-size="14">${escapedLine}</text>\n`;
+            svgLines += `  <text x="15" y="${yOffset}" fill="#DCDCCC" font-family="Courier, monospace" font-size="14" xml:space="preserve">${escapedLine}</text>\n`;
             yOffset += 18;
         }
 

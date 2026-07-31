@@ -20,6 +20,19 @@ describe('resolveComponent', () => {
         expect(c.dependencies).toEqual(['@termuijs/core']);
     });
 
+    it('normalizes deps and peerDeps from registry metadata', async () => {
+        globalThis.fetch = (async () => new Response(JSON.stringify({
+            name: 'Spinner',
+            files: [{ path: 'spinner.ts', content: 'x' }],
+            dependencies: ['@termuijs/core'],
+            deps: ['@termuijs/widgets'],
+            peerDeps: ['@termuijs/core'],
+        }), { status: 200 })) as typeof fetch;
+
+        const c = await resolveComponent('spinner');
+        expect(c.dependencies).toEqual(['@termuijs/core', '@termuijs/widgets']);
+    });
+
     it('throws a helpful error on 404', async () => {
         globalThis.fetch = (async () => new Response('not found', { status: 404 })) as typeof fetch;
         await expect(resolveComponent('nope')).rejects.toThrow(/not found in registry/);

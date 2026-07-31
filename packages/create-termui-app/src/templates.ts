@@ -109,6 +109,23 @@ export default defineConfig({
 `,
     });
 
+    if (config.features.router) {
+        files.push({
+            path: 'screens/index.tsx',
+            content: `/** @jsxImportSource @termuijs/jsx */
+
+export default function HomeScreen() {
+    return (
+        <box flexDirection="column" padding={1}>
+            <text bold>${config.name}</text>
+            <text>Edit screens/index.tsx to customize this route.</text>
+        </box>
+    );
+}
+`,
+        });
+    }
+
     // ── Theme file ──
     const themeSrc = getBuiltinTheme(config.theme);
     if (themeSrc) {
@@ -151,6 +168,7 @@ export default defineConfig({
 function createPackageJson(config: ProjectConfig): string {
     const isFileManager = config.template === 'file-manager';
     const isAiAssistant = config.template === 'ai-assistant';
+    const needsDataPackage = config.features.dataProviders || config.template === 'dashboard';
     return JSON.stringify({
         name: config.name,
         version: '0.1.0',
@@ -187,7 +205,7 @@ function createPackageJson(config: ProjectConfig): string {
                 '@termuijs/tss': 'latest',
                 '@termuijs/quick': 'latest',
                 '@termuijs/motion': 'latest',
-                ...(config.features.dataProviders ? { '@termuijs/data': 'latest' } : {}),
+                ...(needsDataPackage ? { '@termuijs/data': 'latest' } : {}),
                 ...(config.features.router ? { '@termuijs/router': 'latest' } : {}),
             },
         devDependencies: {

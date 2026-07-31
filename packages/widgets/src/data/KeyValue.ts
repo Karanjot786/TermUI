@@ -187,7 +187,7 @@ export class KeyValue extends Widget {
             screen.writeString(keyX, y + i, row.displayKey, {
                 ...attrs,
                 fg: displayFg ?? this._keyColor ?? attrs.fg,
-                bold: isSelected || true,
+                bold: !!isSelected,
             });
 
             // Separator

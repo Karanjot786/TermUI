@@ -2,7 +2,7 @@
 // @termuijs/widgets — Timer widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface TimerOptions {
@@ -49,6 +49,12 @@ export class Timer extends Widget {
 
     constructor(options: TimerOptions, style: Partial<Style> = {}) {
         super({ height: 1, ...style });
+        if (!Number.isFinite(options.duration) || options.duration < 0) {
+            throw new Error('Timer duration must be a finite non-negative number');
+        }
+        if (options.interval !== undefined && (!Number.isFinite(options.interval) || options.interval <= 0)) {
+            throw new Error('Timer interval must be a finite positive number');
+        }
         this._duration = options.duration;
         this._interval = options.interval ?? 1000;
         this._remaining = options.duration;
@@ -112,7 +118,7 @@ export class Timer extends Widget {
 
     /** Stop the interval when the widget is unmounted. */
     unmount(): void {
-        this._clearInterval();
+        this.stop();
         super.unmount();
     }
 
@@ -176,6 +182,6 @@ export class Timer extends Widget {
         const attrs = styleToCellAttrs(this._style);
         const label = this._format(this._remaining);
 
-        screen.writeString(x, y, label, attrs);
+        screen.writeString(x, y, truncate(label, width, ''), attrs);
     }
 }
