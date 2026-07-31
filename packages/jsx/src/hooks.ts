@@ -479,7 +479,7 @@ export function useInterval(callback: () => void, delayMs: number): void {
  * useMemo — memoize expensive computations.
  *
  * ```tsx
- * const sorted = useMemo(() => items.sort(), [items]);
+ * const sorted = useMemo(() => items.sort((a, b) => a - b), [items]);
  * ```
  */
 export function useMemo<T>(factory: () => T, deps: any[]): T {
