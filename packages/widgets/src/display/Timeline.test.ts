@@ -62,6 +62,20 @@ describe('Timeline', () => {
         expect(cellAt(screen, 1, 0)?.char).toBe('\u2514'); // └
     });
 
+    it('uses ASCII connectors when caps.unicode is false', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const items: TimelineItem[] = [
+            { title: 'First' },
+            { title: 'Second' },
+        ];
+        const { screen } = renderList(items);
+
+        expect(cellAt(screen, 0, 0)?.char).toBe('+');
+        expect(cellAt(screen, 0, 1)?.char).toBe('-');
+        expect(cellAt(screen, 1, 0)?.char).toBe('+');
+        expect(cellAt(screen, 1, 1)?.char).toBe('-');
+    });
+
     it('status colors: active is bold/cyan, done is green', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const items: TimelineItem[] = [

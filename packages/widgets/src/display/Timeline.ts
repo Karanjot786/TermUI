@@ -50,9 +50,9 @@ export class Timeline extends Widget {
 
             let connector: string;
             if (isLast) {
-                connector = '\u2514\u2500'; // └─
+                connector = caps.unicode ? '\u2514\u2500' : '+-'; // └─
             } else {
-                connector = '\u251C\u2500'; // ├─
+                connector = caps.unicode ? '\u251C\u2500' : '+-'; // ├─
             }
 
             let icon: string;
