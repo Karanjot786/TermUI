@@ -182,8 +182,8 @@ function _pathsEqual(a: number[], b: number[]): boolean {
 
 function _valuesEqual(a: string[], b: string[]): boolean {
     if (a.length !== b.length) return false;
-    const sortedA = [...a].sort();
-    const sortedB = [...b].sort();
+    const sortedA = [...a].sort((a, b) => a - b);
+    const sortedB = [...b].sort((a, b) => a - b);
     for (let i = 0; i < sortedA.length; i++) {
         if (sortedA[i] !== sortedB[i]) return false;
     }
