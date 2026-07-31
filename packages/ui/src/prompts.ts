@@ -2,7 +2,7 @@
 // @termuijs/ui — Imperative Prompts
 // ─────────────────────────────────────────────────────
 
-import * as readline from 'readline';
+import * as readline from 'node:readline';
 import { App, TermUIAbortError } from '@termuijs/core';
 import { TextInput, Widget } from '@termuijs/widgets';
 import { Select, type SelectOption, type SelectOptions } from './Select.js';
