@@ -64,6 +64,7 @@ export class Accordion extends Widget {
     private _collapseChar: string;
     private _onToggle?: (index: number, open: boolean) => void;
     private _focusedIndex: number = 0;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
 
     constructor(
         sections: AccordionSection[],
@@ -89,6 +90,13 @@ export class Accordion extends Widget {
         }
 
         this._updateHeight();
+        this.events.on('key', this._keyHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
     }
 
     // ── Public API ──────────────────────────────────────────────────────
