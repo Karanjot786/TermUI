@@ -210,7 +210,7 @@ export class LogTable extends Widget {
             if (log.level === 'ERROR') badgeBg = { type: 'hex', hex: '#ef4444' };
             if (log.level === 'DEBUG') badgeBg = { type: 'hex', hex: '#3b82f6' };
 
-            const levelStr = ` ${log.level.padEnd(5)} `;
+            const levelStr = ` ${log.level.padEnd(5, " ")} `;
             screen.writeString(cx, screenY, levelStr, { fg: badgeFg, bg: badgeBg, bold: true });
             cx += 9;
 
@@ -220,7 +220,7 @@ export class LogTable extends Widget {
 
             // 3. Service Tag (cyan or custom mapping)
             const serviceColor = SERVICE_COLORS[log.service] ?? '#ffffff';
-            const serviceStr = `[${log.service}]`.padEnd(16).slice(0, 16);
+            const serviceStr = `[${log.service}]`.padEnd(16, " ").slice(0, 16);
             screen.writeString(cx, screenY, serviceStr, { fg: { type: 'hex', hex: serviceColor }, bg: rowBg, bold: true });
             cx += 17;
 

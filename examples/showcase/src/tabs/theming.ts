@@ -50,7 +50,7 @@ export class ThemingTab extends Widget {
         // Variable display rows
         const vars = ['--primary', '--secondary', '--accent', '--success', '--warning', '--error', '--text', '--text-muted', '--bg', '--surface'];
         for (const v of vars) {
-            rightPanel.addChild(new Text(`  ${v.padEnd(16)} ${'■■■■'}`, { height: 1 }));
+            rightPanel.addChild(new Text(`  ${v.padEnd(16, " ")} ${'■■■■'}`, { height: 1 }));
         }
 
         rightPanel.addChild(new Divider({ title: 'TSS Syntax', color: { type: 'named', name: 'brightBlack' } }));

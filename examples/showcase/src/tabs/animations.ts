@@ -48,7 +48,7 @@ export class AnimationsTab extends Widget {
             this._demos.push({ name, preset: name, config, state, bar });
 
             const row = new Box({ flexDirection: 'row', height: 1, gap: 1 });
-            row.addChild(new Text(`  ${name.padEnd(10)}`, { height: 1, width: 12, fg: { type: 'named', name: colors[i] } }));
+            row.addChild(new Text(`  ${name.padEnd(10, " ")}`, { height: 1, width: 12, fg: { type: 'named', name: colors[i] } }));
             row.addChild(bar);
             springBox.addChild(row);
         }

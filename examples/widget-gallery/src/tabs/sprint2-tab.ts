@@ -50,7 +50,7 @@ export class Sprint2Tab extends Widget {
         const draculaTokens: Array<keyof typeof draculaTheme> = ['bg', 'fg', 'primary', 'error', 'success'];
         for (const key of draculaTokens) {
             draculaBox.addChild(new Text(
-                `  ${key.padEnd(10)} ${draculaTheme[key]}`,
+                `  ${key.padEnd(10, " ")} ${draculaTheme[key]}`,
                 { height: 1, fg: { type: 'hex', hex: draculaTheme[key] } },
             ));
         }
@@ -68,7 +68,7 @@ export class Sprint2Tab extends Widget {
         const nordTokens: Array<keyof typeof nordTheme> = ['bg', 'fg', 'primary', 'error', 'success'];
         for (const key of nordTokens) {
             nordBox.addChild(new Text(
-                `  ${key.padEnd(10)} ${nordTheme[key]}`,
+                `  ${key.padEnd(10, " ")} ${nordTheme[key]}`,
                 { height: 1, fg: { type: 'hex', hex: nordTheme[key] } },
             ));
         }
