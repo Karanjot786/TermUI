@@ -24,32 +24,4 @@ export function lazy<TProps = any>(
             };
 
             promise = loader().then(
-                (mod) => {
-                    status = 'resolved';
-                    result = mod.default;
-                    triggerRender();
-                },
-                (err) => {
-                    status = 'rejected';
-                    result = err;
-                    triggerRender();
-                },
-            );
-
-            throw promise;
-        }
-
-        if (status === 'pending') {
-            throw promise;
-        }
-
-        if (status === 'rejected') {
-            throw result;
-        }
-
-        const Component = result as FC<TProps>;
-        return Component(props as TProps & { children?: any });
-    };
-
-    return LazyComponent;
-}
+            .catch(err => console.error(err))

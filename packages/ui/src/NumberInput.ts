@@ -68,7 +68,7 @@ export class NumberInput extends Widget {
     get numericValue(): number | null {
         if (this._raw === '' || this._raw === '-') return null;
         const n = parseFloat(this._raw);
-        return isNaN(n) ? null : this._clamp(n);
+        return Number.isNaN(n) ? null : this._clamp(n);
     }
 
     /** Raw text string (what the user typed). */
