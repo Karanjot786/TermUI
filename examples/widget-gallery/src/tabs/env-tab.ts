@@ -53,7 +53,7 @@ export class EnvTab extends Widget {
         for (const flag of capsFlags) {
             const val = flag.value;
             capsBox.addChild(new Text(
-                `  ${flag.label.padEnd(14)} ${val ? 'YES' : 'NO'}`,
+                `  ${flag.label.padEnd(14, " ")} ${val ? 'YES' : 'NO'}`,
                 {
                     height: 1,
                     fg: val
@@ -86,7 +86,7 @@ export class EnvTab extends Widget {
         ];
         for (const key of tokenKeys) {
             themeBox.addChild(new Text(
-                `  ${key.padEnd(12)} ${theme[key]}`,
+                `  ${key.padEnd(12, " ")} ${theme[key]}`,
                 { height: 1, fg: { type: 'named', name: 'white' } },
             ));
         }
