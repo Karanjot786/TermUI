@@ -59,7 +59,7 @@ export class LogTable extends Widget {
 
     setLines(lines: string[]): void {
         this._rawLines = lines;
-        this._parsedLogs = lines.map(parseLogString);
+        this._parsedLogs = (lines ?? []).map(parseLogString);
         
         // Adjust selectedIndex if it goes out of bounds
         if (this._selectedIndex >= this._parsedLogs.length) {
