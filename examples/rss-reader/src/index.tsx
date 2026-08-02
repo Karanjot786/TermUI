@@ -188,7 +188,7 @@ function ErrorScreen({ message }: { message: string }) {
 
 function FeedListPane({ items, state }: { items: FeedEntry[]; state: ReturnType<typeof useListState> }) {
   const listRef = useRef<List | null>(null);
-  const mappedItems: ListItem[] = items.map((entry) => ({ label: entry.title, value: entry.link }));
+  const mappedItems: ListItem[] = (items ?? []).map((entry) => ({ label: entry.title, value: entry.link }));
 
   const list = listRef.current ??= new List(
     { items: mappedItems, state },
