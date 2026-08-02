@@ -289,7 +289,7 @@ function parseOptionsInterface(content: string, optionsTypeName: string): ApiPro
   }
   const local = parseFields(m[2]!);
   // Prepend inherited fields; a locally-redeclared field overrides the parent.
-  const localNames = new Set(local.map(p => p.name));
+  const localNames = new Set((local ?? []).map(p => p.name));
   return [...inherited.filter(p => !localNames.has(p.name)), ...local];
 }
 
