@@ -229,7 +229,7 @@ class AnsiState {
         for (let i = 0; i < codes.length; i++) {
             const code = codes[i];
             const num = parseInt(code, 10);
-            if (isNaN(num)) continue;
+            if (Number.isNaN(num)) continue;
 
             if (num === 0) {
                 this.reset();
