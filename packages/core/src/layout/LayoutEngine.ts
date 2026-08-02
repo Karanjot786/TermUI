@@ -623,7 +623,7 @@ function getSpan(start: number | string | undefined, end: number | string | unde
             span = parseInt(start.substring(5)) || 1;
         } else {
             const val = parseInt(start);
-            if (!isNaN(val)) startIdx = val - 1;
+            if (!Number.isNaN(val)) startIdx = val - 1;
         }
     }
 
@@ -640,7 +640,7 @@ function getSpan(start: number | string | undefined, end: number | string | unde
             span = parseInt(end.substring(5)) || 1;
         } else {
             const val = parseInt(end);
-            if (startIdx !== null && !isNaN(val)) {
+            if (startIdx !== null && !Number.isNaN(val)) {
                 span = Math.max(1, val - 1 - startIdx);
             }
         }
@@ -680,7 +680,7 @@ function resolveTracks(template: string | undefined, totalSize: number, gap: num
             return { type: 'fr', value: 1 };
         } else {
             const val = parseFloat(part);
-            if (!isNaN(val)) {
+            if (!Number.isNaN(val)) {
                 fixedSum += val;
                 return { type: 'px', value: val };
             }

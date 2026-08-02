@@ -85,7 +85,7 @@ function safeEval(expr: string): string {
     if (tokens.length === 0) return '0';
 
     // Handle initial negative number
-    if (tokens[0] === '-' && tokens.length > 1 && !isNaN(Number(tokens[1]))) {
+    if (tokens[0] === '-' && tokens.length > 1 && !Number.isNaN(Number(tokens[1]))) {
         tokens.splice(0, 2, '-' + tokens[1]);
     }
 
@@ -146,7 +146,7 @@ function safeEval(expr: string): string {
         j += 2;
     }
 
-    if (isNaN(res) || !isFinite(res)) return 'Error';
+    if (Number.isNaN(res) || !isFinite(res)) return 'Error';
 
     const resStr = String(res);
     if (resStr.includes('.') && resStr.split('.')[1].length > 8) {

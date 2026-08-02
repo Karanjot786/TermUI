@@ -27,7 +27,7 @@ export class Pagination extends Widget {
     }
 
     private _clamp(n: number): number {
-        if (isNaN(n) || !isFinite(n)) return 1;
+        if (Number.isNaN(n) || !isFinite(n)) return 1;
         return Math.min(this._totalPages, Math.max(1, n));
     }
 
