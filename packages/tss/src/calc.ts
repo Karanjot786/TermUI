@@ -17,7 +17,7 @@ export function evalCalc(
         throw new Error(`calc() error: Malformed input (missing calc() wrapper)`);
     }
 
-    if (expr.trim() === '') {
+    if (expr.trim().length === 0) {
         throw new Error(`calc() error: Malformed input (empty expression)`);
     }
 

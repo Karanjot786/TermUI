@@ -17,7 +17,7 @@ export interface TerminalDimensions {
  * @returns true if the media query matches, false otherwise
  */
 export function matchMedia(query: string, dimensions: TerminalDimensions): boolean {
-    if (!query || query.trim() === '') {
+    if (!query || query.trim().length === 0) {
         return true;
     }
 
