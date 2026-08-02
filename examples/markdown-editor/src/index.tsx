@@ -9,7 +9,7 @@ const eye = caps.unicode ? '◉' : 'o';
 
 function countStats(value: string): { lines: number; words: number; chars: number } {
     const lines = value === '' ? 0 : value.split('\n').length;
-    const words = value.trim() === '' ? 0 : value.trim().split(/\s+/).length;
+    const words = value.trim().length === 0 ? 0 : value.trim().split(/\s+/).length;
     const chars = value.length;
     return { lines, words, chars };
 }

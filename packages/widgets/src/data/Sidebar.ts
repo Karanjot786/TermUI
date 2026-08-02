@@ -76,7 +76,7 @@ export class Sidebar extends Widget {
 
             if (this._collapsed) {
                 // Collapsed: show first character of label only
-                const char = item.label.charAt(0) || ' ';
+                const char = item.label[0] || ' ';
                 screen.writeString(x, y + i, char, { ...attrs, fg, bold: isActive });
             } else {
                 // Active indicator
