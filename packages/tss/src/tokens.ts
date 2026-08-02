@@ -102,7 +102,7 @@ export function compileTokensToJSON(source: string, theme = 'default'): Compiled
   }
 
   const tokens: Record<string, string> = {};
-  for (const key of Object.keys(merged).sort()) {
+  for (const key of Object.keys(merged).sort((a, b) => a - b)) {
     tokens[key] = resolveTokenValue(key, merged, new Set<string>());
   }
 
