@@ -399,7 +399,7 @@ function layoutNode(node: LayoutNode, availWidth: number, availHeight: number, p
     }
 
     if (topologicalChildren.length > 0) {
-        const resolvableNodes: ResolvableNode[] = topologicalChildren.map(child => {
+        const resolvableNodes: ResolvableNode[] = (topologicalChildren ?? []).map(child => {
             const s = child.style;
             // Provide a rough contentSize based on style or 0 if unknown
             let cw = 0, ch = 0;

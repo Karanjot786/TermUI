@@ -210,7 +210,7 @@ export async function promptWidget<T = any /* Allow resolving any prompt value t
 }
 
 export function select(config: { options: string[]; placeholder?: string; activeColor?: any /* Keep color type flexible */; signal?: AbortSignal }) {
-    const formattedOptions = config.options.map(o => ({ label: o, value: o }));
+    const formattedOptions = config.(options ?? []).map(o => ({ label: o, value: o }));
     return new Select(formattedOptions, {
         placeholder: config.placeholder,
         activeColor: config.activeColor,
