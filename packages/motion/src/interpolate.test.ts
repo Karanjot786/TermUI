@@ -60,4 +60,16 @@ describe('interpolate and mapRange', () => {
         expect(() => interpolate(5, [0, 1], [0, 1, 2])).toThrow();
         expect(() => interpolate(5, [0], [0])).toThrow();
     });
+
+    it('throws if inputRange is not strictly ascending', () => {
+        expect(() => interpolate(5, [0, 2, 1, 3], [0, 20, 10, 30])).toThrow(
+            'inputRange must contain strictly ascending values'
+        );
+        expect(() => interpolate(5, [0, 1, 1, 2], [0, 10, 20, 30])).toThrow(
+            'inputRange must contain strictly ascending values'
+        );
+        expect(() => interpolate(5, [5, 3], [0, 10])).toThrow(
+            'inputRange must contain strictly ascending values'
+        );
+    });
 });

@@ -52,6 +52,15 @@ export function interpolate(
         throw new Error('inputRange and outputRange must have at least 2 elements.');
     }
 
+    for (let i = 0; i < inputRange.length - 1; i++) {
+        if (inputRange[i] >= inputRange[i + 1]) {
+            throw new Error(
+                'inputRange must contain strictly ascending values. ' +
+                `Found inputRange[${i}]=${inputRange[i]} >= inputRange[${i + 1}]=${inputRange[i + 1]}.`
+            );
+        }
+    }
+
     let index = 0;
     while (index < inputRange.length - 2 && value > inputRange[index + 1]) {
         index++;
