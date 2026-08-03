@@ -64,8 +64,9 @@ function parseSystemdShow(output: string, serviceName: string): ParsedSystemdSer
     return { name: serviceName, description, activeState, subState, pid, nRestarts, activeEnterTimestamp };
 }
 
-function getSystemdServices(serviceNames: string[]): ServiceInfo[] {
+function getSystemdServices(serviceNames: string[]): [ServiceInfo[], string[]] {
     const results: ServiceInfo[] = [];
+    const failedNames: string[] = [];
     for (const name of serviceNames) {
         try {
             const output = execFileSync('systemctl', ['show', name], {
@@ -73,7 +74,10 @@ function getSystemdServices(serviceNames: string[]): ServiceInfo[] {
                 timeout: 3000,
             });
             const parsed = parseSystemdShow(output, name);
-            if (!parsed) continue;
+            if (!parsed) {
+                failedNames.push(name);
+                continue;
+            }
 
             const active = parsed.activeState === 'active';
             const uptimeSeconds = active && parsed.activeEnterTimestamp > 0
@@ -109,10 +113,10 @@ function getSystemdServices(serviceNames: string[]): ServiceInfo[] {
                 description: parsed.description,
             });
         } catch {
-            // systemctl not available or service not found — try fallback
+            failedNames.push(name);
         }
     }
-    return results;
+    return [results, failedNames];
 }
 
 interface Pm2Process {
@@ -237,8 +241,24 @@ export const services = {
         if (os.platform() === 'linux') {
             try {
                 execFileSync('systemctl', ['--version'], { encoding: 'utf-8', timeout: 1000 });
-                const svcs = getSystemdServices(serviceNames);
-                if (svcs.length > 0) return svcs;
+                const [svcs, failedNames] = getSystemdServices(serviceNames);
+                if (svcs.length > 0) {
+                    // Pass unresolved names to PM2 / process fallback
+                    if (failedNames.length > 0) {
+                        const pm2Svcs = getPm2Services(failedNames);
+                        const pm2Names = new Set(pm2Svcs.map(s => s.name));
+                        const stillMissing = failedNames.filter(n => !pm2Names.has(n));
+                        return [...svcs, ...pm2Svcs, ...getProcessFallback(stillMissing)];
+                    }
+                    return svcs;
+                }
+                // systemctl available but no services resolved — pass all names to fallback
+                if (failedNames.length > 0) {
+                    const pm2Svcs = getPm2Services(failedNames);
+                    const pm2Names = new Set(pm2Svcs.map(s => s.name));
+                    const stillMissing = failedNames.filter(n => !pm2Names.has(n));
+                    return [...pm2Svcs, ...getProcessFallback(stillMissing)];
+                }
             } catch {
                 // systemctl not available — continue to PM2
             }
