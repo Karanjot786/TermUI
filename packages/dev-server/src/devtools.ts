@@ -78,7 +78,7 @@ export class DevTools {
             renderTimeMs: timeMs,
             widgetCount,
             lastRenderAt: now,
-            fps: Math.round(fps * 10) / 10,
+            fps: Math.round(fps * 10 + Number.EPSILON) / 10,
             memoryMB: Math.round((process.memoryUsage?.().heapUsed ?? 0) / 1024 / 1024 * 10) / 10,
         };
     }

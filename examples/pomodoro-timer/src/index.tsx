@@ -182,7 +182,7 @@ class GradientProgressBar extends Widget {
 
         const attrs = styleToCellAttrs(this._style);
 
-        const label = this._showLabel ? ` ${Math.round(this._value * 100)}%` : '';
+        const label = this._showLabel ? ` ${Math.round(this._value * 100 + Number.EPSILON)}%` : '';
         const barWidth = Math.max(0, width - label.length);
         const filled = this._value <= 0 ? 0 : Math.round(barWidth * this._value);
         const empty = barWidth - filled;
