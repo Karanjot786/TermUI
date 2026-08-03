@@ -113,6 +113,16 @@ export class VirtualList extends Widget {
 
     get totalItems(): number { return this._totalItems; }
     get selectedIndex(): number { return this._selectedIndex; }
+    /** Whether there is a next item to select */
+    hasNext(): boolean {
+        return this._selectedIndex < this._totalItems - 1;
+    }
+
+    /** Whether there is a previous item to select */
+    hasPrev(): boolean {
+        return this._selectedIndex > 0;
+    }
+
     get scrollOffset(): number { return this._scrollOffset; }
 
     // ── Public API ──
