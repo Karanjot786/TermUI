@@ -16,7 +16,7 @@ export class EmptyState extends Widget {
     constructor(title: string, style: Partial<Style> = {}, opts: EmptyStateOptions = {}) {
         super(style);
         this._title = title;
-        this._icon = opts.icon ?? (caps.unicode ? '📭' : '[]');
+        this._icon = opts.icon ?? (caps.unicode ? '[x]' : '[]');
         if (opts.description !== undefined) this._description = opts.description;
         if (opts.hint !== undefined) this._hint = opts.hint;
         this._updateA11y();
