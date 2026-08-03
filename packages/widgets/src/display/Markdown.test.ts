@@ -50,6 +50,15 @@ describe('Markdown', () => {
         expect(pipeCell.italic).toBe(true);
     });
 
+    it('renders blockquote with ASCII pipe when caps.unicode is false', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const screen = render('> quote text');
+        const row = screen.back[0].map(c => c.char).join('');
+        expect(row).toContain('|');
+        expect(row).not.toContain('│');
+        expect(row).toContain('quote text');
+    });
+
     it('renders bullet list items with • when unicode is enabled', () => {
         vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const screen = render('- item one');
