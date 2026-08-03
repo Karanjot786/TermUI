@@ -44,6 +44,8 @@ export { useList } from './hooks/useList.js';
 export type { UseListActions } from './hooks/useList.js';
 export { useMap } from './hooks/useMap.js';
 export type { UseMapActions } from './hooks/useMap.js';
+export { useHistory } from './hooks/useHistory.js';
+export type { UseHistoryActions, UseHistoryState } from './hooks/useHistory.js';
 // ── Error Boundary ──
 export { ErrorBoundary } from './error-boundary.js';
 export type { ErrorBoundaryProps } from './error-boundary.js';
