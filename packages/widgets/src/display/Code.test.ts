@@ -2,8 +2,8 @@
 // @termuijs/widgets — Tests for Code widget
 // ─────────────────────────────────────────────────────
 
-import { describe, it, expect } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { describe, it, expect, vi } from 'vitest';
+import { Screen, caps } from '@termuijs/core';
 import { Code } from './Code.js';
 
 describe('Code', () => {
@@ -72,5 +72,15 @@ describe('Code', () => {
         expect(screen.back[0][2].char).toBe('[');
         expect(screen.back[0][3].char).toBe('t');
         expect(screen.back[0][4].char).toBe('╮'); // topRight corner (width-1 index)
+    });
+
+    it('uses ASCII pipe for gutter separator when caps.unicode is false', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const code = new Code('hello');
+        code.updateRect({ x: 0, y: 0, width: 12, height: 4 });
+        const screen = new Screen(12, 4);
+        code.render(screen);
+        // Gutter separator should be '|' in ASCII mode, not '\u2502'
+        expect(screen.back[1][2].char).toBe('|');
     });
 });
