@@ -219,7 +219,7 @@ export class SplitPane extends Widget {
 
             for (let col = 0; col < width; col++) {
                 screen.setCell(col + x, dividerY, {
-                    char: '─',
+                    char: caps.unicode ? '─' : '-',
                     ...attrs,
                 });
             }
