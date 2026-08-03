@@ -40,7 +40,7 @@ class AIStreamingApp extends Widget {
         this.addChild(this._toolCall);
         this.addChild(this._streamingText);
 
-        setInterval(() => {
+        clearInterval(window.__interval); window.__interval = setInterval(() => {
             this._streamingText.tick();
         }, 50);
     }
