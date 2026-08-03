@@ -128,4 +128,36 @@ describe('Router hooks', () => {
         
         t.unmount();
     });
+
+    it('useNavigate warns when called without a router context', () => {
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+        // Component that calls useNavigate inside a Router context
+        let capturedNavigate: any;
+        const TestComponent = () => {
+            capturedNavigate = useNavigate();
+            return { type: 'box', props: {}, children: [] } as any;
+        };
+
+        // Create VNode manually so render() calls the component via reconcile/renderComponent
+        const vnode: any = { type: TestComponent, props: {}, children: [] };
+
+        // Render outside a Router context (no RouterContext.Provider in the tree)
+        const t = render(vnode);
+
+        // capturedNavigate should be set by the component rendering
+        // (it captures the navigate function via closure)
+        expect(typeof capturedNavigate).toBe('function');
+
+        // Calling navigate with no router context should warn
+        capturedNavigate('/some-route');
+
+        expect(warn).toHaveBeenCalledOnce();
+        expect(warn).toHaveBeenCalledWith(
+            '[useNavigate] No Router context found. ' +
+            'Ensure your component is rendered inside a <Router>.'
+        );
+
+        t.unmount();
+    });
 });
