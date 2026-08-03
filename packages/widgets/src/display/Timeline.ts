@@ -49,10 +49,10 @@ export class Timeline extends Widget {
             const status = item.status ?? 'pending';
 
             let connector: string;
-            if (isLast) {
-                connector = '\u2514\u2500'; // └─
+            if (caps.unicode) {
+                connector = isLast ? '\u2514\u2500' : '\u251C\u2500'; // └─ / ├─
             } else {
-                connector = '\u251C\u2500'; // ├─
+                connector = isLast ? '`-' : '|-'; // ASCII fallback
             }
 
             let icon: string;
