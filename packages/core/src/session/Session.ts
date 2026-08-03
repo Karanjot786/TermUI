@@ -92,6 +92,13 @@ export class Session {
     /**
      * Stop auto-saving.
      */
+    /**
+     * Delete a value from the session.
+     */
+    delete(key: string): void {
+        delete this._data[key];
+    }
+
     stopAutoSave(): void {
         if (this._timer) {
             clearInterval(this._timer);
