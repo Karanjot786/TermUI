@@ -403,7 +403,7 @@ class CalculatorApp extends Widget {
     }
 
     private evaluate() {
-        if (this.expression.trim() === "") return;
+        if (this.expression.trim().length === 0) return;
         const oldExpr = this.expression;
         this.result = safeEval(this.expression);
         if (this.result !== null && !this.result.startsWith("Error")) {
