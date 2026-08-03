@@ -180,15 +180,17 @@ export class LayoutDebug extends Widget {
     private _renderGrid(screen: Screen, x: number, y: number, width: number, height: number, attrs: Record<string, unknown>): void {
         const gridSize = this._opts.gridSize;
         const gridColor: Record<string, unknown> = { ...attrs, fg: { type: 'named', name: 'brightBlack' }, dim: true };
+        const vertChar = caps.unicode ? '│' : '|';
+        const horizChar = caps.unicode ? '─' : '-';
 
         for (let gx = x; gx < x + width; gx += gridSize) {
             for (let gy = y; gy < y + height; gy++) {
-                screen.setCell(gx, gy, { char: '│', ...gridColor });
+                screen.setCell(gx, gy, { char: vertChar, ...gridColor });
             }
         }
         for (let gy = y; gy < y + height; gy += gridSize) {
             for (let gx = x; gx < x + width; gx++) {
-                screen.setCell(gx, gy, { char: '─', ...gridColor });
+                screen.setCell(gx, gy, { char: horizChar, ...gridColor });
             }
         }
     }

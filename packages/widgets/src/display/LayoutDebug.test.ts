@@ -233,5 +233,17 @@ describe('LayoutDebug', () => {
             expect(text).toContain('+');
             vi.restoreAllMocks();
         });
+
+        it('grid uses ASCII pipe and dash when caps.unicode is false', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+            const debug = makeDebug(20, 20);
+            debug.setOption('showGrid', true);
+            debug.setWidgets(widgets);
+            const screen = renderDebug(debug, 20, 20);
+            const rendered = screen.back.map(row => row.map(c => c.char).join('')).join('');
+            expect(rendered).toContain('|');
+            expect(rendered).toContain('-');
+            vi.restoreAllMocks();
+        });
     });
 });
