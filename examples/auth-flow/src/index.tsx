@@ -21,7 +21,7 @@ function TextInputJSX({
     onChange: (val: string) => void;
     placeholder?: string;
     isFocused: boolean;
-}) {
+}): TextInput {
     const ref = useRef<TextInput | null>(null);
 
     if (!ref.current) {
@@ -57,13 +57,19 @@ function TextInputJSX({
                 ref.current.moveCursorEnd();
                 break;
             default:
-                if (key.length === 1 && !event.ctrl && !event.alt) {
+                // Defensive `key &&` guard: some non-printable keystrokes may
+                // reach this handler with an empty/undefined key depending on
+                // how the TermUI input dispatcher normalizes them.
+                if (key && key.length === 1 && !event.ctrl && !event.alt) {
                     ref.current.insertChar(key);
                 }
         }
     });
 
-    return ref.current as any;
+    // TermUI's JSX runtime accepts widget instances directly as render
+    // output (this isn't a standard JSX.Element), so returning the concrete
+    // TextInput type is intentional rather than a type-safety gap.
+    return ref.current;
 }
 
 function PasswordInputJSX({
@@ -78,7 +84,7 @@ function PasswordInputJSX({
     placeholder?: string;
     isFocused: boolean;
     widgetRef: { current: PasswordInput | null };
-}) {
+}): PasswordInput {
     if (!widgetRef.current) {
         widgetRef.current = new PasswordInput(
             { width: 30 },
@@ -97,7 +103,9 @@ function PasswordInputJSX({
         widgetRef.current.handleKey(event);
     });
 
-    return widgetRef.current as any;
+    // Same TermUI-specific widget-instance-as-render-output pattern as
+    // TextInputJSX above.
+    return widgetRef.current;
 }
 
 function LoginScreen() {
