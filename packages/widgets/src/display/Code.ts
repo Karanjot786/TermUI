@@ -49,7 +49,7 @@ export class Code extends Widget {
                 screen.writeString(x, y, lineNum, { dim: true });
                 x += lineNumWidth;
 
-                screen.setCell(x, y, { char: '│', dim: true });
+                screen.setCell(x, y, { char: caps.unicode ? '│' : '|', dim: true });
                 x++;
 
                 screen.setCell(x, y, { char: ' ' });
