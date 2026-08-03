@@ -70,4 +70,23 @@ describe('Chart', () => {
         expect(row0).toContain('CPU');
         expect(row0).toContain('RAM');
     });
+
+    it('renders axes with ASCII fallback when caps.unicode is false', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+        const chart = new Chart({
+            showAxes: true,
+            series: [{ label: 'X', color: 'green', data: [0, 10] }]
+        });
+        chart.updateRect({ x: 0, y: 0, width: 15, height: 5 });
+        chart.render(screen);
+
+        const row0 = screen.back[0].map(c => c.char).join('');
+        expect(row0).toContain('10.0+');
+
+        const row4 = screen.back[4].map(c => c.char).join('');
+        expect(row4).toContain('+----');
+
+        expect(row0).not.toContain('┤');
+        expect(row4).not.toContain('└');
+    });
 });
