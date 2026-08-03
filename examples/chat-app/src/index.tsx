@@ -257,7 +257,7 @@ function parseBlocks(text: string): Block[] {
         }
 
         // ── Handle Paragraphs ────────────────────────
-        if (line.trim() === '') {
+        if (line.trim().length === 0) {
             blocks.push({
                 type: 'paragraph',
                 text: '',
