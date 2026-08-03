@@ -31,6 +31,24 @@ export class Stat extends Widget {
         this.markDirty();
     }
 
+    getValue(): string {
+        return this._value;
+    }
+
+    getLabel(): string {
+        return this._label;
+    }
+
+    setLabel(label: string): void {
+        if (this._label === label) return;
+        this._label = label;
+        this.markDirty();
+    }
+
+    getDelta(): number | undefined {
+        return this._delta;
+    }
+
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;
