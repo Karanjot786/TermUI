@@ -483,7 +483,15 @@ export function createStore<T extends object>(
                 currentUnsub();
                 unsub = null;
             }
-            listener(state, prevState);
+            try {
+                listener(state, prevState);
+            } catch (err) {
+                // If the listener throws, re-register the wrapper so future
+                // state changes can still notify it. Errors are re-thrown so
+                // the caller's error handler can observe them.
+                unsub = subscribe(wrapper);
+                throw err;
+            }
         };
         unsub = subscribe(wrapper);
         return () => {

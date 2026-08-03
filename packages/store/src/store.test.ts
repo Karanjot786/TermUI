@@ -96,6 +96,29 @@ describe('createStore', () => {
         expect(spy).toHaveBeenCalledTimes(1)
     })
 
+    it('subscribeOnce retries when the listener throws', () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+        }))
+
+        let shouldThrow = true
+        const spy = vi.fn(() => {
+            if (shouldThrow) throw new Error('oops')
+        })
+
+        useStore.subscribeOnce(spy)
+        // First setState: listener throws, error propagates out of setState.
+        // The wrapper re-registers so future changes can still notify.
+        expect(() => useStore.setState({ count: 1 })).toThrow('oops')
+        // First call threw — wrapper should still be subscribed
+        expect(spy).toHaveBeenCalledTimes(1)
+
+        shouldThrow = false
+        useStore.setState({ count: 2 })
+        // Second state change should retry and succeed
+        expect(spy).toHaveBeenCalledTimes(2)
+    })
+
     it('multiple subscribers all get notified', () => {
         const useStore = createStore((set) => ({
             x: 0,
