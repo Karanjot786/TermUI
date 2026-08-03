@@ -4,7 +4,7 @@
 
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync, readdirSync } from 'node:fs';
 import { getBuiltinThemeNames } from '@termuijs/tss';
 import { textPrompt, selectPrompt, multiSelectPrompt } from './prompts.js';
 import { generateProject, type ProjectConfig } from './templates.js';
@@ -122,6 +122,17 @@ async function runProjectScaffold(args: CliArgs): Promise<void> {
   // ── Generate project ──
   const projectDir = resolve(process.cwd(), projectName);
   if (existsSync(projectDir)) {
+    try {
+        const entries = fs.readdirSync(projectDir);
+        const hasContent = entries.some(e => e !== '.git');
+        if (hasContent) {
+            console.log(`\n  ✖  Directory "${projectName}" is not empty. Refusing to overwrite.\n`);
+            console.log(`  Remove the directory or choose a different name.\n`);
+            return;
+        }
+    } catch {
+        // readdirSync failed — let the write calls fail naturally
+    }
     console.log(`\n  ⚠  Directory "${projectName}" already exists. Files may be overwritten.\n`);
   }
 
