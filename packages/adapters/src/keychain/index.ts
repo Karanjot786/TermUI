@@ -75,6 +75,15 @@ export function useKeychain(appName: string): UseKeychainResult {
     return fallbackStore.get(account) ?? process.env[accountToEnvName(account)] ?? null
   }
 
+  function deleteFallback(account: string): boolean {
+    const envName = accountToEnvName(account)
+    const envHadKey = envName in process.env
+    if (envHadKey) {
+      delete process.env[envName]
+    }
+    return fallbackStore.delete(account) || envHadKey
+  }
+
   return {
     async get(account: string): Promise<string | null> {
       if (!keytar) return getFallback(account)
@@ -105,7 +114,7 @@ export function useKeychain(appName: string): UseKeychainResult {
 
     async delete(account: string): Promise<boolean> {
       if (!keytar) {
-        return fallbackStore.delete(account)
+        return deleteFallback(account)
       }
 
       try {
@@ -113,7 +122,7 @@ export function useKeychain(appName: string): UseKeychainResult {
       } catch (error) {
         warnFallback(error)
         keytar = null
-        return fallbackStore.delete(account)
+        return deleteFallback(account)
       }
     },
   }
