@@ -154,6 +154,16 @@ export class Grid extends Widget {
         this.markDirty();
     }
 
+    override removeChild(child: Widget): void {
+        child.setStyle({
+            gridColumnStart: undefined,
+            gridColumnEnd: undefined,
+            gridRowStart: undefined,
+            gridRowEnd: undefined,
+        });
+        super.removeChild(child);
+    }
+
     protected _renderSelf(_screen: Screen): void {
         // Grid is a pure layout container — no self-rendering needed.
     }
@@ -195,6 +205,16 @@ export class GridItem extends Widget {
             ...style
         });
         this.gridArea = options.area;
+    }
+
+    override removeChild(child: Widget): void {
+        child.setStyle({
+            gridColumnStart: undefined,
+            gridColumnEnd: undefined,
+            gridRowStart: undefined,
+            gridRowEnd: undefined,
+        });
+        super.removeChild(child);
     }
 
     protected _renderSelf(_screen: Screen): void {
