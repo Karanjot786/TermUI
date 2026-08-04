@@ -380,7 +380,7 @@ export class DevServer {
 
             this._killChild();
 
-            await exitedPromise.catch(() => {});
+            await exitedPromise.catch( => console.error());
 
             if (this._running && this._entryFile) {
                 this._spawnChild();
