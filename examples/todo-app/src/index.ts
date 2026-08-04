@@ -104,7 +104,7 @@ class CustomMultiProgress extends (MultiProgressClass as any) {
             const value = Math.max(0, Math.min(1, item.value));
             const filled = Math.round(barWidth * value);
 
-            const pct = Math.round(value * 100);
+            const pct = Math.round(value * 100 + Number.EPSILON);
             const percentStr = ` ${pct}% `;
             const showPct = barWidth >= percentStr.length;
             const labelStart = showPct ? Math.floor((barWidth - percentStr.length) / 2) : -1;
