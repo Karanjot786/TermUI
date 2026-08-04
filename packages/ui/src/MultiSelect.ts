@@ -30,7 +30,7 @@ export class MultiSelect extends Widget {
     }
 
     get selectedOptions(): MultiSelectOption[] {
-        return [...this._checked].sort().map(i => this._options[i]);
+        return [...this._checked].sort((a, b) => a - b).map(i => this._options[i]);
     }
     selectNext(): void { if (this._options.length === 0) return; let n = this._cursorIndex + 1; while (n < this._options.length && this._options[n].disabled) n++; if (n < this._options.length) { this._cursorIndex = n; this.markDirty(); } }
     selectPrev(): void { if (this._options.length === 0) return; let n = this._cursorIndex - 1; while (n >= 0 && this._options[n].disabled) n--; if (n >= 0) { this._cursorIndex = n; this.markDirty(); } }
