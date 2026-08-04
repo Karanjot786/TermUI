@@ -44,7 +44,7 @@ export function collectDeps(content: string): string[] {
   const deps = new Set<string>();
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) deps.add(m[1]!);
-  return [...deps].sort();
+  return [...deps].sort((a, b) => a - b);
 }
 
 export function toSlug(name: string): string {
