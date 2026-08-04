@@ -114,7 +114,7 @@ export class Switch extends Widget {
         if (width <= 0) return;
 
         const attrs = styleToCellAttrs(this.style);
-        const knobPos = Math.round(this._animProgress * 2);
+        const knobPos = Math.round(this._animProgress * 2 + Number.EPSILON);
         const transitioning = this._animProgress > 0 && this._animProgress < 1;
 
         let trackChars: string[];
