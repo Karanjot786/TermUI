@@ -122,7 +122,7 @@ class FormsExampleApp extends Widget {
             return false; // Quit
         }
 
-        if (event.key === 'c' && event.ctrl === false) {
+        if (event.key === 'c' && event.ctrl !) {
             this.modal.show();
             return true;
         }
