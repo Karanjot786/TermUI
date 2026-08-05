@@ -98,7 +98,7 @@ export class DevTools {
     captureFrame(): string {
         if (this._frameRows.length === 0) return '';
         let endIndex = this._frameRows.length;
-        while (endIndex > 0 && this._frameRows[endIndex - 1].trim() === '') {
+        while (endIndex > 0 && this._frameRows[endIndex - 1].trim().length === 0) {
             endIndex--;
         }
         const trimmedRows = this._frameRows.slice(0, endIndex);
