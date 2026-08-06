@@ -307,6 +307,25 @@ describe('FileWatcher', () => {
         expect(vi.mocked(watch)).toHaveBeenCalledTimes(dirs.length);
     });
 
+    it('does not register duplicate watchers when start is called twice', () => {
+        const watcher = new FileWatcher(['./src']);
+
+        watcher.start();
+        watcher.start();
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(1);
+    });
+
+    it('can start again after stop', () => {
+        const watcher = new FileWatcher(['./src']);
+
+        watcher.start();
+        watcher.stop();
+        watcher.start();
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(2);
+    });
+
     it('handles events from multiple directories independently', () => {
         // Use separate emitters per directory
         const emitters = [new EventEmitter(), new EventEmitter(), new EventEmitter()];
@@ -391,6 +410,27 @@ describe('FileWatcher', () => {
 
         expect(vi.mocked(watch)).toHaveBeenCalledTimes(3);
         expect(changeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips generated directories during fallback traversal', () => {
+        vi.mocked(watch)
+            .mockImplementationOnce(() => {
+                throw new Error('recursive watch unavailable');
+            })
+            .mockReturnValue(mockWatcherEmitter as any);
+        vi.mocked(readdirSync).mockImplementation((dir) => {
+            if (String(dir).endsWith('src')) return ['components', 'node_modules', 'dist'] as any;
+            return [] as any;
+        });
+        vi.mocked(statSync).mockReturnValue({ isDirectory: () => true } as any);
+
+        const watcher = new FileWatcher(['./src']);
+
+        watcher.start();
+
+        expect(vi.mocked(watch)).toHaveBeenCalledTimes(3);
+        expect(vi.mocked(statSync)).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(statSync).mock.calls[0][0]).toEqual(expect.stringContaining('components'));
     });
 
     // ─── 13. Timestamp generation ─────────────────────────────────────────────

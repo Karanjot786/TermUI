@@ -20,6 +20,7 @@ export class ConfirmDialog extends Widget {
     private _visible = false;
     private _onConfirm?: () => void;
     private _onCancel?: () => void;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
     focusable = true;
 
     constructor(options: ConfirmDialogOptions) {
@@ -30,7 +31,13 @@ export class ConfirmDialog extends Widget {
         this._borderColor = options.borderColor ?? { type: 'named', name: 'yellow' };
         this._onConfirm = options.onConfirm;
         this._onCancel = options.onCancel;
-        this.events.on('key', (event) => this.handleKey(event));
+        this.events.on('key', this._keyHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
     }
 
     get visible(): boolean { return this._visible; }
@@ -47,12 +54,29 @@ export class ConfirmDialog extends Widget {
 
     private handleKey(event: KeyEvent): void {
         if (!this._visible) return;
-        if (event.key === 'escape') {
-            this.selectCancel();
-            this.confirm();
-            event.preventDefault();
-            event.stopPropagation();
+        switch (event.key) {
+            case 'escape':
+                this.selectCancel();
+                this.confirm();
+                break;
+            case 'left':
+                this.selectConfirm();
+                break;
+            case 'right':
+                this.selectCancel();
+                break;
+            case 'tab':
+                this.toggleSelection();
+                break;
+            case 'enter':
+            case 'return':
+                this.confirm();
+                break;
+            default:
+                return;
         }
+        event.preventDefault();
+        event.stopPropagation();
     }
 
     protected _renderSelf(screen: Screen): void {

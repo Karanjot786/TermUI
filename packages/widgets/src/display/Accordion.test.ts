@@ -396,4 +396,73 @@ describe('Accordion', () => {
             expect(accordion.getSections()).toBe(SECTIONS);
         });
     });
-});
+
+    describe('13. Disabled sections & bulk operations', () => {
+        it('ignores open and toggle on disabled section', () => {
+            const sections = [
+                { title: 'Sec 0', content: 'C0' },
+                { title: 'Sec 1 (disabled)', content: 'C1', disabled: true },
+            ];
+            const accordion = new Accordion(sections);
+
+            expect(accordion.isOpen(1)).toBe(false);
+            accordion.open(1);
+            expect(accordion.isOpen(1)).toBe(false);
+
+            accordion.toggle(1);
+            expect(accordion.isOpen(1)).toBe(false);
+        });
+
+        it('renders disabled section title with dim attribute', () => {
+            const sections = [
+                { title: 'Sec 0', content: 'C0' },
+                { title: 'Sec 1 (disabled)', content: 'C1', disabled: true },
+            ];
+            const accordion = new Accordion(sections, { width: 30, height: 10 });
+            accordion.updateRect({ x: 0, y: 0, width: 30, height: 10 });
+            const screen = new Screen(30, 10);
+            accordion.render(screen);
+
+            // Title row for Sec 1 (Row 2, since Sec 0 is open by default: Row 0 title, Row 1 C0, Row 2 Sec 1)
+            const cell = screen.back[2][0];
+            expect(cell.dim).toBe(true);
+        });
+
+        it('expandAll and collapseAll work in multiple mode', () => {
+            const accordion = new Accordion(SECTIONS, { width: 30, height: 10 }, { multiple: true });
+
+            accordion.expandAll();
+            expect(accordion.isOpen(0)).toBe(true);
+            expect(accordion.isOpen(1)).toBe(true);
+            expect(accordion.isOpen(2)).toBe(true);
+
+            accordion.collapseAll();
+            expect(accordion.isOpen(0)).toBe(false);
+            expect(accordion.isOpen(1)).toBe(false);
+            expect(accordion.isOpen(2)).toBe(false);
+        });
+
+        it('right/left expand/collapse and home/end focus keys', () => {
+            const accordion = new Accordion(SECTIONS, { width: 30, height: 10 }, { multiple: true });
+
+            accordion.setFocusedIndex(1);
+            expect(accordion.getFocusedIndex()).toBe(1);
+
+            // Right key expands
+            accordion.handleKey(makeKeyEvent('right'));
+            expect(accordion.isOpen(1)).toBe(true);
+
+            // Left key collapses
+            accordion.handleKey(makeKeyEvent('left'));
+            expect(accordion.isOpen(1)).toBe(false);
+
+            // Home key jumps to 0
+            accordion.handleKey(makeKeyEvent('home'));
+            expect(accordion.getFocusedIndex()).toBe(0);
+
+            // End key jumps to last index
+            accordion.handleKey(makeKeyEvent('end'));
+            expect(accordion.getFocusedIndex()).toBe(2);
+        });
+    });
+});

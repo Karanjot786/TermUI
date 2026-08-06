@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeRange, computeVariableRange } from './virtual-scroll.js';
+import { computeRange, computeVariableRange, createVariableHeightVirtualizer } from './virtual-scroll.js';
 
 describe('computeRange', () => {
     it('start=0, end=12 with default overscan=2 at offset 0', () => {
@@ -78,5 +78,30 @@ describe('computeVariableRange', () => {
         // no item visible; startIdx = sizes.length = 3, then max(0,3-2)=1
         // endIdx = sizes.length = 3, +2 = min(3,5)=3
         expect(r.start).toBeLessThanOrEqual(r.end);
+    });
+
+    it('returns total height metadata for variable-height lists', () => {
+        const r = computeVariableRange(0, 10, [3, 4, 5], 0);
+        expect(r.totalPx).toBe(12);
+    });
+
+    it('returns sticky rows outside the visible window', () => {
+        const r = computeVariableRange(20, 5, [5, 5, 5, 5, 5, 5], {
+            overscan: 0,
+            stickyIndices: [0, 4, 99],
+        });
+
+        expect(r.start).toBe(4);
+        expect(r.end).toBe(5);
+        expect(r.sticky).toEqual([0]);
+    });
+
+    it('creates a reusable virtualizer with normalized item sizes', () => {
+        const virtualize = createVariableHeightVirtualizer([5, -2, 10], { overscan: 0, stickyIndices: [0] });
+        const r = virtualize(5, 5);
+
+        expect(r.totalPx).toBe(15);
+        expect(r.start).toBe(2);
+        expect(r.sticky).toEqual([0]);
     });
 });

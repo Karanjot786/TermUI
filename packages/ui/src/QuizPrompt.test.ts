@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Screen } from '@termuijs/core';
 import { QuizPrompt } from './QuizPrompt.js';
 
 const SAMPLE_QUESTIONS = [
@@ -99,6 +100,20 @@ describe('QuizPrompt', () => {
         const result = quiz.getResult();
         expect(result.total).toBe(1);
         expect(result.answers).toEqual([0]);
+    });
+
+    it('does not render feedback below a short layout', () => {
+        const quiz = new QuizPrompt(SAMPLE_QUESTIONS);
+        quiz['_selectedIndex'] = 0;
+        quiz['_feedback'] = 'wrong';
+        const screen = new Screen(40, 5);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        quiz.updateRect({ x: 0, y: 0, width: 40, height: 3 });
+        quiz.render(screen);
+
+        for (const [, row] of writeSpy.mock.calls) {
+            expect(row).toBeLessThan(3);
+        }
     });
 
     it('clears pending feedback timeout when destroyed', () => {

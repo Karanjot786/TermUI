@@ -2,6 +2,13 @@ export interface ScrollRange {
     start: number;    // first item index to render
     end: number;      // one past last item index to render (exclusive)
     offsetPx: number; // scroll offset in pixels (for variable height)
+    totalPx?: number;
+    sticky?: number[];
+}
+
+export interface VariableRangeOptions {
+    overscan?: number;
+    stickyIndices?: number[];
 }
 
 /**
@@ -33,13 +40,17 @@ export function computeVariableRange(
     scrollPx: number,
     viewportPx: number,
     sizes: number[],
-    overscan = 2,
+    overscanOrOptions: number | VariableRangeOptions = 2,
 ): ScrollRange {
+    const options = typeof overscanOrOptions === 'number'
+        ? { overscan: overscanOrOptions }
+        : overscanOrOptions;
+    const overscan = options.overscan ?? 2;
     const cumulative: number[] = [];
     let sum = 0;
     for (const s of sizes) {
         cumulative.push(sum);
-        sum += s;
+        sum += Math.max(0, s);
     }
     cumulative.push(sum); // sentinel
 
@@ -54,5 +65,18 @@ export function computeVariableRange(
     if (endIdx < 0) endIdx = sizes.length;
     endIdx = Math.min(sizes.length, endIdx + overscan);
 
-    return { start: startIdx, end: endIdx, offsetPx: cumulative[startIdx] };
+    const sticky = (options.stickyIndices ?? [])
+        .filter(index => index >= 0 && index < sizes.length)
+        .filter(index => index < startIdx || index >= endIdx)
+        .sort((a, b) => a - b);
+
+    return { start: startIdx, end: endIdx, offsetPx: cumulative[startIdx], totalPx: sum, sticky };
+}
+
+export function createVariableHeightVirtualizer(
+    sizes: number[],
+    options: VariableRangeOptions = {},
+): (scrollPx: number, viewportPx: number) => ScrollRange {
+    const normalizedSizes = sizes.map(size => Math.max(0, size));
+    return (scrollPx, viewportPx) => computeVariableRange(scrollPx, viewportPx, normalizedSizes, options);
 }

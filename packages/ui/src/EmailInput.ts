@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────
 
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Color, type Screen, type KeyEvent, styleToCellAttrs, truncate, mergeStyles, defaultStyle } from '@termuijs/core';
+import { type Style, type Color, type Screen, type KeyEvent, styleToCellAttrs, truncate, mergeStyles, defaultStyle, splitGraphemes, stringWidth } from '@termuijs/core';
 
 export interface EmailInputOptions {
     placeholder?: string;
@@ -56,29 +56,29 @@ export class EmailInput extends Widget {
     }
 
     insertChar(char: string): void {
-        this._raw =
-            this._raw.slice(0, this._cursorPos) +
-            char +
-            this._raw.slice(this._cursorPos);
-        this._cursorPos++;
+        const graphemes = splitGraphemes(this._raw);
+        const inserted = splitGraphemes(char);
+        graphemes.splice(this._cursorPos, 0, ...inserted);
+        this._raw = graphemes.join('');
+        this._cursorPos += inserted.length;
         this._notify();
     }
 
     deleteBack(): void {
         if (this._cursorPos > 0) {
-            this._raw =
-                this._raw.slice(0, this._cursorPos - 1) +
-                this._raw.slice(this._cursorPos);
+            const graphemes = splitGraphemes(this._raw);
+            graphemes.splice(this._cursorPos - 1, 1);
+            this._raw = graphemes.join('');
             this._cursorPos--;
             this._notify();
         }
     }
 
     deleteForward(): void {
-        if (this._cursorPos < this._raw.length) {
-            this._raw =
-                this._raw.slice(0, this._cursorPos) +
-                this._raw.slice(this._cursorPos + 1);
+        const graphemes = splitGraphemes(this._raw);
+        if (this._cursorPos < graphemes.length) {
+            graphemes.splice(this._cursorPos, 1);
+            this._raw = graphemes.join('');
             this._notify();
         }
     }
@@ -89,7 +89,7 @@ export class EmailInput extends Widget {
     }
     
     moveCursorRight(): void { 
-        this._cursorPos = Math.min(this._raw.length, this._cursorPos + 1); 
+        this._cursorPos = Math.min(splitGraphemes(this._raw).length, this._cursorPos + 1);
         this.markDirty(); 
     }
     
@@ -99,7 +99,7 @@ export class EmailInput extends Widget {
     }
     
     moveCursorEnd(): void { 
-        this._cursorPos = this._raw.length; 
+        this._cursorPos = splitGraphemes(this._raw).length;
         this.markDirty(); 
     }
 
@@ -112,7 +112,7 @@ export class EmailInput extends Widget {
         
         if (match) {
             this._raw = this._raw.slice(0, atIndex + 1) + match;
-            this._cursorPos = this._raw.length;
+            this._cursorPos = splitGraphemes(this._raw).length;
             this._notify();
         }
     }
@@ -151,14 +151,14 @@ export class EmailInput extends Widget {
             return;
         }
 
-        const display = this._raw;
+        const display = splitGraphemes(this._raw);
         const visibleWidth = width - 1;
-        let scrollX = 0;
-        if (this._cursorPos > visibleWidth) {
-            scrollX = this._cursorPos - visibleWidth;
+        let scrollIndex = 0;
+        while (stringWidth(display.slice(scrollIndex, this._cursorPos).join('')) > visibleWidth) {
+            scrollIndex++;
         }
 
-        const visibleText = display.slice(scrollX, scrollX + visibleWidth);
+        const visibleText = truncate(display.slice(scrollIndex).join(''), visibleWidth, '');
         
         // Show error indicator if invalid and not empty
         const isError = this._raw.length > 0 && !this.isValid();
@@ -167,11 +167,10 @@ export class EmailInput extends Widget {
         screen.writeString(x, y, visibleText, renderAttrs);
 
         if (this.isFocused) {
-            const cursorScreenPos = x + this._cursorPos - scrollX;
+            const cursorOffset = stringWidth(display.slice(scrollIndex, this._cursorPos).join(''));
+            const cursorScreenPos = x + cursorOffset;
             if (cursorScreenPos >= x && cursorScreenPos < x + width) {
-                const cursorChar = this._cursorPos < display.length
-                    ? display[this._cursorPos]
-                    : ' ';
+                const cursorChar = display[this._cursorPos] ?? ' ';
                 screen.setCell(cursorScreenPos, y, {
                     char: cursorChar,
                     ...renderAttrs,

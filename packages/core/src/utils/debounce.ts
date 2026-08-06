@@ -41,19 +41,24 @@ export function debounce<T extends (...args: unknown[]) => void>(
         timer = setTimeout(() => {
             timer = undefined;
             if (!options?.leading) func(...(lastArgs as Parameters<T>));
+            lastArgs = undefined;
         }, wait);
     } as T & { cancel: () => void; flush: () => void };
 
     debounced.cancel = () => {
         clearTimeout(timer);
         timer = undefined;
+        lastArgs = undefined;
     };
 
     debounced.flush = () => {
         if (timer) {
             clearTimeout(timer);
             timer = undefined;
-            func(...(lastArgs as Parameters<T>));
+            if (!options?.leading && lastArgs) {
+                func(...lastArgs);
+            }
+            lastArgs = undefined;
         }
     };
 

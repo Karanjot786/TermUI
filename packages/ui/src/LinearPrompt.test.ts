@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Screen, createKeyEvent } from '@termuijs/core';
+import { Screen, createKeyEvent, stringWidth } from '@termuijs/core';
 import { LinearPrompt, type LinearPromptOption } from './LinearPrompt.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -527,6 +527,18 @@ describe('LinearPrompt — rendering constraints', () => {
         }).not.toThrow();
     });
 
+    it('does not render options past the assigned height', () => {
+        const prompt = new LinearPrompt(basicOptions, { question: 'Q' });
+        const screen = new Screen(20, 4);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        prompt.updateRect({ x: 0, y: 1, width: 20, height: 1 });
+        prompt.render(screen);
+
+        for (const [, row] of writeSpy.mock.calls) {
+            expect(row).toBeLessThan(2);
+        }
+    });
+
     it('width smaller than option text renders safely (no overflow)', () => {
         const prompt = new LinearPrompt(
             [{ label: 'VeryLongOptionLabel', value: 'x' }],
@@ -538,6 +550,18 @@ describe('LinearPrompt — rendering constraints', () => {
     it('width smaller than the 2-char marker renders safely', () => {
         const prompt = new LinearPrompt(basicOptions, { question: 'Q' });
         expect(() => renderPrompt(prompt, 1, basicOptions.length + 2)).not.toThrow();
+    });
+
+    it('clips option rows when width is smaller than the marker', () => {
+        const prompt = new LinearPrompt(basicOptions, { question: 'Q' });
+        const screen = new Screen(1, 4);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        prompt.updateRect({ x: 0, y: 0, width: 1, height: 4 });
+        prompt.render(screen);
+
+        for (const [x, , text] of writeSpy.mock.calls) {
+            expect(x + stringWidth(text)).toBeLessThanOrEqual(1);
+        }
     });
 
     it('very long labels do not overflow the row buffer', () => {

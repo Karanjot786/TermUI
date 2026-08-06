@@ -4,11 +4,14 @@ interface ClipboardyModule {
   read: () => Promise<string>
   write: (text: string) => Promise<void>
 }
+
 export interface UseClipboardResult {
   read: () => Promise<string>
   write: (text: string) => Promise<void>
   lastCopied: string | null
 }
+
+let fallbackClipboard: string | null = null
 
 function isMissingClipboardyError(error: unknown): error is NodeJS.ErrnoException {
   return (
@@ -38,19 +41,52 @@ function resolveClipboardy(): ClipboardyModule {
   }
 }
 
+function warnFallback(error: unknown): void {
+  console.warn(error instanceof Error ? error.message : 'useClipboard() could not access the system clipboard.')
+}
+
 export function useClipboard(): UseClipboardResult {
-  const clipboardy = resolveClipboardy()
-  let lastCopied: string | null = null
+  let clipboardy: ClipboardyModule | null = null
+
+  try {
+    clipboardy = resolveClipboardy()
+  } catch (error) {
+    warnFallback(error)
+  }
+
+  let lastCopied: string | null = fallbackClipboard
 
   return {
-    read: async () => {
-      const text = await clipboardy.read()
-      return text
+    read: async (): Promise<string> => {
+      if (!clipboardy) return fallbackClipboard ?? ''
+
+      try {
+        return await clipboardy.read()
+      } catch (error) {
+        warnFallback(error)
+        clipboardy = null
+        return fallbackClipboard ?? ''
+      }
     },
-    write: async (text: string) => {
-      await clipboardy.write(text)
-      lastCopied = text
+
+    write: async (text: string): Promise<void> => {
+      if (!clipboardy) {
+        fallbackClipboard = text
+        lastCopied = text
+        return
+      }
+
+      try {
+        await clipboardy.write(text)
+        lastCopied = text
+      } catch (error) {
+        warnFallback(error)
+        clipboardy = null
+        fallbackClipboard = text
+        lastCopied = text
+      }
     },
+
     get lastCopied() {
       return lastCopied
     },

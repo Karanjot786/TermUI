@@ -4,7 +4,9 @@ import {
     type Screen,
     type KeyEvent,
     caps,
-    styleToCellAttrs
+    styleToCellAttrs,
+    stringWidth,
+    truncate,
 } from '@termuijs/core';
 
 export type PopoverPlacement = 'top' | 'bottom' | 'left' | 'right';
@@ -98,8 +100,8 @@ export class Popover extends Widget {
         const anchorY = this.opts.anchor?.y ?? this._rect.y;
         
         const contentRect = this.content.rect;
-        const width = Math.max(10, contentRect.width + 2); 
-        const height = Math.max(3, contentRect.height + 2);
+        const width = Math.min(Math.max(10, contentRect.width + 2), screen.cols);
+        const height = Math.min(Math.max(3, contentRect.height + 2), screen.rows);
 
         let px = anchorX;
         let py = anchorY;
@@ -110,6 +112,9 @@ export class Popover extends Widget {
             case 'left': px = anchorX - width; break;
             case 'right': px = anchorX + 1; break;
         }
+
+        px = Math.min(Math.max(0, px), Math.max(0, screen.cols - width));
+        py = Math.min(Math.max(0, py), Math.max(0, screen.rows - height));
 
         const attrs = styleToCellAttrs(this.style);
         const bAttrs = { ...attrs, fg: this.opts.borderColor || attrs.fg };
@@ -124,9 +129,9 @@ export class Popover extends Widget {
         }
 
         // ── 2. Top Border with Title ──
-        const titleStr = this.opts.title ? ` ${this.opts.title} ` : '';
         const innerWidth = Math.max(0, width - 2);
-        const fill = Math.max(0, innerWidth - titleStr.length);
+        const titleStr = this.opts.title ? truncate(` ${this.opts.title} `, innerWidth, '') : '';
+        const fill = Math.max(0, innerWidth - stringWidth(titleStr));
         const leftFill = Math.floor(fill / 2);
         const rightFill = fill - leftFill;
 

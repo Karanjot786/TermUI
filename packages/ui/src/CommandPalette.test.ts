@@ -65,6 +65,20 @@ describe('CommandPalette', () => {
         vi.restoreAllMocks();
     });
 
+    it('backspace removes one complete grapheme cluster', () => {
+        const palette = new CommandPalette([
+            { id: 'accented', label: 'é', action: vi.fn() },
+            { id: 'other', label: 'Other', action: vi.fn() },
+        ]);
+        palette.show();
+        palette.insertChar('é');
+
+        palette.deleteBack();
+
+        expect(allText(renderPalette(palette))).not.toContain('�');
+        expect(allText(renderPalette(palette))).toContain('Type a command...');
+    });
+
     // ── 1. Initial State ──────────────────────────────
 
     describe('initial state', () => {

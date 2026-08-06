@@ -2,7 +2,7 @@
 // @termuijs/widgets — MultiProgress widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs, type Color, caps, BLOCK } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, type Color, caps, BLOCK, truncate, stringWidth } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 /**
@@ -122,7 +122,7 @@ export class MultiProgress extends Widget {
 
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
-        const { x, y, width } = rect;
+        const { x, y, width, height } = rect;
         if (width <= 0) return;
 
         const attrs = styleToCellAttrs(this._style);
@@ -132,17 +132,17 @@ export class MultiProgress extends Widget {
         const emptyChar = caps.unicode ? '░' : BLOCK.empty; // '░' or ' '
 
         // Render each item on its own row
-        for (let i = 0; i < this._items.length; i++) {
+        for (let i = 0; i < this._items.length && i < height; i++) {
             const item = this._items[i];
             const rowY = y + i;
             let colX = x;
 
             // 1. Render label (left-aligned, truncated/padded to labelWidth)
-            const label = item.label.length > this._labelWidth
-                ? item.label.substring(0, this._labelWidth)
-                : item.label.padEnd(this._labelWidth);
+            const labelWidth = Math.min(this._labelWidth, width);
+            const t = truncate(item.label, labelWidth, '');
+            const label = t + ' '.repeat(Math.max(0, labelWidth - stringWidth(t)));
             screen.writeString(colX, rowY, label, attrs);
-            colX += this._labelWidth;
+            colX += labelWidth;
 
             // 2. Space after label
             if (colX < x + width) {

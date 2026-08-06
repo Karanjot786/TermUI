@@ -193,64 +193,235 @@ export function stripAnsi(str: string): string {
  * Word-wrap text to a given width, respecting existing newlines.
  * Safely handles ANSI escape sequences without breaking formatting.
  */
-export function wordWrap(str: string, width: number): string {
-    if (width <= 0) return str;
-    const lines = str.split('\n');
-    const result: string[] = [];
-    for (const line of lines) {
-        if (stringWidth(line) <= width) {
-            result.push(line);
-            continue;
+class AnsiState {
+    bold = false;
+    dim = false;
+    italic = false;
+    underline = false;
+    blink = false;
+    inverse = false;
+    strikethrough = false;
+    fg: string | undefined = undefined;
+    bg: string | undefined = undefined;
+
+    reset(): void {
+        this.bold = false;
+        this.dim = false;
+        this.italic = false;
+        this.underline = false;
+        this.blink = false;
+        this.inverse = false;
+        this.strikethrough = false;
+        this.fg = undefined;
+        this.bg = undefined;
+    }
+
+    update(sequence: string): void {
+        if (!sequence.startsWith('\x1b[') || !sequence.endsWith('m')) {
+            return;
         }
-        let currentLine = '';
-        let currentWidth = 0;
-        const words = line.split(/(\s+)/);
-        for (const word of words) {
-            const wordW = stringWidth(word);
-            if (currentWidth + wordW <= width) {
-                currentLine += word;
-                currentWidth += wordW;
-            } else if (wordW > width) {
-                // Break long word
-                if (currentLine) {
-                    result.push(currentLine);
-                    currentLine = '';
-                    currentWidth = 0;
+        const content = sequence.slice(2, -1);
+        if (content === '') {
+            this.reset();
+            return;
+        }
+        const codes = content.split(';');
+        for (let i = 0; i < codes.length; i++) {
+            const code = codes[i];
+            const num = parseInt(code, 10);
+            if (isNaN(num)) continue;
+
+            if (num === 0) {
+                this.reset();
+            } else if (num === 1) {
+                this.bold = true;
+            } else if (num === 2) {
+                this.dim = true;
+            } else if (num === 3) {
+                this.italic = true;
+            } else if (num === 4) {
+                this.underline = true;
+            } else if (num === 5) {
+                this.blink = true;
+            } else if (num === 7) {
+                this.inverse = true;
+            } else if (num === 9) {
+                this.strikethrough = true;
+            } else if (num === 22) {
+                this.bold = false;
+                this.dim = false;
+            } else if (num === 23) {
+                this.italic = false;
+            } else if (num === 24) {
+                this.underline = false;
+            } else if (num === 25) {
+                this.blink = false;
+            } else if (num === 27) {
+                this.inverse = false;
+            } else if (num === 29) {
+                this.strikethrough = false;
+            } else if (num === 39) {
+                this.fg = undefined;
+            } else if (num === 49) {
+                this.bg = undefined;
+            } else if ((num >= 30 && num <= 37) || (num >= 90 && num <= 97)) {
+                this.fg = code;
+            } else if ((num >= 40 && num <= 47) || (num >= 100 && num <= 107)) {
+                this.bg = code;
+            } else if (num === 38) {
+                if (codes[i + 1] === '5' && codes[i + 2] !== undefined) {
+                    this.fg = `38;5;${codes[i + 2]}`;
+                    i += 2;
+                } else if (codes[i + 1] === '2' && codes[i + 2] !== undefined && codes[i + 3] !== undefined && codes[i + 4] !== undefined) {
+                    this.fg = `38;2;${codes[i + 2]};${codes[i + 3]};${codes[i + 4]}`;
+                    i += 4;
                 }
-                const wordSegments = segmenter.segment(word);
-                let inEscape = false;
-                for (const { segment } of wordSegments) {
-                    const cp = segment.codePointAt(0)!;
-                    if (cp === 0x1B) {
-                        inEscape = true;
-                        currentLine += segment;
-                        continue;
-                    }
-                    if (inEscape) {
-                        currentLine += segment;
-                        if ((cp >= 0x40 && cp <= 0x7E) && cp !== 0x5B) {
-                            inEscape = false;
-                        }
-                        continue;
-                    }
-                    const charW = segmentWidth(segment);
-                    if (currentWidth + charW > width) {
-                        if (currentLine) result.push(currentLine);
-                        currentLine = '';
-                        currentWidth = 0;
-                    }
-                    currentLine += segment;
-                    currentWidth += charW;
+            } else if (num === 48) {
+                if (codes[i + 1] === '5' && codes[i + 2] !== undefined) {
+                    this.bg = `48;5;${codes[i + 2]}`;
+                    i += 2;
+                } else if (codes[i + 1] === '2' && codes[i + 2] !== undefined && codes[i + 3] !== undefined && codes[i + 4] !== undefined) {
+                    this.bg = `48;2;${codes[i + 2]};${codes[i + 3]};${codes[i + 4]}`;
+                    i += 4;
                 }
-            } else {
-                // Start new line with this word
-                if (currentLine) result.push(currentLine);
-                currentLine = word.trimStart();
-                currentWidth = stringWidth(currentLine);
             }
         }
-        if (currentLine) result.push(currentLine);
     }
-    return result.join('\n');
+
+    getAsString(): string {
+        const parts: string[] = [];
+        if (this.bold) parts.push('1');
+        if (this.dim) parts.push('2');
+        if (this.italic) parts.push('3');
+        if (this.underline) parts.push('4');
+        if (this.blink) parts.push('5');
+        if (this.inverse) parts.push('7');
+        if (this.strikethrough) parts.push('9');
+        if (this.fg !== undefined) parts.push(this.fg);
+        if (this.bg !== undefined) parts.push(this.bg);
+
+        if (parts.length === 0) return '';
+        return `\x1b[${parts.join(';')}m`;
+    }
 }
 
+function updateAnsiState(text: string, ansiState: AnsiState): void {
+    const segments = segmenter.segment(text);
+    let inEscape = false;
+    let escapeBuffer = '';
+    for (const { segment } of segments) {
+        const cp = segment.codePointAt(0)!;
+        if (cp === 0x1B) {
+            inEscape = true;
+            escapeBuffer += segment;
+            continue;
+        }
+        if (inEscape) {
+            escapeBuffer += segment;
+            if ((cp >= 0x40 && cp <= 0x7E) && cp !== 0x5B) {
+                inEscape = false;
+                ansiState.update(escapeBuffer);
+                escapeBuffer = '';
+            }
+            continue;
+        }
+    }
+}
+
+/**
+ * Word-wrap text to a given width, respecting existing newlines.
+ * Safely handles ANSI escape sequences without breaking formatting.
+ */
+export function wordWrap(str: string, width: number): string {
+    if (width <= 0) return str;
+    const lines = str.split(/\r?\n/);
+    const result: string[] = [];
+    const ansiState = new AnsiState();
+
+    for (const line of lines) {
+        const tokens = line.split(/([^\S\r\n]+)/);
+        let currentLine = ansiState.getAsString();
+        let currentWidth = 0;
+
+        for (const token of tokens) {
+            if (!token) continue;
+
+            if (/^[^\S\r\n]+$/.test(token)) {
+                const tokenW = stringWidth(token);
+                if (currentWidth + tokenW <= width) {
+                    currentLine += token;
+                    currentWidth += tokenW;
+                    updateAnsiState(token, ansiState);
+                }
+            } else {
+                const tokenW = stringWidth(token);
+                if (currentWidth + tokenW <= width) {
+                    currentLine += token;
+                    currentWidth += tokenW;
+                    updateAnsiState(token, ansiState);
+                } else if (tokenW > width) {
+                    // Break long word
+                    if (currentWidth > 0) {
+                        if (ansiState.getAsString()) {
+                            currentLine += '\x1b[0m';
+                        }
+                        result.push(currentLine);
+                        currentLine = ansiState.getAsString();
+                        currentWidth = 0;
+                    }
+                    const wordSegments = segmenter.segment(token);
+                    let inEscape = false;
+                    let escapeBuffer = '';
+                    for (const { segment } of wordSegments) {
+                        const cp = segment.codePointAt(0)!;
+                        if (cp === 0x1B) {
+                            inEscape = true;
+                            escapeBuffer += segment;
+                            currentLine += segment;
+                            continue;
+                        }
+                        if (inEscape) {
+                            escapeBuffer += segment;
+                            currentLine += segment;
+                            if ((cp >= 0x40 && cp <= 0x7E) && cp !== 0x5B) {
+                                inEscape = false;
+                                ansiState.update(escapeBuffer);
+                                escapeBuffer = '';
+                            }
+                            continue;
+                        }
+                        const charW = segmentWidth(segment);
+                        if (currentWidth + charW > width) {
+                            if (currentWidth > 0) {
+                                if (ansiState.getAsString()) {
+                                    currentLine += '\x1b[0m';
+                                }
+                                result.push(currentLine);
+                                currentLine = ansiState.getAsString();
+                                currentWidth = 0;
+                            }
+                        }
+                        currentLine += segment;
+                        currentWidth += charW;
+                    }
+                } else {
+                    // Start new line with this word
+                    if (ansiState.getAsString()) {
+                        currentLine += '\x1b[0m';
+                    }
+                    result.push(currentLine);
+                    const trimmedToken = token.trimStart();
+                    currentLine = ansiState.getAsString() + trimmedToken;
+                    currentWidth = stringWidth(trimmedToken);
+                    updateAnsiState(trimmedToken, ansiState);
+                }
+            }
+        }
+        if (ansiState.getAsString()) {
+            currentLine += '\x1b[0m';
+        }
+        result.push(currentLine);
+    }
+
+    return result.join('\n');
+}

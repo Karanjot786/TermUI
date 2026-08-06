@@ -1,6 +1,6 @@
 // MultiSelect — checkbox-style multi-item selector
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps, truncate } from '@termuijs/core';
 
 export interface MultiSelectOption { label: string; value: string; disabled?: boolean; }
 export interface MultiSelectOptions {
@@ -49,7 +49,7 @@ export class MultiSelect extends Widget {
             const active = i === this._cursorIndex;
             const checked = this._checked.has(i);
             const label = `${active ? (caps.unicode ? '❯ ' : '> ') : '  '}${checked ? this._checkChar : this._uncheckChar} ${o.label}`;
-            screen.writeString(x, y + i, label.slice(0, width), {
+            screen.writeString(x, y + i, truncate(label, width), {
                 ...attrs,
                 fg: o.disabled ? { type: 'named' as const, name: 'brightBlack' as const } : active ? this._activeColor : attrs.fg,
                 bold: active, dim: o.disabled,

@@ -43,9 +43,7 @@ export class Calendar extends Widget {
 
     constructor(style: Partial<Style> = {}, opts: CalendarOptions = {}) {
         super(style);
-        this._selectedDate = opts.date ? new Date(opts.date) : new Date();
-        this._selectedDate.setHours(0, 0, 0, 0);
-
+        this._selectedDate = opts.date ? this._normalizeDate(opts.date) : this._normalizeDate(new Date());
         this._currentMonth = new Date(this._selectedDate.getFullYear(), this._selectedDate.getMonth(), 1);
         this._currentMonth.setHours(0, 0, 0, 0);
 
@@ -173,14 +171,13 @@ export class Calendar extends Widget {
         this._selectedDate = newDate;
 
         if (
-            newDate.getMonth() !== this._currentMonth.getMonth() ||
-            newDate.getFullYear() !== this._currentMonth.getFullYear()
+            norm.getMonth() !== this._currentMonth.getMonth() ||
+            norm.getFullYear() !== this._currentMonth.getFullYear()
         ) {
             this._currentMonth = new Date(newDate.getFullYear(), newDate.getMonth(), 1);
             this._currentMonth.setHours(0, 0, 0, 0);
             this._onMonthChange?.(newDate.getFullYear(), newDate.getMonth());
         }
-        this.markDirty();
     }
 
     protected _renderSelf(screen: Screen): void {
@@ -227,8 +224,7 @@ export class Calendar extends Widget {
         const gridStartY = y + 2;
         const maxWeeks = 6;
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = this._normalizeDate(new Date());
 
         for (let w = 0; w < maxWeeks; w++) {
             const rowY = gridStartY + w;
@@ -266,6 +262,12 @@ export class Calendar extends Widget {
                             bold: true,
                             inverse: this.isFocused,
                             underline: !this.isFocused,
+                        });
+                    } else if (isHighlighted) {
+                        screen.writeString(colX, rowY, label, {
+                            ...attrs,
+                            fg: this._highlightColor,
+                            bold: true,
                         });
                     } else if (isToday) {
                         screen.writeString(colX, rowY, label, {

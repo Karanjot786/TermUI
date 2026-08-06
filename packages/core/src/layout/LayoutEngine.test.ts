@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { computeLayout, createLayoutNode, invalidateLayout } from '../layout/LayoutEngine.js';
+import { Constraint } from './constraint.js';
 import type { Style } from '../style/Style.js';
 
 function makeNode(id: string, style: Partial<Style> = {}, children: ReturnType<typeof createLayoutNode>[] = []) {
@@ -105,6 +106,26 @@ describe('computeLayout', () => {
 
         expect(root.children[0].computed.y).toBe(0);
         expect(root.children[1].computed.y).toBe(4); // 3 + 1 gap
+    });
+
+    it('respects gap when using constraints', () => {
+        const root = makeNode('root', {
+            flexDirection: 'column',
+            gap: 2,
+            constraints: [
+                Constraint.Length(3),
+                Constraint.Length(4),
+            ]
+        }, [
+            makeNode('a'),
+            makeNode('b'),
+        ]);
+        computeLayout(root, 80, 24);
+
+        expect(root.children[0].computed.y).toBe(0);
+        expect(root.children[0].computed.height).toBe(3);
+        expect(root.children[1].computed.y).toBe(5); // 3 + 2 gap
+        expect(root.children[1].computed.height).toBe(4);
     });
 
     it('centers children with justifyContent: center', () => {

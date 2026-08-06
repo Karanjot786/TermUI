@@ -12,7 +12,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, styleToCellAttrs, truncate, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, styleToCellAttrs, truncate, caps, splitGraphemes, stringWidth } from '@termuijs/core';
 
 export interface PathInputOptions {
     placeholder?: string;
@@ -61,8 +61,8 @@ export class PathInput extends Widget {
     get value(): string { return this._value; }
 
     set value(v: string) {
-        this._value = v.slice(0, this._maxLength);
-        this._cursorPos = Math.min(this._cursorPos, this._value.length);
+        this._value = splitGraphemes(v).slice(0, this._maxLength).join('');
+        this._cursorPos = Math.min(this._cursorPos, this._graphemes().length);
         this._dismissCompletions();
     }
 
@@ -132,17 +132,16 @@ export class PathInput extends Widget {
         }
 
         this._value = this._completions[this._completionIndex];
-        this._cursorPos = this._value.length;
+        this._cursorPos = this._graphemes().length;
         this._onChange?.(this._value);
         this.markDirty();
     }
 
     insertChar(char: string): void {
-        if (this._value.length >= this._maxLength) return;
-        this._value =
-            this._value.slice(0, this._cursorPos) +
-            char +
-            this._value.slice(this._cursorPos);
+        const graphemes = this._graphemes();
+        if (graphemes.length >= this._maxLength) return;
+        graphemes.splice(this._cursorPos, 0, char);
+        this._value = graphemes.join('');
         this._cursorPos++;
         this._dismissCompletions();
         this._onChange?.(this._value);
@@ -151,9 +150,9 @@ export class PathInput extends Widget {
 
     deleteBack(): void {
         if (this._cursorPos > 0) {
-            this._value =
-                this._value.slice(0, this._cursorPos - 1) +
-                this._value.slice(this._cursorPos);
+            const graphemes = this._graphemes();
+            graphemes.splice(this._cursorPos - 1, 1);
+            this._value = graphemes.join('');
             this._cursorPos--;
             this._dismissCompletions();
             this._onChange?.(this._value);
@@ -162,10 +161,10 @@ export class PathInput extends Widget {
     }
 
     deleteForward(): void {
-        if (this._cursorPos < this._value.length) {
-            this._value =
-                this._value.slice(0, this._cursorPos) +
-                this._value.slice(this._cursorPos + 1);
+        const graphemes = this._graphemes();
+        if (this._cursorPos < graphemes.length) {
+            graphemes.splice(this._cursorPos, 1);
+            this._value = graphemes.join('');
             this._dismissCompletions();
             this._onChange?.(this._value);
             this.markDirty();
@@ -173,11 +172,15 @@ export class PathInput extends Widget {
     }
 
     moveCursorLeft(): void { this._cursorPos = Math.max(0, this._cursorPos - 1); this.markDirty(); }
-    moveCursorRight(): void { this._cursorPos = Math.min(this._value.length, this._cursorPos + 1); this.markDirty(); }
+    moveCursorRight(): void { this._cursorPos = Math.min(this._graphemes().length, this._cursorPos + 1); this.markDirty(); }
     moveCursorHome(): void { this._cursorPos = 0; this.markDirty(); }
-    moveCursorEnd(): void { this._cursorPos = this._value.length; this.markDirty(); }
+    moveCursorEnd(): void { this._cursorPos = this._graphemes().length; this.markDirty(); }
     submit(): void { this._dismissCompletions(); this._onSubmit?.(this._value); }
     clear(): void { this._value = ''; this._cursorPos = 0; this._dismissCompletions(); this._onChange?.(''); this.markDirty(); }
+
+    private _graphemes(): string[] {
+        return splitGraphemes(this._value);
+    }
 
     /**
      * Handle key events. Call this from your input loop.
@@ -225,18 +228,41 @@ export class PathInput extends Widget {
             screen.writeString(x, y, truncate(this._placeholder, width), { ...attrs, dim: true });
         } else {
             const visibleWidth = width - 1;
-            let scrollX = 0;
-            if (this._cursorPos > visibleWidth) {
-                scrollX = this._cursorPos - visibleWidth;
+            const graphemes = this._graphemes();
+            // Post-#2681, _cursorPos IS a grapheme index — use it directly,
+            // do not reconstruct it from accumulated UTF-16 `.length`.
+            const cursorIndex = Math.min(this._cursorPos, graphemes.length);
+
+            // Walk backward from the cursor accumulating cell width (via
+            // stringWidth) until the viewport would overflow, to find the
+            // first visible grapheme index. This keeps the cursor in view
+            // even when graphemes are wider than 1 cell.
+            let scrollIndex = cursorIndex;
+            let widthBeforeCursor = 0;
+            while (scrollIndex > 0) {
+                const graphemeWidth = stringWidth(graphemes[scrollIndex - 1]!);
+                if (widthBeforeCursor + graphemeWidth > visibleWidth) break;
+                widthBeforeCursor += graphemeWidth;
+                scrollIndex--;
             }
-            const visibleText = this._value.slice(scrollX, scrollX + visibleWidth);
+
+            let visibleText = '';
+            let renderedWidth = 0;
+            for (let i = scrollIndex; i < graphemes.length; i++) {
+                const grapheme = graphemes[i]!;
+                const graphemeWidth = stringWidth(grapheme);
+                if (renderedWidth + graphemeWidth > visibleWidth) break;
+                visibleText += grapheme;
+                renderedWidth += graphemeWidth;
+            }
             screen.writeString(x, y, visibleText, attrs);
 
             if (this.isFocused) {
-                const cursorScreenPos = x + this._cursorPos - scrollX;
+                const beforeCursor = graphemes.slice(scrollIndex, cursorIndex).join('');
+                const cursorScreenPos = x + stringWidth(beforeCursor);
                 if (cursorScreenPos >= x && cursorScreenPos < x + width) {
-                    const cursorChar = this._cursorPos < this._value.length
-                        ? this._value[this._cursorPos]
+                    const cursorChar = cursorIndex < graphemes.length
+                        ? graphemes[cursorIndex]
                         : ' ';
                     screen.setCell(cursorScreenPos, y, {
                         char: cursorChar,

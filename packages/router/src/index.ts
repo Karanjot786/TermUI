@@ -11,6 +11,7 @@ export type {
     RouteMatch,
     RouteParams,
     QueryParams,
+    NavigationGuardContext,
     LazyLoader,
     BeforeEnterGuard,
     AfterEnterGuard,

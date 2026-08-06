@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, createKeyEvent } from '@termuijs/core';
+import { Screen, createKeyEvent, stringWidth } from '@termuijs/core';
 import { RadioGroup } from './RadioGroup.js';
 
 const OPTIONS = [
@@ -183,7 +183,7 @@ describe('RadioGroup', () => {
         radio.render(screen);
 
         const row0 = screen.back[0]!.map((c) => c.char).join('');
-        expect(row0).toContain('(o)');
+        expect(row0).toMatch(/\((o|\*)\)/);
         expect(row0).toContain('Dark');
     });
 
@@ -196,5 +196,20 @@ describe('RadioGroup', () => {
         const row1 = screen.back[1]!.map((c) => c.char).join('');
         expect(row1).toContain('( )');
         expect(row1).toContain('Light');
+    });
+
+    it('clips wide option labels by cell width', () => {
+        const radio = new RadioGroup({
+            options: [{ label: '你好你好', value: 'wide' }],
+            defaultValue: 'wide',
+        });
+        const screen = new Screen(9, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        radio.updateRect({ x: 0, y: 0, width: 9, height: 1 });
+        radio.render(screen);
+
+        for (const [x, , text] of writeSpy.mock.calls) {
+            expect(x + stringWidth(text)).toBeLessThanOrEqual(9);
+        }
     });
 });

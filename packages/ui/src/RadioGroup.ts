@@ -14,6 +14,7 @@ import {
     defaultStyle,
     styleToCellAttrs,
     caps,
+    truncate,
 } from '@termuijs/core';
 import { firstEnabledIndex, lastEnabledIndex, nextEnabledIndex, previousEnabledIndex } from './navigation.js';
 
@@ -182,7 +183,7 @@ export class RadioGroup extends Widget {
             screen.writeString(
                 x,
                 y + i,
-                text.slice(0, width),
+                truncate(text, width, ''),
                 {
                     ...attrs,
                     bold: isFocused,

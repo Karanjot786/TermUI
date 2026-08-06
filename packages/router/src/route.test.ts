@@ -27,6 +27,13 @@ describe('route - Query Utilities', () => {
                 'key space': 'value',
             });
         });
+
+        it('preserves repeated query parameters as arrays', () => {
+            expect(parseQuery('tag=ui&tag=data&sort=asc')).toEqual({
+                tag: ['ui', 'data'],
+                sort: 'asc',
+            });
+        });
     });
 
     describe('serializeQuery', () => {
@@ -45,6 +52,12 @@ describe('route - Query Utilities', () => {
         it('URL-encodes parameters during serialization', () => {
             expect(serializeQuery({ hello: 'world!', 'key space': 'value' })).toBe(
                 'hello=world%21&key+space=value'
+            );
+        });
+
+        it('serializes array values as repeated query parameters', () => {
+            expect(serializeQuery({ tag: ['ui', 'data'], sort: 'asc' })).toBe(
+                'tag=ui&tag=data&sort=asc'
             );
         });
     });
@@ -104,17 +117,17 @@ describe('route - matchRoute', () => {
         {
             path: '/users/[id]',
             component: mockComponent,
-            meta: { name: 'user-detail' },
+            meta: { name: 'user-detail', section: 'users', auth: true },
             children: [
                 {
                     path: 'posts',
                     component: mockComponent,
-                    meta: { name: 'user-posts' },
+                    meta: { name: 'user-posts', title: 'Posts' },
                 },
                 {
                     path: '/users/[id]/settings', // absolute path in nested route
                     component: mockComponent,
-                    meta: { name: 'user-settings' },
+                    meta: { name: 'user-settings', auth: false },
                 }
             ],
         },
@@ -157,10 +170,29 @@ describe('route - matchRoute', () => {
         expect(match?.chain[1].meta?.name).toBe('user-posts');
     });
 
+    it('merges nested route metadata from parent to child', () => {
+        const match = matchRoute('/users/42/posts', routes);
+        expect(match?.meta).toEqual({
+            name: 'user-posts',
+            section: 'users',
+            auth: true,
+            title: 'Posts',
+        });
+    });
+
     it('matches nested absolute route correctly', () => {
         const match = matchRoute('/users/42/settings', routes);
         expect(match?.route.meta?.name).toBe('user-settings');
         expect(match?.params).toEqual({ id: '42' });
+    });
+
+    it('lets child metadata override parent metadata keys', () => {
+        const match = matchRoute('/users/42/settings', routes);
+        expect(match?.meta).toMatchObject({
+            name: 'user-settings',
+            section: 'users',
+            auth: false,
+        });
     });
 
     it('matches wildcard route and parses catch-all params', () => {
@@ -173,5 +205,10 @@ describe('route - matchRoute', () => {
         const match = matchRoute('/about?tab=settings&theme=dark', routes);
         expect(match?.route.meta?.name).toBe('about');
         expect(match?.query).toEqual({ tab: 'settings', theme: 'dark' });
+    });
+
+    it('preserves repeated query parameters in route match', () => {
+        const match = matchRoute('/about?tag=ui&tag=data', routes);
+        expect(match?.query).toEqual({ tag: ['ui', 'data'] });
     });
 });

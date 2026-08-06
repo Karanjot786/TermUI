@@ -162,7 +162,11 @@ export class SplitPane extends Widget {
                 typeof layout.ratio === 'number' &&
                 layout.ratio !== this._ratio
             ) {
-                this._ratio = layout.ratio;
+                const content = this._getContentRect();
+                const totalSize = this._direction === 'horizontal' ? content.width : content.height;
+                this._ratio = totalSize > 0
+                    ? this._clampRatio(layout.ratio, totalSize)
+                    : layout.ratio;
                 changed = true;
             }
 

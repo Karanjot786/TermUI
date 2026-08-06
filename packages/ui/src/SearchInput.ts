@@ -118,6 +118,7 @@ export class SearchInput extends Widget {
         const icon = caps.unicode ? '🔍' : '/';
         const prefix = `${icon} `;
         const prefixWidth = stringWidth(prefix);
+        const visiblePrefix = truncate(prefix, width, '');
 
         const valueOrPlaceholder = this._value.length > 0
             ? this._value
@@ -130,8 +131,10 @@ export class SearchInput extends Widget {
         const available = Math.max(0, width - prefixWidth);
         const valueText = truncate(valueOrPlaceholder, available);
 
-        screen.writeString(x, y, prefix, attrs);
-        if (valueText.length > 0) {
+        if (visiblePrefix.length > 0) {
+            screen.writeString(x, y, visiblePrefix, attrs);
+        }
+        if (stringWidth(visiblePrefix) === prefixWidth && valueText.length > 0) {
             screen.writeString(x + prefixWidth, y, valueText, valueAttrs);
         }
     }

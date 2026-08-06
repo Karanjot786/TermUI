@@ -48,7 +48,9 @@ export { useBattery } from './hooks/useBattery.js';
 export type { BatteryData, UseBatteryResult } from './hooks/useBattery.js';
 
 export { usePolling } from './hooks/usePolling.js';
-export type { UsePollingResult } from './hooks/usePolling.js';
+export type { UsePollingOptions, UsePollingResult } from './hooks/usePolling.js';
+export { AdaptivePollingController } from './hooks/adaptive-polling.js';
+export type { AdaptivePollingOptions, AdaptivePollingState } from './hooks/adaptive-polling.js';
 
 export { useMutation } from './hooks/useMutation.js'
 export type { HttpMethod, UseMutationReturn } from './hooks/useMutation.js'

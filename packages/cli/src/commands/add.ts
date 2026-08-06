@@ -5,6 +5,31 @@ import type { CliArgs } from '../args.js';
 import { resolveComponent } from '../registry.js';
 import { detectPackageManager, installArgs } from '../pm.js';
 
+export interface ComponentFilePlan {
+    path: string;
+    action: 'create' | 'overwrite';
+}
+
+export function planComponentFiles(
+    destRoot: string,
+    slug: string,
+    files: Array<{ path: string; content: string }>,
+): ComponentFilePlan[] {
+    const componentRoot = resolve(destRoot, slug);
+    return files.map((file) => {
+        const dest = resolve(componentRoot, normalizeComponentPath(slug, file.path));
+        const rel = relative(componentRoot, dest);
+        if (rel.startsWith('..') || isAbsolute(rel)) {
+            throw new Error(`Refusing to write ${dest}: path is outside ${componentRoot}`);
+        }
+
+        return {
+            path: dest,
+            action: existsSync(dest) ? 'overwrite' : 'create',
+        };
+    });
+}
+
 /** Write a component's files under <destRoot>/<slug>/, refusing path escapes. */
 export function writeComponentFiles(
     destRoot: string,
@@ -12,20 +37,14 @@ export function writeComponentFiles(
     files: Array<{ path: string; content: string }>,
     opts: { dryRun: boolean },
 ): string[] {
-    const componentRoot = resolve(destRoot, slug);
-    const written: string[] = [];
-    for (const file of files) {
-        const dest = resolve(componentRoot, normalizeComponentPath(slug, file.path));
-        const rel = relative(componentRoot, dest);
-        if (rel.startsWith('..') || isAbsolute(rel)) {
-            throw new Error(`Refusing to write ${dest}: path is outside ${componentRoot}`);
-        }
-        written.push(dest);
+    const plan = planComponentFiles(destRoot, slug, files);
+    for (let i = 0; i < files.length; i++) {
+        const dest = plan[i]!.path;
         if (opts.dryRun) continue;
         mkdirSync(dirname(dest), { recursive: true });
-        writeFileSync(dest, file.content, 'utf-8');
+        writeFileSync(dest, files[i]!.content, 'utf-8');
     }
-    return written;
+    return plan.map(entry => entry.path);
 }
 
 function normalizeComponentPath(slug: string, filePath: string): string {
@@ -48,11 +67,17 @@ export async function runAdd(args: CliArgs): Promise<void> {
             throw new Error(`${componentDir} already exists. Re-run with --yes to overwrite.`);
         }
 
+        const plan = planComponentFiles(destRoot, slug, comp.files);
         const written = writeComponentFiles(destRoot, slug, comp.files, { dryRun: args.dryRun });
         for (const dep of comp.dependencies) allDeps.add(dep);
 
         console.log(`\n  ${args.dryRun ? 'would add' : 'added'} ${comp.name}:`);
-        for (const w of written) console.log(`    ${args.dryRun ? '-' : '+'} ${relative(process.cwd(), w)}`);
+        for (const w of written) {
+            const action = plan.find(entry => entry.path === w)?.action ?? 'create';
+            const marker = args.dryRun ? (action === 'overwrite' ? '~' : '+') : '+';
+            const label = args.dryRun ? `${action} ` : '';
+            console.log(`    ${marker} ${label}${relative(process.cwd(), w)}`);
+        }
     }
 
     const deps = [...allDeps].sort();

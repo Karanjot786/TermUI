@@ -106,6 +106,33 @@ describe('SearchableSelect', () => {
         expect(widget.searchQuery).toBe('hi');
     });
 
+    it('consumes handled search input keys', () => {
+        const widget = new SearchableSelect(sampleOptions);
+        const event = makeKey('a', {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        });
+
+        widget.handleKey(event);
+
+        expect(event.preventDefault).toHaveBeenCalled();
+        expect(event.stopPropagation).toHaveBeenCalled();
+    });
+
+    it('does not consume ignored modifier keys', () => {
+        const widget = new SearchableSelect(sampleOptions);
+        const event = makeKey('a', {
+            ctrl: true,
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        });
+
+        widget.handleKey(event);
+
+        expect(event.preventDefault).not.toHaveBeenCalled();
+        expect(event.stopPropagation).not.toHaveBeenCalled();
+    });
+
     it('typing characters filters options case-insensitively', () => {
         const widget = new SearchableSelect([
             { label: 'Dashboard', value: 'dashboard' },
@@ -141,6 +168,28 @@ describe('SearchableSelect', () => {
         const widget = new SearchableSelect(sampleOptions);
         widget.handleKey(makeKey('down'));
         expect(widget.selectedIndex).toBe(1);
+    });
+
+    it('consumes handled navigation and confirm keys', () => {
+        const onSelect = vi.fn();
+        const widget = new SearchableSelect(sampleOptions, { onSelect });
+        const down = makeKey('down', {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        });
+        const enter = makeKey('enter', {
+            preventDefault: vi.fn(),
+            stopPropagation: vi.fn(),
+        });
+
+        widget.handleKey(down);
+        widget.handleKey(enter);
+
+        expect(down.preventDefault).toHaveBeenCalled();
+        expect(down.stopPropagation).toHaveBeenCalled();
+        expect(enter.preventDefault).toHaveBeenCalled();
+        expect(enter.stopPropagation).toHaveBeenCalled();
+        expect(onSelect).toHaveBeenCalledWith(sampleOptions[1], 1);
     });
 
     it('down and up change the selected option', () => {

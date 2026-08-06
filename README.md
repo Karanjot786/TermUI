@@ -123,7 +123,7 @@ render(
 |---------|-------------|
 | [`@termuijs/core`](./packages/core) | Screen buffer, input parsing, event system, flexbox layout, caps flags, WCAG utilities |
 | [`@termuijs/widgets`](./packages/widgets) | 40+ widgets: Box, Text, Table, VirtualList, StreamingText, ChatMessage, ToolCall, Card, Sidebar, LineChart, HeatMap, and more |
-| [`@termuijs/ui`](./packages/ui) | Select, Tabs, Modal, Toast, NotificationCenter, imperative prompts, PasswordInput, NumberInput, PathInput |
+| [`@termuijs/ui`](./packages/ui) | Select, Tabs, Modal, Toast, Tree, MultiSelect, Drawer, Wizard, RadioGroup, MenuBar, and 25+ more. See the [full component catalog](https://www.termui.io/docs/ui/overview). |
 | [`@termuijs/jsx`](./packages/jsx) | JSX runtime with useState, useEffect, useKeymap, useMotion, ErrorBoundary, and a complete focus system |
 | [`@termuijs/store`](./packages/store) | Zustand-style global state with selector subscriptions and batch updates |
 | [`@termuijs/testing`](./packages/testing) | In-memory test renderer: render, query, fireKey, waitFor, renderToString |

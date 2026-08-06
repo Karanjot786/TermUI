@@ -49,6 +49,8 @@ export class List extends Widget {
     private _reorderable = false;
     private _searchBuffer = '';
     private _searchTimeout: ReturnType<typeof setTimeout> | null = null;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
+    private readonly _mouseHandler = (event: MouseEvent): void => this.handleMouse(event);
 
 
     constructor(
@@ -78,8 +80,16 @@ export class List extends Widget {
         }
 
         this.focusable = true;
-        this.events.on('key', this.handleKey.bind(this));
-        this.events.on('mouse', (event) => this.handleMouse(event));
+        this.events.on('key', this._keyHandler);
+        this.events.on('mouse', this._mouseHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.off('mouse', this._mouseHandler);
+        this.events.on('key', this._keyHandler);
+        this.events.on('mouse', this._mouseHandler);
     }
 
     // ── Getters ───────────────────────────────────────

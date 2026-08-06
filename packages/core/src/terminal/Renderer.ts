@@ -185,6 +185,12 @@ export class Renderer {
             this._screen.saveLines();
             this._screen.swap();
         } catch (_err) {
+            if (bufferedLogs) {
+                this.hook.requeue(bufferedLogs);
+            }
+            // Reset flushEpoch so the next render attempt isn't skipped by the epoch guard
+            // (a throwing flush must not permanently freeze rendering).
+            this._screen.flushEpoch = -1;
             // Re-request render so the next frame tick retries.
             this._renderRequested = true;
             // Reset style state to prevent color bleed on retry.

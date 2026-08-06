@@ -6,6 +6,7 @@ import {
     defaultStyle,
     styleToCellAttrs,
     stringWidth,
+    truncate,
     caps,
     prefersReducedMotion,
 } from '@termuijs/core';
@@ -127,13 +128,23 @@ export class Switch extends Widget {
         }
 
         let cursorX = x;
+        const right = x + width;
 
         if (this._label) {
-            screen.writeString(cursorX, y, `${this._label} `, attrs);
-            cursorX += stringWidth(`${this._label} `);
+            const labelWidth = Math.max(0, width - 3);
+            const label = truncate(`${this._label} `, labelWidth, '');
+
+            if (label.length > 0) {
+                screen.writeString(cursorX, y, label, attrs);
+                cursorX += stringWidth(label);
+            }
         }
 
         for (let i = 0; i < 3; i++) {
+            if (cursorX + i >= right) {
+                break;
+            }
+
             const isKnob = i === knobPos;
             const isOn = this._value;
             screen.setCell(cursorX + i, y, {

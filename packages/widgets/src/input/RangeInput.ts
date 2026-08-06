@@ -7,6 +7,7 @@ import {
     styleToCellAttrs,
     caps,
     stringWidth,
+    truncate,
 } from '@termuijs/core';
 
 export interface RangeInputOptions {
@@ -131,11 +132,20 @@ export class RangeInput extends Widget {
         const leftCapWidth = stringWidth(leftCap);
         const rightCapWidth = stringWidth(rightCap);
         const valueWidth = stringWidth(valueStr);
+        const fixedWidth = labelWidth + leftCapWidth + rightCapWidth + valueWidth;
 
         const trackWidth = Math.max(
             0,
-            width - labelWidth - leftCapWidth - rightCapWidth - valueWidth,
+            width - fixedWidth,
         );
+
+        if (trackWidth === 0 && fixedWidth > width) {
+            screen.writeString(x, y, truncate(`${labelStr}${leftCap}${rightCap}${valueStr}`, width, ''), {
+                ...attrs,
+                bold: true,
+            });
+            return;
+        }
 
         // Render label
         screen.writeString(x, y, labelStr, { ...attrs, bold: true });

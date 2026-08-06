@@ -204,6 +204,22 @@ describe('App', () => {
         });
     });
 
+    describe('mount()', () => {
+        it('restores terminal state and rethrows when interactive setup throws (#2014)', async () => {
+            const root = createMockRootWidget();
+            root.mount = () => {
+                throw new Error('boom');
+            };
+            const app = new App(root, createInteractiveTestOptions());
+            const restoreSpy = vi.spyOn(app.terminal, 'restore');
+
+            await expect(app.mount()).rejects.toThrow('boom');
+
+            expect(restoreSpy).toHaveBeenCalledTimes(1);
+            expect((app as any)._mounted).toBe(false);
+        });
+    });
+
     describe('exit()', () => {
         afterEach(() => vi.restoreAllMocks());
 

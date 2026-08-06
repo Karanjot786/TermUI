@@ -21,6 +21,8 @@ export interface AccordionSection {
     title: string;
     /** Section body content (may contain newlines) */
     content: string;
+    /** Whether the section is disabled for interaction */
+    disabled?: boolean;
 }
 
 export interface AccordionOptions {
@@ -45,6 +47,8 @@ export interface AccordionOptions {
  *
  * Press Enter or Space to toggle the focused section.
  * Press up/down arrow keys to move between sections.
+ * Press right/left arrow keys to expand/collapse.
+ * Press Home/End to jump to top/bottom section.
  *
  * @example
  * const accordion = new Accordion([
@@ -79,7 +83,7 @@ export class Accordion extends Widget {
         this._openSet = new Set();
         if (sections.length > 0) {
             const idx = opts.openIndex ?? 0;
-            if (idx >= 0 && idx < sections.length) {
+            if (idx >= 0 && idx < sections.length && !sections[idx].disabled) {
                 this._openSet.add(idx);
             }
         }
@@ -89,9 +93,10 @@ export class Accordion extends Widget {
 
     // ── Public API ──────────────────────────────────────────────────────
 
-    /** Open a section by index. No-op if already open or index out of bounds. */
+    /** Open a section by index. No-op if disabled, already open, or index out of bounds. */
     open(index: number): void {
         if (index < 0 || index >= this._sections.length) return;
+        if (this._sections[index].disabled) return;
         if (this._openSet.has(index)) return;
         if (!this._multiple) {
             // Fire onToggle for all sections being implicitly closed
@@ -117,11 +122,56 @@ export class Accordion extends Widget {
 
     /** Toggle a section open or closed by index. */
     toggle(index: number): void {
+        if (index < 0 || index >= this._sections.length) return;
+        if (this._sections[index].disabled) return;
+
         if (this._openSet.has(index)) {
             this.close(index);
         } else {
             this.open(index);
         }
+    }
+
+    /** Open all non-disabled sections (in multiple mode or opens first valid section). */
+    expandAll(): void {
+        if (this._multiple) {
+            let changed = false;
+            for (let i = 0; i < this._sections.length; i++) {
+                if (!this._sections[i].disabled && !this._openSet.has(i)) {
+                    this._openSet.add(i);
+                    this._onToggle?.(i, true);
+                    changed = true;
+                }
+            }
+            if (changed) {
+                this._updateHeight();
+                this.markDirty();
+            }
+        } else if (this._sections.length > 0) {
+            const firstValid = this._sections.findIndex((s) => !s.disabled);
+            if (firstValid !== -1) {
+                this.open(firstValid);
+            }
+        }
+    }
+
+    /** Close all open sections. */
+    collapseAll(): void {
+        if (this._openSet.size === 0) return;
+        for (const idx of this._openSet) {
+            this._onToggle?.(idx, false);
+        }
+        this._openSet.clear();
+        this._updateHeight();
+        this.markDirty();
+    }
+
+    /** Set keyboard-focused section index (clamped to bounds). */
+    setFocusedIndex(index: number): void {
+        const clamped = Math.max(0, Math.min(index, this._sections.length - 1));
+        if (clamped === this._focusedIndex) return;
+        this._focusedIndex = clamped;
+        this.markDirty();
     }
 
     /** Returns true if the section at the given index is open. */
@@ -138,7 +188,10 @@ export class Accordion extends Widget {
     setSections(sections: AccordionSection[]): void {
         this._sections = sections;
         this._openSet.clear();
-        if (sections.length > 0) this._openSet.add(0);
+        if (sections.length > 0) {
+            const firstValid = sections.findIndex((s) => !s.disabled);
+            if (firstValid !== -1) this._openSet.add(firstValid);
+        }
         this._focusedIndex = 0;
         this._updateHeight();
         this.markDirty();
@@ -161,6 +214,24 @@ export class Accordion extends Widget {
             case ' ':
             case 'space':
                 this.toggle(this._focusedIndex);
+                break;
+            case 'arrowright':
+            case 'right':
+                if (!this.isOpen(this._focusedIndex)) {
+                    this.open(this._focusedIndex);
+                }
+                break;
+            case 'arrowleft':
+            case 'left':
+                if (this.isOpen(this._focusedIndex)) {
+                    this.close(this._focusedIndex);
+                }
+                break;
+            case 'home':
+                this.setFocusedIndex(0);
+                break;
+            case 'end':
+                this.setFocusedIndex(this._sections.length - 1);
                 break;
             case 'arrowup':
             case 'up':
@@ -196,11 +267,14 @@ export class Accordion extends Widget {
             const section = this._sections[i];
             const open = this._openSet.has(i);
             const focused = i === this._focusedIndex;
+            const disabled = Boolean(section.disabled);
 
             // Title row
             const indicator = open ? this._collapseChar : this._expandChar;
             const titleLine = indicator + ' ' + section.title;
-            const titleAttrs = focused
+            const titleAttrs = disabled
+                ? { ...attrs, dim: true }
+                : focused
                 ? { ...attrs, bold: true }
                 : attrs;
             screen.writeString(x, y + row, truncate(titleLine, width), titleAttrs);
@@ -235,4 +309,4 @@ export class Accordion extends Widget {
         }
         this._style.height = total;
     }
-}
+}

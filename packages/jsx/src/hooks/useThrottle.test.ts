@@ -93,6 +93,30 @@ describe('useThrottle', () => {
         destroyFiber(fiber);
     });
 
+    it('emits a pending value after intervalMs changes', () => {
+        const fiber = createFiber();
+
+        let throttled = renderWithFiber(fiber, () => useThrottle('a', 500));
+        expect(throttled).toBe('a');
+
+        vi.advanceTimersByTime(50);
+        throttled = renderWithFiber(fiber, () => useThrottle('b', 500));
+        expect(throttled).toBe('a');
+
+        throttled = renderWithFiber(fiber, () => useThrottle('b', 100));
+        expect(throttled).toBe('a');
+
+        vi.advanceTimersByTime(99);
+        throttled = renderWithFiber(fiber, () => useThrottle('b', 100));
+        expect(throttled).toBe('a');
+
+        vi.advanceTimersByTime(1);
+        throttled = renderWithFiber(fiber, () => useThrottle('b', 100));
+        expect(throttled).toBe('b');
+
+        destroyFiber(fiber);
+    });
+
     it('emits the first change immediately if called after intervalMs has passed since mount', () => {
         const fiber = createFiber();
 

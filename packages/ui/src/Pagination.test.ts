@@ -46,4 +46,18 @@ describe('Pagination', () => {
         expect(p2.page).toBe(5);
         expect(onChange).not.toHaveBeenCalled();
     });
+
+    it('normalizes NaN totalPages to one page', () => {
+        const p = new Pagination(3, NaN);
+
+        expect(p.totalPages).toBe(1);
+        expect(p.page).toBe(1);
+    });
+
+    it('normalizes infinite totalPages to one page', () => {
+        const p = new Pagination(3, Infinity);
+
+        expect(p.totalPages).toBe(1);
+        expect(p.page).toBe(1);
+    });
 });

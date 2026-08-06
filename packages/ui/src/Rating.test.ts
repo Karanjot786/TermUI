@@ -182,4 +182,65 @@ describe('Rating', () => {
         const { rating } = renderRating({ value: 4 });
         expect(rating.getValue()).toBe(4);
     });
+
+    it('supports precision stepping 0.5 and renders half-star glyph', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+        const { rating, screen } = renderRating({ precision: 0.5, value: 2.5, max: 5 });
+        const rendered = screen.back[0].map((c: { char: string }) => c.char).join('');
+        expect(rendered).toContain('★★½☆☆');
+
+        rating.handleKey(key('right'));
+        expect(rating.getValue()).toBe(3.0);
+
+        rating.handleKey(key('down'));
+        expect(rating.getValue()).toBe(2.5);
+    });
+
+    it('ignores key interaction when readonly is true', () => {
+        const { rating } = renderRating({ value: 2, readonly: true });
+        expect(rating.readonly).toBe(true);
+
+        rating.handleKey(key('right'));
+        expect(rating.getValue()).toBe(2);
+
+        rating.handleKey(key('3'));
+        expect(rating.getValue()).toBe(2);
+
+        rating.setReadonly(false);
+        rating.handleKey(key('3'));
+        expect(rating.getValue()).toBe(3);
+    });
+
+    it('supports direct digit key shortcuts 0-9', () => {
+        const { rating } = renderRating({ value: 0, max: 5 });
+
+        rating.handleKey(key('4'));
+        expect(rating.getValue()).toBe(4);
+
+        rating.handleKey(key('0'));
+        expect(rating.getValue()).toBe(0);
+    });
+
+    it('renders numerical label when showLabel is true', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+
+        const { rating, screen } = renderRating({ value: 3, max: 5, showLabel: true }, 30);
+        expect(rating.showLabel).toBe(true);
+
+        const rendered = screen.back[0].map((c: { char: string }) => c.char).join('');
+        expect(rendered).toContain('★★★☆☆ (3/5)');
+    });
+
+    it('triggers onChange callback when value changes', () => {
+        const onChange = vi.fn();
+        const { rating } = renderRating({ value: 1, onChange });
+
+        rating.handleKey(key('right'));
+        expect(onChange).toHaveBeenCalledWith(2);
+
+        rating.setValue(4);
+        expect(onChange).toHaveBeenCalledWith(4);
+    });
 });
+

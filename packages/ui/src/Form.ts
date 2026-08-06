@@ -28,6 +28,7 @@ export class Form extends Widget {
     private _onComplete?: (values: Record<string, string>) => void;
     focusable = true;
     public signal?: AbortSignal;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
 
     constructor(fields: FormField[], options: FormOptions = {}) {
         super(mergeStyles(defaultStyle(), { height: fields.length * 2 + 1, flexGrow: 1 }));
@@ -40,7 +41,13 @@ export class Form extends Widget {
         for (const f of fields) this._values.set(f.name, '');
         // Wire key events from the App/event system into this widget's handlers.
         // Minimal: only route printable chars and backspace to existing methods.
-        this.events.on('key', (event: KeyEvent) => this.handleKey(event));
+        this.events.on('key', this._keyHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
     }
 
     get values(): Record<string, string> { const r: Record<string, string> = {}; for (const [k, v] of this._values) r[k] = v; return r; }

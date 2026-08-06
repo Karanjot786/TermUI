@@ -271,6 +271,25 @@ describe('batch', () => {
         expect(spy).not.toHaveBeenCalled()
     })
 
+    it('destroy clears pending batched updates for that store', async () => {
+        const useStore = createStore((set) => ({
+            count: 0,
+            setCount: (count: number) => set({ count }),
+        }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        batch(() => {
+            useStore.getState().setCount(1)
+        })
+
+        useStore.destroy()
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        expect(useStore.getState().count).toBe(0)
+        expect(spy).not.toHaveBeenCalled()
+    })
+
     it('batch preserves listener notification order for unchanged keys', async () => {
         const useStore = createStore((set) => ({
             a: 1,

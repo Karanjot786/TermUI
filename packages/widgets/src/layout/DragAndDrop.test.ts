@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { KeyEvent, MouseEvent as TermMouseEvent } from '@termuijs/core';
+import { Screen, type KeyEvent, type MouseEvent as TermMouseEvent } from '@termuijs/core';
 import { DragState, DraggableWidget, DroppableWidget } from './DragAndDrop.js';
 
 function keyEvent(key: string): KeyEvent {
@@ -122,6 +122,19 @@ describe('DraggableWidget', () => {
         widget.handleKey(keyEvent('space'));
 
         expect(onDragEnd).toHaveBeenCalledOnce();
+    });
+
+    it('renders transparently and does not modify the screen output', () => {
+        const drag = new DraggableWidget({ id: 'drag-5' });
+        const screen = new Screen(10, 10);
+        drag.updateRect({ x: 0, y: 0, width: 5, height: 5 });
+        drag.render(screen);
+
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                expect(screen.back[r][c].char).toBe(' ');
+            }
+        }
     });
 });
 
@@ -277,5 +290,42 @@ describe('DroppableWidget', () => {
         widget.handleMouse(mouseEvent('mouseleave'));
 
         expect(onDragLeave).not.toHaveBeenCalled();
+    });
+
+    it('renders transparently and does not modify the screen output', () => {
+        const drop = new DroppableWidget({ id: 'drop-3' });
+        const screen = new Screen(10, 10);
+        drop.updateRect({ x: 0, y: 0, width: 5, height: 5 });
+        drop.render(screen);
+
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                expect(screen.back[r][c].char).toBe(' ');
+            }
+        }
+    });
+});
+
+describe('Group isolation', () => {
+    it('a drag active in one group does not affect another group\'s state', () => {
+        const onDropA = vi.fn();
+        const onDropB = vi.fn();
+
+        const draggableA = new DraggableWidget({ id: 'item-a', group: 'a' });
+        const draggableB = new DraggableWidget({ id: 'item-b', group: 'b' });
+        const droppableA = new DroppableWidget({ id: 'target-a', group: 'a', onDrop: onDropA });
+        const droppableB = new DroppableWidget({ id: 'target-b', group: 'b', onDrop: onDropB });
+
+        draggableA.handleKey(keyEvent('space'));
+        draggableB.handleKey(keyEvent('space'));
+
+        // Dropping in group 'b' must only resolve group 'b's drag.
+        droppableB.handleKey(keyEvent('enter'));
+        expect(onDropB).toHaveBeenCalledWith('item-b');
+        expect(onDropA).not.toHaveBeenCalled();
+
+        // Group 'a's drag must still be active — group 'b' resolving did not clear it.
+        droppableA.handleKey(keyEvent('enter'));
+        expect(onDropA).toHaveBeenCalledWith('item-a');
     });
 });

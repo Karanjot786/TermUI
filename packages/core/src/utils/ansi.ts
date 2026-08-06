@@ -38,13 +38,42 @@ export function cursorShape(shape: CursorShape, blink = true): string {
     return `${CSI}${code} q`;
 }
 
+/**
+ * Move cursor to a specific column and row (0-indexed).
+ * @param col - Target column number (0-indexed).
+ * @param row - Target row number (0-indexed).
+ * @returns The ANSI escape sequence to position the cursor.
+ */
 export function moveTo(col: number, row: number): string {
     return `${CSI}${row + 1};${col + 1}H`;
 }
 
+/**
+ * Move cursor up by n cells.
+ * @param n - Number of cells to move up (default: 1).
+ * @returns The ANSI escape sequence to move the cursor up.
+ */
 export function moveUp(n = 1): string { return `${CSI}${n}A`; }
+
+/**
+ * Move cursor down by n cells.
+ * @param n - Number of cells to move down (default: 1).
+ * @returns The ANSI escape sequence to move the cursor down.
+ */
 export function moveDown(n = 1): string { return `${CSI}${n}B`; }
+
+/**
+ * Move cursor right by n cells.
+ * @param n - Number of cells to move right (default: 1).
+ * @returns The ANSI escape sequence to move the cursor right.
+ */
 export function moveRight(n = 1): string { return `${CSI}${n}C`; }
+
+/**
+ * Move cursor left by n cells.
+ * @param n - Number of cells to move left (default: 1).
+ * @returns The ANSI escape sequence to move the cursor left.
+ */
 export function moveLeft(n = 1): string { return `${CSI}${n}D`; }
 
 /** Request cursor position report (ESC[6n). Terminal responds with ESC[row;colR. */

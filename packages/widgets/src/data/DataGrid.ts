@@ -16,6 +16,7 @@ import {
     stringWidth,
     truncate,
     caps,
+    splitGraphemes,
 } from '@termuijs/core';
 import { Table, type TableColumn, type TableRow, type TableOptions } from './Table.js';
 
@@ -121,7 +122,7 @@ export class DataGrid extends Table {
                     return;
                 case 'backspace':
                     if (this._filter.length > 0) {
-                        this.setFilter(this._filter.slice(0, -1));
+                        this.setFilter(splitGraphemes(this._filter).slice(0, -1).join(''));
                     }
                     return;
                 default:

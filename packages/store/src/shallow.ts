@@ -8,6 +8,8 @@ export function shallow<U>(a: U, b: U): boolean {
   if (typeof a !== 'object' || a === null) return false
   if (typeof b !== 'object' || b === null) return false
 
+  if (Array.isArray(a) !== Array.isArray(b)) return false
+
   const aRec = a as Record<string, unknown>
   const bRec = b as Record<string, unknown>
   const aKeys = Object.keys(aRec)

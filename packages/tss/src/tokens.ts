@@ -1,3 +1,6 @@
+import { parse } from './parser.js';
+import { tokenize } from './tokenizer.js';
+
 export interface ThemeTokens {
   bg: string;
   fg: string;
@@ -9,6 +12,11 @@ export interface ThemeTokens {
   muted: string;
   border: string;
   highlight: string;
+}
+
+export interface CompiledTokenJSON {
+  theme: string;
+  tokens: Record<string, string>;
 }
 
 /**
@@ -76,5 +84,47 @@ export function tokensToTSS(name: string, tokens: ThemeTokens): string {
     return `@theme ${name} {\n` +
         Object.entries(tokens).map(([k, v]) => `  --${k}: ${v};`).join('\n') +
         '\n}';
+}
+
+/** Compile TSS @theme variables into JSON-ready token data. */
+export function compileTokensToJSON(source: string, theme = 'default'): CompiledTokenJSON {
+  const ast = parse(tokenize(source));
+  const merged: Record<string, string> = {};
+  const defaultTheme = ast.themes.find(t => t.name === 'default');
+  const selectedTheme = theme === 'default'
+    ? undefined
+    : ast.themes.find(t => t.name === theme);
+
+  if (defaultTheme) Object.assign(merged, normalizeThemeVariables(defaultTheme.variables));
+  if (selectedTheme) Object.assign(merged, normalizeThemeVariables(selectedTheme.variables));
+  if (!defaultTheme && !selectedTheme && ast.themes.length > 0) {
+    Object.assign(merged, normalizeThemeVariables(ast.themes[0].variables));
+  }
+
+  const tokens: Record<string, string> = {};
+  for (const key of Object.keys(merged).sort()) {
+    tokens[key] = resolveTokenValue(key, merged, new Set<string>());
+  }
+
+  return { theme, tokens };
+}
+
+function resolveTokenValue(name: string, tokens: Record<string, string>, seen: Set<string>): string {
+  if (seen.has(name)) return '';
+  seen.add(name);
+
+  const value = tokens[name] ?? '';
+  const match = value.match(/^(?:var\()?--([^)]+)\)?$/);
+  if (!match) return value;
+
+  return resolveTokenValue(match[1], tokens, seen);
+}
+
+function normalizeThemeVariables(variables: Record<string, string>): Record<string, string> {
+  const normalized: Record<string, string> = {};
+  for (const [key, value] of Object.entries(variables)) {
+    normalized[key.replace(/^--/, '')] = value;
+  }
+  return normalized;
 }
 

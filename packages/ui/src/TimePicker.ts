@@ -1,5 +1,5 @@
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 
 export interface TimePickerOptions {
     value?: Date;
@@ -106,24 +106,55 @@ export class TimePicker extends Widget {
         const totalWidth = 2 + 1 + 2 + (this._use24Hour ? 0 : 3);
         const startX = x + Math.max(0, Math.floor((width - totalWidth) / 2));
         const centerY = y + Math.floor(height / 2);
+        const right = x + width;
 
-        screen.writeString(startX, centerY, hStr, {
-            ...attrs,
-            inverse: this.isFocused && this._activeSegment === 0
-        });
-
-        screen.writeString(startX + 2, centerY, ":", attrs);
-
-        screen.writeString(startX + 3, centerY, mStr, {
-            ...attrs,
-            inverse: this.isFocused && this._activeSegment === 1
-        });
+        const segments = [
+            {
+                text: hStr,
+                active: this._activeSegment === 0,
+            },
+            {
+                text: ":",
+                active: false,
+            },
+            {
+                text: mStr,
+                active: this._activeSegment === 1,
+            },
+        ];
 
         if (!this._use24Hour) {
-            screen.writeString(startX + 5, centerY, ampmStr, {
-                ...attrs,
-                inverse: this.isFocused && this._activeSegment === 2
+            segments.push({
+                text: ampmStr,
+                active: this._activeSegment === 2,
             });
+        }
+
+        let col = startX;
+
+        for (const segment of segments) {
+            const remaining = right - col;
+
+            if (remaining <= 0) {
+                break;
+            }
+
+            const visible = truncate(segment.text, remaining, '');
+
+            if (visible.length === 0) {
+                break;
+            }
+
+            screen.writeString(col, centerY, visible, {
+                ...attrs,
+                inverse: this.isFocused && segment.active
+            });
+
+            col += stringWidth(visible);
+
+            if (stringWidth(segment.text) > remaining) {
+                break;
+            }
         }
     }
 }

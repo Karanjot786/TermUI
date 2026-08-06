@@ -23,8 +23,8 @@ export type { PseudoClass } from './pseudo.js';
 export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThemes } from './themes.js';
 
 // Design Tokens
-export { systemTheme, defaultDark, defaultLight, detectDark, tokensToTSS } from './tokens.js';
-export type { ThemeTokens } from './tokens.js';
+export { systemTheme, defaultDark, defaultLight, detectDark, tokensToTSS, compileTokensToJSON } from './tokens.js';
+export type { CompiledTokenJSON, ThemeTokens } from './tokens.js';
 
 // Named ThemeTokens
 export {

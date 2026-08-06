@@ -34,6 +34,12 @@ export function _setCustomLoader(loader: (() => any) | null): void {
   customLoader = loader
 }
 
+function assertValidAppName(appName: string): void {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(appName)) {
+    throw new Error('useConf() appName must contain only letters, numbers, dots, underscores, and hyphens, and must start with a letter or number.')
+  }
+}
+
 function resolveConfConstructor(): ConfConstructor {
   try {
     const loaded = customLoader
@@ -89,6 +95,8 @@ function createStore<T extends Record<string, unknown>>(appName: string, default
 }
 
 export function useConf<T extends Record<string, unknown>>(appName: string, defaults: T): UseConfResult<T> {
+  assertValidAppName(appName)
+
   // The cache is keyed by app name, so callers are responsible for reusing a consistent config shape per app.
   const cachedStore = configStores.get(appName) as ConfStore<T> | undefined
   const store = cachedStore ?? createStore(appName, defaults)

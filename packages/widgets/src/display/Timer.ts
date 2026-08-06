@@ -2,7 +2,7 @@
 // @termuijs/widgets — Timer widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, styleToCellAttrs } from '@termuijs/core';
+import { type Screen, type Style, styleToCellAttrs, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface TimerOptions {
@@ -182,6 +182,6 @@ export class Timer extends Widget {
         const attrs = styleToCellAttrs(this._style);
         const label = this._format(this._remaining);
 
-        screen.writeString(x, y, label, attrs);
+        screen.writeString(x, y, truncate(label, width, ''), attrs);
     }
 }

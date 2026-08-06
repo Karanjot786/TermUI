@@ -4,6 +4,17 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { Table } from './Table.js';
+import type { KeyEvent } from '@termuijs/core';
+
+const key = (key: string): KeyEvent => ({
+    key,
+    raw: Buffer.alloc(0),
+    ctrl: false,
+    alt: false,
+    shift: false,
+    preventDefault: vi.fn(),
+    stopPropagation: vi.fn(),
+});
 
 const COLUMNS = [
     { header: 'Name', key: 'name' },
@@ -30,6 +41,32 @@ describe('Table', () => {
     it('handles empty rows array', () => {
         const table = new Table(COLUMNS, []);
         expect(() => table).not.toThrow();
+    });
+
+    it('keeps empty no-header tables on a non-header selection', () => {
+        const table = new Table(COLUMNS, [], {}, { showHeader: false });
+
+        table.handleKey(key('down'));
+
+        expect(table.selectedRow).toBe(0);
+    });
+
+    it('allows header selection for empty header-enabled tables', () => {
+        const table = new Table(COLUMNS, [], {}, { showHeader: true });
+
+        table.handleKey(key('up'));
+
+        expect(table.selectedRow).toBe(-1);
+    });
+
+    it('clamps selection when rows are replaced with an empty array', () => {
+        const table = new Table(COLUMNS, ROWS, {}, { showHeader: false });
+        table.handleKey(key('down'));
+        expect(table.selectedRow).toBe(1);
+
+        table.setRows([]);
+
+        expect(table.selectedRow).toBe(0);
     });
 
     it('computes column widths correctly', () => {

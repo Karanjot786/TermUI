@@ -99,4 +99,65 @@ describe('usePolling', () => {
         expect(fn).toHaveBeenCalledTimes(3);
         expect((global as any).hookResult.data).toBe(3);
     });
+
+    it('Skips interval tick while a request is still in flight', async () => {
+        let resolveFirst!: (value: string) => void;
+        const fn = vi.fn().mockImplementationOnce(() => new Promise<string>(resolve => {
+            resolveFirst = resolve;
+        }));
+        render(createElement(TestComponent, { fn, interval: 1000 }));
+
+        await flushPromises();
+        expect(fn).toHaveBeenCalledTimes(1);
+
+        // Interval tick fires while the first request is still unresolved.
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(fn).toHaveBeenCalledTimes(1);
+
+        resolveFirst('first result');
+        await flushPromises();
+        expect((global as any).hookResult.data).toBe('first result');
+
+        // Next tick after resolution starts a new request.
+        fn.mockResolvedValueOnce('second result');
+        await vi.advanceTimersByTimeAsync(1000);
+        await flushPromises();
+        expect(fn).toHaveBeenCalledTimes(2);
+        expect((global as any).hookResult.data).toBe('second result');
+    });
+
+    it('Ignores manual refresh while a request is in flight', async () => {
+        let resolveFirst!: (value: string) => void;
+        const fn = vi.fn().mockImplementationOnce(() => new Promise<string>(resolve => {
+            resolveFirst = resolve;
+        }));
+        render(createElement(TestComponent, { fn, interval: 1000 }));
+
+        await flushPromises();
+        expect(fn).toHaveBeenCalledTimes(1);
+
+        (global as any).hookResult.refresh();
+        (global as any).hookResult.refresh();
+        expect(fn).toHaveBeenCalledTimes(1);
+
+        resolveFirst('done');
+        await flushPromises();
+        expect((global as any).hookResult.data).toBe('done');
+    });
+
+    it('Does not commit a resolved request that is no longer current after unmount', async () => {
+        let resolveFirst!: (value: string) => void;
+        const fn = vi.fn().mockImplementationOnce(() => new Promise<string>(resolve => {
+            resolveFirst = resolve;
+        }));
+        const { unmount } = render(createElement(TestComponent, { fn, interval: 1000 }));
+
+        await flushPromises();
+        unmount();
+
+        resolveFirst('late');
+        await flushPromises();
+
+        expect((global as any).hookResult.data).toBeNull();
+    });
 });

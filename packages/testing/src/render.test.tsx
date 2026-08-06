@@ -49,10 +49,14 @@ class FakeWidget extends Widget {
     protected _renderSelf(): void {}
 }
 
-function FakeA11yWidget(props: { role?: string, label?: string }) {
+function FakeA11yWidget(props: { role?: string, label?: string, testId?: string, a11yTestId?: string }) {
     const box = new Box();
     if (props.role !== undefined) Reflect.set(box, "role", props.role);
     if (props.label !== undefined) Reflect.set(box, "label", props.label);
+    if (props.testId !== undefined) Reflect.set(box, "testId", props.testId);
+    if (props.a11yTestId !== undefined) {
+        box.setA11y({ testId: props.a11yTestId } as any);
+    }
     return box;
 }
 
@@ -100,6 +104,44 @@ describe("render harness", () => {
         });
     });
 
+    describe("testId queries", () => {
+        it("returns the widget whose testId metadata matches the query", () => {
+            const screen = render(<FakeA11yWidget testId="submit-button" />);
+            const widget = screen.getByTestId("submit-button");
+
+            expect(widget).toBeTruthy();
+            expect(Reflect.get(widget!, "testId")).toBe("submit-button");
+        });
+
+        it("reads testId metadata from a11y props", () => {
+            const screen = render(<FakeA11yWidget a11yTestId="status-region" />);
+            const widget = screen.queryByTestId("status-region");
+
+            expect(widget).toBeTruthy();
+            expect(widget?.a11y).toEqual({ testId: "status-region" });
+        });
+
+        it("returns null when no testId matches", () => {
+            const screen = render(<FakeA11yWidget testId="submit-button" />);
+
+            expect(screen.getByTestId("cancel-button")).toBeNull();
+            expect(screen.queryByTestId("cancel-button")).toBeNull();
+        });
+
+        it("returns all widgets whose testId matches", () => {
+            const screen = render(
+                <box>
+                    <FakeA11yWidget testId="row" />
+                    <FakeA11yWidget testId="row" />
+                    <FakeA11yWidget testId="other" />
+                </box>
+            );
+
+            expect(screen.queryAllByTestId("row")).toHaveLength(2);
+            expect(screen.queryAllByTestId("missing")).toEqual([]);
+        });
+    });
+
     describe("getAllByText", () => {
         it("returns all matching widgets", () => {
             const screen = render(<MultiText />);
@@ -132,6 +174,33 @@ describe("render harness", () => {
 
             const widgets = screen.getAllByType(FakeWidget);
 
+            expect(widgets).toEqual([]);
+        });
+    });
+
+    describe("findByText", () => {
+        it("returns a matching widget", () => {
+            const screen = render(<Hello />);
+    
+            expect(screen.findByText("Hello")).toBeTruthy();
+        });
+    
+        it("throws when no widget matches", () => {
+            const screen = render(<Hello />);
+    
+            expect(() => {
+                screen.findByText("Missing");
+            }).toThrow('Unable to find widget with text "Missing"');
+        });
+    });
+    
+    describe("queryAllByRole", () => {
+        it("returns an array when no matching roles exist", () => {
+            const screen = render(<MultiText />);
+    
+            const widgets = screen.queryAllByRole("listitem");
+    
+            expect(Array.isArray(widgets)).toBe(true);
             expect(widgets).toEqual([]);
         });
     });

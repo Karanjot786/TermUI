@@ -607,4 +607,46 @@ describe('ConfirmDialog', () => {
         expect(onCancel).not.toHaveBeenCalled();
         expect(dialog.visible).toBe(false);
     });
+
+    it('uses left and right to select an action', () => {
+        const dialog = new ConfirmDialog({ message: 'Continue?' });
+        dialog.show();
+
+        dialog.events.emit('key', makeKey('right'));
+        expect(allRows(renderDialog(dialog)).join('')).toContain('[No]');
+
+        dialog.events.emit('key', makeKey('left'));
+        expect(allRows(renderDialog(dialog)).join('')).toContain('[Yes]');
+    });
+
+    it('uses tab to toggle the selected action', () => {
+        const dialog = new ConfirmDialog({ message: 'Continue?' });
+        dialog.show();
+
+        dialog.events.emit('key', makeKey('tab'));
+        expect(allRows(renderDialog(dialog)).join('')).toContain('[No]');
+    });
+
+    it.each(['enter', 'return'])('%s invokes the selected action', (key) => {
+        const onCancel = vi.fn();
+        const dialog = new ConfirmDialog({ message: 'Continue?', onCancel });
+        dialog.show();
+        dialog.selectCancel();
+
+        dialog.events.emit('key', makeKey(key));
+
+        expect(onCancel).toHaveBeenCalledTimes(1);
+        expect(dialog.visible).toBe(false);
+    });
+
+    it.each(['left', 'right', 'tab', 'enter', 'return', 'escape'])('%s consumes the event while visible', (key) => {
+        const dialog = new ConfirmDialog({ message: 'Continue?' });
+        const event = makeKey(key);
+        dialog.show();
+
+        dialog.events.emit('key', event);
+
+        expect(event._defaultPrevented).toBe(true);
+        expect(event._propagationStopped).toBe(true);
+    });
 });

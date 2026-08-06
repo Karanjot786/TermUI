@@ -4,6 +4,11 @@
 
 import * as os from 'node:os';
 
+/**
+ * Format system uptime duration in seconds into a human-readable string.
+ * @param seconds - System uptime duration in seconds.
+ * @returns Formatted human-readable uptime string (e.g. "2d 4h", "3h 15m", or "45m").
+ */
 function formatUptime(seconds: number): string {
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);

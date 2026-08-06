@@ -4,6 +4,7 @@ import { ansi, caps, parseColor, relativeLuminance } from '@termuijs/core';
 import { detectDark, defaultDark, defaultLight, systemTheme } from './tokens.js';
 import type { ThemeTokens } from './tokens.js';
 import { deriveTheme } from './theme/derive.js';
+import { detectTerminalBackground, type TerminalBackground } from './auto-theme.js';
 
 /**
  * Context holding the current ThemeTokens.
@@ -120,11 +121,13 @@ export const AutoThemeProvider: FC<AutoThemeProviderProps> = (props) => {
     const dark = props.darkTheme ?? defaultDark;
     const light = props.lightTheme ?? defaultLight;
 
-    const [theme, setTheme] = useState(() =>
-        detectDark()
+    const [theme, setTheme] = useState(() => {
+        // Use detectDark() for initial synchronous detection
+        // The async detection will happen in useEffect
+        return detectDark()
             ? deriveTheme({ Normal: { fg: dark.fg, bg: dark.bg } })
-            : deriveTheme({ Normal: { fg: light.fg, bg: light.bg } })
-    );
+            : deriveTheme({ Normal: { fg: light.fg, bg: light.bg } });
+    });
 
     useEffect(() => {
         const derivedDark = deriveTheme({ Normal: { fg: dark.fg, bg: dark.bg } });
@@ -133,15 +136,40 @@ export const AutoThemeProvider: FC<AutoThemeProviderProps> = (props) => {
         let cancelled = false;
 
         const updateTheme = async () => {
+            // First, try to detect via OSC (most accurate)
             const oscDark = await detectDarkViaOsc();
-            if (cancelled || oscDark === undefined) return;
-            setTheme(oscDark ? derivedDark : derivedLight);
+            if (cancelled) return;
+            
+            if (oscDark !== undefined) {
+                setTheme(oscDark ? derivedDark : derivedLight);
+                return;
+            }
+
+            // Fallback to detectTerminalBackground()
+            const bg = await detectTerminalBackground();
+            if (cancelled) return;
+            
+            if (bg === 'dark') {
+                setTheme(derivedDark);
+                return;
+            }
+            
+            if (bg === 'light') {
+                setTheme(derivedLight);
+                return;
+            }
+
+            // Final fallback: use detectDark()
+            const isDark = detectDark();
+            setTheme(isDark ? derivedDark : derivedLight);
         };
 
         updateTheme();
 
         const handler = () => {
-            setTheme(detectDark() ? derivedDark : derivedLight);
+            // On window resize, re-detect
+            const isDark = detectDark();
+            setTheme(isDark ? derivedDark : derivedLight);
         };
 
         if (caps.color) {

@@ -120,6 +120,9 @@ export abstract class Widget {
     /** Optional callback for mouse leave events */
     onMouseLeave?: (event: TermMouseEvent) => void;
 
+    /** Extended description shown on hover/focus */
+    tooltip?: string;
+
     /**
      * Dirty flag — true when this widget needs re-rendering.
      * Newly created widgets start dirty.

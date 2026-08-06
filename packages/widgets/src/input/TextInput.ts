@@ -24,6 +24,7 @@ export type { VimMode };
 export class TextInput extends Widget {
     private _value = '';
     private _cursorPos = 0;
+    private _selectionAnchor: number | null = null;
     private _placeholder: string;
     private _mask: string | null;
     private _maxLength: number;
@@ -36,6 +37,7 @@ export class TextInput extends Widget {
     public signal?: AbortSignal;
 
     private _raw: boolean;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
 
     constructor(
         style: Partial<Style> = {},
@@ -74,7 +76,13 @@ export class TextInput extends Widget {
 
         this.focusable = true;
 
-        this.events.on('key', (event: KeyEvent) => this.handleKey(event));
+        this.events.on('key', this._keyHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
     }
 
     get value(): string {
@@ -89,7 +97,21 @@ export class TextInput extends Widget {
             this._value = v;
         }
         this._cursorPos = Math.min(this._cursorPos, splitGraphemes(this._value).length);
+        this._clearSelection();
         this.markDirty();
+    }
+
+    get selectionStart(): number {
+        return this._selectionRange()[0];
+    }
+
+    get selectionEnd(): number {
+        return this._selectionRange()[1];
+    }
+
+    get selectedText(): string {
+        const [start, end] = this._selectionRange();
+        return splitGraphemes(this._value).slice(start, end).join('');
     }
 
     get vimMode(): VimMode {
@@ -115,16 +137,29 @@ export class TextInput extends Widget {
 
     insertChar(char: string): void {
         const graphemes = splitGraphemes(this._value);
-        if (graphemes.length >= this._maxLength) return;
+        const deletedSelection = this._deleteSelectionFrom(graphemes);
+        if (graphemes.length >= this._maxLength) {
+            if (deletedSelection) {
+                this._value = graphemes.join('');
+                this._onChange?.(this._value);
+                this.markDirty();
+            }
+            return;
+        }
         graphemes.splice(this._cursorPos, 0, char);
         this._value = graphemes.join('');
         this._cursorPos++;
+        this._clearSelection();
         this._suggestionIndex = 0;
         this._onChange?.(this._value);
         this.markDirty();
     }
 
     deleteBack(): void {
+        if (this._deleteSelection()) {
+            return;
+        }
+
         if (this._cursorPos > 0) {
             const graphemes = splitGraphemes(this._value);
             graphemes.splice(this._cursorPos - 1, 1);
@@ -137,6 +172,13 @@ export class TextInput extends Widget {
 
     deleteForward(): void {
         const graphemes = splitGraphemes(this._value);
+        if (this._deleteSelectionFrom(graphemes)) {
+            this._value = graphemes.join('');
+            this._onChange?.(this._value);
+            this.markDirty();
+            return;
+        }
+
         if (this._cursorPos < graphemes.length) {
             graphemes.splice(this._cursorPos, 1);
             this._value = graphemes.join('');
@@ -146,6 +188,10 @@ export class TextInput extends Widget {
     }
 
     deleteWordBack(): void {
+        if (this._deleteSelection()) {
+            return;
+        }
+
         if (this._cursorPos === 0) return;
 
         const graphemes = splitGraphemes(this._value);
@@ -170,18 +216,20 @@ export class TextInput extends Widget {
         this.markDirty();
     }
 
-    moveCursorLeft(): void {
+    moveCursorLeft(extendSelection = false): void {
         const next = Math.max(0, this._cursorPos - 1);
 
         if (next === this._cursorPos) {
             return;
         }
 
+        this._updateSelectionForMove(extendSelection);
         this._cursorPos = next;
+        if (!extendSelection) this._clearSelection();
         this.markDirty();
     }
 
-    moveCursorRight(): void {
+    moveCursorRight(extendSelection = false): void {
         const graphemes = splitGraphemes(this._value);
         const next = Math.min(graphemes.length, this._cursorPos + 1);
 
@@ -189,26 +237,32 @@ export class TextInput extends Widget {
             return;
         }
 
+        this._updateSelectionForMove(extendSelection);
         this._cursorPos = next;
+        if (!extendSelection) this._clearSelection();
         this.markDirty();
     }
 
-    moveCursorHome(): void {
+    moveCursorHome(extendSelection = false): void {
         if (this._cursorPos === 0) {
             return;
         }
 
+        this._updateSelectionForMove(extendSelection);
         this._cursorPos = 0;
+        if (!extendSelection) this._clearSelection();
         this.markDirty();
     }
 
-    moveCursorEnd(): void {
+    moveCursorEnd(extendSelection = false): void {
         const graphemes = splitGraphemes(this._value);
         if (this._cursorPos === graphemes.length) {
             return;
         }
 
+        this._updateSelectionForMove(extendSelection);
         this._cursorPos = graphemes.length;
+        if (!extendSelection) this._clearSelection();
         this.markDirty();
     }
 
@@ -224,6 +278,7 @@ export class TextInput extends Widget {
     clear(): void {
         this._value = '';
         this._cursorPos = 0;
+        this._clearSelection();
         this._suggestionIndex = 0;
         this._onChange?.('');
         this.markDirty();
@@ -232,6 +287,7 @@ export class TextInput extends Widget {
     clearLine(): void {
         this._value = '';
         this._cursorPos = 0;
+        this._clearSelection();
         this._onChange?.('');
         this.markDirty();
     }
@@ -359,22 +415,22 @@ export class TextInput extends Widget {
                 event.stopPropagation();
                 break;
             case 'left':
-                this.moveCursorLeft();
+                this.moveCursorLeft(event.shift);
                 event.preventDefault();
                 event.stopPropagation();
                 break;
             case 'right':
-                this.moveCursorRight();
+                this.moveCursorRight(event.shift);
                 event.preventDefault();
                 event.stopPropagation();
                 break;
             case 'home':
-                this.moveCursorHome();
+                this.moveCursorHome(event.shift);
                 event.preventDefault();
                 event.stopPropagation();
                 break;
             case 'end':
-                this.moveCursorEnd();
+                this.moveCursorEnd(event.shift);
                 event.preventDefault();
                 event.stopPropagation();
                 break;
@@ -421,7 +477,7 @@ export class TextInput extends Widget {
             modeIndicator = ` -- ${this._vimMode.toUpperCase()} -- `;
             rightReserved = modeIndicator.length;
         } else if (this.isFocused) {
-            const length = this._value.length;
+            const length = graphemes.length;
             const max = this._maxLength === Infinity ? null : this._maxLength;
             const counterText = max ? `${length}/${max}` : `${length}`;
             const counterWidth = stringWidth(counterText);
@@ -458,6 +514,17 @@ export class TextInput extends Widget {
         const displayText = this._raw ? visibleText : stripAnsiEscapes(visibleText);
         screen.writeString(x, y, displayText, attrs);
 
+        const [selectionStart, selectionEnd] = this._selectionRange();
+        for (let i = Math.max(selectionStart, scrollGraphemeIndex); i < Math.min(selectionEnd, endGraphemeIndex); i++) {
+            const cellX = x + prefixWidths[i] - prefixWidths[scrollGraphemeIndex];
+            const selected = displayGraphemes[i] ?? ' ';
+            screen.setCell(cellX, y, {
+                char: selected[0] || ' ',
+                ...attrs,
+                inverse: true,
+            });
+        }
+
         if (this.isFocused) {
             const cursorOffset = prefixWidths[this._cursorPos] - prefixWidths[scrollGraphemeIndex];
             const cursorScreenPos = x + cursorOffset;
@@ -466,11 +533,14 @@ export class TextInput extends Widget {
                     ? displayGraphemes[this._cursorPos]
                     : ' ';
                 const isBlock = this._vimMode === 'normal' || this._vimMode === 'visual';
+                const isSelected = this.selectionStart !== this.selectionEnd
+                    && this._cursorPos >= this.selectionStart
+                    && this._cursorPos < this.selectionEnd;
                 screen.setCell(cursorScreenPos, y, {
                     char: cursorChar[0] || ' ',
                     ...attrs,
-                    inverse: isBlock,
-                    underline: !isBlock,
+                    inverse: isBlock || isSelected,
+                    underline: !isBlock && !isSelected,
                 });
             }
         }
@@ -478,7 +548,7 @@ export class TextInput extends Widget {
         if (modeIndicator) {
             screen.writeString(x + width - modeIndicator.length, y, modeIndicator, { ...attrs, dim: true });
         } else if (this.isFocused) {
-            const length = this._value.length;
+            const length = graphemes.length;
             const max = this._maxLength === Infinity ? null : this._maxLength;
             const counterText = max ? `${length}/${max}` : `${length}`;
             const counterWidth = stringWidth(counterText);
@@ -493,5 +563,50 @@ export class TextInput extends Widget {
         for (let i = 0; i < suggestions.length; i++) {
             screen.writeString(x, y + i + 1, truncate(suggestions[i], width), { ...attrs, dim: true });
         }
+    }
+
+    private _selectionRange(): [number, number] {
+        if (this._selectionAnchor === null || this._selectionAnchor === this._cursorPos) {
+            return [this._cursorPos, this._cursorPos];
+        }
+
+        return [
+            Math.min(this._selectionAnchor, this._cursorPos),
+            Math.max(this._selectionAnchor, this._cursorPos),
+        ];
+    }
+
+    private _updateSelectionForMove(extendSelection: boolean): void {
+        if (extendSelection) {
+            this._selectionAnchor ??= this._cursorPos;
+        }
+    }
+
+    private _clearSelection(): void {
+        this._selectionAnchor = null;
+    }
+
+    private _deleteSelection(): boolean {
+        const graphemes = splitGraphemes(this._value);
+        if (!this._deleteSelectionFrom(graphemes)) {
+            return false;
+        }
+
+        this._value = graphemes.join('');
+        this._onChange?.(this._value);
+        this.markDirty();
+        return true;
+    }
+
+    private _deleteSelectionFrom(graphemes: string[]): boolean {
+        const [start, end] = this._selectionRange();
+        if (start === end) {
+            return false;
+        }
+
+        graphemes.splice(start, end - start);
+        this._cursorPos = start;
+        this._clearSelection();
+        return true;
     }
 }

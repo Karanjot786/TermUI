@@ -11,13 +11,13 @@ function makeWidget(id: string, tabIndex = 0, focusable = true) {
 
 describe('FocusManager', () => {
     it('auto-focuses first registered focusable widget', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         expect(fm.currentId).toBe('a');
     });
 
     it('focusNext cycles forward', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         fm.register(makeWidget('b'));
         fm.register(makeWidget('c'));
@@ -28,7 +28,7 @@ describe('FocusManager', () => {
     });
 
     it('focusPrev cycles backward', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         fm.register(makeWidget('b'));
         fm.register(makeWidget('c'));
@@ -39,7 +39,7 @@ describe('FocusManager', () => {
     });
 
     it('focusWidget directly focuses by ID', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         fm.register(makeWidget('b'));
         fm.register(makeWidget('c'));
@@ -48,7 +48,7 @@ describe('FocusManager', () => {
     });
 
     it('skips non-focusable widgets in focusNext', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         fm.register(makeWidget('disabled', 0, false));
         fm.register(makeWidget('b'));
@@ -57,7 +57,7 @@ describe('FocusManager', () => {
     });
 
     it('emits focus event on new widget', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         const focusHandler = vi.fn();
         fm.on('focus', focusHandler);
         fm.register(makeWidget('a'));
@@ -67,7 +67,7 @@ describe('FocusManager', () => {
     });
 
     it('emits blur event on previous widget', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         const blurHandler = vi.fn();
         fm.on('blur', blurHandler);
         fm.register(makeWidget('a'));
@@ -77,7 +77,7 @@ describe('FocusManager', () => {
     });
 
     it('_changeFocus emits blur and focus events with epoch field', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         const focusHandler = vi.fn();
         const blurHandler = vi.fn();
         fm.on('focus', focusHandler);
@@ -102,7 +102,7 @@ describe('FocusManager', () => {
     });
 
     it('isFocused returns correct value', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         fm.register(makeWidget('b'));
         expect(fm.isFocused('a')).toBe(true);
@@ -112,9 +112,41 @@ describe('FocusManager', () => {
         expect(fm.isFocused('b')).toBe(true);
     });
 
+    it('queues events for manual focus changes before start() is called', () => {
+        const fm = new FocusManager();
+        const focusHandler = vi.fn();
+        const blurHandler = vi.fn();
+        fm.on('focus', focusHandler);
+        fm.on('blur', blurHandler);
+
+        fm.register(makeWidget('a'));
+        fm.register(makeWidget('b'));
+        
+        // Manual focus change BEFORE start()
+        fm.focusWidget('b');
+        
+        // Events should NOT be emitted yet
+        expect(focusHandler).not.toHaveBeenCalled();
+        expect(blurHandler).not.toHaveBeenCalled();
+        
+        // Start the manager
+        fm.start();
+        
+        // NOW events should be emitted in order:
+        // 1. Auto-focus 'a' during register
+        // 2. Blur 'a' during focusWidget('b')
+        // 3. Focus 'b' during focusWidget('b')
+        expect(focusHandler).toHaveBeenCalledTimes(2);
+        expect(blurHandler).toHaveBeenCalledTimes(1);
+        
+        expect(focusHandler.mock.calls[0][0].targetId).toBe('a');
+        expect(blurHandler.mock.calls[0][0].targetId).toBe('a');
+        expect(focusHandler.mock.calls[1][0].targetId).toBe('b');
+    });
+
     describe('unregister', () => {
         it('does not emit blur when unregistering a non-focused widget', () => {
-            const fm = new FocusManager();
+            const fm = new FocusManager(); fm.start();
             const blurHandler = vi.fn();
             fm.on('blur', blurHandler);
 
@@ -130,7 +162,7 @@ describe('FocusManager', () => {
         });
 
         it('emits blur when unregistering the focused widget', () => {
-            const fm = new FocusManager();
+            const fm = new FocusManager(); fm.start();
             const blurHandler = vi.fn();
             fm.on('blur', blurHandler);
 
@@ -146,7 +178,7 @@ describe('FocusManager', () => {
         });
 
         it('moves focus to next widget when focused widget is unregistered', () => {
-            const fm = new FocusManager();
+            const fm = new FocusManager(); fm.start();
             fm.register(makeWidget('a'));
             fm.register(makeWidget('b'));
             fm.register(makeWidget('c'));
@@ -158,7 +190,7 @@ describe('FocusManager', () => {
         });
 
         it('sets currentId to null when last widget is unregistered', () => {
-            const fm = new FocusManager();
+            const fm = new FocusManager(); fm.start();
             fm.register(makeWidget('a'));
 
             fm.unregister('a');
@@ -167,7 +199,7 @@ describe('FocusManager', () => {
         });
 
         it('adjusts index correctly when non-focused widget before focused is removed', () => {
-            const fm = new FocusManager();
+            const fm = new FocusManager(); fm.start();
             fm.register(makeWidget('a'));
             fm.register(makeWidget('b'));
             fm.register(makeWidget('c'));
@@ -181,7 +213,7 @@ describe('FocusManager', () => {
         });
 
         it('unregistering a non-focused widget after focused one does not affect focus', () => {
-            const fm = new FocusManager();
+            const fm = new FocusManager(); fm.start();
             fm.register(makeWidget('a'));
             fm.register(makeWidget('b'));
             fm.register(makeWidget('c'));
@@ -193,7 +225,7 @@ describe('FocusManager', () => {
         });
 
         it('does not emit any events when unregistering a non-focused widget', () => {
-            const fm = new FocusManager();
+            const fm = new FocusManager(); fm.start();
             const focusHandler = vi.fn();
             const blurHandler = vi.fn();
             fm.on('focus', focusHandler);
@@ -214,7 +246,7 @@ describe('FocusManager', () => {
 
 describe('FocusManager Spatial Navigation', () => {
     it('right move picks the nearest right neighbor', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a', 0, true));
         fm.register(makeWidget('b', 1, true));
         
@@ -227,7 +259,7 @@ describe('FocusManager Spatial Navigation', () => {
     });
 
     it('down move picks the nearest below neighbor', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('top', 0, true));
         fm.register(makeWidget('bottom', 1, true));
         
@@ -240,7 +272,7 @@ describe('FocusManager Spatial Navigation', () => {
     });
 
     it('up move picks the nearest above neighbor', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('bottom', 0, true));
         fm.register(makeWidget('top', 1, true));
         
@@ -253,7 +285,7 @@ describe('FocusManager Spatial Navigation', () => {
     });
 
     it('left move picks the nearest left neighbor', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('right', 0, true));
         fm.register(makeWidget('left', 1, true));
         
@@ -266,7 +298,7 @@ describe('FocusManager Spatial Navigation', () => {
     });
 
     it('no candidate in a direction returns false', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('lonely', 0, true));
         fm.setRect('lonely', { x: 5, y: 5, width: 5, height: 5 });
         
@@ -280,7 +312,7 @@ describe('FocusManager Spatial Navigation', () => {
     });
 
     it('a closer widget wins over a farther one on the same axis', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('start', 0, true));
         fm.register(makeWidget('close', 1, true));
         fm.register(makeWidget('far', 2, true));
@@ -299,7 +331,7 @@ describe('FocusManager Spatial Navigation', () => {
 
 describe('FocusManager Re-entrancy', () => {
     it('unregister in blur handler does not corrupt _currentIndex', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a', 0, true));
         fm.register(makeWidget('b', 1, true));
         fm.register(makeWidget('c', 2, true));
@@ -322,7 +354,7 @@ describe('FocusManager Re-entrancy', () => {
     });
 
     it('unregister in focus handler does not cause out-of-bounds access', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a', 0, true));
         fm.register(makeWidget('b', 1, true));
         fm.register(makeWidget('c', 2, true));
@@ -344,7 +376,7 @@ describe('FocusManager Re-entrancy', () => {
     });
 
     it('re-entrant focusNext from focus handler does not corrupt state', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a', 0, true));
         fm.register(makeWidget('b', 1, true));
         fm.register(makeWidget('c', 2, true));
@@ -365,7 +397,7 @@ describe('FocusManager Re-entrancy', () => {
     });
 
     it('registering a new focusable that sorts before current does not change current focus', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         // A (10), B (20)
         fm.register(makeWidget('a', 10, true));
         fm.register(makeWidget('b', 20, true));
@@ -384,7 +416,7 @@ describe('FocusManager Re-entrancy', () => {
 
 describe('FocusManager Focus Trap', () => {
     it('release() on empty stack warns and does not throw', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -396,7 +428,7 @@ describe('FocusManager Focus Trap', () => {
     });
 
     it('release() with mismatched containerId warns and keeps trap active', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         fm.register(makeWidget('b'));
         fm.registerContainerMembers('modal-1', ['b']);
@@ -414,7 +446,7 @@ describe('FocusManager Focus Trap', () => {
     });
 
     it('release() with correct containerId removes the trap', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         fm.register(makeWidget('b'));
         fm.registerContainerMembers('modal-1', ['b']);
@@ -428,7 +460,7 @@ describe('FocusManager Focus Trap', () => {
     });
 
     it('release() restores focus to widget focused before trap() was called', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('trigger-btn'));
         fm.register(makeWidget('modal-input'));
         fm.register(makeWidget('modal-confirm'));
@@ -449,7 +481,7 @@ describe('FocusManager Focus Trap', () => {
     });
 
     it('nested traps: each release restores to the correct prior focus', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('main-btn'));
         fm.register(makeWidget('outer-input'));
         fm.register(makeWidget('inner-input'));
@@ -474,7 +506,7 @@ describe('FocusManager Focus Trap', () => {
     });
 
     it('double release() warns on second call and leaves state clean', () => {
-        const fm = new FocusManager();
+        const fm = new FocusManager(); fm.start();
         fm.register(makeWidget('a'));
         fm.register(makeWidget('b'));
         fm.registerContainerMembers('modal', ['b']);

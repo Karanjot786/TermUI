@@ -14,6 +14,10 @@ describe('shallow', () => {
   it('returns false when key sets differ', () => {
     expect(shallow({ a: 1 }, { a: 1, b: 2 })).toBe(false)
   })
+
+  it('returns false when comparing an array with an object containing identical keys', () => {
+    expect(shallow([1, 2], { '0': 1, '1': 2 })).toBe(false)
+  })
 })
 
 describe('useStore selector with shallow', () => {

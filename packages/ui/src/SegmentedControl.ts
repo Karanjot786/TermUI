@@ -5,10 +5,13 @@ import {
     type Style,
     type Screen,
     type KeyEvent,
+    type Color,
     mergeStyles,
     defaultStyle,
     styleToCellAttrs,
     caps,
+    stringWidth,
+    truncate,
 } from '@termuijs/core';
 
 export interface SegmentedControlOptions {
@@ -21,7 +24,7 @@ export interface SegmentedControlOptions {
 export class SegmentedControl extends Widget {
     private _options: string[];
     private _selectedIndex = 0;
-    private _activeColor: Style['fg'];
+    private _activeColor: Color;
     private _onChange?: (value: string) => void;
 
     focusable = true;
@@ -89,39 +92,66 @@ export class SegmentedControl extends Widget {
     }
 
     protected _renderSelf(screen: Screen): void {
-        const { x, y } = this._rect;
+        const { x, y, width } = this._rect;
+
+        if (width <= 0) {
+            return;
+        }
 
         const attrs = styleToCellAttrs(this.style);
 
         const separator = caps.unicode ? ' │ ' : ' | ';
 
         let col = x;
+        const right = x + width;
 
-        screen.writeString(col, y, '[ ', attrs);
-        col += 2;
+        const writeSegment = (
+            text: string,
+            segmentAttrs = attrs
+        ): boolean => {
+            const remaining = right - col;
+
+            if (remaining <= 0) {
+                return false;
+            }
+
+            const visible = truncate(text, remaining, '');
+
+            if (visible.length === 0) {
+                return false;
+            }
+
+            screen.writeString(col, y, visible, segmentAttrs);
+            col += stringWidth(visible);
+
+            return stringWidth(text) <= remaining;
+        };
+
+        if (!writeSegment('[ ')) {
+            return;
+        }
 
         for (let i = 0; i < this._options.length; i++) {
             const active = i === this._selectedIndex;
 
-            screen.writeString(
-                col,
-                y,
+            if (!writeSegment(
                 this._options[i],
                 {
                     ...attrs,
                     fg: active ? this._activeColor : attrs.fg,
                     bold: active,
                 }
-            );
-
-            col += this._options[i].length;
+            )) {
+                return;
+            }
 
             if (i < this._options.length - 1) {
-                screen.writeString(col, y, separator, attrs);
-                col += separator.length;
+                if (!writeSegment(separator)) {
+                    return;
+                }
             }
         }
 
-        screen.writeString(col, y, ' ]', attrs);
+        writeSegment(' ]');
     }
 }

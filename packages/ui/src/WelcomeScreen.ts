@@ -78,7 +78,7 @@ export class WelcomeScreen extends Widget {
             const keymapRow = y + height - 1;
             if (keymapRow > row) {
                 const parts = this._keymap.map(({ key, action }) => `[${key}] ${action}`);
-                const hint = parts.join('  ');
+                const hint = truncate(parts.join('  '), width, '');
                 const hintX = x + Math.max(0, Math.floor((width - stringWidth(hint)) / 2));
                 screen.writeString(hintX, keymapRow, hint, { ...attrs, dim: true });
             }

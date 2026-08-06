@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Screen, createKeyEvent } from '@termuijs/core';
+import { Screen, createKeyEvent, stringWidth } from '@termuijs/core';
 import { SegmentedControl } from './SegmentedControl.js';
 
 describe('SegmentedControl', () => {
@@ -96,5 +96,26 @@ describe('SegmentedControl', () => {
 
         expect(control.value).toBe('Three');
         expect(onChange).toHaveBeenCalledWith('Three');
+    });
+
+    it('clips rendered segments to the widget width', () => {
+        const control = new SegmentedControl({
+            options: ['LongOne', 'LongTwo'],
+        });
+        const screen = new Screen(6, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        control.updateRect({
+            x: 0,
+            y: 0,
+            width: 6,
+            height: 1,
+        });
+
+        control.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(6);
+        }
     });
 });

@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { Screen, createKeyEvent } from "@termuijs/core";
+import { describe, it, expect, vi } from "vitest";
+import { Screen, createKeyEvent, stringWidth } from "@termuijs/core";
 import { TimePicker } from "./TimePicker.js";
 
 describe("TimePicker", () => {
@@ -64,5 +64,33 @@ describe("TimePicker", () => {
         picker.handleKey(createKeyEvent({ key: "right", raw: Buffer.from(""), ctrl: false, alt: false, shift: false }));
         picker.handleKey(createKeyEvent({ key: "up", raw: Buffer.from(""), ctrl: false, alt: false, shift: false }));
         expect(picker.value.getHours()).toBe(2); // 14 - 12 = 2 (AM)
+    });
+
+    it("clips 12-hour rendering to narrow widths", () => {
+        const screen = new Screen(4, 3);
+        const writeSpy = vi.spyOn(screen, "writeString");
+        const d = new Date(2020, 1, 1, 14, 30);
+        const picker = new TimePicker({ value: d, use24Hour: false });
+
+        picker.updateRect({ x: 0, y: 0, width: 4, height: 3 });
+        picker.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(4);
+        }
+    });
+
+    it("clips 24-hour rendering to narrow widths", () => {
+        const screen = new Screen(3, 3);
+        const writeSpy = vi.spyOn(screen, "writeString");
+        const d = new Date(2020, 1, 1, 14, 30);
+        const picker = new TimePicker({ value: d, use24Hour: true });
+
+        picker.updateRect({ x: 0, y: 0, width: 3, height: 3 });
+        picker.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(3);
+        }
     });
 });

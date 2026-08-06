@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 import { Timeline, type TimelineItem } from './Timeline.js';
 
 function renderList(
@@ -114,4 +114,25 @@ describe('Timeline', () => {
         expect(rowText(nextScreen, 0)).toContain('New');
     });
 
+    it('clips long titles before right-aligned time text', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+        const widget = new Timeline([
+            {
+                title: 'A very long deployment step name',
+                time: '12:34',
+                status: 'active',
+            },
+        ]);
+        const screen = new Screen(16, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        widget.updateRect({ x: 0, y: 0, width: 16, height: 1 });
+        widget.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(16);
+        }
+
+        expect(rowText(screen, 0)).toContain('12:34');
+    });
 });

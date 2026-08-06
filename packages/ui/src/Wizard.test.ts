@@ -144,4 +144,17 @@ describe('Wizard', () => {
         wizard.handleKey({ key: 'enter', ctrl: false, alt: false } as any);
         expect(onCompleteMock).toHaveBeenCalledWith(['john_doe', 'postgres://db']);
     });
+
+    it('does not write the error-clearing row outside height-one layouts', () => {
+        const wizard = new Wizard(makeSteps());
+        const screen = new Screen(40, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        wizard.updateRect({ x: 0, y: 0, width: 40, height: 1 });
+        wizard.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[1]).toBeLessThan(1);
+        }
+    });
 });

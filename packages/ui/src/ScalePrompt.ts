@@ -1,5 +1,5 @@
 import { Widget } from '@termuijs/widgets';
-import { type Color, type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs } from '@termuijs/core';
+import { type Color, type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, stringWidth, truncate } from '@termuijs/core';
 
 export interface ScalePromptOptions {
     max?: number;
@@ -22,7 +22,8 @@ export class ScalePrompt extends Widget {
     constructor(style?: Partial<Style>, opts: ScalePromptOptions = {}) {
         super(mergeStyles(defaultStyle(), { height: 3, flexGrow: 1, ...style }));
 
-        this._max = Math.max(1, Math.floor(opts.max ?? 5));
+        const rawMax = opts.max ?? 5;
+        this._max = Number.isFinite(rawMax) ? Math.max(1, Math.floor(rawMax)) : 5;
         this._value = 1;
         this._question = opts.question;
         this._endLabels = opts.endLabels;
@@ -90,12 +91,15 @@ export class ScalePrompt extends Widget {
 
         if (row < height && this._endLabels) {
             const [leftLabel, rightLabel] = this._endLabels;
-            const leftText = leftLabel.slice(0, width);
-            const rightText = rightLabel.slice(0, width);
-            const rightX = x + Math.max(0, width - rightText.length);
+            const leftText = truncate(leftLabel, width, '');
+            const rightWidth = Math.max(0, width - stringWidth(leftText));
+            const rightText = truncate(rightLabel, rightWidth, '');
+            const rightX = x + Math.max(0, width - stringWidth(rightText));
 
             screen.writeString(x, y + row, leftText, attrs);
-            screen.writeString(rightX, y + row, rightText, attrs);
+            if (rightText) {
+                screen.writeString(rightX, y + row, rightText, attrs);
+            }
         }
     }
 }

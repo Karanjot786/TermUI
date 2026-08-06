@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 import { Switch } from './Switch.js';
 
 describe('Switch', () => {
@@ -96,5 +96,33 @@ describe('Switch', () => {
             .join('');
 
         expect(row).toContain('O');
+    });
+
+    it('keeps the label and track within the widget width', () => {
+        const sw = new Switch({
+            label: 'Very long wireless label',
+            defaultValue: true,
+        });
+
+        sw.updateRect({
+            x: 0,
+            y: 0,
+            width: 5,
+            height: 1,
+        });
+
+        const screen = new Screen(5, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        const setCellSpy = vi.spyOn(screen, 'setCell');
+
+        sw.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(5);
+        }
+
+        for (const call of setCellSpy.mock.calls) {
+            expect(call[0]).toBeLessThan(5);
+        }
     });
 });

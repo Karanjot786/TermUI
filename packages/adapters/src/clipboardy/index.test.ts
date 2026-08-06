@@ -22,7 +22,6 @@ function createMissingClipboardyRequire(): NodeJS.Require {
       main: undefined,
     }
   )
-
   return missingRequire as NodeJS.Require
 }
 
@@ -30,7 +29,6 @@ function createClipboardyRequire(): NodeJS.Require {
   const requireFn = Object.assign(
     (specifier: string) => {
       if (specifier === 'clipboardy') return mockClipboardy
-
       const error = new Error(`Cannot find module '${specifier}'`) as NodeJS.ErrnoException
       error.code = 'MODULE_NOT_FOUND'
       throw error
@@ -42,7 +40,6 @@ function createClipboardyRequire(): NodeJS.Require {
       main: undefined,
     }
   )
-
   return requireFn as NodeJS.Require
 }
 
@@ -53,10 +50,9 @@ async function loadUseClipboard() {
 
 vi.mock('node:module', async (importActual) => {
   const actual = await importActual<typeof import('node:module')>()
-
   return {
     ...actual,
-    createRequire: (...args: Parameters<typeof actual.createRequire>) => {
+    createRequire: () => {
       return shouldThrowMissingClipboardy
         ? createMissingClipboardyRequire()
         : createClipboardyRequire()
@@ -77,21 +73,17 @@ describe('useClipboard', () => {
     shouldThrowMissingClipboardy = false
   })
 
-  it('writes delegates to clipboardy.write', async () => {
+  it('write delegates to clipboardy.write', async () => {
     const useClipboard = await loadUseClipboard()
     const clipboard = useClipboard()
-
     await clipboard.write('test text')
-
     expect(mockClipboardy.write).toHaveBeenCalledWith('test text')
   })
 
   it('read delegates to clipboardy.read', async () => {
     const useClipboard = await loadUseClipboard()
     const clipboard = useClipboard()
-
     const text = await clipboard.read()
-
     expect(text).toBe('clipboard contents')
     expect(mockClipboardy.read).toHaveBeenCalled()
   })
@@ -99,22 +91,44 @@ describe('useClipboard', () => {
   it('lastCopied tracks the most recent successful write', async () => {
     const useClipboard = await loadUseClipboard()
     const clipboard = useClipboard()
-
-    expect(clipboard.lastCopied).toBe(null)
-
     await clipboard.write('first text')
     expect(clipboard.lastCopied).toBe('first text')
-
     await clipboard.write('second text')
     expect(clipboard.lastCopied).toBe('second text')
   })
 
-  it('throws a clear error when clipboardy is missing', async () => {
+  it('falls back and warns when clipboardy is unavailable, without throwing', async () => {
     shouldThrowMissingClipboardy = true
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const useClipboard = await loadUseClipboard()
+    const clipboard = useClipboard()
+    expect(warn).toHaveBeenCalledWith(
+      'useClipboard() requires the optional peer dependency `clipboardy`. Install `clipboardy` before calling useClipboard().'
+    )
+    await expect(clipboard.write('fallback text')).resolves.toBeUndefined()
+  })
 
-    expect(() => {
-      useClipboard()
-    }).toThrow(/requires the optional peer dependency `clipboardy`/)
+  it('stores writes in an in-memory fallback when clipboardy is missing', async () => {
+    shouldThrowMissingClipboardy = true
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const useClipboard = await loadUseClipboard()
+    const clipboard = useClipboard()
+    await clipboard.write('memory text')
+    expect(clipboard.lastCopied).toBe('memory text')
+    const text = await clipboard.read()
+    expect(text).toBe('memory text')
+  })
+
+  it('falls back when clipboardy access fails at runtime', async () => {
+    mockClipboardy = {
+      read: vi.fn(async () => { throw new Error('Clipboard access denied') }),
+      write: vi.fn(async () => { throw new Error('Clipboard access denied') }),
+    }
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const useClipboard = await loadUseClipboard()
+    const clipboard = useClipboard()
+    await expect(clipboard.write('runtime text')).resolves.toBeUndefined()
+    expect(clipboard.lastCopied).toBe('runtime text')
+    expect(warn).toHaveBeenCalledWith('Clipboard access denied')
   })
 })

@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 import { MultiProgress, type ProgressItem } from './MultiProgress.js';
 
 describe('MultiProgress', () => {
@@ -189,6 +189,57 @@ describe('MultiProgress — edge cases', () => {
         mp.render(screen);
         const rows = screen.back.map((row: { char: string }[]) => row.map(c => c.char).join(''));
         expect(rows.some(r => r.trim().length > 0)).toBe(true);
+    });
+
+    it('clips the label column to the widget width', () => {
+        const mp = new MultiProgress({
+            items: [{ label: 'VeryLongLabel', value: 0.5 }],
+            labelWidth: 12,
+            showValues: false,
+        });
+        const screen = new Screen(5, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        mp.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+        mp.render(screen);
+
+        expect(writeSpy.mock.calls[0]?.[2]).toHaveLength(5);
+    });
+
+    it('clips a wide-character label to the widget width by display width', () => {
+        const mp = new MultiProgress({
+            items: [{ label: '你好你好你好你好', value: 0.5 }],
+            labelWidth: 8,
+            showValues: false,
+        });
+        const screen = new Screen(8, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        mp.updateRect({ x: 0, y: 0, width: 8, height: 1 });
+        mp.render(screen);
+
+        const [callX, , callText] = writeSpy.mock.calls[0] as [number, number, string];
+        expect(callX + stringWidth(callText)).toBeLessThanOrEqual(8);
+    });
+
+    it('does not render rows past the assigned height', () => {
+        const mp = new MultiProgress({
+            items: [
+                { label: 'One', value: 0.2 },
+                { label: 'Two', value: 0.4 },
+                { label: 'Three', value: 0.6 },
+            ],
+        });
+        const screen = new Screen(30, 4);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        const setCellSpy = vi.spyOn(screen, 'setCell');
+        mp.updateRect({ x: 0, y: 1, width: 30, height: 1 });
+        mp.render(screen);
+
+        for (const [, row] of writeSpy.mock.calls) {
+            expect(row).toBeLessThan(2);
+        }
+        for (const [, row] of setCellSpy.mock.calls) {
+            expect(row).toBeLessThan(2);
+        }
     });
 
     it('setItems() clamps all values in new items', () => {

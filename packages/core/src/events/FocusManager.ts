@@ -141,10 +141,10 @@ export class FocusManager {
         if (wasFocused) {
             // The focused widget is being removed — emit blur for it, then
             // move focus to the next available widget if one exists.
-            this._events.emit('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
+            this._emitOrQueue('blur', { targetId: id, type: 'blur', epoch: this._epoch++ });
             if (this._focusables.length > 0) {
                 this._currentIndex = Math.min(this._currentIndex, this._focusables.length - 1);
-                this._events.emit('focus', {
+                this._emitOrQueue('focus', {
                     targetId: this._focusables[this._currentIndex].id,
                     type: 'focus',
                     epoch: this._epoch++,
@@ -449,6 +449,14 @@ export class FocusManager {
 
     // ── Private ──────────────────────────────────────────
 
+    private _emitOrQueue(type: 'focus' | 'blur', data: FocusEvent): void {
+        if (this._started) {
+            this._events.emit(type, data);
+        } else {
+            this._pendingQueue.push(data);
+        }
+    }
+
     /**
      * Get the active focusables, filtered by the current trap if any.
      */
@@ -491,7 +499,7 @@ export class FocusManager {
         // Flush events after state is fully updated so that any re-entrant calls
         // (e.g., handlers that call unregister()) see the finalized _currentIndex.
         for (const evt of events) {
-            this._events.emit(evt.type, evt.data);
+            this._emitOrQueue(evt.type, evt.data);
         }
     }
 }

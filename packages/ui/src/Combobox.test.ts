@@ -24,6 +24,19 @@ describe('Combobox', () => {
         vi.restoreAllMocks();
     });
 
+    it('backspace removes one complete grapheme cluster', () => {
+        const cb = new Combobox([
+            { label: 'é', value: 'accented' },
+            { label: 'Other', value: 'other' },
+        ]);
+        cb.handleKey(makeKey('e'));
+        cb.handleKey(makeKey('\u0301'));
+
+        cb.handleKey(makeKey('backspace'));
+
+        expect(cb.filtered).toHaveLength(2);
+    });
+
     it('initializes with empty value and no selection', () => {
         const cb = new Combobox([
             { label: 'Apple', value: 'a' },

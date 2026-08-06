@@ -38,7 +38,7 @@ describe('useInfiniteQuery', () => {
         expect(result!.loading).toBe(true);
         expect(result!.pages).toHaveLength(0);
         expect(queryFn).toHaveBeenCalledTimes(1);
-        expect(queryFn).toHaveBeenCalledWith(1);
+        expect(queryFn).toHaveBeenCalledWith(1, expect.any(AbortSignal));
 
         await flush();
 
@@ -88,7 +88,7 @@ describe('useInfiniteQuery', () => {
         expect(result!.pages).toHaveLength(2);
         expect(result!.pages[1]).toEqual({ items: ['b'], next: null });
         expect(queryFn).toHaveBeenCalledTimes(2);
-        expect(queryFn).toHaveBeenNthCalledWith(2, 2);
+        expect(queryFn).toHaveBeenNthCalledWith(2, 2, expect.any(AbortSignal));
     });
 
     it('hasNextPage becomes false at the end', async () => {

@@ -10,7 +10,8 @@ afterEach(() => {
 
 describe('BulletChart', () => {
     it('initializes with 0 value and target', async () => {
-        const { Screen } = await import('@termuijs/core');
+        const { Screen, caps } = await import('@termuijs/core');
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
         const { BulletChart } = await import('./BulletChart.js');
         const chart = new BulletChart();
         chart.updateRect({ x: 0, y: 0, width: 10, height: 1 });
@@ -102,5 +103,31 @@ describe('BulletChart', () => {
         // Indices 0-5 are <= 50%, indices 6-9 are > 50%
         expect(screen.back[0][5].bg?.name).toBe('red');
         expect(screen.back[0][6].bg?.name).toBe('green');
+    });
+
+    it('clips long labels to the chart width', async () => {
+        const { Screen, stringWidth } = await import('@termuijs/core');
+        const { BulletChart } = await import('./BulletChart.js');
+
+        const chart = new BulletChart({}, {
+            label: 'Very long label',
+            max: 100,
+        });
+        chart.setValue(50);
+        chart.updateRect({ x: 0, y: 0, width: 6, height: 1 });
+
+        const screen = new Screen(6, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+        const setCellSpy = vi.spyOn(screen, 'setCell');
+
+        chart.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(call[0] + stringWidth(String(call[2]))).toBeLessThanOrEqual(6);
+        }
+
+        for (const call of setCellSpy.mock.calls) {
+            expect(call[0]).toBeLessThan(6);
+        }
     });
 });

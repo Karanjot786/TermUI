@@ -5,6 +5,15 @@
 import { watch, existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve, extname, join } from 'node:path';
 
+const DEFAULT_IGNORED_DIRS = new Set([
+    '.git',
+    '.next',
+    '.turbo',
+    'coverage',
+    'dist',
+    'node_modules',
+]);
+
 /**
  * A single detected file change emitted by the {@link FileWatcher}.
  */
@@ -37,6 +46,7 @@ export class FileWatcher {
     private _onChangeCallbacks: Array<(change: FileChange) => void> = [];
     private _onErrorCallbacks: Array<(err: Error) => void> = [];
     private _debounceTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+    private _started = false;
 
     constructor(dirs: string[]) {
         this._dirs = dirs.map(d => resolve(d));
@@ -49,6 +59,9 @@ export class FileWatcher {
 
     /** Begin watching all configured directories, debouncing rapid changes. */
     start(): void {
+        if (this._started) return;
+        this._started = true;
+
         for (const dir of this._dirs) {
             if (!existsSync(dir)) continue;
             const ac = new AbortController();
@@ -70,6 +83,7 @@ export class FileWatcher {
         this.watchDir(rootDir, rootDir, ac, false);
 
         for (const entry of readdirSync(rootDir)) {
+            if (DEFAULT_IGNORED_DIRS.has(entry)) continue;
             const child = join(rootDir, entry);
             if (statSync(child).isDirectory()) {
                 this.watchDirectoryTree(child, ac);
@@ -114,6 +128,7 @@ export class FileWatcher {
     stop(): void {
         for (const ac of this._abortControllers) ac.abort();
         this._abortControllers = [];
+        this._started = false;
         for (const timer of this._debounceTimers.values()) clearTimeout(timer);
         this._debounceTimers.clear();
     }

@@ -5,6 +5,7 @@ import {
   type KeyEvent,
   styleToCellAttrs,
   stringWidth,
+  truncate,
   caps,
 } from "@termuijs/core";
 import { Widget } from "../base/Widget.js";
@@ -91,6 +92,14 @@ export class Slider extends Widget {
       0,
       width - prefixWidth - suffixWidth
     );
+
+    if (trackWidth === 0 && prefixWidth + suffixWidth > width) {
+      screen.writeString(x, y, truncate(`${prefix}${suffix}`, width, ""), {
+        ...attrs,
+        bold: true,
+      });
+      return;
+    }
 
     const ratio =
       (this._value - this._min) /

@@ -8,6 +8,7 @@ import {
     defaultStyle,
     styleToCellAttrs,
     caps,
+    truncate,
 } from '@termuijs/core';
 
 export interface TransferItem {
@@ -189,18 +190,18 @@ export class Transfer extends Widget {
 
         for (let i = 0; i < height; i++) {
             // 1. Left pane (source)
-            if (i < this._sourceItems.length) {
+            if (leftPaneWidth > 0 && i < this._sourceItems.length) {
                 const o = this._sourceItems[i];
                 const active = this._activePane === 'source' && i === this._sourceCursorIndex;
                 const text = (active ? indicator : noIndicator) + o.label;
-                const truncatedText = text.slice(0, leftPaneWidth).padEnd(leftPaneWidth, ' ');
+                const truncatedText = truncate(text, leftPaneWidth, '').padEnd(leftPaneWidth, ' ');
                 screen.writeString(x, y + i, truncatedText, {
                     ...attrs,
                     fg: o.disabled ? { type: 'named' as const, name: 'brightBlack' as const } : active ? this._activeColor : attrs.fg,
                     bold: active,
                     dim: o.disabled,
                 });
-            } else {
+            } else if (leftPaneWidth > 0) {
                 screen.writeString(x, y + i, ' '.repeat(leftPaneWidth), attrs);
             }
 
@@ -211,18 +212,18 @@ export class Transfer extends Widget {
             });
 
             // 3. Right pane (target)
-            if (i < this._targetItems.length) {
+            if (rightPaneWidth > 0 && dividerX + 1 < x + width && i < this._targetItems.length) {
                 const o = this._targetItems[i];
                 const active = this._activePane === 'target' && i === this._targetCursorIndex;
                 const text = (active ? indicator : noIndicator) + o.label;
-                const truncatedText = text.slice(0, rightPaneWidth).padEnd(rightPaneWidth, ' ');
+                const truncatedText = truncate(text, rightPaneWidth, '').padEnd(rightPaneWidth, ' ');
                 screen.writeString(dividerX + 1, y + i, truncatedText, {
                     ...attrs,
                     fg: o.disabled ? { type: 'named' as const, name: 'brightBlack' as const } : active ? this._activeColor : attrs.fg,
                     bold: active,
                     dim: o.disabled,
                 });
-            } else {
+            } else if (rightPaneWidth > 0 && dividerX + 1 < x + width) {
                 screen.writeString(dividerX + 1, y + i, ' '.repeat(rightPaneWidth), attrs);
             }
         }

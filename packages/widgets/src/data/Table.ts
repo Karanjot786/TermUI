@@ -87,6 +87,8 @@ export class Table extends Widget {
     private _focusedHeaderIndex = 0;
     private _tableOnSort?: (colIndex: number, direction: 'asc' | 'desc') => void;
     private _sortState: { colIndex: number; direction: 'asc' | 'desc' } | null = null;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
+    private readonly _mouseHandler = (event: MouseEvent): void => this.handleMouse(event);
 
     constructor(
         columnsOrProps: TableColumn[] | TableProps,
@@ -123,9 +125,19 @@ export class Table extends Widget {
         this._onStateChange = onStateChange;
         this._tableOnSort = options.onSort;
 
-        this.events.on('key', this.handleKey.bind(this));
+        this.events.on('key', this._keyHandler);
         if (this._resizable) {
-            this.events.on('mouse', this.handleMouse.bind(this));
+            this.events.on('mouse', this._mouseHandler);
+        }
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
+        if (this._resizable) {
+            this.events.off('mouse', this._mouseHandler);
+            this.events.on('mouse', this._mouseHandler);
         }
     }
 
@@ -137,6 +149,7 @@ export class Table extends Widget {
 
     setRows(rows: TableRow[]): void {
         this._rows = rows;
+        this._clampSelectedRow();
         this._clampScroll();
         this.markDirty();
         this._pushState();
@@ -264,6 +277,8 @@ export class Table extends Widget {
             this._selectedRow = Math.max(minRow, this._rows.length - 1);
         }
 
+        this._clampSelectedRow();
+
         // Header Navigation Mode
         if (this._selectedRow === -1) {
             if (event.key === 'left') {
@@ -279,6 +294,12 @@ export class Table extends Widget {
 
         this._clampScroll();
         this.markDirty();
+    }
+
+    private _clampSelectedRow(): void {
+        const minRow = this._showHeader ? -1 : 0;
+        const maxRow = this._rows.length > 0 ? this._rows.length - 1 : minRow;
+        this._selectedRow = Math.max(minRow, Math.min(this._selectedRow, maxRow));
     }
     
     protected _computeRowHeights(colWidths: number[]): number[] {

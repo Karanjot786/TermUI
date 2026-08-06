@@ -115,4 +115,18 @@ describe("SurveyPrompt", () => {
             name: "Bob",
         });
     });
+
+    it("backspace removes one grapheme from text answers", () => {
+        const prompt = new SurveyPrompt(QUESTIONS);
+
+        for (const key of "Cafe\u0301") {
+            prompt.handleKey({ key, ctrl: false, alt: false } as any);
+        }
+        prompt.handleKey({ key: "backspace", ctrl: false, alt: false } as any);
+        prompt.handleKey({ key: "enter", ctrl: false, alt: false } as any);
+
+        expect(prompt.getAnswers()).toEqual({
+            name: "Caf",
+        });
+    });
 });

@@ -313,6 +313,25 @@ describe("BasicAuthPrompt – multiple backspaces on username", () => {
         pressBackspace(widget);
         expect(widget.getCredentials().password).toBe("");
     });
+
+    it("removes one grapheme from username input", () => {
+        const widget = new BasicAuthPrompt();
+
+        typeInto(widget, "Cafe\u0301");
+        pressBackspace(widget);
+
+        expect(widget.getCredentials().username).toBe("Caf");
+    });
+
+    it("removes one grapheme from password input", () => {
+        const widget = new BasicAuthPrompt();
+        pressEnter(widget);
+
+        typeInto(widget, "Cafe\u0301");
+        pressBackspace(widget);
+
+        expect(widget.getCredentials().password).toBe("Caf");
+    });
 });
 
 // ─── 2. Backspace on empty fields ─────────────────────────────────────────────

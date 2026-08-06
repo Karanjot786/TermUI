@@ -68,6 +68,15 @@ describe('Router', () => {
         expect(r.params.id).toBe('42');
     });
 
+    it('push serializes array query values as repeated params', () => {
+        const r = new Router();
+        r.addRoute('/search', () => 'Search');
+        r.push('/search', { query: { tag: ['ui', 'data'] } });
+
+        expect(r.currentPath).toBe('/search?tag=ui&tag=data');
+        expect(r.query).toEqual({ tag: ['ui', 'data'] });
+    });
+
     it('navigate event fires on push', () => {
         const r = new Router();
         r.addRoute('/home', () => 'Home');
@@ -194,6 +203,33 @@ describe('Router', () => {
         expect(r.currentPath).toBe('/login');
     });
 
+    it('parent beforeEnter can block nested child navigation', () => {
+        const r = new Router();
+        const parentGuard = vi.fn().mockReturnValue(false);
+        r.addRoute('/admin', () => 'Admin', undefined, [
+            { path: 'users', component: () => 'Users' },
+        ], undefined, { beforeEnter: parentGuard });
+
+        r.push('/admin/users');
+
+        expect(parentGuard.mock.calls[0][0]).toBe('/admin/users');
+        expect(r.current).toBeNull();
+        expect(r.historyLength).toBe(0);
+    });
+
+    it('parent beforeEnter can redirect nested child navigation', () => {
+        const r = new Router();
+        r.addRoute('/login', () => 'Login');
+        r.addRoute('/admin', () => 'Admin', undefined, [
+            { path: 'users', component: () => 'Users' },
+        ], undefined, { beforeEnter: () => '/login' });
+
+        r.push('/admin/users');
+
+        expect(r.currentPath).toBe('/login');
+        expect(r.current?.route.path).toBe('/login');
+    });
+
     it('back() with beforeEnter redirect does not corrupt history', () => {
         const r = new Router();
         r.addRoute('/login', () => 'Login');
@@ -223,6 +259,39 @@ describe('Router', () => {
         r.push('/home');
         
         expect(spy).toHaveBeenCalled();
+    });
+
+    it('keeps the newest route when a guard starts another navigation', () => {
+        const r = new Router();
+        const navFn = vi.fn();
+        r.addRoute('/old', () => 'Old', undefined, {
+            beforeEnter: () => {
+                r.push('/new');
+                return true;
+            },
+        });
+        r.addRoute('/new', () => 'New');
+        r.events.on('navigate', navFn);
+
+        r.push('/old');
+
+        expect(r.currentPath).toBe('/new');
+        expect(r.current?.route.path).toBe('/new');
+        expect(navFn).toHaveBeenCalledTimes(1);
+        expect(navFn.mock.calls[0][0].match.route.path).toBe('/new');
+    });
+
+    it('passes abortable navigation context to guards and afterEnter hooks', () => {
+        const r = new Router();
+        const guard = vi.fn().mockReturnValue(true);
+        const after = vi.fn();
+        r.addRoute('/a', () => 'A', undefined, { beforeEnter: guard, afterEnter: after });
+
+        r.push('/a');
+
+        expect(guard.mock.calls[0][1]).toMatchObject({ id: 1 });
+        expect(guard.mock.calls[0][1].signal.aborted).toBe(false);
+        expect(after.mock.calls[0][1].isStale()).toBe(false);
     });
 
     it('initialPath sets current match once a matching route is registered', () => {
