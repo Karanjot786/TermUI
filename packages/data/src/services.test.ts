@@ -151,4 +151,86 @@ describe('services provider', () => {
         expect(result[0].active).toBe(false);
         expect(result[0].status).toBe('stopped');
     });
+
+    it('falls through unresolved systemd names to PM2/process when another unit resolves', () => {
+        const MOCK_SYSTEMCTL_SHOW_NOT_FOUND = [
+            'LoadState=not-found',
+            'ActiveState=inactive',
+            'SubState=dead',
+            'MainPID=0',
+            'NRestarts=0',
+            'ActiveEnterTimestamp=n/a',
+            'Description=my-node-worker.service',
+            '',
+        ].join('\n');
+
+        mockExecFileSync.mockImplementation((cmd: string, args?: string[]) => {
+            if (cmd === 'systemctl' && args?.[0] === '--version') return 'systemd 252';
+            if (cmd === 'systemctl' && args?.[0] === 'show' && args?.[1] === 'ssh.service') {
+                return [
+                    'LoadState=loaded',
+                    'Type=notify',
+                    'ActiveState=active',
+                    'SubState=running',
+                    'MainPID=99',
+                    'NRestarts=0',
+                    'ActiveEnterTimestamp=Mon 2026-06-01 08:00:00 UTC',
+                    'Description=OpenSSH server daemon',
+                    '',
+                ].join('\n');
+            }
+            if (cmd === 'systemctl' && args?.[0] === 'show' && args?.[1] === 'my-node-worker') {
+                return MOCK_SYSTEMCTL_SHOW_NOT_FOUND;
+            }
+            if (cmd === 'ps' && args?.[0] === '-p') return '  0.1  0.2\n';
+            if (cmd === 'pm2') {
+                return JSON.stringify([
+                    {
+                        name: 'my-node-worker',
+                        pid: 4242,
+                        pm2_env: { status: 'online', restart_time: 0, pm_uptime: Date.now() - 60000 },
+                        monit: { cpu: 4, memory: 64 * 1024 * 1024 },
+                    },
+                ]);
+            }
+            throw new Error(`unexpected exec: ${cmd} ${(args ?? []).join(' ')}`);
+        });
+
+        const result = services.list(['ssh.service', 'my-node-worker']);
+
+        expect(result.map(s => s.name)).toEqual(['ssh.service', 'my-node-worker']);
+        expect(result[0].active).toBe(true);
+        expect(result[0].pid).toBe(99);
+        expect(result[1].active).toBe(true);
+        expect(result[1].pid).toBe(4242);
+        expect(result[1].mem).toBe(64);
+    });
+
+    it('falls through names that throw from systemctl show', () => {
+        const MOCK_PS_AUX = [
+            'USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND',
+            'root      7777  1.5  2.0 123456 78900 ?        Ss   Jun01   0:10 /usr/bin/orphan-worker',
+        ].join('\n');
+
+        mockExecFileSync.mockImplementation((cmd: string, args?: string[]) => {
+            if (cmd === 'systemctl' && args?.[0] === '--version') return 'systemd 252';
+            if (cmd === 'systemctl' && args?.[0] === 'show' && args?.[1] === 'nginx') {
+                return MOCK_SYSTEMCTL_SHOW_NGINX;
+            }
+            if (cmd === 'systemctl' && args?.[0] === 'show' && args?.[1] === 'orphan-worker') {
+                throw new Error('Unit orphan-worker.service could not be found.');
+            }
+            if (cmd === 'ps' && args?.[0] === '-p') return MOCK_PS_OUTPUT;
+            if (cmd === 'pm2') throw new Error('pm2 not found');
+            if (cmd === 'ps' && args?.[0] === 'aux') return MOCK_PS_AUX;
+            throw new Error(`unexpected exec: ${cmd} ${(args ?? []).join(' ')}`);
+        });
+
+        const result = services.list(['nginx', 'orphan-worker']);
+
+        expect(result.map(s => s.name)).toEqual(['nginx', 'orphan-worker']);
+        expect(result[0].pid).toBe(1234);
+        expect(result[1].active).toBe(true);
+        expect(result[1].pid).toBe(7777);
+    });
 });
