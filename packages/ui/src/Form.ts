@@ -138,3 +138,5 @@ export class Form extends Widget {
         }
     }
 }
+
+.catch(err => console.error("Promise.all failed:", err));
