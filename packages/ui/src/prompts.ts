@@ -69,7 +69,7 @@ async function promptText(options: TextPromptOptions): Promise<string> {
 async function promptConfirm(options: ConfirmPromptOptions): Promise<boolean> {
     if (!process.stdin.isTTY) throw new NonInteractiveError();
 
-    const hint = options.default === true ? 'Y/n' : options.default === false ? 'y/N' : 'y/n';
+    const hint = options.default  ? 'Y/n' : options.default === false ? 'y/N' : 'y/n';
 
     return new Promise((resolve) => {
         const rl = readline.createInterface({
