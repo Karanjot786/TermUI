@@ -4,9 +4,17 @@
 
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
+import {
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  unlinkSync,
+  rmSync,
+} from 'node:fs';
 import { getBuiltinThemeNames } from '@termuijs/tss';
-import { textPrompt, selectPrompt, multiSelectPrompt } from './prompts.js';
+import { textPrompt, selectPrompt, multiSelectPrompt, confirmPrompt } from './prompts.js';
 import { generateProject, type ProjectConfig } from './templates.js';
 import { parseArgs, isNonInteractive, TEMPLATE_KEYS, type CliArgs } from './args.js';
 import { runAddCommand } from './commands/add.js';
@@ -121,23 +129,29 @@ async function runProjectScaffold(args: CliArgs): Promise<void> {
 
   // ── Generate project ──
   const projectDir = resolve(process.cwd(), projectName);
-  if (existsSync(projectDir)) {
-    console.log(`\n  ⚠  Directory "${projectName}" already exists. Files may be overwritten.\n`);
+  if (existsSync(projectDir) && isNonEmptyDirectory(projectDir)) {
+    if (args.force) {
+      console.log(`\n  ⚠  Directory "${projectName}" is not empty. Overwriting with --force.\n`);
+    } else if (nonInteractive) {
+      throw new Error(
+        `Directory "${projectName}" is not empty. Re-run with --force to overwrite.`,
+      );
+    } else {
+      const overwrite = await confirmPrompt(
+        `Directory "${projectName}" is not empty. Overwrite existing files?`,
+        false,
+      );
+      if (!overwrite) {
+        console.log('\n  Aborted. Existing files were left unchanged.\n');
+        return;
+      }
+    }
   }
 
   console.log(`\n  Creating ${projectName}...`);
 
   const files = generateProject(config);
-
-  for (const file of files) {
-    const fullPath = join(projectDir, file.path);
-    const dir = dirname(fullPath);
-
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(fullPath, file.content, 'utf-8');
-
-    console.log(`    ✓ ${file.path}`);
-  }
+  writeProjectFiles(projectDir, files);
 
   console.log();
   console.log('  ┌──────────────────────────────────┐');
@@ -149,6 +163,68 @@ async function runProjectScaffold(args: CliArgs): Promise<void> {
   console.log(`    bun install`);
   console.log(`    bun run dev`);
   console.log();
+}
+
+function isNonEmptyDirectory(dir: string): boolean {
+  try {
+    return readdirSync(dir).some(entry => entry !== '.git');
+  } catch {
+    return true;
+  }
+}
+
+function writeProjectFiles(
+  projectDir: string,
+  files: Array<{ path: string; content: string }>,
+): void {
+  const projectDirExisted = existsSync(projectDir);
+  const backups = new Map<string, string | null>();
+  const written: string[] = [];
+
+  try {
+    for (const file of files) {
+      const fullPath = join(projectDir, file.path);
+      const dir = dirname(fullPath);
+
+      if (existsSync(fullPath)) {
+        backups.set(fullPath, readFileSync(fullPath, 'utf-8'));
+      } else {
+        backups.set(fullPath, null);
+      }
+
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(fullPath, file.content, 'utf-8');
+      written.push(fullPath);
+      console.log(`    ✓ ${file.path}`);
+    }
+  } catch (error) {
+    for (const path of written.reverse()) {
+      const previous = backups.get(path);
+      if (previous === null || previous === undefined) {
+        try {
+          unlinkSync(path);
+        } catch {
+          // Best-effort rollback of newly created files.
+        }
+      } else {
+        try {
+          writeFileSync(path, previous, 'utf-8');
+        } catch {
+          // Best-effort restore of overwritten content.
+        }
+      }
+    }
+
+    if (!projectDirExisted && existsSync(projectDir)) {
+      try {
+        rmSync(projectDir, { recursive: true, force: true });
+      } catch {
+        // Ignore cleanup failures after rollback.
+      }
+    }
+
+    throw error;
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

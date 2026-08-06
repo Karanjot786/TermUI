@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { mkdirSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import * as prompts from './prompts.js';
 import * as templates from './templates.js';
 import * as addModule from './commands/add.js';
@@ -106,5 +106,83 @@ describe('CLI integration', () => {
 
     expect(logSpy).toHaveBeenCalledWith(expect.any(String));
     expect(generateSpy).not.toHaveBeenCalled();
+  });
+
+  it('rejects non-interactive scaffold into a non-empty directory without --force', async () => {
+    const existingDir = join(tempDir, 'existing-app');
+    mkdirSync(existingDir, { recursive: true });
+    writeFileSync(join(existingDir, 'package.json'), '{ "name": "keep-me" }', 'utf-8');
+
+    const generateSpy = vi.spyOn(templates, 'generateProject');
+    const indexModule = await import('./index');
+
+    await expect(indexModule.runCli(['existing-app', '--yes'])).rejects.toThrow(
+      'Directory "existing-app" is not empty. Re-run with --force to overwrite.',
+    );
+
+    expect(generateSpy).not.toHaveBeenCalled();
+    expect(readFileSync(join(existingDir, 'package.json'), 'utf-8')).toBe('{ "name": "keep-me" }');
+  });
+
+  it('overwrites a non-empty directory when --force is passed', async () => {
+    const existingDir = join(tempDir, 'force-app');
+    mkdirSync(existingDir, { recursive: true });
+    writeFileSync(join(existingDir, 'package.json'), '{ "name": "keep-me" }', 'utf-8');
+
+    vi.spyOn(templates, 'generateProject').mockReturnValue(createProjectFiles as any);
+    const indexModule = await import('./index');
+
+    await indexModule.runCli(['force-app', '--yes', '--force']);
+
+    expect(readFileSync(join(existingDir, 'package.json'), 'utf-8')).toBe('{ }');
+  });
+
+  it('allows scaffolding into an empty existing directory without --force', async () => {
+    const emptyDir = join(tempDir, 'empty-app');
+    mkdirSync(emptyDir, { recursive: true });
+
+    vi.spyOn(templates, 'generateProject').mockReturnValue(createProjectFiles as any);
+    const indexModule = await import('./index');
+
+    await indexModule.runCli(['empty-app', '--yes']);
+
+    expect(existsSync(join(emptyDir, 'package.json'))).toBe(true);
+  });
+
+  it('aborts interactive overwrite when the user declines', async () => {
+    const existingDir = join(tempDir, 'interactive-app');
+    mkdirSync(existingDir, { recursive: true });
+    writeFileSync(join(existingDir, 'package.json'), '{ "name": "keep-me" }', 'utf-8');
+
+    vi.spyOn(prompts, 'selectPrompt').mockResolvedValue(0);
+    vi.spyOn(prompts, 'multiSelectPrompt').mockResolvedValue([false, false, true]);
+    vi.spyOn(prompts, 'confirmPrompt').mockResolvedValue(false);
+    const generateSpy = vi.spyOn(templates, 'generateProject');
+
+    const indexModule = await import('./index');
+    await indexModule.runCli(['interactive-app']);
+
+    expect(generateSpy).not.toHaveBeenCalled();
+    expect(readFileSync(join(existingDir, 'package.json'), 'utf-8')).toBe('{ "name": "keep-me" }');
+  });
+
+  it('restores overwritten files when a later write fails', async () => {
+    const existingDir = join(tempDir, 'rollback-app');
+    mkdirSync(existingDir, { recursive: true });
+    writeFileSync(join(existingDir, 'package.json'), '{ "name": "keep-me" }', 'utf-8');
+    // A file named `src` makes mkdirSync(src/) fail after package.json is overwritten.
+    writeFileSync(join(existingDir, 'src'), 'not-a-directory', 'utf-8');
+
+    vi.spyOn(templates, 'generateProject').mockReturnValue([
+      { path: 'package.json', content: '{ "name": "new" }' },
+      { path: 'src/index.tsx', content: 'export {}' },
+    ] as any);
+
+    const indexModule = await import('./index');
+
+    await expect(indexModule.runCli(['rollback-app', '--yes', '--force'])).rejects.toThrow();
+
+    expect(readFileSync(join(existingDir, 'package.json'), 'utf-8')).toBe('{ "name": "keep-me" }');
+    expect(readFileSync(join(existingDir, 'src'), 'utf-8')).toBe('not-a-directory');
   });
 });
