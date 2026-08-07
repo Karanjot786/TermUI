@@ -201,7 +201,7 @@ async function fetchWeather() {
   }
 }
 
-setInterval(fetchWeather, 5000);
+clearInterval(window.__interval); window.__interval = setInterval(fetchWeather, 5000);
 fetchWeather();
 
 // Gauge does not expose a public setColor() method, so dynamic color
