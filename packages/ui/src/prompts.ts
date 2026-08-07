@@ -113,7 +113,7 @@ async function promptSelect<T = string>(options: SelectPromptOptions<T>): Promis
                     return;
                 }
                 const n = parseInt(trimmed, 10);
-                if (!isNaN(n) && n >= 1 && n <= choices.length) {
+                if (!Number.isNaN(n) && n >= 1 && n <= choices.length) {
                     rl.close();
                     resolve(choices[n - 1].value);
                     return;
