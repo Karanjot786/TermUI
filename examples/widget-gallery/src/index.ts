@@ -129,7 +129,7 @@ class WidgetGalleryApp extends Widget {
         }
 
         // Tab switching: 1-6
-        const num = parseInt(event.key);
+        const num = parseInt(event.key, 10);
         if (num >= 1 && num <= 6) {
             this._switchTab(num - 1);
             return true;
