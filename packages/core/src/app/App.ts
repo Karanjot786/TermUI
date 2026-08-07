@@ -543,7 +543,7 @@ export class App {
                 // dropped that state change. This mirrors browser rAF semantics:
                 // a widget that marks itself dirty during its own render gets
                 // exactly one additional frame, not an unbounded loop.
-                if (this._rootWidget.isDirty === true) {
+                if (this._rootWidget.isDirty ) {
                     this.requestRender();
                 }
             }
