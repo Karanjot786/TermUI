@@ -248,3 +248,8 @@ export type { WelcomeScreenOptions, KeymapHint } from './WelcomeScreen.js';
 export { SetupFlow } from './SetupFlow.js';
 export type { SetupFlowOptions, SetupStep } from './SetupFlow.js';
 
+export { Window } from './Window.js';
+export type { WindowOptions } from './Window.js';
+export { WindowManager } from './WindowManager.js';
+
+
