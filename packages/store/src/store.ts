@@ -357,6 +357,47 @@ export function createStore<T extends object>(
         }
     }
 
+    let exitHookRegistered = false;
+
+    const performWrite = (data: string) => {
+        try {
+            const dir = path.dirname(persistFilePath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            const tempPath = `${persistFilePath}.tmp`;
+            fs.writeFileSync(tempPath, data, 'utf8');
+            fs.renameSync(tempPath, persistFilePath);
+        } catch {
+            // Ignore write errors to keep terminal stable
+        }
+    };
+
+    const flushSync = () => {
+        if (writeTimeout) {
+            clearTimeout(writeTimeout);
+            writeTimeout = null;
+        }
+        try {
+            const dir = path.dirname(persistFilePath);
+            if (!fs.existsSync(dir)) {
+                fs.mkdirSync(dir, { recursive: true });
+            }
+            const dataToSave: Record<string, unknown> = {};
+            for (const [key, val] of Object.entries(state)) {
+                if (typeof val !== 'function') {
+                    dataToSave[key] = val;
+                }
+            }
+            const dataStr = JSON.stringify(dataToSave);
+            const tempPath = `${persistFilePath}.tmp`;
+            fs.writeFileSync(tempPath, dataStr, 'utf8');
+            fs.renameSync(tempPath, persistFilePath);
+        } catch {
+            // Ignore write errors
+        }
+    };
+
     const persistState = () => {
         if (!persistFilePath) return;
 
@@ -366,22 +407,28 @@ export function createStore<T extends object>(
             clearTimeout(writeTimeout);
         }
 
+        if (!exitHookRegistered) {
+            exitHookRegistered = true;
+            process.once('beforeExit', flushSync);
+            process.once('exit', flushSync);
+            process.once('SIGINT', () => {
+                flushSync();
+                process.exit(0);
+            });
+            process.once('SIGTERM', () => {
+                flushSync();
+                process.exit(0);
+            });
+        }
+
         writeTimeout = setTimeout(() => {
-            try {
-                const dir = path.dirname(persistFilePath);
-                if (!fs.existsSync(dir)) {
-                    fs.mkdirSync(dir, { recursive: true });
+            const dataToSave: Record<string, unknown> = {};
+            for (const [key, val] of Object.entries(state)) {
+                if (typeof val !== 'function') {
+                    dataToSave[key] = val;
                 }
-                const dataToSave: Record<string, unknown> = {};
-                for (const [key, val] of Object.entries(state)) {
-                    if (typeof val !== 'function') {
-                        dataToSave[key] = val;
-                    }
-                }
-                fs.writeFileSync(persistFilePath, JSON.stringify(dataToSave), 'utf8');
-            } catch (err) {
-                // Ignore write errors to keep terminal stable
             }
+            performWrite(JSON.stringify(dataToSave));
         }, debounceMs);
     };
 
@@ -680,4 +727,3 @@ export interface UseStore<T> {
     reset(): void;
     getInitialState(): T;
 }
-
