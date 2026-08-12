@@ -14,7 +14,7 @@ export interface UseAsyncOptions<T> {
     onError?: (error: Error) => void;
 }
 
-export interface UseAsyncResult<T> {
+export interface UseAsyncResult<T, TArgs extends unknown[] = unknown[]> {
     /** Resolved data (null when loading, idle, or on error) */
     data: T | null;
     /** Backward-compatible alias for isLoading */
@@ -32,13 +32,13 @@ export interface UseAsyncResult<T> {
     /** Re-execute the async function (returns resolved data or null) */
     refetch: () => Promise<T | null>;
     /** Execute the async function with optional arguments */
-    execute: (...args: any[]) => Promise<T | null>;
+    execute: (...args: TArgs) => Promise<T | null>;
     /** Reset hook state back to initial/idle */
     reset: () => void;
 }
 
 /** Backward-compatible type alias */
-export type AsyncState<T> = UseAsyncResult<T>;
+export type AsyncState<T, TArgs extends unknown[] = unknown[]> = UseAsyncResult<T, TArgs>;
 
 type AsyncStatus = 'idle' | 'loading' | 'success' | 'error';
 
@@ -56,10 +56,10 @@ type AsyncStatus = 'idle' | 'loading' | 'success' | 'error';
  * }
  * ```
  */
-export function useAsync<T>(
-    asyncFn: (...args: any[]) => Promise<T>,
-    optionsOrDeps?: UseAsyncOptions<T> | any[],
-): UseAsyncResult<T> {
+export function useAsync<T, TArgs extends unknown[] = unknown[]>(
+    asyncFn: (...args: TArgs) => Promise<T>,
+    optionsOrDeps?: UseAsyncOptions<T> | unknown[],
+): UseAsyncResult<T, TArgs> {
     const isDeps = Array.isArray(optionsOrDeps);
     const deps = isDeps ? optionsOrDeps : undefined;
     const options: UseAsyncOptions<T> = isDeps ? {} : (optionsOrDeps ?? {});
@@ -87,8 +87,9 @@ export function useAsync<T>(
     }, []);
 
     const execute = useCallback(
-        async (...args: any[]): Promise<T | null> => {
+        async (...args: TArgs): Promise<T | null> => {
             const version = ++versionRef.current;
+            setData(null);
             setStatus('loading');
             setError(null);
 
@@ -103,6 +104,7 @@ export function useAsync<T>(
             } catch (err) {
                 const errorObj = err instanceof Error ? err : new Error(String(err));
                 if (mountedRef.current && versionRef.current === version) {
+                    setData(null);
                     setError(errorObj);
                     setStatus('error');
                     optionsRef.current.onError?.(errorObj);
@@ -120,11 +122,11 @@ export function useAsync<T>(
         setError(null);
     }, [initialData]);
 
-    const refetch = useCallback(() => execute(), [execute]);
+    const refetch = useCallback(() => execute(...([] as unknown as TArgs)), [execute]);
 
     useEffect(() => {
         if (immediate) {
-            execute();
+            execute(...([] as unknown as TArgs));
         }
     }, deps ? [immediate, ...deps] : []);
 

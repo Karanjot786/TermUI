@@ -153,4 +153,54 @@ describe('useAsync', () => {
 
         destroyFiber(fiber);
     });
+
+    it('clears stale data during loading and error states on failed refetch', async () => {
+        const fiber = createFiber();
+        let shouldFail = false;
+        const asyncFn = vi.fn().mockImplementation(async () => {
+            if (shouldFail) {
+                throw new Error('Refetch failed');
+            }
+            return 'initial success data';
+        });
+
+        let res = renderWithFiber(fiber, () => useAsync(asyncFn, { immediate: false }));
+        await res.execute();
+
+        res = renderWithFiber(fiber, () => useAsync(asyncFn, { immediate: false }));
+        expect(res.isSuccess).toBe(true);
+        expect(res.data).toBe('initial success data');
+
+        shouldFail = true;
+        const failPromise = res.execute();
+
+        // While executing, stale data should be cleared to null
+        res = renderWithFiber(fiber, () => useAsync(asyncFn, { immediate: false }));
+        expect(res.isLoading).toBe(true);
+        expect(res.data).toBeNull();
+
+        await failPromise;
+
+        // After failure, state is error and data is null (not stale successful data)
+        res = renderWithFiber(fiber, () => useAsync(asyncFn, { immediate: false }));
+        expect(res.isError).toBe(true);
+        expect(res.error?.message).toBe('Refetch failed');
+        expect(res.data).toBeNull();
+
+        destroyFiber(fiber);
+    });
+
+    it('supports typed arguments in execute function', async () => {
+        const fiber = createFiber();
+        const asyncFn = vi.fn().mockImplementation(async (id: number, name: string) => `User #${id}: ${name}`);
+
+        let res = renderWithFiber(fiber, () => useAsync(asyncFn, { immediate: false }));
+        await res.execute(101, 'Alice');
+
+        res = renderWithFiber(fiber, () => useAsync(asyncFn, { immediate: false }));
+        expect(res.isSuccess).toBe(true);
+        expect(res.data).toBe('User #101: Alice');
+
+        destroyFiber(fiber);
+    });
 });
