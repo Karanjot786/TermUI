@@ -11,7 +11,8 @@ import {
   readFileSync,
   readdirSync,
   unlinkSync,
-  rmSync,
+  lstatSync,
+  rmdirSync,
 } from 'node:fs';
 import { getBuiltinThemeNames } from '@termuijs/tss';
 import { textPrompt, selectPrompt, multiSelectPrompt, confirmPrompt } from './prompts.js';
@@ -41,12 +42,15 @@ const packageVersion = JSON.parse(
 ).version as string;
 
 const FEATURES = ['Screen Router', 'Data Providers', 'Hot Reload'];
+const report = (message = ''): void => {
+  process.stdout.write(`${message}\n`);
+};
 
 export async function runCli(argv: string[]): Promise<void> {
   const args = parseArgs(argv);
 
   if (args.version) {
-    console.log(packageVersion);
+    report(packageVersion);
     return;
   }
 
@@ -64,12 +68,12 @@ export async function runCli(argv: string[]): Promise<void> {
 }
 
 async function runProjectScaffold(args: CliArgs): Promise<void> {
-  console.log();
-  console.log('  ┌──────────────────────────────────┐');
-  console.log('  │       create-termui-app           │');
-  console.log('  │   The React/Next.js for CLI apps  │');
-  console.log('  └──────────────────────────────────┘');
-  console.log();
+  report();
+  report('  ┌──────────────────────────────────┐');
+  report('  │       create-termui-app           │');
+  report('  │   The React/Next.js for CLI apps  │');
+  report('  └──────────────────────────────────┘');
+  report();
 
   const nonInteractive = isNonInteractive(args);
 
@@ -131,7 +135,7 @@ async function runProjectScaffold(args: CliArgs): Promise<void> {
   const projectDir = resolve(process.cwd(), projectName);
   if (existsSync(projectDir) && isNonEmptyDirectory(projectDir)) {
     if (args.force) {
-      console.log(`\n  ⚠  Directory "${projectName}" is not empty. Overwriting with --force.\n`);
+      report(`\n  ⚠  Directory "${projectName}" is not empty. Overwriting with --force.\n`);
     } else if (nonInteractive) {
       throw new Error(
         `Directory "${projectName}" is not empty. Re-run with --force to overwrite.`,
@@ -142,27 +146,27 @@ async function runProjectScaffold(args: CliArgs): Promise<void> {
         false,
       );
       if (!overwrite) {
-        console.log('\n  Aborted. Existing files were left unchanged.\n');
+        report('\n  Aborted. Existing files were left unchanged.\n');
         return;
       }
     }
   }
 
-  console.log(`\n  Creating ${projectName}...`);
+  report(`\n  Creating ${projectName}...`);
 
   const files = generateProject(config);
   writeProjectFiles(projectDir, files);
 
-  console.log();
-  console.log('  ┌──────────────────────────────────┐');
-  console.log('  │  ✅ Project created successfully!  │');
-  console.log('  └──────────────────────────────────┘');
-  console.log();
-  console.log(`  Next steps:`);
-  console.log(`    cd ${projectName}`);
-  console.log(`    bun install`);
-  console.log(`    bun run dev`);
-  console.log();
+  report();
+  report('  ┌──────────────────────────────────┐');
+  report('  │  ✅ Project created successfully!  │');
+  report('  └──────────────────────────────────┘');
+  report();
+  report('  Next steps:');
+  report(`    cd ${projectName}`);
+  report('    bun install');
+  report('    bun run dev');
+  report();
 }
 
 function isNonEmptyDirectory(dir: string): boolean {
@@ -173,32 +177,86 @@ function isNonEmptyDirectory(dir: string): boolean {
   }
 }
 
+function assertNoSymbolicLinks(projectDir: string, targetPath: string): void {
+  let current = targetPath;
+
+  while (true) {
+    if (existsSync(current) && lstatSync(current).isSymbolicLink()) {
+      throw new Error(`Refusing to write through symbolic link: ${current}`);
+    }
+    if (current === projectDir) return;
+
+    const parent = dirname(current);
+    if (parent === current) return;
+    current = parent;
+  }
+}
+
+function createDirectories(
+  projectDir: string,
+  dir: string,
+  createdDirectories: string[],
+): void {
+  const missing: string[] = [];
+  let current = dir;
+
+  while (!existsSync(current)) {
+    missing.push(current);
+    if (current === projectDir) break;
+    current = dirname(current);
+  }
+
+  if (existsSync(current)) {
+    const entry = lstatSync(current);
+    if (entry.isSymbolicLink() || !entry.isDirectory()) {
+      throw new Error(`Refusing to create files below non-directory path: ${current}`);
+    }
+  }
+
+  for (const path of missing.reverse()) {
+    try {
+      mkdirSync(path);
+      createdDirectories.push(path);
+    } catch (error) {
+      // Another process may have created the directory after the existence check.
+      if (!existsSync(path)) throw error;
+      const entry = lstatSync(path);
+      if (entry.isSymbolicLink() || !entry.isDirectory()) throw error;
+    }
+  }
+}
+
 function writeProjectFiles(
   projectDir: string,
   files: Array<{ path: string; content: string }>,
 ): void {
-  const projectDirExisted = existsSync(projectDir);
-  const backups = new Map<string, string | null>();
-  const written: string[] = [];
+  const backups = new Map<string, Buffer | null>();
+  const attemptedWrites: string[] = [];
+  const attemptedPaths = new Set<string>();
+  const createdDirectories: string[] = [];
 
   try {
+    assertNoSymbolicLinks(projectDir, projectDir);
+
     for (const file of files) {
       const fullPath = join(projectDir, file.path);
       const dir = dirname(fullPath);
 
-      if (existsSync(fullPath)) {
-        backups.set(fullPath, readFileSync(fullPath, 'utf-8'));
-      } else {
-        backups.set(fullPath, null);
+      assertNoSymbolicLinks(projectDir, fullPath);
+      if (!backups.has(fullPath)) {
+        backups.set(fullPath, existsSync(fullPath) ? readFileSync(fullPath) : null);
       }
 
-      mkdirSync(dir, { recursive: true });
+      createDirectories(projectDir, dir, createdDirectories);
+      if (!attemptedPaths.has(fullPath)) {
+        attemptedPaths.add(fullPath);
+        attemptedWrites.push(fullPath);
+      }
       writeFileSync(fullPath, file.content, 'utf-8');
-      written.push(fullPath);
-      console.log(`    ✓ ${file.path}`);
+      report(`    ✓ ${file.path}`);
     }
   } catch (error) {
-    for (const path of written.reverse()) {
+    for (const path of attemptedWrites.reverse()) {
       const previous = backups.get(path);
       if (previous === null || previous === undefined) {
         try {
@@ -208,18 +266,20 @@ function writeProjectFiles(
         }
       } else {
         try {
-          writeFileSync(path, previous, 'utf-8');
+          writeFileSync(path, previous);
         } catch {
           // Best-effort restore of overwritten content.
         }
       }
     }
 
-    if (!projectDirExisted && existsSync(projectDir)) {
+    for (const path of createdDirectories.reverse()) {
       try {
-        rmSync(projectDir, { recursive: true, force: true });
+        // Only empty directories created by this invocation are removed. Any
+        // concurrent content makes rmdirSync fail and is preserved.
+        rmdirSync(path);
       } catch {
-        // Ignore cleanup failures after rollback.
+        // Best-effort rollback of directories created by this invocation.
       }
     }
 
@@ -233,5 +293,4 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   });
 }
-
 
