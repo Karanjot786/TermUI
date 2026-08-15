@@ -1,13 +1,32 @@
-// CommandPalette — fuzzy-search command launcher
+// CommandPalette — fuzzy-search command launcher with favorites and recents
 import { Widget } from '@termuijs/widgets';
 import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars, caps, splitGraphemes } from '@termuijs/core';
 
 export interface Command { id: string; label: string; shortcut?: string; action: () => void; category?: string; }
-export interface CommandPaletteOptions { placeholder?: string; borderColor?: Style['fg']; activeColor?: Style['fg']; maxVisible?: number; }
+export interface CommandPaletteOptions {
+    placeholder?: string;
+    borderColor?: Style['fg'];
+    activeColor?: Style['fg'];
+    maxVisible?: number;
+    /** Initial set of favorite command IDs. */
+    favorites?: Iterable<string>;
+    /** Maximum number of recent commands tracked. Default: 5. */
+    recentLimit?: number;
+    /** Label for the favorites section header. Default: 'Favorites'. */
+    favoritesLabel?: string;
+    /** Label for the recent commands section header. Default: 'Recent'. */
+    recentLabel?: string;
+}
+
+interface CommandSection {
+    title: string;
+    commands: Command[];
+}
 
 export class CommandPalette extends Widget {
     private _commands: Command[];
     private _filtered: Command[] = [];
+    private _sections: CommandSection[] = [];
     private _query = '';
     private _cursorPos = 0;
     private _selectedIndex = 0;
@@ -16,20 +35,29 @@ export class CommandPalette extends Widget {
     private _borderColor: Style['fg'];
     private _activeColor: Style['fg'];
     private _maxVisible: number;
+    private _favorites: string[];
+    private _recent: string[] = [];
+    private _recentLimit: number;
+    private _favoritesLabel: string;
+    private _recentLabel: string;
     focusable = true;
 
     constructor(commands: Command[], options: CommandPaletteOptions = {}) {
         super(mergeStyles(defaultStyle(), {}));
         this._commands = commands;
-        this._filtered = [...commands];
         this._placeholder = options.placeholder ?? 'Type a command...';
         this._borderColor = options.borderColor ?? { type: 'named', name: 'cyan' };
         this._activeColor = options.activeColor ?? { type: 'named', name: 'cyan' };
         this._maxVisible = options.maxVisible ?? 10;
+        this._favorites = options.favorites ? [...options.favorites] : [];
+        this._recentLimit = options.recentLimit ?? 5;
+        this._favoritesLabel = options.favoritesLabel ?? 'Favorites';
+        this._recentLabel = options.recentLabel ?? 'Recent';
+        this._filter();
     }
 
     get visible(): boolean { return this._visible; }
-    show(): void { this._visible = true; this._query = ''; this._cursorPos = 0; this._selectedIndex = 0; this._filtered = [...this._commands]; this.markDirty(); }
+    show(): void { this._visible = true; this._query = ''; this._cursorPos = 0; this._selectedIndex = 0; this._filter(); this.markDirty(); }
     hide(): void { this._visible = false; this.markDirty(); }
     toggle(): void { this._visible ? this.hide() : this.show(); }
     insertChar(ch: string): void {
@@ -52,7 +80,58 @@ export class CommandPalette extends Widget {
     }
     selectNext(): void { if (this._selectedIndex < this._filtered.length - 1) { this._selectedIndex++; this.markDirty(); } }
     selectPrev(): void { if (this._selectedIndex > 0) { this._selectedIndex--; this.markDirty(); } }
-    confirm(): void { const c = this._filtered[this._selectedIndex]; if (c) { this.hide(); c.action(); } }
+    confirm(): void { const c = this._filtered[this._selectedIndex]; if (c) { this._recordRecent(c.id); this.hide(); c.action(); } }
+
+    // ─── Favorites ──────────────────────────────────────
+
+    /** Returns a copy of the favorite command IDs in toggle order. */
+    getFavorites(): string[] { return [...this._favorites]; }
+    /** True when the command with the given id is a favorite. */
+    isFavorite(id: string): boolean { return this._favorites.includes(id); }
+    /** Add a command id to favorites. No-op if already present. */
+    addFavorite(id: string): void {
+        if (!this._favorites.includes(id)) {
+            this._favorites.push(id);
+            this._filter();
+            this.markDirty();
+        }
+    }
+    /** Remove a command id from favorites. No-op if not present. */
+    removeFavorite(id: string): void {
+        const i = this._favorites.indexOf(id);
+        if (i >= 0) {
+            this._favorites.splice(i, 1);
+            this._filter();
+            this.markDirty();
+        }
+    }
+    /** Toggle the favorite state of a command id. */
+    toggleFavorite(id: string): void {
+        const i = this._favorites.indexOf(id);
+        if (i >= 0) this._favorites.splice(i, 1);
+        else this._favorites.push(id);
+        this._filter();
+        this.markDirty();
+    }
+
+    // ─── Recent commands ────────────────────────────────
+
+    /** Returns a copy of recent command IDs, most-recent first. */
+    getRecent(): string[] { return [...this._recent]; }
+    /** Clears the recent commands history. */
+    clearRecent(): void {
+        if (this._recent.length === 0) return;
+        this._recent = [];
+        this._filter();
+        this.markDirty();
+    }
+
+    private _recordRecent(id: string): void {
+        const i = this._recent.indexOf(id);
+        if (i >= 0) this._recent.splice(i, 1);
+        this._recent.unshift(id);
+        if (this._recent.length > this._recentLimit) this._recent.length = this._recentLimit;
+    }
 
     /**
      * Handle a KeyEvent from @termuijs/core.
@@ -68,6 +147,7 @@ export class CommandPalette extends Widget {
      *   Enter           — confirm selected command
      *   Escape          — close
      *   Backspace       — delete last character
+     *   Ctrl+F          — toggle favorite on selected command
      *   any printable   — append character to query
      *
      * Ctrl+P is also handled while hidden so the palette can be opened.
@@ -89,6 +169,13 @@ export class CommandPalette extends Widget {
         if (key === 'escape' || (ctrl && key === 'c')) {
             event.stopPropagation();
             this.hide();
+            return;
+        }
+
+        if (ctrl && key === 'f') {
+            event.stopPropagation();
+            const c = this._filtered[this._selectedIndex];
+            if (c) this.toggleFavorite(c.id);
             return;
         }
 
@@ -124,13 +211,50 @@ export class CommandPalette extends Widget {
         }
     }
 
+    private _groupByCategory(commands: Command[]): CommandSection[] {
+        const grouped = new Map<string, Command[]>();
+        for (const cmd of commands) {
+            const category = cmd.category ?? 'General';
+            if (!grouped.has(category)) {
+                grouped.set(category, []);
+            }
+            grouped.get(category)!.push(cmd);
+        }
+        const sections: CommandSection[] = [];
+        for (const [category, cmds] of grouped) {
+            sections.push({ title: category, commands: cmds });
+        }
+        return sections;
+    }
+
     private _filter(): void {
         const q = this._query.toLowerCase();
-        if (!q) { this._filtered = [...this._commands]; } else {
-            this._filtered = this._commands.filter(c => { 
+        this._sections = [];
+        if (!q) {
+            // Favorites first
+            const favSet = new Set(this._favorites);
+            const favCmds = this._favorites
+                .map((id) => this._commands.find((c) => c.id === id))
+                .filter((c): c is Command => !!c);
+            if (favCmds.length) this._sections.push({ title: this._favoritesLabel, commands: favCmds });
+
+            // Recent next (excluding favorites so items aren't duplicated)
+            const recCmds = this._recent
+                .map((id) => this._commands.find((c) => c.id === id))
+                .filter((c): c is Command => !!c && !favSet.has(c.id));
+            if (recCmds.length) this._sections.push({ title: this._recentLabel, commands: recCmds });
+
+            // Remaining commands grouped by category
+            const rest = this._commands.filter((c) => !favSet.has(c.id) && !this._recent.includes(c.id));
+            this._sections.push(...this._groupByCategory(rest));
+        } else {
+            const filtered = this._commands.filter((c) => {
                 const l =
-    `${c.label} ${c.category ?? ''}`.toLowerCase(); let qi = 0; for (let i = 0; i < l.length && qi < q.length; i++) { if (l[i] === q[qi]) qi++; } return qi === q.length; });
+                    `${c.label} ${c.category ?? ''}`.toLowerCase(); let qi = 0; for (let i = 0; i < l.length && qi < q.length; i++) { if (l[i] === q[qi]) qi++; } return qi === q.length;
+            });
+            this._sections = this._groupByCategory(filtered);
         }
+        this._filtered = this._sections.flatMap((s) => s.commands);
         this._selectedIndex = 0;
     }
 
@@ -142,17 +266,19 @@ export class CommandPalette extends Widget {
         const backdropCh = caps.unicode ? '░' : ' ';
         for (let r = 0; r < height; r++) screen.writeString(x, y + r, backdropCh.repeat(width), { ...attrs, dim: true });
         // Box
-        const vis = this._filtered.slice(0, this._maxVisible);
-        const grouped = new Map<string, Command[]>();
-        for (const cmd of vis) {
-            const category = cmd.category ?? 'General';
-            if (!grouped.has(category)) {
-                grouped.set(category, []);
-            }
-            grouped.get(category)!.push(cmd);
-        }
         const bw = Math.min(60, width - 4);
-        const totalVisRows = grouped.size + vis.length;
+
+        // Build the visible sections, capping command rows at maxVisible.
+        let remaining = this._maxVisible;
+        const sectionsToRender: CommandSection[] = [];
+        for (const sec of this._sections) {
+            if (remaining <= 0) break;
+            const take = Math.min(sec.commands.length, remaining);
+            sectionsToRender.push({ title: sec.title, commands: sec.commands.slice(0, take) });
+            remaining -= take;
+        }
+
+        const totalVisRows = sectionsToRender.reduce((n, s) => n + 1 + s.commands.length, 0);
         const bh = Math.min(totalVisRows + 3, height - 2);
         const bx = x + Math.floor((width - bw) / 2);
         const by = y + 2;
@@ -170,39 +296,41 @@ export class CommandPalette extends Widget {
         screen.writeString(bx, by + 2, border.left + '─'.repeat(bw - 2) + border.right, ba);
         // Items
         let rowOffset = 0;
+        let flatIndex = 0;
 
-for (const [category, commands] of grouped) {
-    screen.writeString(
-        bx + 1,
-        by + 3 + rowOffset,
-        `[${category}]`,
-        { ...attrs, bold: true }
-    );
+        for (const section of sectionsToRender) {
+            screen.writeString(
+                bx + 1,
+                by + 3 + rowOffset,
+                `[${section.title}]`,
+                { ...attrs, bold: true }
+            );
+            rowOffset++;
 
-    rowOffset++;
+            for (const c of section.commands) {
+                const active = flatIndex === this._selectedIndex;
 
-    for (const c of commands) {
-        const active = rowOffset - 1 === this._selectedIndex;
+                const prefix = active ? (caps.unicode ? '❯ ' : '> ') : '  ';
+                const favMark = this.isFavorite(c.id) ? (caps.unicode ? ' ★' : ' *') : '';
+                const shortcutStr = c.shortcut ? `  ${c.shortcut}` : '';
+                const labelFull = prefix + c.label + shortcutStr + favMark;
+                const label = labelFull.slice(0, bw - 4).padEnd(bw - 4);
 
-        const prefix = active ? (caps.unicode ? '❯ ' : '> ') : '  ';
-        const shortcutStr = c.shortcut ? `  ${c.shortcut}` : '';
-        const labelFull = prefix + c.label + shortcutStr;
-        const label = labelFull.slice(0, bw - 4).padEnd(bw - 4);
+                screen.writeString(
+                    bx + 1,
+                    by + 3 + rowOffset,
+                    label,
+                    {
+                        ...attrs,
+                        fg: active ? this._activeColor : attrs.fg,
+                        bold: active,
+                    }
+                );
 
-        screen.writeString(
-            bx + 1,
-            by + 3 + rowOffset,
-            label,
-            {
-                ...attrs,
-                fg: active ? this._activeColor : attrs.fg,
-                bold: active,
+                rowOffset++;
+                flatIndex++;
             }
-        );
-
-        rowOffset++;
-    }
-}
+        }
         // Bottom
         const last = Math.min(by + 3 + totalVisRows, by + bh - 1);
         screen.writeString(bx, last, border.bottomLeft + border.bottom.repeat(bw - 2) + border.bottomRight, ba);

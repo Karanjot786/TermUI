@@ -21,6 +21,8 @@ export interface Command {
     label: string;
     description?: string;
     action: () => void;
+    /** Optional category used to group commands under a header. */
+    category?: string;
 }
 
 export interface CommandPaletteOptions {
@@ -201,7 +203,6 @@ export class CommandPalette extends Widget {
         if (width <= 0 || height <= 0) return;
 
         const attrs = styleToCellAttrs(this._style);
-        const maxVisible = this._options.maxVisible ?? 8;
         const placeholder = this._options.placeholder ?? 'Type to search...';
 
         // ── Row 0: query line ──────────────────────────
@@ -218,68 +219,94 @@ export class CommandPalette extends Widget {
             screen.setCell(x + c, y, { char: ' ', ...attrs });
         }
 
-        // ── Rows 1..N: command list ────────────────────
+        // ── Rows 1..N: command list, grouped by category ─
         const listStartRow = 1;
         const listHeight = height - listStartRow;
-        const visibleCount = Math.min(this._filtered.length, maxVisible, listHeight);
 
-        for (let i = 0; i < visibleCount; i++) {
-            const cmd = this._filtered[i];
-            const isSelected = i === this._selectedIndex;
-            const rowY = y + listStartRow + i;
+        // Group filtered commands by category, preserving filter order.
+        const sections: { title: string; commands: Command[] }[] = [];
+        const indexByCategory = new Map<string, number>();
+        for (const cmd of this._filtered) {
+            const title = cmd.category ?? 'General';
+            let idx = indexByCategory.get(title);
+            if (idx === undefined) {
+                idx = sections.length;
+                indexByCategory.set(title, idx);
+                sections.push({ title, commands: [] });
+            }
+            sections[idx].commands.push(cmd);
+        }
 
-            // Compose left part: prefix + label
-            const rowPrefix = isSelected ? '▸ ' : '  ';
-            const labelPart = rowPrefix + cmd.label;
+        let rowY = y + listStartRow;
+        let flatIndex = 0;
 
-            // Compose right part: description (dim, right-aligned)
-            const desc = cmd.description ?? '';
-            const descWidth = stringWidth(desc);
+        for (const section of sections) {
+            if (section.commands.length === 0) continue;
+            if (rowY >= y + listHeight) break;
 
-            // Available width for label (leave room for desc if it fits)
-            const gap = 1; // minimum space between label and desc
-            const labelMaxWidth = desc
-                ? Math.max(0, width - descWidth - gap)
-                : width;
+            // Category header
+            screen.writeString(x, rowY, truncate(`[${section.title}]`, width), { ...attrs, bold: true, dim: true });
+            rowY++;
 
-            const labelTruncated = truncate(labelPart, labelMaxWidth);
-            const labelWidth = stringWidth(labelTruncated);
+            for (const cmd of section.commands) {
+                if (rowY >= y + listHeight) break;
+                const isSelected = flatIndex === this._selectedIndex;
 
-            // Cell style for the row
-            const cellStyle = {
-                ...attrs,
-                bold: isSelected,
-                inverse: isSelected,
-            };
-            const dimStyle = {
-                ...attrs,
-                dim: true,
-                inverse: isSelected,
-            };
+                // Compose left part: prefix + label
+                const rowPrefix = isSelected ? '▸ ' : '  ';
+                const labelPart = rowPrefix + cmd.label;
 
-            // Write label
-            screen.writeString(x, rowY, labelTruncated, cellStyle);
+                // Compose right part: description (dim, right-aligned)
+                const desc = cmd.description ?? '';
+                const descWidth = stringWidth(desc);
 
-            // Fill gap between label and description
-            if (desc) {
-                const descX = x + width - descWidth;
-                // Fill blank between label end and desc start
-                for (let c = x + labelWidth; c < descX; c++) {
-                    screen.setCell(c, rowY, { char: ' ', ...cellStyle });
+                // Available width for label (leave room for desc if it fits)
+                const gap = 1; // minimum space between label and desc
+                const labelMaxWidth = desc
+                    ? Math.max(0, width - descWidth - gap)
+                    : width;
+
+                const labelTruncated = truncate(labelPart, labelMaxWidth);
+                const labelWidth = stringWidth(labelTruncated);
+
+                // Cell style for the row
+                const cellStyle = {
+                    ...attrs,
+                    bold: isSelected,
+                    inverse: isSelected,
+                };
+                const dimStyle = {
+                    ...attrs,
+                    dim: true,
+                    inverse: isSelected,
+                };
+
+                // Write label
+                screen.writeString(x, rowY, labelTruncated, cellStyle);
+
+                // Fill gap between label and description
+                if (desc) {
+                    const descX = x + width - descWidth;
+                    // Fill blank between label end and desc start
+                    for (let c = x + labelWidth; c < descX; c++) {
+                        screen.setCell(c, rowY, { char: ' ', ...cellStyle });
+                    }
+                    // Write description (right-aligned, dim)
+                    screen.writeString(descX, rowY, desc, dimStyle);
+                } else {
+                    // Fill remainder of row for inverse highlight
+                    for (let c = x + labelWidth; c < x + width; c++) {
+                        screen.setCell(c, rowY, { char: ' ', ...cellStyle });
+                    }
                 }
-                // Write description (right-aligned, dim)
-                screen.writeString(descX, rowY, desc, dimStyle);
-            } else {
-                // Fill remainder of row for inverse highlight
-                for (let c = x + labelWidth; c < x + width; c++) {
-                    screen.setCell(c, rowY, { char: ' ', ...cellStyle });
-                }
+
+                rowY++;
+                flatIndex++;
             }
         }
 
         // Clear any rows below the visible commands (in case widget was larger)
-        for (let i = visibleCount; i < listHeight; i++) {
-            const rowY = y + listStartRow + i;
+        for (; rowY < y + listHeight; rowY++) {
             for (let c = 0; c < width; c++) {
                 screen.setCell(x + c, rowY, { char: ' ', ...attrs });
             }

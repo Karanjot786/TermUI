@@ -1054,4 +1054,244 @@ describe('CommandPalette', () => {
             expect((cmds[0]!.action as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callCount);
         });
     });
+
+    // ── 33. Favorites ──────────────────────────────────
+
+    describe('favorites', () => {
+        it('starts with no favorites by default', () => {
+            const palette = new CommandPalette(makeCommands());
+            expect(palette.getFavorites()).toEqual([]);
+        });
+
+        it('accepts initial favorites via options', () => {
+            const palette = new CommandPalette(makeCommands(), { favorites: ['open', 'settings'] });
+            expect(palette.getFavorites()).toEqual(['open', 'settings']);
+            expect(palette.isFavorite('open')).toBe(true);
+            expect(palette.isFavorite('close')).toBe(false);
+        });
+
+        it('addFavorite adds an id and reports it', () => {
+            const palette = new CommandPalette(makeCommands());
+            palette.addFavorite('open');
+            expect(palette.isFavorite('open')).toBe(true);
+            expect(palette.getFavorites()).toEqual(['open']);
+        });
+
+        it('addFavorite is a no-op when already present', () => {
+            const palette = new CommandPalette(makeCommands(), { favorites: ['open'] });
+            palette.addFavorite('open');
+            expect(palette.getFavorites()).toEqual(['open']);
+        });
+
+        it('removeFavorite removes an id', () => {
+            const palette = new CommandPalette(makeCommands(), { favorites: ['open'] });
+            palette.removeFavorite('open');
+            expect(palette.isFavorite('open')).toBe(false);
+            expect(palette.getFavorites()).toEqual([]);
+        });
+
+        it('removeFavorite is a no-op when not present', () => {
+            const palette = new CommandPalette(makeCommands());
+            palette.removeFavorite('open');
+            expect(palette.getFavorites()).toEqual([]);
+        });
+
+        it('toggleFavorite adds then removes the same id', () => {
+            const palette = new CommandPalette(makeCommands());
+            palette.toggleFavorite('open');
+            expect(palette.isFavorite('open')).toBe(true);
+            palette.toggleFavorite('open');
+            expect(palette.isFavorite('open')).toBe(false);
+        });
+
+        it('getFavorites returns a copy, not the internal array', () => {
+            const palette = new CommandPalette(makeCommands(), { favorites: ['open'] });
+            const favs = palette.getFavorites();
+            favs.push('close');
+            expect(palette.getFavorites()).toEqual(['open']);
+        });
+
+        it('marks dirty when toggling a favorite', () => {
+            const palette = new CommandPalette(makeCommands());
+            const spy = vi.spyOn(palette as any, 'markDirty');
+            palette.toggleFavorite('open');
+            expect(spy).toHaveBeenCalled();
+        });
+
+        it('renders a Favorites section header when favorites exist', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const palette = new CommandPalette(makeCommands(), { favorites: ['open'] });
+            palette.show();
+            const text = allText(renderPalette(palette));
+            expect(text).toContain('Favorites');
+            expect(text).toContain('Open File');
+        });
+
+        it('does not duplicate a favorited command in its category section', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const cmds: Command[] = [
+                { id: 'open', label: 'Open File', category: 'File', action: vi.fn() },
+                { id: 'close', label: 'Close File', category: 'File', action: vi.fn() },
+            ];
+            const palette = new CommandPalette(cmds, { favorites: ['open'] });
+            palette.show();
+            const text = allText(renderPalette(palette));
+            const occurrences = text.split('Open File').length - 1;
+            expect(occurrences).toBe(1);
+        });
+
+        it('Ctrl+F toggles the favorite state of the selected command', () => {
+            const palette = new CommandPalette(makeCommands());
+            palette.show();
+            const ev = makeKey('f', { ctrl: true });
+            palette.handleKey(ev as any);
+            expect(ev._propagationStopped).toBe(true);
+            expect(palette.isFavorite('open')).toBe(true);
+        });
+
+        it('Ctrl+F toggles off an already-favorited selected command', () => {
+            const palette = new CommandPalette(makeCommands(), { favorites: ['open'] });
+            palette.show();
+            palette.handleKey(makeKey('f', { ctrl: true }) as any);
+            expect(palette.isFavorite('open')).toBe(false);
+        });
+    });
+
+    // ── 34. Recent Commands ────────────────────────────
+
+    describe('recent commands', () => {
+        it('starts with an empty recent list', () => {
+            const palette = new CommandPalette(makeCommands());
+            expect(palette.getRecent()).toEqual([]);
+        });
+
+        it('records a command after it is confirmed', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette(cmds);
+            palette.show();
+            palette.handleKey(makeKey('enter') as any); // executes 'open'
+            expect(palette.getRecent()).toEqual(['open']);
+            expect(cmds[0]!.action).toHaveBeenCalledTimes(1);
+        });
+
+        it('orders recents most-recent-first', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette(cmds);
+            palette.show();
+            palette.handleKey(makeKey('enter') as any); // open
+            palette.show();
+            palette.handleKey(makeKey('down') as any); // -> close
+            palette.handleKey(makeKey('enter') as any); // close
+            expect(palette.getRecent()).toEqual(['close', 'open']);
+        });
+
+        it('moves an already-recent command back to the front', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette(cmds);
+            palette.show();
+            palette.handleKey(makeKey('enter') as any); // open
+            palette.show();
+            palette.handleKey(makeKey('down') as any);
+            palette.handleKey(makeKey('enter') as any); // close
+            palette.show();
+            palette.handleKey(makeKey('enter') as any); // open again
+            expect(palette.getRecent()).toEqual(['open', 'close']);
+        });
+
+        it('respects the recentLimit option', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette(cmds, { recentLimit: 2 });
+            // Execute all three in order
+            palette.show(); palette.handleKey(makeKey('enter') as any); // open
+            palette.show(); palette.handleKey(makeKey('down') as any); palette.handleKey(makeKey('enter') as any); // close
+            palette.show(); palette.handleKey(makeKey('down') as any); palette.handleKey(makeKey('down') as any); palette.handleKey(makeKey('enter') as any); // settings
+            expect(palette.getRecent()).toEqual(['settings', 'close']);
+        });
+
+        it('clears the recent list', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette(cmds);
+            palette.show();
+            palette.handleKey(makeKey('enter') as any);
+            expect(palette.getRecent()).toHaveLength(1);
+            palette.clearRecent();
+            expect(palette.getRecent()).toEqual([]);
+        });
+
+        it('does not record anything when confirming with no results', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette(cmds);
+            palette.show();
+            for (const ch of 'zzzz') palette.insertChar(ch);
+            palette.handleKey(makeKey('enter') as any);
+            expect(palette.getRecent()).toEqual([]);
+        });
+
+        it('renders a Recent section when recents exist', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const cmds = makeCommands();
+            const palette = new CommandPalette(cmds);
+            palette.show();
+            palette.handleKey(makeKey('enter') as any); // record 'open'
+            palette.show();
+            const text = allText(renderPalette(palette));
+            expect(text).toContain('Recent');
+            expect(text).toContain('Open File');
+        });
+
+        it('getRecent returns a copy, not the internal array', () => {
+            const cmds = makeCommands();
+            const palette = new CommandPalette(cmds);
+            palette.show();
+            palette.handleKey(makeKey('enter') as any);
+            const rec = palette.getRecent();
+            rec.push('close');
+            expect(palette.getRecent()).toEqual(['open']);
+        });
+    });
+
+    // ── 35. Favorites + Recent + Category integration ──
+
+    describe('favorites, recent, and categories together', () => {
+        it('shows Favorites above Recent above categories when query is empty', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const cmds: Command[] = [
+                { id: 'open', label: 'Open File', category: 'File', action: vi.fn() },
+                { id: 'save', label: 'Save File', category: 'File', action: vi.fn() },
+                { id: 'theme', label: 'Toggle Theme', category: 'View', action: vi.fn() },
+            ];
+            const palette = new CommandPalette(cmds, { favorites: ['save'] });
+            palette.show();
+            // Execute 'open' so it appears in Recent
+            palette.handleKey(makeKey('enter') as any);
+            palette.show();
+            const text = allText(renderPalette(palette));
+            expect(text).toContain('Favorites');
+            expect(text).toContain('Recent');
+            expect(text).toContain('File');
+            const favIdx = text.indexOf('Favorites');
+            const recIdx = text.indexOf('Recent');
+            const fileIdx = text.indexOf('File');
+            expect(favIdx).toBeLessThan(recIdx);
+            expect(recIdx).toBeLessThan(fileIdx);
+        });
+
+        it('query mode hides Favorites/Recent and shows only matches grouped by category', () => {
+            vi.spyOn(caps, 'unicode', 'get').mockReturnValue(true);
+            const cmds: Command[] = [
+                { id: 'open', label: 'Open File', category: 'File', action: vi.fn() },
+                { id: 'save', label: 'Save File', category: 'File', action: vi.fn() },
+                { id: 'theme', label: 'Toggle Theme', category: 'View', action: vi.fn() },
+            ];
+            const palette = new CommandPalette(cmds, { favorites: ['save'] });
+            palette.show();
+            palette.handleKey(makeKey('enter') as any); // record recent
+            palette.show();
+            palette.insertChar('o'); // fuzzy: 'Open File'
+            const text = allText(renderPalette(palette));
+            expect(text).not.toContain('Favorites');
+            expect(text).not.toContain('Recent');
+            expect(text).toContain('Open File');
+        });
+    });
 });
