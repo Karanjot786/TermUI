@@ -410,16 +410,19 @@ function renderComponent(
         const existing = parentFiber._prevChildFibers.get(identityKey);
         if (existing && existing.component === component) {
             fiber = existing.fiber;
+            fiber.componentName = componentName;
             // Transfer to current render's childFibers
             parentFiber.childFibers!.set(identityKey, { fiber, component });
         } else {
             // Different component at this position — destroy old, create new
             if (existing) destroyFiber(existing.fiber);
             fiber = createFiber(parentFiber);
+            fiber.componentName = componentName;
             parentFiber.childFibers!.set(identityKey, { fiber, component });
         }
     } else {
         fiber = createFiber(parentFiber);
+        fiber.componentName = componentName;
         if (parentFiber?.childFibers) {
             parentFiber.childFibers.set(identityKey, { fiber, component });
         }

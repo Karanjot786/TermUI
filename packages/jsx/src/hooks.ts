@@ -50,6 +50,7 @@ export interface Fiber {
     // ── Portal tracking ──
     /** Widgets created via createPortal and their target, for proper teardown */
     portalChildren?: Array<{ widgets: Widget[]; target: Widget }>;
+    componentName?: string;
 }
 
 interface HookState {
@@ -332,11 +333,23 @@ export interface KeyBinding {
  * ]);
  * ```
  */
+// ── Module-level registry: which fibers currently bind which key ──
+const _keymapOwners = new Map<string, Set<Fiber>>();
+
+function keymapLabel(key: string): string {
+    const [k, ctrl, alt, shift] = key.split('|');
+    const parts: string[] = [];
+    if (ctrl === 'true') parts.push('ctrl');
+    if (alt === 'true') parts.push('alt');
+    if (shift === 'true') parts.push('shift');
+    parts.push(k);
+    return parts.join('+');
+}
+
 export function useKeymap(bindings: KeyBinding[]): void {
     const fiber = currentFiber();
     const idx = fiber.hookIndex++;
 
-    // Dev-mode conflict detection on every render (moved outside the init block)
     if (process.env.NODE_ENV !== 'production') {
         const seen = new Map<string, KeyBinding>();
         for (const b of bindings) {
@@ -346,6 +359,45 @@ export function useKeymap(bindings: KeyBinding[]): void {
             }
             seen.set(key, b);
         }
+
+        const name = fiber.componentName ?? 'anon';
+        const prevKeys: Set<string> = (fiber as any)._keymapKeys ?? new Set();
+        const nextKeys = new Set(seen.keys());
+
+        for (const key of prevKeys) {
+            if (!nextKeys.has(key)) {
+                _keymapOwners.get(key)?.delete(fiber);
+            }
+        }
+
+        for (const key of nextKeys) {
+            let owners = _keymapOwners.get(key);
+            if (!owners) {
+                owners = new Set();
+                _keymapOwners.set(key, owners);
+            }
+            const others = [...owners].filter((f) => f !== fiber);
+            if (others.length > 0) {
+                const otherNames = others.map((f) => `<${f.componentName ?? 'anon'}>`).join(', ');
+                console.warn(
+                    `[TermUI] Keymap conflict: "${keymapLabel(key)}" is bound in both ${otherNames} and <${name}>. ` +
+                    `The most recently mounted binding takes priority.`
+                );
+            }
+            owners.add(fiber);
+        }
+
+        (fiber as any)._keymapKeys = nextKeys;
+
+        if (!(fiber as any)._keymapCleanupRegistered) {
+            (fiber as any)._keymapCleanupRegistered = true;
+            fiber.cleanups.push(() => {
+                const keys: Set<string> = (fiber as any)._keymapKeys ?? new Set();
+                for (const key of keys) {
+                    _keymapOwners.get(key)?.delete(fiber);
+                }
+            });
+        }
     }
 
     if (idx >= fiber.hooks.length) {
@@ -353,7 +405,6 @@ export function useKeymap(bindings: KeyBinding[]): void {
     } else {
         fiber.hooks[idx].value = bindings;
     }
-
     fiber.onInput = (event: KeyEvent) => {
         const currentBindings: KeyBinding[] = fiber.hooks[idx].value;
         for (const b of currentBindings) {
@@ -369,8 +420,6 @@ export function useKeymap(bindings: KeyBinding[]): void {
         }
     };
 }
-
-
 /**
  * useInsertBefore — register a persistent line above the inline viewport.
  * The line is added when the component mounts and removed on unmount or when
