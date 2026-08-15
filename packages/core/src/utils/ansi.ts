@@ -166,44 +166,92 @@ export function stripAnsiControl(str: string): string {
     return out;
 }
 
-// ── Clipboard ───────────────────────────────────────
+// ── Clipboard ──────────────────────────────────────────
+
+const TMUX_DCS_START = '\x1bPtmux;';
+const TMUX_DCS_END = '\x1b\\';
+const SCREEN_DCS_START = '\x1bP';
+const SCREEN_DCS_END = '\x1b\\';
+
+/**
+ * Wraps an OSC escape sequence for passthrough through tmux or GNU screen.
+ * Without this, multiplexers intercept and drop OSC 52 sequences instead
+ * of forwarding them to the underlying terminal.
+ */
+function wrapForMultiplexer(sequence: string): string {
+    if (process.env.TMUX) {
+        // tmux requires ESC bytes inside the payload to be doubled
+        const escaped = sequence.replace(/\x1b/g, '\x1b\x1b');
+        return `${TMUX_DCS_START}${escaped}${TMUX_DCS_END}`;
+    }
+    if (process.env.STY) {
+        // GNU screen: wrap in a Device Control String
+        return `${SCREEN_DCS_START}${sequence}${SCREEN_DCS_END}`;
+    }
+    return sequence;
+}
 
 /**
  * Write text to the system clipboard via OSC 52.
  * Supported by: xterm, iTerm2, Kitty, WezTerm, Alacritty, Windows Terminal.
+ * Automatically wraps the sequence for tmux/screen passthrough when detected.
  * @param text Plain text to copy to clipboard
  * @param stdout Target stream (default: process.stdout)
  */
 export function writeClipboard(text: string, stdout: NodeJS.WriteStream = process.stdout): void {
     const encoded = Buffer.from(text, 'utf8').toString('base64');
-    stdout.write(`${OSC}52;c;${encoded}\x07`);
+    const sequence = `${OSC}52;c;${encoded}\x07`;
+    stdout.write(wrapForMultiplexer(sequence));
 }
+
+export interface ReadClipboardOptions {
+    /** Milliseconds to wait for a terminal response before rejecting (default: 1000) */
+    timeoutMs?: number;
+}
+
+/**
+ * Read text from the system clipboard via OSC 52 query.
+ * Rejects if the terminal doesn't respond within `timeoutMs` (e.g. the
+ * terminal doesn't support OSC 52 queries), preventing an indefinite hang.
+ */
 export function readClipboard(
     stdin: NodeJS.ReadStream = process.stdin,
-    stdout: NodeJS.WriteStream = process.stdout
+    stdout: NodeJS.WriteStream = process.stdout,
+    options: ReadClipboardOptions = {}
 ): Promise<string> {
+    const timeoutMs = options.timeoutMs ?? 1000;
+
     return new Promise((resolve, reject) => {
+        let settled = false;
+
+        const cleanup = () => {
+            stdin.off('data', handler);
+            clearTimeout(timer);
+        };
+
+        const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            cleanup();
+            reject(new Error('readClipboard timed out: terminal did not respond to OSC 52 query'));
+        }, timeoutMs);
+
         const handler = (data: Buffer) => {
             const str = data.toString('utf8');
-
             const match = str.match(/\x1b\]52;c;([^\x07]+)\x07/);
-
             if (!match) return;
-
-            stdin.off('data', handler);
-
+            if (settled) return;
+            settled = true;
+            cleanup();
             try {
-                resolve(
-                    Buffer.from(match[1], 'base64').toString('utf8')
-                );
+                resolve(Buffer.from(match[1], 'base64').toString('utf8'));
             } catch (err) {
                 reject(err);
             }
         };
 
         stdin.on('data', handler);
-
-        stdout.write(`${OSC}52;c;?\x07`);
+        stdout.write(wrapForMultiplexer(`${OSC}52;c;?\x07`));
     });
 }
 
