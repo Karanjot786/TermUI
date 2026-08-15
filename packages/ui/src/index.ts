@@ -248,3 +248,11 @@ export type { WelcomeScreenOptions, KeymapHint } from './WelcomeScreen.js';
 export { SetupFlow } from './SetupFlow.js';
 export type { SetupFlowOptions, SetupStep } from './SetupFlow.js';
 
+export { ProgressTimeline } from './ProgressTimeline.js';
+export type {
+    TimelineStep,
+    TimelineStepStatus,
+    TimelineOrientation,
+    ProgressTimelineOptions,
+} from './ProgressTimeline.js';
+
