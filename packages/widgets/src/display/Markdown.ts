@@ -22,6 +22,9 @@ export interface MarkdownOptions {
  * - Unordered lists (- item)
  * - Ordered lists (1. item)
  * - Code fences (```lang)
+ * - Blockquotes (> text)
+ * - Tables (pipe-delimited)
+ * - Links ([text](url))
  */
 
 const segmenter = new Intl.Segmenter();
@@ -123,6 +126,69 @@ export class Markdown extends Widget {
         return lines.length + 2;
     }
 
+    private renderTable(
+        screen: Screen,
+        x: number,
+        y: number,
+        width: number,
+        headers: string[],
+        rows: string[][]
+    ): number {
+        const vl = caps.unicode ? '│' : '|';
+        const hl = caps.unicode ? '─' : '-';
+        const cross = caps.unicode ? '┼' : '+';
+        const tl = caps.unicode ? '┌' : '+';
+        const tr = caps.unicode ? '┐' : '+';
+        const bl = caps.unicode ? '└' : '+';
+        const br = caps.unicode ? '┘' : '+';
+
+        const colCount = headers.length;
+        const colWidths = headers.map(h => Math.max(stringWidth(h), 3));
+        const pad = 1;
+        const totalWidth = colCount * (colWidths.reduce((a, b) => a + b, 0) + (colCount - 1) * 3 + 2);
+
+        const renderRow = (cells: string[], isHeader: boolean): string => {
+            let row = vl + ' ';
+            for (let i = 0; i < colCount; i++) {
+                const cell = (cells[i] ?? '').slice(0, colWidths[i]);
+                const padded = cell.padEnd(colWidths[i]);
+                row += padded + ' ' + vl + ' ';
+            }
+            return row;
+        };
+
+        const renderSep = (): string => {
+            let sep = '';
+            for (let i = 0; i < colCount; i++) {
+                if (i > 0) sep += cross + hl.repeat(3);
+                sep += hl.repeat(colWidths[i] + 2);
+            }
+            return sep;
+        };
+
+        let screenRow = 0;
+        const topBorder = tl + renderSep().slice(1) + tr;
+        this.writeText(screen, x, y + screenRow, topBorder);
+        screenRow++;
+
+        this.writeText(screen, x, y + screenRow, renderRow(headers, true));
+        screenRow++;
+
+        this.writeText(screen, x, y + screenRow, cross + renderSep().slice(1) + cross);
+        screenRow++;
+
+        for (const row of rows) {
+            this.writeText(screen, x, y + screenRow, renderRow(row, false));
+            screenRow++;
+        }
+
+        const bottomBorder = bl + renderSep().slice(1) + br;
+        this.writeText(screen, x, y + screenRow, bottomBorder);
+        screenRow++;
+
+        return screenRow;
+    }
+
     constructor(options: MarkdownOptions, style: Partial<Style> = {}) {
         super(style);
         this._content = options.content;
@@ -177,6 +243,23 @@ export class Markdown extends Widget {
                 continue;
             }
 
+            if (line.startsWith('|') && line.endsWith('|')) {
+                const cells = line.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1).map(c => c.trim());
+                if (cells.every(c => c.match(/^[-:]+$/))) {
+                    continue;
+                }
+                const headers = cells;
+                const dataRows: string[][] = [];
+                row++;
+                while (row < lines.length && lines[row].startsWith('|') && lines[row].endsWith('|')) {
+                    const rowCells = lines[row].split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1).map(c => c.trim());
+                    dataRows.push(rowCells);
+                    row++;
+                }
+                screenRow += this.renderTable(screen, rect.x, rect.y + screenRow, rect.width, headers, dataRows);
+                continue;
+            }
+
             if (line.startsWith('# ')) {
                 screen.writeString(rect.x, rect.y + screenRow, line.slice(2), {
                     bold: true,
@@ -185,18 +268,34 @@ export class Markdown extends Widget {
                 screenRow++;
             }
 
-            else if (line.startsWith('> ')) {
-    screen.writeString(
-        rect.x,
-        rect.y + screenRow,
-        `│ ${line.slice(2)}`,
-        {
-            italic: true
-        }
-    );
+            else if (line.startsWith('## ')) {
+                screen.writeString(rect.x, rect.y + screenRow, line.slice(3), {
+                    bold: true,
+                    underline: true
+                });
+                screenRow++;
+            }
 
-    screenRow++;
-}
+            else if (line.startsWith('### ')) {
+                screen.writeString(rect.x, rect.y + screenRow, line.slice(4), {
+                    bold: true
+                });
+                screenRow++;
+            }
+
+            else if (line.startsWith('> ')) {
+                const quote = line.slice(2);
+                screen.writeString(
+                    rect.x,
+                    rect.y + screenRow,
+                    `│ ${quote}`,
+                    {
+                        italic: true,
+                        dim: true
+                    }
+                );
+                screenRow++;
+            }
             else if (line.startsWith('- ')) {
                 const bullet = caps.unicode ? '•' : '*';
 
