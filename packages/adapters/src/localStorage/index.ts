@@ -9,7 +9,14 @@ export interface LocalStorageAdapter {
   clear(): void
 }
 
+function assertValidServiceName(service: string): void {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(service)) {
+    throw new Error('useLocalStorage() service must contain only letters, numbers, dots, underscores, and hyphens, and must start with a letter or number.')
+  }
+}
+
 function resolveStorePath(service: string): string {
+  assertValidServiceName(service)
   const dir = path.join(os.homedir(), '.config', 'termui')
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
   return path.join(dir, `${service}.json`)

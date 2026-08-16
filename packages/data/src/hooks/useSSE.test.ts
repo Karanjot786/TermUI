@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 let stateValues: unknown[] = [];
 let stateSetters: Array<ReturnType<typeof vi.fn>> = [];
 let effectCb: (() => (() => void) | void) | null = null;
+let effectDeps: unknown[] | undefined;
 let stateCallCount = 0;
 
 vi.mock('@termuijs/jsx', () => ({
@@ -21,8 +22,9 @@ vi.mock('@termuijs/jsx', () => ({
         }
         return [stateValues[id], stateSetters[id]];
     },
-    useEffect: (cb: () => (() => void) | void) => {
+    useEffect: (cb: () => (() => void) | void, deps?: unknown[]) => {
         effectCb = cb;
+        effectDeps = deps;
     },
     useInterval: vi.fn(),
 }));
@@ -64,6 +66,7 @@ describe('useSSE', () => {
         stateSetters = [];
         stateCallCount = 0;
         effectCb = null;
+        effectDeps = undefined;
         activeSources = [];
         vi.stubGlobal('EventSource', MockEventSource);
     });
@@ -96,6 +99,24 @@ describe('useSSE', () => {
         expect(stateValues[0]).toBe('live-update');
         expect(stateValues[1]).toBeNull();
         expect(stateValues[2]).toBe(false);
+    });
+
+    it('reruns the effect when the parser callback changes', () => {
+        const parse = (raw: string) => ({ value: raw });
+        useSSE('https://example.com/events', parse);
+
+        expect(effectDeps).toEqual(['https://example.com/events', parse]);
+    });
+
+    it('resets stale state when a subscription starts', () => {
+        stateValues = ['old-event', new Error('old error'), false];
+
+        useSSE('https://example.com/events');
+        effectCb?.();
+
+        expect(stateValues[0]).toBeNull();
+        expect(stateValues[1]).toBeNull();
+        expect(stateValues[2]).toBe(true);
     });
 
     it('cleanup runs on unmount', () => {

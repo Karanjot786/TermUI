@@ -3,7 +3,8 @@
 // ─────────────────────────────────────────────────────
 
 import type { Options } from 'execa';
-import { execa } from 'execa';
+
+type ExecaFunction = (file: string, args?: string[], options?: Options) => any;
 
 export interface UseExecaResult {
   run(
@@ -32,15 +33,15 @@ async function getExeca(): Promise<typeof import('execa')> {
   }
 }
 
-function isExecaCallable(obj: unknown): obj is typeof execa {
+function isExecaCallable(obj: unknown): obj is ExecaFunction {
   return typeof obj === 'function';
 }
 
-function isExecaModuleWithExeca(obj: unknown): obj is { execa: typeof execa } {
+function isExecaModuleWithExeca(obj: unknown): obj is { execa: ExecaFunction } {
   return typeof obj === 'object' && obj !== null && 'execa' in obj && typeof (obj as { execa: unknown }).execa === 'function';
 }
 
-function isExecaModuleWithDefault(obj: unknown): obj is { default: typeof execa } {
+function isExecaModuleWithDefault(obj: unknown): obj is { default: ExecaFunction } {
   return typeof obj === 'object' && obj !== null && 'default' in obj && typeof (obj as { default: unknown }).default === 'function';
 }
 
@@ -60,7 +61,7 @@ export function useExeca(globalOpts?: Options): UseExecaResult {
       opts?: Options
     ): AsyncGenerator<string, void, unknown> {
       const execaModule: unknown = await getExeca();
-      let execaFn: typeof execa;
+      let execaFn: ExecaFunction;
 
       if (isExecaModuleWithExeca(execaModule)) {
         execaFn = execaModule.execa;
