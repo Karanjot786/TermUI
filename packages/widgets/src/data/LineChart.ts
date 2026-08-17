@@ -105,9 +105,9 @@ export class LineChart extends Widget {
                 const v = plotHeight > 1 ? max - (row / (plotHeight - 1)) * range : max;
                 if (row === 0 || row === plotHeight - 1) {
                     const label = v.toFixed(0).padStart(yAxisWidth - 1, ' ');
-                    screen.writeString(x, y + row, label + '┤', { ...attrs, dim: true });
+                    screen.writeString(x, y + row, label + (caps.unicode ? '┤' : '+'), { ...attrs, dim: true });
                 } else {
-                    screen.writeString(x + yAxisWidth - 1, y + row, '│', { ...attrs, dim: true });
+                    screen.writeString(x + yAxisWidth - 1, y + row, caps.unicode ? '│' : '|', { ...attrs, dim: true });
                 }
             }
         }
@@ -157,7 +157,7 @@ export class LineChart extends Widget {
                     const top = Math.min(prevRow, row) + 1;
                     const bottom = Math.max(prevRow, row);
                     for (let r = top; r < bottom; r++) {
-                        screen.setCell(plotX + col, y + r, { char: '│', fg: this._color, dim: true });
+                        screen.setCell(plotX + col, y + r, { char: caps.unicode ? '│' : '|', fg: this._color, dim: true });
                     }
                 }
 
@@ -172,10 +172,10 @@ export class LineChart extends Widget {
         if (this._showXAxis) {
             const axisY = y + height - 1;
             for (let col = 0; col < plotWidth; col++) {
-                screen.setCell(plotX + col, axisY, { char: '─', ...attrs, dim: true });
+                screen.setCell(plotX + col, axisY, { char: caps.unicode ? '─' : '-', ...attrs, dim: true });
             }
             if (yAxisWidth > 0) {
-                screen.setCell(plotX - 1, axisY, { char: '└', ...attrs, dim: true });
+                screen.setCell(plotX - 1, axisY, { char: caps.unicode ? '└' : '+', ...attrs, dim: true });
             }
         }
     }

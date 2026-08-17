@@ -406,5 +406,41 @@ describe('LineChart', () => {
             expect(hasBraille).toBe(true);
         });
     });
+
+    describe('ASCII fallback for axes', () => {
+        it('uses ASCII pipe for Y-axis separator when caps.unicode is false', async () => {
+            vi.stubEnv('NO_UNICODE', '1');
+            vi.stubEnv('TERM', '');
+            vi.resetModules();
+
+            const lines = await renderLineChart([10, 50, 90], { showYAxis: true }, 20, 5);
+            const asciiPipeCount = countCharInGrid(lines, '|');
+            const unicodePipeCount = countCharInGrid(lines, '│');
+            expect(asciiPipeCount).toBeGreaterThan(0);
+            expect(unicodePipeCount).toBe(0);
+        });
+
+        it('uses ASCII dash for X-axis line when caps.unicode is false', async () => {
+            vi.stubEnv('NO_UNICODE', '1');
+            vi.stubEnv('TERM', '');
+            vi.resetModules();
+
+            const lines = await renderLineChart([10, 50, 90], { showXAxis: true }, 20, 5);
+            const asciiDashCount = countCharInGrid(lines, '-');
+            const unicodeDashCount = countCharInGrid(lines, '─');
+            expect(asciiDashCount).toBeGreaterThan(0);
+            expect(unicodeDashCount).toBe(0);
+        });
+
+        it('uses ASCII chars for Y-axis tick marks when caps.unicode is false', async () => {
+            vi.stubEnv('NO_UNICODE', '1');
+            vi.stubEnv('TERM', '');
+            vi.resetModules();
+
+            const lines = await renderLineChart([0, 100], { showYAxis: true }, 20, 5);
+            expect(lines[0]).not.toContain('┤');
+            expect(lines[0]).toContain('+');
+        });
+    });
 });
 

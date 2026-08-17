@@ -119,6 +119,24 @@ describe('SplitPane layout', () => {
         expect(markDirtySpy).toHaveBeenCalled();
     });
 
+    it('vertical split uses ASCII dash for divider when caps.unicode is false', () => {
+        vi.spyOn(caps, 'unicode', 'get').mockReturnValue(false);
+
+        const left = new Box();
+        const right = new Box();
+        const pane = new SplitPane(left, right, { width: 10, height: 6 }, { ratio: 0.5, direction: 'vertical' });
+
+        const node = pane.getLayoutNode();
+        computeLayout(node, 10, 6);
+        pane.syncLayout();
+
+        const screen = new Screen(10, 6);
+        pane.render(screen);
+
+        const dividerRow = screen.back[3].map(c => c.char).join('');
+        expect(dividerRow).toContain('-');
+    });
+
     describe('mouse drag', () => {
         function makePane(opts: { ratio?: number; minSize?: number } = {}) {
             const left = new Box();
