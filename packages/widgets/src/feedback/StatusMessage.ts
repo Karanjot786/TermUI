@@ -60,10 +60,28 @@ export class StatusMessage extends Widget {
         this.markDirty();
     }
 
+    getMessage(): string {
+        return this._message;
+    }
+
     setVariant(variant: StatusVariant): void {
         if (this._variant === variant) return;
         
         this._variant = variant;
+        this.markDirty();
+    }
+
+    getVariant(): StatusVariant {
+        return this._variant;
+    }
+
+    getIcon(): string | undefined {
+        return this._icon;
+    }
+
+    setIcon(icon?: string): void {
+        if (this._icon === icon) return;
+        this._icon = icon;
         this.markDirty();
     }
 

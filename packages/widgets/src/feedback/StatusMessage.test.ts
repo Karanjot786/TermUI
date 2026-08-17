@@ -181,4 +181,17 @@ describe('StatusMessage', () => {
         expect(widget.isDirty).toBe(false);
     });
 
+    it('gets and sets message, variant, and custom icon', () => {
+        const widget = new StatusMessage('Ready', {}, { variant: 'info', icon: '★' });
+        expect(widget.getMessage()).toBe('Ready');
+        expect(widget.getVariant()).toBe('info');
+        expect(widget.getIcon()).toBe('★');
+
+        widget.setMessage('Processing');
+        widget.setVariant('warning');
+        widget.setIcon('⚡');
+        expect(widget.getMessage()).toBe('Processing');
+        expect(widget.getVariant()).toBe('warning');
+        expect(widget.getIcon()).toBe('⚡');
+    });
 });
