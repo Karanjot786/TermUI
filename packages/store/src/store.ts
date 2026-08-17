@@ -24,6 +24,7 @@ import { useState, useEffect, useRef } from '@termuijs/jsx';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import type { EqualityFn } from './shallow.js'
 
 
@@ -37,11 +38,14 @@ interface BatchEntry<T> {
     rollback: () => void;
 }
 
-let _batchDepth = 0;
-let _batchEpoch = 0;
-// Map store instance to batch entry. Using any for listener set type because
-// the batch mechanism operates on the raw Set<Listener<T>> without knowing T at this level.
-const _batchStores = new Map<Set<any>, BatchEntry<any>>();
+interface BatchContext {
+    depth: number;
+}
+
+const batchLocalStorage = new AsyncLocalStorage<BatchContext>();
+const globalBatchStores = new Map<Set<any>, BatchEntry<any>>();
+let globalBatchEpoch = 0;
+
 /**
  * Batch multiple state updates into a single render pass.
  *
@@ -63,60 +67,96 @@ const _batchStores = new Map<Set<any>, BatchEntry<any>>();
  * ```
  */
 export function batch<T>(fn: () => T): T {
-    const isOutermost = _batchDepth === 0;
-    _batchDepth++;
-    if (isOutermost) _batchEpoch++;
-    let threw = false;
-    let res: any;
-    try {
-        res = fn();
-    } catch (err) {
-        threw = true;
-        _batchDepth--;
-        if (_batchDepth === 0) {
-            flushBatch(threw);
+    const parentContext = batchLocalStorage.getStore();
+    
+    if (parentContext) {
+        parentContext.depth++;
+        try {
+            const res = fn();
+            // Cast res through unknown to Promise<unknown> to safely check if it is a thenable (Promise) without type errors on generic T
+            if (res && typeof (res as unknown as Promise<unknown>).then === 'function') {
+                // Cast through unknown to Promise<unknown> to chain the then callback before returning
+                return (res as unknown as Promise<unknown>).then(
+                    (val) => {
+                        parentContext.depth--;
+                        if (parentContext.depth === 0) flushBatch(false, true);
+                        return val;
+                    },
+                    (err) => {
+                        parentContext.depth--;
+                        if (parentContext.depth === 0) flushBatch(true, true);
+                        throw err;
+                    }
+                ) as T;
+            } else {
+                parentContext.depth--;
+                if (parentContext.depth === 0) {
+                    flushBatch(false);
+                }
+                return res;
+            }
+        } catch (err) {
+            parentContext.depth--;
+            if (parentContext.depth === 0) {
+                flushBatch(true);
+            }
+            throw err;
         }
-        throw err;
     }
 
-    if (res && typeof res.then === 'function') {
-        return (res as Promise<any>).then(
-            (val) => {
-                _batchDepth--;
-                if (_batchDepth === 0) flushBatch(false, true);
-                return val;
-            },
-            (err) => {
-                _batchDepth--;
-                if (_batchDepth === 0) flushBatch(true, true);
-                throw err;
+    globalBatchEpoch++;
+    const context: BatchContext = {
+        depth: 1
+    };
+
+    return batchLocalStorage.run(context, () => {
+        try {
+            const res = fn();
+            // Cast res through unknown to Promise<unknown> to safely check if it is a thenable (Promise) without type errors on generic T
+            if (res && typeof (res as unknown as Promise<unknown>).then === 'function') {
+                // Cast through unknown to Promise<unknown> to chain the then callback before returning
+                return (res as unknown as Promise<unknown>).then(
+                    (val) => {
+                        context.depth--;
+                        if (context.depth === 0) flushBatch(false, true);
+                        return val;
+                    },
+                    (err) => {
+                        context.depth--;
+                        if (context.depth === 0) flushBatch(true, true);
+                        throw err;
+                    }
+                ) as T;
+            } else {
+                context.depth--;
+                if (context.depth === 0) {
+                    flushBatch(false);
+                }
+                return res;
             }
-        ) as T;
-    } else {
-        _batchDepth--;
-        if (_batchDepth === 0) {
-            flushBatch(false);
+        } catch (err) {
+            context.depth--;
+            if (context.depth === 0) {
+                flushBatch(true);
+            }
+            throw err;
         }
-        return res;
-    }
+    });
 }
 
 function flushBatch(threw: boolean, immediate = false) {
     if (threw) {
-        for (const [, { rollback }] of _batchStores) {
+        for (const [, { rollback }] of globalBatchStores) {
             rollback();
         }
-        _batchStores.clear();
+        globalBatchStores.clear();
     } else {
-        if (_batchStores.size === 0) return;
-        // Snapshot the current epoch so the microtask can bail out if a new
-        // batch has started before it runs.
-        const epochAtFlush = _batchEpoch;
+        if (globalBatchStores.size === 0) return;
+        const epochAtFlush = globalBatchEpoch;
         const notify = () => {
-            // A new batch started between flush and notify — skip.
-            if (_batchEpoch !== epochAtFlush) return;
-            const stores = Array.from(_batchStores.entries());
-            _batchStores.clear();
+            if (globalBatchEpoch !== epochAtFlush) return;
+            const stores = Array.from(globalBatchStores.entries());
+            globalBatchStores.clear();
             const newStates = new Map<Set<any>, any>();
             for (const [listeners, { commit }] of stores) {
                 newStates.set(listeners, commit());
@@ -387,16 +427,17 @@ export function createStore<T extends object>(
 
     const setState: SetState<T> = (partial) => {
         const prevState = state;
+        const context = batchLocalStorage.getStore();
 
         // When in a batch, function updaters should see the pending batch state
-        const batchState: T = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
+        const batchState: T = context && context.depth > 0 ? globalBatchStores.get(listeners)?.nextState ?? state : state;
         const nextPartial = typeof partial === 'function'
             ? (partial as (state: T) => Partial<T>)(batchState)
             : partial;
 
         const applyUpdate = (finalPartial: Partial<T>): T => {
             // When in a batch, compute nextState from pending batch state if available
-            const baseState: T = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
+            const baseState: T = context && context.depth > 0 ? globalBatchStores.get(listeners)?.nextState ?? state : state;
             const nextState = { ...baseState, ...finalPartial };
 
             // Only notify if at least one key's value actually changed
@@ -405,14 +446,14 @@ export function createStore<T extends object>(
                 key => !Object.is((baseState as any)[key], (nextState as any)[key])
             );
             if (hasChanged) {
-                if (_batchDepth > 0) {
+                if (context && context.depth > 0) {
                     // We're in a batch: defer listener notifications and track the final state
-                    const existing = _batchStores.get(listeners);
+                    const existing = globalBatchStores.get(listeners);
                     if (!existing) {
                         // Track only the keys changed inside the batch so commit can merge
                         // onto any intermediate non-batched updates without overwriting them.
                         const changes: Partial<T> = { ...finalPartial };
-                        _batchStores.set(listeners, {
+                        globalBatchStores.set(listeners, {
                             prevState,
                             nextState,
                             changes,
@@ -461,8 +502,9 @@ export function createStore<T extends object>(
     };
 
     const getState: GetState<T> = () => {
-        if (_batchDepth > 0) {
-            const entry = _batchStores.get(listeners);
+        const context = batchLocalStorage.getStore();
+        if (context && context.depth > 0) {
+            const entry = globalBatchStores.get(listeners);
             if (entry) return entry.nextState;
         }
         return state;
@@ -495,7 +537,7 @@ export function createStore<T extends object>(
     };
 
     const destroy = (): void => {
-        _batchStores.delete(listeners);
+        globalBatchStores.delete(listeners);
         listeners.clear();
         if (writeTimeout) {
             clearTimeout(writeTimeout);
@@ -504,16 +546,17 @@ export function createStore<T extends object>(
     };
     const mutate = (recipe: (draft: T) => void): void => {
         const prevState = state;
+        const context = batchLocalStorage.getStore();
         // When in a batch, produce from pending batch state
-        const baseState: T = _batchDepth > 0 ? _batchStores.get(listeners)?.nextState ?? state : state;
+        const baseState: T = context && context.depth > 0 ? globalBatchStores.get(listeners)?.nextState ?? state : state;
         const nextState = produce(baseState, (draft) => {
             recipe(draft as T);
         });
         if (Object.is(baseState, nextState)) {
             return;
         }
-        if (_batchDepth > 0) {
-            const existing = _batchStores.get(listeners);
+        if (context && context.depth > 0) {
+            const existing = globalBatchStores.get(listeners);
             // Compute which keys actually changed so commit can merge instead of replace
             const changedKeys = Object.keys(nextState).filter(
                 k => !Object.is((nextState as any)[k], (baseState as any)[k])
@@ -523,7 +566,7 @@ export function createStore<T extends object>(
                 (changes as any)[k] = (nextState as any)[k];
             }
             if (!existing) {
-                _batchStores.set(listeners, {
+                globalBatchStores.set(listeners, {
                     prevState,
                     nextState,
                     changes,

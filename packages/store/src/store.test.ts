@@ -548,6 +548,42 @@ describe('batch', () => {
         expect(useStore.getState()).toEqual({ a: 1, b: 2 })
     })
 
+    it('async batch does not leak batch context to concurrent non-batched updates (issue 8866)', async () => {
+        const useStore = createStore(() => ({ x: 0, y: 0 }))
+        const spy = vi.fn()
+        useStore.subscribe(spy)
+
+        let resolveBatch: () => void = () => {}
+        const p = batch(async () => {
+            useStore.setState({ x: 1 })
+            await new Promise<void>((resolve) => {
+                resolveBatch = resolve
+            })
+            useStore.setState({ x: 2 })
+        })
+
+        // While the batch is suspended, perform a non-batched update
+        useStore.setState({ y: 10 })
+
+        // The non-batched update should apply immediately and trigger listeners,
+        // because the async batch should not leak its batching context to concurrent tasks
+        expect(useStore.getState().y).toBe(10)
+        expect(spy).toHaveBeenCalledOnce()
+        expect(spy.mock.calls[0][0]).toEqual({ x: 0, y: 10 }) // x is still 0 (deferred), y is 10 (applied)
+
+        spy.mockClear()
+
+        // Resolve the batch
+        resolveBatch()
+        await p
+        await new Promise(resolve => queueMicrotask(resolve))
+
+        // The batch should now complete and notify
+        expect(useStore.getState()).toEqual({ x: 2, y: 10 })
+        expect(spy).toHaveBeenCalledOnce()
+        expect(spy.mock.calls[0][0]).toEqual({ x: 2, y: 10 })
+    })
+
 describe('middleware', () => {
     it('middleware is called during setState', () => {
         const spy = vi.fn((prev, update, next) => next(update))
