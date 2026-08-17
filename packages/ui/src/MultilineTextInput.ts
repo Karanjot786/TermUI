@@ -18,6 +18,7 @@ import {
     styleToCellAttrs,
     caps,
     stringWidth,
+    stripAnsiControl,
 } from '@termuijs/core';
 
 export interface MultilineTextInputOptions {
@@ -54,7 +55,8 @@ export class MultilineTextInput extends Widget {
 
     /** Set text programmatically. */
     set value(v: string) {
-        this._lines = v.split('\n');
+        const sanitizedVal = stripAnsiControl(v);
+        this._lines = sanitizedVal.split('\n');
         if (this._lines.length === 0) this._lines = [''];
         this._cursorLine = Math.min(this._cursorLine, this._lines.length - 1);
         this._cursorCol = Math.min(this._cursorCol, this._lines[this._cursorLine].length);
@@ -74,10 +76,12 @@ export class MultilineTextInput extends Widget {
 
     /** Insert a single printable character at the cursor position. */
     insertChar(char: string): void {
+        const sanitizedChar = stripAnsiControl(char);
+        if (!sanitizedChar) return;
         const line = this._lines[this._cursorLine];
         this._lines[this._cursorLine] =
-            line.slice(0, this._cursorCol) + char + line.slice(this._cursorCol);
-        this._cursorCol++;
+            line.slice(0, this._cursorCol) + sanitizedChar + line.slice(this._cursorCol);
+        this._cursorCol += sanitizedChar.length;
         this._notify();
     }
 

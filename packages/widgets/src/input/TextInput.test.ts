@@ -444,3 +444,22 @@ describe('Performance optimizations', () => {
         expect(input.isDirty).toBe(false);
     });
 });
+
+describe('ANSI Control Code Security Sanitization', () => {
+    it('strips ANSI escape sequences and control codes by default (raw: false)', () => {
+        const input = new TextInput({}, { value: '\x1b[2J\x1b[31mHello\x1b[0m' });
+        expect(input.value).toBe('Hello');
+    });
+
+    it('strips injected ANSI control codes in insertChar() when raw: false', () => {
+        const input = new TextInput();
+        input.insertChar('\x1b[2J\x1b]0;HackTitle\x07x');
+        expect(input.value).toBe('x');
+    });
+
+    it('preserves ANSI escape sequences when raw: true option is specified', () => {
+        const input = new TextInput({}, { value: '\x1b[31mRed\x1b[0m', raw: true });
+        expect(input.value).toBe('\x1b[31mRed\x1b[0m');
+    });
+});
+

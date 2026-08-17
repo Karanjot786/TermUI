@@ -11,6 +11,7 @@ import {
     type KeyEvent,
     splitGraphemes,
     stripAnsiEscapes,
+    stripAnsiControl,
 } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 import { type VimMode } from './vim.js';
@@ -65,7 +66,8 @@ export class TextInput extends Widget {
         this.signal = options.signal;
         this._raw = options.raw ?? false;
 
-        const initialVal = options.value ?? '';
+        const rawInitialVal = options.value ?? '';
+        const initialVal = this._raw ? rawInitialVal : stripAnsiControl(rawInitialVal);
         const graphemes = splitGraphemes(initialVal);
         if (graphemes.length > this._maxLength) {
             this._value = graphemes.slice(0, this._maxLength).join('');
@@ -90,11 +92,12 @@ export class TextInput extends Widget {
     }
 
     set value(v: string) {
-        const graphemes = splitGraphemes(v);
+        const sanitizedVal = this._raw ? v : stripAnsiControl(v);
+        const graphemes = splitGraphemes(sanitizedVal);
         if (graphemes.length > this._maxLength) {
             this._value = graphemes.slice(0, this._maxLength).join('');
         } else {
-            this._value = v;
+            this._value = sanitizedVal;
         }
         this._cursorPos = Math.min(this._cursorPos, splitGraphemes(this._value).length);
         this._clearSelection();
@@ -136,6 +139,8 @@ export class TextInput extends Widget {
     }
 
     insertChar(char: string): void {
+        const sanitizedChar = this._raw ? char : stripAnsiControl(char);
+        if (!sanitizedChar) return;
         const graphemes = splitGraphemes(this._value);
         const deletedSelection = this._deleteSelectionFrom(graphemes);
         if (graphemes.length >= this._maxLength) {
@@ -146,7 +151,7 @@ export class TextInput extends Widget {
             }
             return;
         }
-        graphemes.splice(this._cursorPos, 0, char);
+        graphemes.splice(this._cursorPos, 0, sanitizedChar);
         this._value = graphemes.join('');
         this._cursorPos++;
         this._clearSelection();

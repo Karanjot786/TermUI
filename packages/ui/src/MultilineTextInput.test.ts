@@ -698,3 +698,18 @@ describe('MultilineTextInput — unicode and cursor rendering', () => {
         expect(() => renderInput(input, 12, 4)).not.toThrow();
     });
 });
+
+describe('MultilineTextInput — ANSI Control Code Security Sanitization', () => {
+    it('strips ANSI escape sequences and control codes from value assignment', () => {
+        const input = makeInput();
+        input.value = '\x1b[2J\x1b[32mLine 1\x1b[0m\n\x1b]0;Title\x07Line 2';
+        expect(input.value).toBe('Line 1\nLine 2');
+    });
+
+    it('strips injected ANSI control characters in insertChar()', () => {
+        const input = makeInput();
+        input.insertChar('\x1b[2J\x1b]0;Title\x07a');
+        expect(input.value).toBe('a');
+    });
+});
+

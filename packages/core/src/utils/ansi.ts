@@ -228,10 +228,13 @@ export function notify(text: string): string {
  * to the terminal.
  */
 export function stripAnsiControl(str: string): string {
-    // Remove all ESC-introduced sequences (CSI, OSC, DCS, SS2/SS3, etc.)
+    // Remove all ESC-introduced sequences (OSC, CSI, DCS, PM, APC, SS2/SS3, etc.)
+    // Ordering matters: specific multi-byte handlers must appear before the [@-Z\_] catch-all,
+    // otherwise `ESC P/X/^/_` would be consumed by the catch-all before the DCS/PM/APC
+    // handler runs, leaving the payload text in the output.
     // eslint-disable-next-line no-control-regex
     let out = str.replace(
-        /\x1b(?:[@-Z\\-_]|\[[0-9;<=>?]*[a-zA-Z]|\][^\x07\x1b]*(?:\x07|\x1b\\)|[PX^_][^\x1b]*\x1b\\|.)/g,
+        /\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|[PX^_][^\x1b]*\x1b\\|\[[0-?]*[ -/]*[@-~]|[NO].|[@-Z\\_]|.)/g,
         ''
     );
     // Remove remaining bare C0 controls (keep TAB=0x09, LF=0x0A) and C1/DEL
