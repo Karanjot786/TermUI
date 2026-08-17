@@ -80,20 +80,25 @@ export class Chart extends Widget {
             
             if (chartWidth <= 0 || chartHeight <= 0) return;
 
+            const axisVert = caps.unicode ? '│' : '|';
+            const axisHoriz = caps.unicode ? '─' : '-';
+            const axisCorner = caps.unicode ? '└' : '+';
+            const axisTick = caps.unicode ? '┤' : '+';
+
             // Draw Y-axis line
             for (let r = 0; r < chartHeight; r++) {
-                screen.setCell(chartX - 1, y + r, { char: '│', ...attrs });
+                screen.setCell(chartX - 1, y + r, { char: axisVert, ...attrs });
             }
             // Draw X-axis line
             for (let c = 0; c < chartWidth; c++) {
-                screen.setCell(chartX + c, y + chartHeight, { char: '─', ...attrs });
+                screen.setCell(chartX + c, y + chartHeight, { char: axisHoriz, ...attrs });
             }
             // Draw origin corner
-            screen.setCell(chartX - 1, y + chartHeight, { char: '└', ...attrs });
+            screen.setCell(chartX - 1, y + chartHeight, { char: axisCorner, ...attrs });
 
             // Draw Y-axis labels
-            screen.writeString(x, y, maxStr.padStart(yAxisLabelWidth - 1) + '┤', attrs);
-            screen.writeString(x, y + chartHeight - 1, minStr.padStart(yAxisLabelWidth - 1) + '┤', attrs);
+            screen.writeString(x, y, maxStr.padStart(yAxisLabelWidth - 1) + axisTick, attrs);
+            screen.writeString(x, y + chartHeight - 1, minStr.padStart(yAxisLabelWidth - 1) + axisTick, attrs);
         }
 
         if (chartWidth <= 0 || chartHeight <= 0) return;
