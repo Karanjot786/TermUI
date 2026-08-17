@@ -189,7 +189,7 @@ export class Markdown extends Widget {
     screen.writeString(
         rect.x,
         rect.y + screenRow,
-        `│ ${line.slice(2)}`,
+`${caps.unicode ? '│' : '|'} ${line.slice(2)}`,
         {
             italic: true
         }
