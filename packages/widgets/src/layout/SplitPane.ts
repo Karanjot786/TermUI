@@ -28,6 +28,7 @@ export class SplitPane extends Widget {
     private readonly _minSize: number;
     private _direction: SplitDirection;
     private readonly _persistent: boolean;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
 
     constructor(
         left: Widget,
@@ -45,6 +46,13 @@ export class SplitPane extends Widget {
         this.focusable = true;
         this.addChild(left);
         this.addChild(right);
+        this.events.on('key', this._keyHandler);
+    }
+
+    override mount(): void {
+        super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
     }
 
     getRatio(): number {

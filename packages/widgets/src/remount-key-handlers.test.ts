@@ -3,6 +3,10 @@ import { type KeyEvent } from '@termuijs/core';
 import { List } from './input/List.js';
 import { TextInput } from './input/TextInput.js';
 import { Table } from './data/Table.js';
+import { Accordion } from './display/Accordion.js';
+import { SplitPane } from './layout/SplitPane.js';
+import { ThinkingBlock } from './display/ThinkingBlock.js';
+import { Box } from './display/Box.js';
 
 function key(keyName: string): KeyEvent {
     return {
@@ -54,5 +58,38 @@ describe('widget key handlers after remount', () => {
         table.events.emit('key', key('down'));
 
         expect(table.selectedRow).toBe(1);
+    });
+
+    it('restores Accordion key handling', () => {
+        const accordion = new Accordion([
+            { title: 'One', content: 'content1' },
+            { title: 'Two', content: 'content2' },
+        ], {}, { openIndex: 0 });
+        remount(accordion);
+
+        accordion.events.emit('key', key('down'));
+
+        expect(accordion.getFocusedIndex()).toBe(1);
+    });
+
+    it('restores SplitPane key handling', () => {
+        const left = new Box();
+        const right = new Box();
+        const pane = new SplitPane(left, right, { width: 40, height: 10 }, { ratio: 0.5 });
+        pane.updateRect({ x: 0, y: 0, width: 40, height: 10 });
+        remount(pane);
+
+        pane.events.emit('key', { ...key('right'), shift: true });
+
+        expect(pane.getRatio()).toBeGreaterThan(0.5);
+    });
+
+    it('restores ThinkingBlock key handling', () => {
+        const block = new ThinkingBlock({ thinking: 'Test' });
+        remount(block);
+
+        block.events.emit('key', key('enter'));
+
+        expect((block as any)._expanded).toBe(true);
     });
 });
