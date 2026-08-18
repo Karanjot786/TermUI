@@ -37,7 +37,13 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
         this._onceHandlers.get(event)!.add(handler);
 
         return () => {
-            this._onceHandlers.get(event)?.delete(handler);
+            const reg = this._onceHandlers.get(event);
+            if (reg) {
+                reg.delete(handler);
+                if (reg.size === 0) {
+                    this._onceHandlers.delete(event);
+                }
+            }
         };
     }
 
@@ -123,4 +129,22 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
             (this._onceHandlers.get(event)?.size ?? 0) > 0
         );
     }
+
+    /**
+     * Get the count of listeners for a specific event or all events.
+     */
+    listenerCount(event?: keyof TEventMap): number {
+        if (event) {
+            return (this._handlers.get(event)?.size ?? 0) + (this._onceHandlers.get(event)?.size ?? 0);
+        }
+        let total = 0;
+        for (const set of this._handlers.values()) {
+            total += set.size;
+        }
+        for (const set of this._onceHandlers.values()) {
+            total += set.size;
+        }
+        return total;
+    }
 }
+
