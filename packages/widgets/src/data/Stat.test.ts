@@ -102,4 +102,28 @@ describe('Stat', () => {
         const row1 = screen.back[1].map((c: { char: string }) => c.char).join('').trimEnd();
         expect(row1).toContain('\u2192');
     });
+
+    it('gets value and label via getters and setLabel updates label', async () => {
+        const { Stat } = await import('./Stat.js');
+        const stat = new Stat('Initial Label', '100');
+        expect(stat.getLabel()).toBe('Initial Label');
+        expect(stat.getValue()).toBe('100');
+
+        stat.setLabel('Updated Label');
+        stat.setValue('200');
+        expect(stat.getLabel()).toBe('Updated Label');
+        expect(stat.getValue()).toBe('200');
+    });
+
+    it('gets and sets delta via getDelta and setDelta', async () => {
+        const { Stat } = await import('./Stat.js');
+        const stat = new Stat('CPU', '45%', {}, { delta: 1.5 });
+        expect(stat.getDelta()).toBe(1.5);
+
+        stat.setDelta(-2.0);
+        expect(stat.getDelta()).toBe(-2.0);
+
+        stat.setDelta(undefined);
+        expect(stat.getDelta()).toBeUndefined();
+    });
 });

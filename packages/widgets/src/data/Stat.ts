@@ -22,13 +22,34 @@ export class Stat extends Widget {
     }
 
     setValue(value: string): void {
+        if (this._value === value) return;
         this._value = value;
         this.markDirty();
     }
 
-    setDelta(delta: number | undefined): void {
-        this._delta = delta !== undefined ? validateFinite(delta) : undefined;
+    getValue(): string {
+        return this._value;
+    }
+
+    setLabel(label: string): void {
+        if (this._label === label) return;
+        this._label = label;
         this.markDirty();
+    }
+
+    getLabel(): string {
+        return this._label;
+    }
+
+    setDelta(delta: number | undefined): void {
+        const next = delta !== undefined ? validateFinite(delta) : undefined;
+        if (this._delta === next) return;
+        this._delta = next;
+        this.markDirty();
+    }
+
+    getDelta(): number | undefined {
+        return this._delta;
     }
 
     protected _renderSelf(screen: Screen): void {
