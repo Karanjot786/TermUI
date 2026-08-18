@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { Buffer } from 'node:buffer';
-import { Screen, createKeyEvent, type KeyEvent } from '@termuijs/core';
+import { Screen, createKeyEvent, stringWidth, type KeyEvent } from '@termuijs/core';
 import { ConfirmDialog } from './ConfirmDialog.js';
 
 // ── Helpers ───────────────────────────────────────────
@@ -104,6 +104,20 @@ describe('ConfirmDialog', () => {
         dialog.hide();
         const screen = renderDialog(dialog);
         expect(screenHasContent(screen)).toBe(false);
+    });
+
+    it('clips mixed-width messages inside the dialog body', () => {
+        const dialog = new ConfirmDialog({ message: '\u8868\u8868\u8868\u8868?' });
+        dialog.show();
+        const screen = makeScreen(16, 8);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        dialog.updateRect({ x: 0, y: 0, width: 16, height: 8 });
+        dialog.render(screen);
+
+        const messageCall = writeSpy.mock.calls.find(([, , text]) => String(text).includes('\u8868'));
+        expect(messageCall).toBeDefined();
+        expect(stringWidth(String(messageCall![2]))).toBeLessThanOrEqual(8);
     });
 
     // ── 4. show() resets previous selection ──────────
