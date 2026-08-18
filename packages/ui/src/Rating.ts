@@ -16,6 +16,8 @@ import {
     defaultStyle,
     styleToCellAttrs,
     caps,
+    stringWidth,
+    truncate,
 } from '@termuijs/core';
 
 export interface RatingOptions {
@@ -239,14 +241,17 @@ export class Rating extends Widget {
                 fgColor = this._filledColor;
             }
 
+            const charWidth = stringWidth(charToRender);
+            if (currentX + charWidth > maxX) break;
+
             const cellAttrs = fgColor ? { ...attrs, fg: fgColor } : attrs;
             screen.writeString(currentX, y, charToRender, cellAttrs);
-            currentX += charToRender.length;
+            currentX += charWidth;
         }
 
         if (this._showLabel && currentX < maxX) {
             const label = ` (${this._value}/${this._max})`;
-            screen.writeString(currentX, y, label.slice(0, maxX - currentX), attrs);
+            screen.writeString(currentX, y, truncate(label, maxX - currentX, ''), attrs);
         }
     }
 }
