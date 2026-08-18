@@ -1,6 +1,6 @@
 // TreeSelect — expandable tree with single or multi selection
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps, truncate } from '@termuijs/core';
 
 export interface TreeSelectNode {
     label: string;
@@ -163,7 +163,7 @@ export class TreeSelect extends Widget {
                 : '  ';
             const selectIcon = this._selected.has(it.node.value) ? selectedMarker : unselectedMarker;
             const line = `${indent}${expandIcon}${selectIcon}${it.node.label}`;
-            screen.writeString(x, y + i, line.slice(0, width), {
+            screen.writeString(x, y + i, truncate(line, width, ''), {
                 ...attrs,
                 fg: active ? this._activeColor : attrs.fg,
                 bold: active,
