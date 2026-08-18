@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { Screen } from "@termuijs/core";
+import { Screen, stringWidth } from "@termuijs/core";
 import { SurveyPrompt } from "./SurveyPrompt.js";
 
 describe("SurveyPrompt", () => {
@@ -128,5 +128,25 @@ describe("SurveyPrompt", () => {
         expect(prompt.getAnswers()).toEqual({
             name: "Caf",
         });
+    });
+
+    it("renders mixed-width survey text within the content width", () => {
+        const prompt = new SurveyPrompt([
+            {
+                id: "food",
+                question: "\u8868\u8868\u8868\u8868?",
+                type: "choice",
+                options: ["\u8868\u8868\u8868\u8868"],
+            },
+        ]);
+        const screen = new Screen(8, 6);
+        const writeSpy = vi.spyOn(screen, "writeString");
+
+        prompt.updateRect({ x: 0, y: 0, width: 5, height: 6 });
+        prompt.render(screen);
+
+        for (const call of writeSpy.mock.calls) {
+            expect(stringWidth(String(call[2]))).toBeLessThanOrEqual(5);
+        }
     });
 });
