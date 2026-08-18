@@ -19,7 +19,6 @@ export {
     useId,
     useEffect,
     useInput,
-    useInterval,
     useMemo,
     useRef,
     useImperativeHandle,
@@ -30,6 +29,7 @@ export {
     useInsertBefore,
     useReducer,
 } from './hooks.js';
+export { useInterval } from './hooks/useInterval.js';
 export { useToggle } from './hooks/useToggle.js';
 export { useAnimation } from './hooks/useAnimation.js';
 export type { UseAnimationConfig } from './hooks/useAnimation.js';
