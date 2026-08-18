@@ -2,7 +2,7 @@
 // Transitions — pre-built animation effects
 // ─────────────────────────────────────────────────────
 
-import { prefersReducedMotion } from '@termuijs/core';
+import { prefersReducedMotion, splitGraphemes } from '@termuijs/core';
 import { subscribe } from './timer-pool.js';
 
 export type EasingFn = (t: number) => number;
@@ -76,10 +76,12 @@ export function slideIn(from: number, durationMs: number, onFrame: (offset: numb
 
 /** Typewriter: reveal text character by character */
 export function typewriter(text: string, durationMs: number, onFrame: (visibleChars: number) => void, onComplete?: () => void): () => void {
+    const totalGraphemes = splitGraphemes(text).length;
+
     return transition({
         durationMs,
         easing: easings.linear,
-        onFrame: t => onFrame(Math.floor(t * text.length)),
+        onFrame: t => onFrame(Math.floor(t * totalGraphemes)),
         onComplete,
     });
 }
