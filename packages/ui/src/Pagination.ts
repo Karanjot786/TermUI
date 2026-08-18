@@ -1,15 +1,19 @@
 // Pagination — simple page navigator
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, truncate } from '@termuijs/core';
 
 export interface PaginationOptions {
     onChange?: (page: number) => void;
+    previousLabel?: string;
+    nextLabel?: string;
 }
 
 export class Pagination extends Widget {
     private _page: number;
     private _totalPages: number;
     private _onChange?: (page: number) => void;
+    private _previousLabel: string;
+    private _nextLabel: string;
     focusable = true;
 
     constructor(page: number, totalPages: number, options: PaginationOptions = {}) {
@@ -17,6 +21,8 @@ export class Pagination extends Widget {
         this._totalPages = this._normalizeTotalPages(totalPages);
         this._page = this._clamp(Math.floor(page));
         this._onChange = options.onChange;
+        this._previousLabel = options.previousLabel ?? '<';
+        this._nextLabel = options.nextLabel ?? '>';
     }
 
     get page(): number { return this._page; }
@@ -60,7 +66,7 @@ export class Pagination extends Widget {
         const { x, y, width } = this._rect;
         if (width <= 0) return;
         const attrs = styleToCellAttrs(this.style);
-        const text = `< ${this._page} / ${this._totalPages} >`;
-        screen.writeString(x, y, text.slice(0, width), attrs);
+        const text = `${this._previousLabel} ${this._page} / ${this._totalPages} ${this._nextLabel}`;
+        screen.writeString(x, y, truncate(text, width, ''), attrs);
     }
 }

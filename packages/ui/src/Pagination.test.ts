@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Screen } from '@termuijs/core';
+import { Screen, stringWidth } from '@termuijs/core';
 import { Pagination } from './Pagination.js';
 
 describe('Pagination', () => {
@@ -59,5 +59,19 @@ describe('Pagination', () => {
 
         expect(p.totalPages).toBe(1);
         expect(p.page).toBe(1);
+    });
+
+    it('renders custom mixed-width labels within the widget width', () => {
+        const p = new Pagination(3, 10, {
+            previousLabel: '\u8868\u8868',
+            nextLabel: '\u8868\u8868',
+        });
+        const screen = new Screen(6, 1);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        p.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+        p.render(screen);
+
+        expect(stringWidth(String(writeSpy.mock.calls[0][2]))).toBeLessThanOrEqual(5);
     });
 });
