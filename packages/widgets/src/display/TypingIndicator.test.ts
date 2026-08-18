@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 import { TypingIndicator } from './TypingIndicator.js';
 
 describe('TypingIndicator', () => {
@@ -81,6 +81,18 @@ describe('TypingIndicator', () => {
         indicator.render(screen);
         row = screen.back[0].map(c => c.char).join('').trim();
         expect(row).toBe('Typing...');
+    });
+
+    it('clips reduced-motion fallback text by cell width', () => {
+        vi.spyOn(caps, 'motion', 'get').mockReturnValue(false);
+        const indicator = new TypingIndicator({}, { fallbackText: '\u8868\u8868\u8868\u8868' });
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        indicator.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+        indicator.start();
+        indicator.render(screen);
+
+        expect(stringWidth(String(writeSpy.mock.calls[0][2]))).toBe(5);
     });
 
     it('clears interval on unmount', () => {
