@@ -40,6 +40,26 @@ export class Skeleton extends Widget {
         }
     }
 
+    getVariant(): 'pulse' | 'shimmer' {
+        return this._variant;
+    }
+
+    setVariant(variant: 'pulse' | 'shimmer'): void {
+        if (this._variant === variant) return;
+        this._variant = variant;
+        this.markDirty();
+    }
+
+    getShape(): 'text' | 'card' | 'table' | 'list' {
+        return this._shape;
+    }
+
+    setShape(shape: 'text' | 'card' | 'table' | 'list'): void {
+        if (this._shape === shape) return;
+        this._shape = shape;
+        this.markDirty();
+    }
+
     override unmount(): void {
         this._unsubscribe?.();
         super.unmount();
