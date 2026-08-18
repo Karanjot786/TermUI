@@ -79,4 +79,14 @@ describe('Definition', () => {
     def.updateRect({ x: 0, y: 0, width: 30, height: 3 });
     expect(() => def.render(screen)).not.toThrow();
   });
+
+  it('returns current pairs via getPairs', () => {
+    const initial = [{ term: 'Term1', definition: 'Def1' }];
+    const def = new Definition(initial);
+    expect(def.getPairs()).toEqual(initial);
+
+    const updated = [{ term: 'Term2', definition: 'Def2' }];
+    def.setPairs(updated);
+    expect(def.getPairs()).toEqual(updated);
+  });
 });
