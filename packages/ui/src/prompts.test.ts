@@ -1,8 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { prompt, NonInteractiveError } from './prompts.js';
-import * as readline from 'readline';
+import * as readline from 'node:readline';
 
-vi.mock('readline', () => ({
+vi.mock('node:readline', () => ({
     createInterface: vi.fn()
 }));
 
