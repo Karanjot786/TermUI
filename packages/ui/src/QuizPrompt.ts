@@ -1,5 +1,5 @@
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, caps, truncate } from '@termuijs/core';
 
 export interface QuizQuestion {
     question: string;
@@ -131,7 +131,7 @@ export class QuizPrompt extends Widget {
             // Show completion screen
             const result = this.getResult();
             const scoreText = `Quiz Complete! Score: ${result.correct}/${result.total}`;
-            screen.writeString(x, y, scoreText.slice(0, width), attrs);
+            screen.writeString(x, y, truncate(scoreText, width, ''), attrs);
             return;
         }
         
@@ -140,7 +140,7 @@ export class QuizPrompt extends Widget {
         
         // Render question
         const questionText = `${this._currentIndex + 1}. ${currentQuestion.question}`;
-        screen.writeString(x, y + row, questionText.slice(0, width), { ...attrs, bold: true });
+        screen.writeString(x, y + row, truncate(questionText, width, ''), { ...attrs, bold: true });
         row += 2;
         
         // Render options
@@ -153,7 +153,7 @@ export class QuizPrompt extends Widget {
                                  this._feedback === 'wrong' && i === this._selectedIndex ? this._wrongColor : attrs.fg;
             
             const line = `${cursor}${i + 1}. ${option}${indicator}`;
-            screen.writeString(x, y + row, line.slice(0, width), {
+            screen.writeString(x, y + row, truncate(line, width, ''), {
                 ...attrs,
                 fg: feedbackColor,
                 bold: isSelected,
@@ -165,11 +165,11 @@ export class QuizPrompt extends Widget {
         if (row >= height) return;
 
         if (this._feedback === 'correct') {
-            screen.writeString(x, y + row, '✓ Correct!'.slice(0, width), { ...attrs, fg: this._correctColor });
+            screen.writeString(x, y + row, truncate('✓ Correct!', width, ''), { ...attrs, fg: this._correctColor });
         } else if (this._feedback === 'wrong') {
             const correctIndex = currentQuestion.correctIndex;
             const correctText = `✗ Wrong. Correct answer: ${correctIndex + 1}. ${currentQuestion.options[correctIndex]}`;
-            screen.writeString(x, y + row, correctText.slice(0, width), { ...attrs, fg: this._wrongColor });
+            screen.writeString(x, y + row, truncate(correctText, width, ''), { ...attrs, fg: this._wrongColor });
         }
     }
 }
