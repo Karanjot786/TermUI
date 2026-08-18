@@ -69,7 +69,7 @@ export class ScalePrompt extends Widget {
         let row = 0;
 
         if (this._question) {
-            screen.writeString(x, y + row, this._question.slice(0, width), attrs);
+            screen.writeString(x, y + row, truncate(this._question, width, ''), attrs);
             row++;
         }
 
@@ -83,7 +83,7 @@ export class ScalePrompt extends Widget {
             screen.writeString(
                 x,
                 y + row,
-                numbers.join(' ').slice(0, width),
+                truncate(numbers.join(' '), width, ''),
                 { ...attrs, fg: this._activeColor }
             );
             row++;
