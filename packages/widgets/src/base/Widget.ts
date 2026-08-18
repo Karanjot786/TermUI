@@ -20,6 +20,7 @@ import {
     caps,
     stripAnsiEscapes,
     sanitizeForDisplay,
+    truncate,
     type A11yProps,
     emitA11y,
 } from '@termuijs/core';
@@ -324,7 +325,7 @@ export abstract class Widget {
                 const { x, y, width } = this._rect;
                 if (width > 2) {
                     const label = `Error: ${this.constructor.name}`;
-                    const truncated = label.slice(0, Math.max(3, width - 2));
+                    const truncated = truncate(label, Math.max(3, width - 2), '');
                     screen.writeString(x + 1, y, truncated, {
                         fg: { type: 'named', name: 'red' },
                     });

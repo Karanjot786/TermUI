@@ -12,7 +12,7 @@ vi.mock('@termuijs/core', async (importOriginal) => {
     };
 });
 import { Widget } from './Widget.js';
-import { Screen, computeLayout } from '@termuijs/core';
+import { Screen, computeLayout, stringWidth } from '@termuijs/core';
 
 // Concrete test subclass – Widget is abstract
 class TestWidget extends Widget {
@@ -134,6 +134,20 @@ describe('Widget', () => {
         w.render(screen);
         expect(w.isDirty).toBe(true);
         expect(w.renderError).toBeInstanceOf(Error);
+    });
+
+    it('keeps development render error labels inside the widget width', () => {
+        const w = new ErrorWidget();
+        const screen = new Screen(8, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        Object.defineProperty(w.constructor, 'name', { value: '\u8868\u8868\u8868\u8868' });
+        w.updateRect({ x: 0, y: 0, width: 6, height: 3 });
+        w.render(screen);
+
+        const fallbackCall = writeSpy.mock.calls.find(call => call[0] === 1 && call[1] === 0);
+        expect(fallbackCall).toBeDefined();
+        expect(stringWidth(String(fallbackCall![2]))).toBeLessThanOrEqual(4);
     });
 
     it('clearDirty does not clear errored widgets', () => {
