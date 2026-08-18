@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { Tooltip } from "./Tooltip.js";
-import { Screen, caps, prefersReducedMotion } from "@termuijs/core";
+import { Screen, caps, stringWidth } from "@termuijs/core";
 import * as motion from "@termuijs/motion";
 
 afterEach(() => {
@@ -165,6 +165,13 @@ describe("Tooltip", () => {
         tooltip.render(screen);
 
         expect(screen.back[0][0].dim).toBe(false);
+    });
+
+    it("clips and pads mixed-width content inside the border", () => {
+        const { screen } = renderTooltip("\u8868\u8868\u8868\u8868", true, 7, 3);
+        const content = screen.back[1].slice(1, 6).map((cell) => cell.char).join("");
+
+        expect(stringWidth(content)).toBe(5);
     });
 });
 
