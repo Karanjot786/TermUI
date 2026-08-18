@@ -122,4 +122,20 @@ describe('Clock', () => {
         clock.destroy();
         expect(spy).toHaveBeenCalled();
     });
+
+    it('gets and sets showSeconds option', () => {
+        const clock = new Clock({}, { showSeconds: false });
+        expect(clock.getShowSeconds()).toBe(false);
+
+        clock.setShowSeconds(true);
+        expect(clock.getShowSeconds()).toBe(true);
+    });
+
+    it('gets and sets use24Hour option', () => {
+        const clock = new Clock({}, { use24Hour: false });
+        expect(clock.getUse24Hour()).toBe(false);
+
+        clock.setUse24Hour(true);
+        expect(clock.getUse24Hour()).toBe(true);
+    });
 });
