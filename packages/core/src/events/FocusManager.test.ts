@@ -241,6 +241,25 @@ describe('FocusManager', () => {
             expect(focusHandler).not.toHaveBeenCalled();
             expect(blurHandler).not.toHaveBeenCalled();
         });
+
+        it('respects focus trap and focusable property when unregistering focused widget', () => {
+            const fm = new FocusManager(); fm.start();
+            fm.register(makeWidget('bg-widget'));
+            fm.register(makeWidget('modal-widget'));
+            fm.register(makeWidget('modal-widget-2'));
+            fm.register(makeWidget('bg-non-focusable', 3, false));
+
+            fm.registerContainerMembers('modal-container', ['modal-widget', 'modal-widget-2']);
+            fm.trap('modal-container');
+
+            expect(fm.currentId).toBe('modal-widget');
+
+            fm.unregister('modal-widget');
+
+            // Should fallback to the other focusable inside the trap, NOT the non-focusable,
+            // and NOT escape the trap to bg-widget.
+            expect(fm.currentId).toBe('modal-widget-2');
+        });
     });
 });
 
