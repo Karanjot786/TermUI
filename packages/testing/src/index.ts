@@ -15,3 +15,8 @@ export { getByRole, getByLabel, queryByText } from "./queries.js";
 // ── Screen Recorder ──
 export { ScreenRecorder } from './recorder.js';
 export type { FrameData } from './recorder.js';
+
+// ── VT100/ANSI Terminal Driver ──
+export { TerminalTestDriver } from './terminal-driver.js';
+export type { TerminalCell, TerminalTestDriverOptions } from './terminal-driver.js';
+
