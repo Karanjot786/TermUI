@@ -85,6 +85,13 @@ export class Session {
     /**
      * Clear all session data.
      */
+    /**
+     * Check if a key exists in the session.
+     */
+    has(key: string): boolean {
+        return key in this._data;
+    }
+
     clear(): void {
         this._data = {};
     }
