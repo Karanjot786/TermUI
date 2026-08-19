@@ -27,6 +27,10 @@ export function useNavigate(): (path: string, options?: { replace?: boolean; que
     
     return (path: string, options?: { replace?: boolean; query?: QueryParams }) => {
         if (!router) {
+            console.warn(
+                '[useNavigate] No Router context found. ' +
+                'Ensure your component is rendered inside a <Router>.'
+            );
             return;
         }
         if (options?.replace) {
