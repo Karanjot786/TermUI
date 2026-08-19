@@ -47,7 +47,7 @@ A powerful TypeScript and JavaScript framework tailored for building rich termin
 - [Architecture](#architecture)
 - [Examples](#examples)
   - [Running the Examples](#running-the-examples)
-    - [Available Examples](#available-examples)
+    - [Examples Gallery](#examples-gallery)
 - [Project Structure](#project-structure)
 - [Development](#development)
 - [Requirements](#requirements)
@@ -466,7 +466,7 @@ New to TermUI? Start with the tutorial ladder, then explore the rest by topic.
 | Pomodoro Timer | Pomodoro timer | Widget, Box, Text, Center, `@termuijs/motion` transitions | [`examples/pomodoro-timer`](./examples/pomodoro-timer) |
 | Calculator | Calculator | Widget, Box, Text, Grid, Center | [`examples/calculator`](./examples/calculator) |
 
-See [`examples/`](./examples) for the full list — 34 runnable programs.
+See [`examples/`](./examples) for the full list — 34 example applications plus 3 standalone demo scripts (37 runnable programs).
 
 ## Project structure
 

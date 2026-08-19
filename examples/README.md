@@ -78,7 +78,7 @@ The tutorial ladder — start here if you're new to TermUI.
 
 ## Standalone demo scripts
 
-A few single-file demos live at the top level of `examples/` (no `package.json`, no install step) — run them directly from the repo root:
+A few single-file demos live at the top level of `examples/` (no `package.json`, no per-demo install step). They import `@termuijs/core`, `@termuijs/widgets`, and `@termuijs/ui` directly, so run the root [`bun install` / `bun run build`](../README.md#running-the-examples) steps first, then run them directly from the repo root:
 
 ```bash
 bun examples/braille-chart.ts    # LineChart + BrailleCanvas rendering
