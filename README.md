@@ -119,6 +119,8 @@ render(
 
 ## Packages
 
+This README covers setup and the example apps in this repo. Full per-widget API reference — constructor options, props, and hooks — lives in the [Karanjot786/TermUI_Docs](https://github.com/Karanjot786/TermUI_Docs) repo, published at [termui.io](https://www.termui.io).
+
 | Package | What it does |
 |---------|-------------|
 | [`@termuijs/core`](./packages/core) | Screen buffer, input parsing, event system, flexbox layout, caps flags, WCAG utilities |
@@ -133,7 +135,9 @@ render(
 | [`@termuijs/data`](./packages/data) | Real-time system data: CPU, memory, disk, network, processes; raw API and reactive hooks |
 | [`@termuijs/dev-server`](./packages/dev-server) | Hot-reload dev server with graceful restart in under 200ms |
 | [`@termuijs/quick`](./packages/quick) | Fluent builder API for dashboards in ~20 lines |
+| [`@termuijs/adapters`](./packages/adapters) | Adapters for popular CLI libraries (git, execa, chalk) and AI/RAG helpers to integrate with TermUI |
 | [`create-termui-app`](./packages/create-termui-app) | Project scaffolding CLI |
+| [`termuijs`](./packages/cli) | Component-adding CLI — `npx termuijs add <name>` copies a widget's source into your project |
 
 ## Features
 
@@ -428,10 +432,15 @@ cd examples/ai-streaming
 bun run dev
 ```
 
-### Available Examples
+### Examples Gallery
+
+New to TermUI? Start with the tutorial ladder, then explore the rest by topic.
 
 | Example | Purpose | Features demonstrated | Path |
 |---------|---------|-----------------------|------|
+| 01 · Hello World | Smallest possible TermUI app | `App`, `Box`, `Text`, `Center`, key event handling | [`examples/01-hello-world`](./examples/01-hello-world) |
+| 02 · Simple Button | Focusable, clickable button | Custom `Widget` subclass, focus state, Enter/Space key handling | [`examples/02-simple-button`](./examples/02-simple-button) |
+| 03 · Form Inputs | Text input with live display | `TextInput`, `handleKey`, `onSubmit` | [`examples/03-form-inputs`](./examples/03-form-inputs) |
 | Auth Flow | Demonstrates authentication | Store, Text inputs, conditional rendering | [`examples/auth-flow`](./examples/auth-flow) |
 | Todo App | Interactive todo list | Store batching, Lists, Inputs | [`examples/todo-app`](./examples/todo-app) |
 | Forms and Validation | Form validation | Form widget, inputs, modals | [`examples/forms-and-validation`](./examples/forms-and-validation) |
@@ -443,6 +452,21 @@ bun run dev
 | Widget Gallery | All widgets in one place | Comprehensive widget showcase | [`examples/widget-gallery`](./examples/widget-gallery) |
 | CLI Wrapper | Live log streaming | Subprocesses, streaming output | [`examples/cli-wrapper-live`](./examples/cli-wrapper-live) |
 | AI Assistant | Interactive AI chat with streaming | ChatMessage, StreamingText, ToolCall, ToolApproval, useAI, dual-mode operation | [`examples/ai-assistant`](./examples/ai-assistant) |
+| Chat App | Streaming chat UI | Widget, ScrollView, TextInput | [`examples/chat-app`](./examples/chat-app) |
+| Kanban Board | Kanban board | Custom Widget, Box, Text | [`examples/kanban-board`](./examples/kanban-board) |
+| REST Client | Postman-style REST client | Form, Tabs, JSONView | [`examples/rest-client`](./examples/rest-client) |
+| Log Viewer | Log viewer with realtime logs and filtering | Widget composition, custom header/filter/sidebar components | [`examples/log-viewer`](./examples/log-viewer) |
+| Process Monitor | Process monitor using chart widgets and data hooks | JSX runtime, Table, LineChart, BarChart, `@termuijs/data` hooks | [`examples/process-monitor`](./examples/process-monitor) |
+| Flashcard App | Flashcard study app | Widget, Box, Text, Center | [`examples/flashcard-app`](./examples/flashcard-app) |
+| Quiz App | Multiple-choice quiz app | Widget, Box, Text, Center | [`examples/quiz-app`](./examples/quiz-app) |
+| Markdown Viewer | Scrollable terminal markdown reader | Markdown widget, ScrollView, word wrap | [`examples/markdown-viewer`](./examples/markdown-viewer) |
+| DB Browser | SQLite database browser | `bun:sqlite`, Tree, Table, ScrollView | [`examples/db-browser`](./examples/db-browser) |
+| Git Client | Git client | List, DiffView | [`examples/git-client`](./examples/git-client) |
+| File Manager | File manager | DirectoryTree, FilePicker | [`examples/file-manager`](./examples/file-manager) |
+| Pomodoro Timer | Pomodoro timer | Widget, Box, Text, Center, `@termuijs/motion` transitions | [`examples/pomodoro-timer`](./examples/pomodoro-timer) |
+| Calculator | Calculator | Widget, Box, Text, Grid, Center | [`examples/calculator`](./examples/calculator) |
+
+See [`examples/`](./examples) for the full list — 34 runnable programs.
 
 ## Project structure
 
@@ -482,7 +506,7 @@ examples/
 
 ```bash
 bun install
-bun run build      # Build all 14 packages
+bun run build      # Build all 15 packages
 bun run test        # Run all 5018 tests
 bun run coverage    # Generate test coverage report
 bun run typecheck  # Type-check all packages
