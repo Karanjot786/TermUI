@@ -77,26 +77,11 @@ export function batch<T>(fn: () => T): T {
         throw err;
     }
 
-    if (res && typeof res.then === 'function') {
-        return (res as Promise<any>).then(
-            (val) => {
-                _batchDepth--;
-                if (_batchDepth === 0) flushBatch(false, true);
-                return val;
-            },
-            (err) => {
-                _batchDepth--;
-                if (_batchDepth === 0) flushBatch(true, true);
-                throw err;
-            }
-        ) as T;
-    } else {
-        _batchDepth--;
-        if (_batchDepth === 0) {
-            flushBatch(false);
-        }
-        return res;
+    _batchDepth--;
+    if (_batchDepth === 0) {
+        flushBatch(false);
     }
+    return res;
 }
 
 function flushBatch(threw: boolean, immediate = false) {
