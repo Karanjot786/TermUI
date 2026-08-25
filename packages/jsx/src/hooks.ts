@@ -785,10 +785,13 @@ export function useAsync<T>(
                     setLoading(false);
                 }
             });
-    }, deps);
+    }, []);
 
     useEffect(() => {
         refetch();
+        return () => {
+            versionRef.current++;
+        };
     }, deps);
 
     return { data, loading, error, refetch };
