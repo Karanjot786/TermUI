@@ -130,3 +130,13 @@ Use these rules when deciding where a change belongs:
 * Third-party integrations belong in `adapters`.
 
 When in doubt, prefer the lowest-level package that owns the responsibility and avoid moving functionality across package boundaries without a documented reason.
+
+
+---
+
+## ⚡ Quick Directory Map
+* `packages/core/` — Primary engine runtime, buffer loops, cell grids, and terminal inputs.
+* `packages/widgets/` — Visible interface layout modules (Boxes, Tables, Gauges).
+* `packages/ui/` — Highly interactive overlay controls, compound prompt boxes, and Modals.
+* `packages/jsx/` — Custom TypeScript compilation runtimes and core hooks handlers.
+* `packages/testing/` — Custom headless mock-rendering blocks for continuous validation.
