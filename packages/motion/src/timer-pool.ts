@@ -23,6 +23,8 @@ interface ClockSubEntry {
     delayMs: number;
     cb: () => void;
     unsub: () => void;
+    // Indication whether the subscriber unsubscribed before clock detach
+    active: boolean;
 }
 const clockSubs: ClockSubEntry[] = [];
 
@@ -88,17 +90,19 @@ export function subscribe(...args: unknown[]): () => void {
                 }
                 savedSubs.clear();
 
-                // Migrate clock-registered callbacks back to real timers.
+                // Migrate active clock-registered callbacks back to real timers.
                 for (const entry of clockSubs) {
                     entry.unsub();
-                    if (!pool.has(entry.delayMs)) {
-                        const newSubs = new Set<() => void>();
-                        const id = setInterval(() => {
-                            for (const s of newSubs) s();
-                        }, entry.delayMs);
-                        pool.set(entry.delayMs, { id, subs: newSubs });
+                    if (entry.active) {
+                        if (!pool.has(entry.delayMs)) {
+                            const newSubs = new Set<() => void>();
+                            const id = setInterval(() => {
+                                for (const s of newSubs) s();
+                            }, entry.delayMs);
+                            pool.set(entry.delayMs, { id, subs: newSubs });
+                        }
+                        pool.get(entry.delayMs)!.subs.add(entry.cb);
                     }
-                    pool.get(entry.delayMs)!.subs.add(entry.cb);
                 }
                 clockSubs.length = 0;
             }
@@ -110,12 +114,25 @@ export function subscribe(...args: unknown[]): () => void {
         const delayMs = first as number;
         const cb = second as () => void;
         const unsub = virtualClock._setInterval(delayMs, cb);
-        const entry: ClockSubEntry = { delayMs, cb, unsub };
+        const entry: ClockSubEntry = { delayMs, cb, unsub, active: true };
         clockSubs.push(entry);
         return () => {
-            unsub();
-            const idx = clockSubs.indexOf(entry);
-            if (idx !== -1) clockSubs.splice(idx, 1);
+            if (entry.active) {
+                entry.active = false;
+                unsub();
+                const idx = clockSubs.indexOf(entry);
+                if (idx !== -1) clockSubs.splice(idx, 1);
+            } else {
+                // If it was already migrated back to the real pool, unsubscribe it from there
+                const realEntry = pool.get(entry.delayMs);
+                if (realEntry) {
+                    realEntry.subs.delete(entry.cb);
+                    if (realEntry.subs.size === 0) {
+                        clearInterval(realEntry.id);
+                        pool.delete(entry.delayMs);
+                    }
+                }
+            }
         };
     }
 

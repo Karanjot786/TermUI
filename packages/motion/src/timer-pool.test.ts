@@ -94,6 +94,31 @@ describe("Timer Pool — VirtualClock integration", () => {
     vi.advanceTimersByTime(100);
     expect(cb).toHaveBeenCalledTimes(1);
   });
+
+  it("properly unsubscribes migrated callbacks from real timers after clock restore", () => {
+    const clock = {
+      now: () => 0,
+      advance: (_ms: number) => {},
+      tick: () => {},
+      _setInterval: (delayMs: number, cb: () => void) => {
+        return () => {};
+      },
+    };
+    const restore = subscribe(clock);
+
+    const cb = vi.fn();
+    const unsub = subscribe(100, cb);
+
+    // Detach virtual clock, migrating subscription back to real timer pool
+    restore();
+
+    // Call the unsub wrapper returned from virtual clock subscribe pass
+    unsub();
+
+    // Advance fake timers — callback must not fire
+    vi.advanceTimersByTime(100);
+    expect(cb).not.toHaveBeenCalled();
+  });
 });
 
 describe("Motion Presets and Easings", () => {
