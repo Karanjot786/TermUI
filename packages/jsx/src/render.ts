@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────
 
 import { App, type KeyEvent } from '@termuijs/core';
+import { getInstanceMap } from './reconciler.js';
 import { Box, Widget } from '@termuijs/widgets';
 import type { VNode, FC } from './vnode.js';
 import { reconcile, unmountAll, reRenderComponent } from './reconciler.js';
@@ -91,7 +92,8 @@ export async function render(
     setRequestRender(() => {
         // Re-render from the root component instance to preserve fiber state (useState, useRef, etc.)
         // Falling back to a full reconcile only when the root instance is not found.
-        const rootInstance = instanceMap.get(rootWidget);
+        const instances = getInstanceMap();
+        const rootInstance = instances?.get(rootWidget);
 
         let newRoot: Widget;
         if (rootInstance) {
@@ -135,7 +137,8 @@ export async function render(
         // instanceMap dispatch is unreliable for pass-through components (ancestors
         // overwrite descendants' instanceMap entries). Traversing the root fiber's
         // childFibers tree finds every onInput handler regardless of nesting.
-        const rootInstance = instanceMap.get(rootWidget);
+        const instances = getInstanceMap();
+        const rootInstance = instances?.get(rootWidget);
         if (rootInstance?.fiber) {
             for (const handler of collectInputHandlers(rootInstance.fiber)) {
                 handler(event);

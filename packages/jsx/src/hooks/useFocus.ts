@@ -5,6 +5,7 @@
 import { useEffect } from '../hooks.js';
 import { useContext } from '../context.js';
 import { FocusContext } from '../focus-context.js';
+import { autoBlurNode } from '../focus_cleanup.js';
 
 export interface UseFocusOptions {
     /** Unique identifier for this focusable element */
@@ -39,11 +40,15 @@ export function useFocus({ id, autoFocus }: UseFocusOptions): UseFocusResult {
     // Extract stable references (important for deps safety)
     const { focused, focus, blur } = ctx;
 
+    // Auto-focus on mount if nothing is currently focused, clean up on unmount
     useEffect(() => {
         if (autoFocus && focused === null) {
             focus(id);
         }
-    }, [autoFocus, focused, focus, id]);
+        return () => {
+            autoBlurNode(ctx, id);
+        };
+    }, [autoFocus, focused, focus, id, ctx]);
 
     return {
         isFocused,

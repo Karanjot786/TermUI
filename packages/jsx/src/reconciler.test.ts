@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { Box, Text } from '@termuijs/widgets';
 import { Screen } from '@termuijs/core';
 import type { VNode } from './vnode.js';
-import { reconcile, reRenderComponent, unmountAll, _pruneInstancesForWidget } from './reconciler.js';
+import { reconcile, reRenderComponent, unmountAll, _pruneInstancesForWidget, getInstanceMap } from './reconciler.js';
 import { destroyFiber } from './hooks.js';
 import { instanceMap } from './globals.js';
 
@@ -36,9 +36,6 @@ function ReturnsTextVNode(): VNode {
     return h('text', {}, ['hello']);
 }
 
-function getInstanceMap(): Map<any, any> {
-    return instanceMap;
-}
 
 describe('_instanceMap leak prevention', () => {
     beforeEach(() => {

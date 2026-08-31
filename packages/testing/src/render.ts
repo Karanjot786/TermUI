@@ -18,6 +18,7 @@ import {
     destroyFiber,
     resetHooksGlobals,
     type VNode,
+    getInstanceMap,
 } from "@termuijs/jsx";
 
 /**
@@ -355,8 +356,7 @@ export function render(
 
     // Set up re-render callback — use fiber-preserving reRenderComponent
     setRequestRender(() => {
-        const instances: Map<Widget, any> = (globalThis as any) // as any: set by @termuijs/jsx reconciler at runtime; not in globalThis type
-            .__termuijs_instances;
+        const instances: Map<Widget, any> = getInstanceMap();
         const rootInstance = instances?.get(rootWidget);
         if (rootInstance) {
             const newRoot = reRenderComponent(rootInstance);
@@ -499,10 +499,9 @@ export function render(
                 },
             };
 
-        
 
-            const instances: Map<Widget, any> = (globalThis as any)
-                .__termuijs_instances;
+
+            const instances: Map<Widget, any> = getInstanceMap();
             const rootInstance = instances?.get(rootWidget);
             if (rootInstance?.fiber) {
                 for (const handler of collectInputHandlers(
@@ -595,7 +594,7 @@ export function render(
             }
 
             // Re-render and flush any sync state updates
-            const instances: Map<Widget, any> = (globalThis as any).__termuijs_instances;
+            const instances: Map<Widget, any> = getInstanceMap();
             const rootInstance = instances?.get(rootWidget);
             if (rootInstance) {
                 const newRoot = reRenderComponent(rootInstance);
@@ -629,8 +628,7 @@ export function render(
                 renderToScreen(container, screenRef.current);
             } else {
                 // No new element: re-render existing fiber, preserving state.
-                const instances: Map<Widget, any> = (globalThis as any)
-                    .__termuijs_instances;
+                const instances: Map<Widget, any> = getInstanceMap();
                 const rootInstance = instances?.get(rootWidget);
                 if (rootInstance) {
                     const newRoot = reRenderComponent(rootInstance);
@@ -689,8 +687,7 @@ export function render(
             // Restore the caller's render callback (don't leave a stale test callback)
             setRequestRender(prevRender);
             // Destroy only this test's root fiber — don't wipe the whole app
-            const instances: Map<Widget, any> = (globalThis as any)
-                .__termuijs_instances;
+            const instances: Map<Widget, any> = getInstanceMap();
             const rootInstance = instances?.get(rootWidget);
             if (rootInstance?.fiber) {
                 destroyFiber(rootInstance.fiber);

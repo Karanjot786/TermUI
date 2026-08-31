@@ -676,14 +676,14 @@ export function destroyFiber(fiber: Fiber): void {
     fiber.cleanups = [];
     fiber.intervals = [];
     fiber.contextValues.clear();
-    
+
     if (fiber.contextDependencies) {
         for (const subs of fiber.contextDependencies) {
             subs.delete(fiber);
         }
         fiber.contextDependencies.clear();
     }
-    
+
     fiber.childFibers = undefined;
     fiber._prevChildFibers = undefined;
 }
@@ -701,8 +701,7 @@ export function resetHooksGlobals(): void {
     for (const fn of cleanups) {
         try { fn(); } catch { /* ignore cleanup errors */ }
     }
-    
-    // Clear global instance map
+
     instanceMap.clear();
     // Clear reverse fiber→widget map
     fiberToWidgetMap.clear();

@@ -77,6 +77,7 @@ export type { KeyboardNavigationOptions, KeyboardNavigationResult } from './hook
 export { useTypeahead } from './hooks/useTypeahead.js';
 export { useModal } from './hooks/useModal.js';
 export type { UseModalResult } from './hooks/useModal.js';
+export { autoBlurNode } from './focus_cleanup.js';
 
 // ── Subprocess ──
 export { useSubprocess } from './hooks/useSubprocess.js';
@@ -92,6 +93,8 @@ export { reconcile, reRenderComponent, unmountAll } from './reconciler.js';
 
 // ── Internal — used by @termuijs/testing ──
 export { setRequestRender, getRequestRender, setInsertBefore, collectInputHandlers, destroyFiber, resetHooksGlobals, registerCleanup } from './hooks.js';
+// Export instance map accessor for testing utilities
+export { getInstanceMap, getInstanceMap as getReconcilerInstanceMap } from './reconciler.js';
 
 // ── Convenience alias ──
 /** h() — shorthand for createElement */

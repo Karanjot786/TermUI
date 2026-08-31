@@ -36,6 +36,14 @@ interface ComponentInstance {
     lastVNode: VNode | Widget;
 }
 
+/**
+ * Typed accessor for the internal widget instance registry.
+ * Returns the map that tracks all widget instances created by the reconciler.
+ * Consumers should import this function instead of accessing the global directly.
+ */
+export function getInstanceMap(): Map<Widget, ComponentInstance> {
+  return instanceMap as any;
+}
 // ── Parent fiber tracking ──
 // Tracks the currently-rendering fiber so child components
 // can inherit the parent reference for context lookups.
