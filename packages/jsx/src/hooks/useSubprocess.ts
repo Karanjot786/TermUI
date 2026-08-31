@@ -21,8 +21,13 @@ function spawnProcess(cmd: string[]): Promise<number> {
 
 export function useSubprocess(): UseSubprocessResult {
     async function run(cmd: string[]): Promise<number> {
-        if (cmd.length === 0) {
+        if (!cmd || cmd.length === 0) {
             throw new Error('useSubprocess.run requires a command');
+        }
+        for (const part of cmd) {
+            if (typeof part === 'string' && part.includes('\0')) {
+                throw new Error('useSubprocess: command contains null bytes');
+            }
         }
 
         const app = getCurrentApp();

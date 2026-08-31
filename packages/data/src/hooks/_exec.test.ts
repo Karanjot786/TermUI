@@ -27,7 +27,7 @@ describe('execFileAsync', () => {
             stdout: 'hello stdout',
             stderr: 'hello stderr',
         });
-        expect(spy).toHaveBeenCalledWith('test-bin', ['arg1'], { cwd: '/tmp' }, expect.any(Function));
+        expect(spy).toHaveBeenCalledWith('test-bin', ['arg1'], { cwd: '/tmp', shell: false }, expect.any(Function));
     });
 
     it('should reject with error when execution fails', async () => {
@@ -42,4 +42,29 @@ describe('execFileAsync', () => {
 
         await expect(execFileAsync('test-bin', [])).rejects.toThrow('Spawn failed');
     });
+
+    it('should reject when file path contains null bytes', async () => {
+        await expect(execFileAsync('test-bin\0malicious', [])).rejects.toThrow('execFileAsync: file path contains null bytes');
+    });
+
+    it('should reject when an argument contains null bytes', async () => {
+        await expect(execFileAsync('test-bin', ['safe', 'malicious\0arg'])).rejects.toThrow('execFileAsync: argument contains null bytes');
+    });
+
+    it('should always enforce shell: false even if caller passes shell: true in opts', async () => {
+        // Security invariant: caller must never be able to re-enable shell execution
+        const spy = vi.spyOn(childProcess, 'execFile').mockImplementation(
+            (file, args, opts, callback) => {
+                const cb = typeof opts === 'function' ? opts : callback;
+                cb(null, '', '');
+                return {} as any;
+            }
+        );
+
+        // Even if caller attempts to pass shell: true, it must be overridden to false
+        await execFileAsync('test-bin', [], { shell: true });
+        const calledOpts = spy.mock.calls[0][2] as { shell: boolean };
+        expect(calledOpts.shell).toBe(false);
+    });
 });
+
