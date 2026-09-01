@@ -138,6 +138,20 @@ describe('useWebSocket hook', () => {
         expect(activeSockets[2].url).toBe('wss://new.com')
     })
 
+    it('clears the previous message when the url changes', async () => {
+        const { rerender } = render(<TestComponent url="wss://old.com" />)
+        activeSockets[0].onopen?.()
+        activeSockets[0].onmessage?.({ data: 'old message' })
+        await Promise.resolve()
+        expect((global as any).hookResult.message).toBe('old message')
+
+        rerender(<TestComponent url="wss://new.com" />)
+        await Promise.resolve()
+
+        expect((global as any).hookResult.message).toBeNull()
+        expect((global as any).hookResult.state).toBe('connecting')
+    })
+
     it('rapid url changes do not accumulate reconnect timers', () => {
         const { rerender } = render(<TestComponent url="wss://a.com" />)
         // Simulate disconnect which schedules reconnect

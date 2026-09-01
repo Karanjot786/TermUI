@@ -28,6 +28,9 @@ export function useSSE<T = string>(
 
     useEffect(() => {
         let isMounted = true;
+        setData(null);
+        setError(null);
+        setLoading(true);
 
         if (typeof EventSource === 'undefined') {
             setError(new Error('EventSource is not supported in this environment'));
@@ -61,7 +64,7 @@ export function useSSE<T = string>(
             isMounted = false;
             source.close();
         };
-    }, [url]);
+    }, [url, parse]);
 
     return { data, error, loading };
 }

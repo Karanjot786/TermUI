@@ -265,6 +265,7 @@ export function useWebSocket(url: string): UseWebSocketReturn {
         let isMounted = true;
         const thisGeneration = ++generationRef.current;
         retryCountRef.current = 0;
+        setMessage(null);
 
         function connect() {
             if (socketRef.current) {

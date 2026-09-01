@@ -19,6 +19,19 @@ const _latencyHistory = new Map<string, number[]>();
 const MAX_HISTORY = 100;
 const MAX_URLS = 100;
 
+function recordLatency(url: string, latency: number): void {
+    if (!_latencyHistory.has(url)) {
+        if (_latencyHistory.size >= MAX_URLS) {
+            const oldest = _latencyHistory.keys().next().value;
+            if (oldest !== undefined) _latencyHistory.delete(oldest);
+        }
+        _latencyHistory.set(url, []);
+    }
+    const history = _latencyHistory.get(url)!;
+    history.push(latency);
+    if (history.length > MAX_HISTORY) history.shift();
+}
+
 /** HTTP data provider — uses native fetch (Node 18+) */
 export const http = {
     /**
@@ -41,18 +54,7 @@ export const http = {
             // Consume response body to prevent connection leaks
             await res.text().catch(() => { });
             const latency = Date.now() - start;
-
-            // Store latency history
-            if (!_latencyHistory.has(url)) {
-                if (_latencyHistory.size >= MAX_URLS) {
-                    const oldest = _latencyHistory.keys().next().value;
-                    if (oldest !== undefined) _latencyHistory.delete(oldest);
-                }
-                _latencyHistory.set(url, []);
-            }
-            const history = _latencyHistory.get(url)!;
-            history.push(latency);
-            if (history.length > MAX_HISTORY) history.shift();
+            recordLatency(url, latency);
 
             return {
                 name: url,
@@ -63,6 +65,7 @@ export const http = {
             };
         } catch {
             const latency = Date.now() - start;
+            recordLatency(url, latency);
             return { name: url, url, status: 'down', latency, statusCode: 0 };
         }
     },

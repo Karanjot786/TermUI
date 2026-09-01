@@ -100,6 +100,23 @@ describe('usePolling', () => {
         expect((global as any).hookResult.data).toBe(3);
     });
 
+    it('does not run immediately on dependency change while paused', async () => {
+        const fn = vi.fn().mockResolvedValue('data');
+        const props = { fn, interval: 1000, deps: [1] as unknown[] };
+        const { rerender } = render(createElement(TestComponent, props));
+
+        await flushPromises();
+        expect(fn).toHaveBeenCalledTimes(1);
+
+        (global as any).hookResult.pause();
+        props.deps = [2];
+        rerender();
+        await flushPromises();
+
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect((global as any).hookResult.paused).toBe(true);
+    });
+
     it('Skips interval tick while a request is still in flight', async () => {
         let resolveFirst!: (value: string) => void;
         const fn = vi.fn().mockImplementationOnce(() => new Promise<string>(resolve => {

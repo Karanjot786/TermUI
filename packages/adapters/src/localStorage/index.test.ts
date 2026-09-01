@@ -35,4 +35,7 @@ describe('useLocalStorage', () => {
     store.set('a', 1); store.set('b', 2); store.clear()
     expect(store.get('a')).toBeNull(); expect(store.get('b')).toBeNull()
   })
+  it('rejects service names that can escape the config directory', () => {
+    expect(() => useLocalStorage('../outside-termui')).toThrow(/service must contain/)
+  })
 })

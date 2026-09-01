@@ -39,8 +39,11 @@ export function usePolling<T>(
     const requestIdRef = useRef(0);
     const adaptiveRef = useRef<AdaptivePollingController | null>(null);
 
-    const execute = async () => {
+    const execute = async (force = false) => {
         const startedAt = Date.now();
+        if (!force && pausedRef.current) {
+            return;
+        }
         if (inFlightRef.current) {
             adaptiveRef.current?.begin();
             return;
@@ -89,15 +92,17 @@ export function usePolling<T>(
     };
 
     const refresh = () => {
-        execute();
+        execute(true);
     };
 
 
     useEffect(() => {
         mountedRef.current = true;
-        setLoading(true);
         adaptiveRef.current = options.adaptive ? new AdaptivePollingController(options.adaptive) : null;
-        execute();
+        if (!paused) {
+            setLoading(true);
+            execute();
+        }
 
         if (adaptiveRef.current) {
             let timeout: ReturnType<typeof setTimeout> | undefined;
@@ -131,7 +136,7 @@ export function usePolling<T>(
             clearInterval(timer);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [interval, options.adaptive, ...deps]);
+    }, [interval, options.adaptive, paused, ...deps]);
 
     return { data, error, loading, paused, pause, resume, refresh };
 }

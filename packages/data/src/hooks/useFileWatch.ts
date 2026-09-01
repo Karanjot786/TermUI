@@ -37,6 +37,9 @@ export function useFileWatch(
     useEffect(() => {
         let isMounted = true;
         let watcher: ReturnType<typeof watch> | null = null;
+        setData(null);
+        setError(null);
+        setLoading(true);
 
         try {
             watcher = watch(path, {

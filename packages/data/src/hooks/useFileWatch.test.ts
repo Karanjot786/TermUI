@@ -81,6 +81,21 @@ describe('useFileWatch', () => {
         expect(stateValues[2]).toBe(false);
     });
 
+    it('resets stale state when starting a new watcher', () => {
+        stateValues = [
+            { eventType: 'change', filename: 'old.txt' },
+            new Error('old error'),
+            false,
+        ];
+
+        useFileWatch('next-path');
+        effectCb?.();
+
+        expect(stateValues[0]).toBeNull();
+        expect(stateValues[1]).toBeNull();
+        expect(stateValues[2]).toBe(true);
+    });
+
     it('cleanup runs on unmount', () => {
         useFileWatch('test-path');
 

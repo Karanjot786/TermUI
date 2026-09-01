@@ -80,6 +80,8 @@ describe('http data provider', () => {
             latency: 0,
             statusCode: 0,
         });
+
+        expect(http.latency('http://error.com')).toEqual([0]);
     });
 
     it('stores rolling history and caps it at MAX_HISTORY (100)', async () => {

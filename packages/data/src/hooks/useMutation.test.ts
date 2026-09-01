@@ -79,6 +79,63 @@ describe('useMutation', () => {
         expect(returnData).toEqual(mockResponseData);
     });
 
+    it('treats successful empty responses as completed mutations', async () => {
+        mockFetch.mockResolvedValue({
+            ok: true,
+            status: 204,
+            text: async () => '',
+        });
+
+        render(createElement(TestComponent, { url: '/api/test', method: 'DELETE' }));
+
+        const returnData = await (global as any).hookResult.mutate(undefined);
+        await flushPromises();
+
+        const result = (global as any).hookResult;
+        expect(returnData).toBeNull();
+        expect(result.loading).toBe(false);
+        expect(result.data).toBeNull();
+        expect(result.error).toBeNull();
+        expect(result.mutationCount).toBe(1);
+    });
+
+    it('does not let older concurrent mutations overwrite newer state', async () => {
+        let resolveFirst!: (response: any) => void;
+        let resolveSecond!: (response: any) => void;
+
+        mockFetch
+            .mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }))
+            .mockImplementationOnce(() => new Promise(resolve => { resolveSecond = resolve; }));
+
+        render(createElement(TestComponent, { url: '/api/test' }));
+
+        const mutate = (global as any).hookResult.mutate;
+        const first = mutate({ value: 'old' });
+        const second = mutate({ value: 'new' });
+
+        resolveSecond({
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ value: 'new' }),
+        });
+        await second;
+        await flushPromises();
+        expect((global as any).hookResult.data).toEqual({ value: 'new' });
+
+        resolveFirst({
+            ok: true,
+            status: 200,
+            text: async () => JSON.stringify({ value: 'old' }),
+        });
+        await first;
+        await flushPromises();
+
+        const result = (global as any).hookResult;
+        expect(result.data).toEqual({ value: 'new' });
+        expect(result.mutationCount).toBe(1);
+        expect(result.loading).toBe(false);
+    });
+
     it('Error Handling on failed HTTP status', async () => {
         // Setup the mock fetch to simulate a 404 error
         mockFetch.mockResolvedValue({
