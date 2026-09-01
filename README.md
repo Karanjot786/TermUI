@@ -133,6 +133,7 @@ render(
 | [`@termuijs/data`](./packages/data) | Real-time system data: CPU, memory, disk, network, processes; raw API and reactive hooks |
 | [`@termuijs/dev-server`](./packages/dev-server) | Hot-reload dev server with graceful restart in under 200ms |
 | [`@termuijs/quick`](./packages/quick) | Fluent builder API for dashboards in ~20 lines |
+| [`@termuijs/adapters`](./packages/adapters) | Storage, AI/RAG, CLI tool, and integration adapters for terminal apps |
 | [`create-termui-app`](./packages/create-termui-app) | Project scaffolding CLI |
 
 ## Features
@@ -460,6 +461,7 @@ packages/
   data/              System data providers and hooks
   dev-server/        Hot-reload dev server
   quick/             Fluent builder API
+  adapters/          Storage, AI/RAG, CLI tool, and integration adapters
   create-termui-app/ Project scaffolding CLI
 examples/
   ai-streaming/          Mock AI chat with StreamingText, ChatMessage, ToolCall
@@ -482,7 +484,7 @@ examples/
 
 ```bash
 bun install
-bun run build      # Build all 14 packages
+bun run build      # Build all 15 packages
 bun run test        # Run all 5018 tests
 bun run coverage    # Generate test coverage report
 bun run typecheck  # Type-check all packages
