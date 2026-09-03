@@ -116,6 +116,10 @@ export function subscribe(...args: unknown[]): () => void {
             unsub();
             const idx = clockSubs.indexOf(entry);
             if (idx !== -1) clockSubs.splice(idx, 1);
+            // Also remove from savedSubs so ghost subscribers are not
+            // restored when the clock detaches.
+            const saved = savedSubs.get(delayMs);
+            if (saved) saved.delete(cb);
         };
     }
 
