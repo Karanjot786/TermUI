@@ -127,7 +127,7 @@ export class SplitPane extends Widget {
                 if (Math.abs(event.x - dividerX) <= SplitPane.DIVIDER_HIT_TOLERANCE) {
                     this._dragging = true;
                 }
-            } else if ((event.type === 'mousemove' || event.type === 'drag') && this._dragging) {
+            } else if ((event.type === 'mousemove' || event.type === 'mousedrag') && this._dragging) {
                 const newRatio = (event.x - x) / width;
                 this.setRatio(newRatio);
             } else if (event.type === 'mouseup' || event.type === 'dragend') {
@@ -140,7 +140,7 @@ export class SplitPane extends Widget {
                 if (Math.abs(event.y - dividerY) <= SplitPane.DIVIDER_HIT_TOLERANCE) {
                     this._dragging = true;
                 }
-            } else if ((event.type === 'mousemove' || event.type === 'drag') && this._dragging) {
+            } else if ((event.type === 'mousemove' || event.type === 'mousedrag') && this._dragging) {
                 const newRatio = (event.y - y) / height;
                 this.setRatio(newRatio);
             } else if (event.type === 'mouseup' || event.type === 'dragend') {
