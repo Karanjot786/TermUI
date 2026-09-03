@@ -7,6 +7,11 @@ import { Screen } from '@termuijs/core';
 import { Digits } from './Digits.js';
 
 describe('Digits', () => {
+    it('initializes value from options', () => {
+        const widget = new Digits({}, { value: '42' });
+        expect(widget.getValue()).toBe('42');
+    });
+
     it('renders a single digit', () => {
         const widget = new Digits({ value: '1', width: 10, height: 3 } as never);
         widget.updateRect({ x: 0, y: 0, width: 10, height: 3 });
