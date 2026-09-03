@@ -14,6 +14,7 @@ import { App } from '@termuijs/core';
 import { FileWatcher, type FileChange } from './watcher.js';
 import { DevTools } from './devtools.js';
 import { ErrorOverlay } from './error-overlay.js';
+import { InspectorBridge } from './inspector-bridge.js';
 
 const log = (msg: string) => process.stdout.write(msg + '\n');
 
@@ -41,6 +42,9 @@ export interface DevServerOptions {
 
     /** How long the reload banner stays visible, in ms. Default: 1500 */
     bannerMs?: number;
+
+    /** Optional WebSocket DevTools Inspector Bridge */
+    inspector?: InspectorBridge;
 }
 
 type ChildSubprocess = Subprocess<'pipe', 'inherit', 'pipe'>;
@@ -48,6 +52,7 @@ type ChildSubprocess = Subprocess<'pipe', 'inherit', 'pipe'>;
 export class DevServer {
     private _watcher: FileWatcher;
     private _devtools: DevTools;
+    private _inspector: InspectorBridge | null = null;
     private _rootDir: string;
     private _running = false;
     private _reloadCount = 0;
@@ -100,6 +105,7 @@ export class DevServer {
 
         this._watcher = new FileWatcher(watchDirs);
         this._devtools = new DevTools();
+        this._inspector = options.inspector ?? null;
 
         this._watcher.onChange((change) => {
             this._reloadCount++;
@@ -113,6 +119,10 @@ export class DevServer {
 
     get devtools(): DevTools {
         return this._devtools;
+    }
+
+    get inspector(): InspectorBridge | null {
+        return this._inspector;
     }
 
     get reloadCount(): number {
@@ -136,6 +146,7 @@ export class DevServer {
         if (this._running) return;
 
         this._running = true;
+        this._inspector?.start();
 
         log('');
         log('  ⚡ TermUI Dev Server (Bun)');
@@ -160,6 +171,7 @@ export class DevServer {
     /** Stop the dev server — kills child process and stops watching */
     stop(): void {
         this._running = false;
+        this._inspector?.stop();
 
         this._hideErrorOverlay();
         this._killChild();

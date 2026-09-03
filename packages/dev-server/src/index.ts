@@ -8,4 +8,6 @@ export type { WidgetNode, PerfMetrics } from './devtools.js';
 export { ErrorOverlay, parseErrorStack } from './error-overlay.js';
 export type { ParsedError } from './error-overlay.js';
 export { WidgetTreeInspector } from './inspector.js';
+export { InspectorBridge } from './inspector-bridge.js';
+export type { InspectorBridgeOptions, JSONRPCRequest, JSONRPCResponse } from './inspector-bridge.js';
 export { cleanupActiveInstances } from './cleanup.js';
