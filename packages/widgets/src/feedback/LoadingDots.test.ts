@@ -148,6 +148,14 @@ describe('LoadingDots', () => {
         expect(second).toBe(first);
     });
 
+    it('truncates label and dots to fit narrow rect width without overflowing', () => {
+        const screen = new Screen(5, 1);
+        const ld = new LoadingDots({}, { label: 'LongLoadingText', maxDots: 5 });
+        ld.updateRect({ x: 0, y: 0, width: 5, height: 1 });
+        expect(() => ld.render(screen)).not.toThrow();
+        const row = screen.back[0].map(c => c.char).join('');
+        expect(row.length).toBeLessThanOrEqual(5);
+    });
     it('truncates the label and dots when they exceed the width', () => {
         const screen = new Screen(6, 1);
         const ld = new LoadingDots({}, { label: 'Thinking', maxDots: 3 });
