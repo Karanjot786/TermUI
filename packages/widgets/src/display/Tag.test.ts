@@ -147,6 +147,11 @@ describe('Tag', () => {
         expect(() => renderTag('test', {}, {}, 0, 0)).not.toThrow();
     });
 
+    it('truncates double-width text by terminal column width without overflowing box', () => {
+        const { screen } = renderTag('测试tag', {}, {}, 6, 3);
+        expect(() => renderTag('测试tag', {}, {}, 6, 3)).not.toThrow();
+        const contentRow = rowText(screen, 1);
+        expect(contentRow.length).toBeLessThanOrEqual(6);
     it('truncates double-width characters correctly without overflow', () => {
         const { screen } = renderTag('测试试', {}, {}, 6, 3);
         const row = rowText(screen, 1);
