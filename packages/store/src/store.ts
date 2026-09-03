@@ -119,19 +119,20 @@ function flushBatch(threw: boolean, immediate = false) {
             for (const [listeners, { commit }] of stores) {
                 newStates.set(listeners, commit());
             }
-            for (const [listeners, { prevState }] of stores) {
-                const newState = newStates.get(listeners);
-                try {
+            try {
+                for (const [listeners, { prevState }] of stores) {
+                    const newState = newStates.get(listeners);
                     for (const listener of listeners) {
                         listener(newState, prevState);
                     }
-                } catch (e) {
-                    const failedEntry = stores.find(([l]) => l === listeners);
-                    if (failedEntry) {
-                        failedEntry[1].rollback();
-                    }
-                    throw e;
                 }
+            } catch (e) {
+                // Roll back ALL stores if any listener throws, to keep
+                // cross-store state consistent.
+                for (const [, { rollback }] of stores) {
+                    rollback();
+                }
+                throw e;
             }
         };
         if (immediate) {
