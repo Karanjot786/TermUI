@@ -106,10 +106,12 @@ export class Code extends Widget {
 
         if (label) {
             screen.setCell(x + 1, y, { char: chars.top, ...cellStyle });
-            for (let i = 0; i < label.length; i++) {
+            const maxLabelChars = Math.max(0, width - 3);
+            const visibleLabelLength = Math.min(label.length, maxLabelChars);
+            for (let i = 0; i < visibleLabelLength; i++) {
                 screen.setCell(x + 2 + i, y, { char: label[i], ...cellStyle, bold: true });
             }
-            for (let c = 2 + label.length; c < width - 1; c++) {
+            for (let c = 2 + visibleLabelLength; c < width - 1; c++) {
                 screen.setCell(x + c, y, { char: chars.top, ...cellStyle });
             }
         } else {

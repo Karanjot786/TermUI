@@ -63,6 +63,12 @@ describe('Code', () => {
         expect(screen.back[1][8].char).toBe('d');
     });
 
+    it('does not overflow top border label in narrow box width', () => {
+        const code = new Code('const x = 1;', {}, { language: 'typescript' });
+        code.updateRect({ x: 0, y: 0, width: 6, height: 3 });
+        const screen = new Screen(6, 3);
+        expect(() => code.render(screen)).not.toThrow();
+        expect(screen.back[0][5].char).not.toBe(']');
     it('clamps language label when width is narrow', () => {
         const code = new Code('hello', {}, { language: 'typescript' });
         // Width of 5 only allows a 2-character label "[t"
