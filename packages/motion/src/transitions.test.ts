@@ -131,3 +131,22 @@ describe("cubicBezier easing", () => {
     expect(midValue).toBeLessThan(1);
   });
 });
+
+describe('typewriter', () => {
+    beforeEach(() => {
+        vi.unstubAllEnvs();
+        vi.resetModules();
+    });
+
+    it('counts grapheme clusters for mixed-width text', async () => {
+        vi.stubEnv('NO_MOTION', '1');
+        vi.stubEnv('CI', '');
+        vi.resetModules();
+        const { typewriter } = await import('./transitions.js');
+
+        const frames: number[] = [];
+        typewriter('\u{1F44B}\u{1F3FD}a', 300, value => frames.push(value));
+
+        expect(frames).toEqual([2]);
+    });
+});

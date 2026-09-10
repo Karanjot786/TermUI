@@ -93,4 +93,25 @@ describe('LineGauge', () => {
         gauge.setValue(0.3);
         expect(spy).toHaveBeenCalled();
     });
+
+    it('gets and sets showLabel option', async () => {
+        const { LineGauge } = await import('./LineGauge.js');
+        const gauge = new LineGauge({}, { showLabel: false });
+        expect(gauge.getShowLabel()).toBe(false);
+
+        gauge.setShowLabel(true);
+        expect(gauge.getShowLabel()).toBe(true);
+    });
+
+    it('gets and sets filledChar and emptyChar options', async () => {
+        const { LineGauge } = await import('./LineGauge.js');
+        const gauge = new LineGauge({}, { filledChar: '#', emptyChar: '.' });
+        expect(gauge.getFilledChar()).toBe('#');
+        expect(gauge.getEmptyChar()).toBe('.');
+
+        gauge.setFilledChar('=');
+        gauge.setEmptyChar('-');
+        expect(gauge.getFilledChar()).toBe('=');
+        expect(gauge.getEmptyChar()).toBe('-');
+    });
 });

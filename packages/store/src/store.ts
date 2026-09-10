@@ -73,9 +73,7 @@ export function batch<T>(fn: () => T): T {
     } catch (err) {
         threw = true;
         _batchDepth--;
-        if (_batchDepth === 0) {
-            flushBatch(threw);
-        }
+        flushBatch(threw);
         throw err;
     }
 
@@ -380,7 +378,7 @@ export function createStore<T extends object>(
                 }
                 fs.writeFileSync(persistFilePath, JSON.stringify(dataToSave), 'utf8');
             } catch (err) {
-                // Ignore write errors to keep terminal stable
+                console.warn(`[termui/store] Failed to persist state to ${persistFilePath}:`, err);
             }
         }, debounceMs);
     };

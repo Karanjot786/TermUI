@@ -1054,4 +1054,68 @@ describe('CommandPalette', () => {
             expect((cmds[0]!.action as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callCount);
         });
     });
+
+    describe('Issue #3099 extensions: open/close, sub-commands, fuzzyMatch', () => {
+        it('supports open() and close() aliases', () => {
+            const palette = new CommandPalette(makeCommands());
+            palette.open();
+            expect(palette.visible).toBe(true);
+            palette.close();
+            expect(palette.visible).toBe(false);
+        });
+
+        it('supports single options object constructor', () => {
+            const palette = new CommandPalette({
+                commands: makeCommands(),
+                placeholder: 'Search commands...',
+            });
+            palette.open();
+            expect(palette.visible).toBe(true);
+            const screen = renderPalette(palette);
+            expect(allText(screen)).toContain('Search commands...');
+        });
+
+        it('supports sub-command tree traversal via children property', () => {
+            const subAction = vi.fn();
+            const palette = new CommandPalette([
+                {
+                    id: 'git',
+                    label: 'Git Commands',
+                    children: [
+                        { id: 'git.commit', label: 'Git: Commit Changes', action: subAction },
+                    ],
+                },
+            ]);
+
+            palette.open();
+            expect(palette.visible).toBe(true);
+
+            // Confirm parent item -> opens sub-command list
+            palette.handleKey(makeKey('enter') as any);
+            expect(palette.visible).toBe(true);
+
+            // Sub-command item selected and confirmed -> calls subAction and closes
+            palette.handleKey(makeKey('enter') as any);
+            expect(subAction).toHaveBeenCalledOnce();
+            expect(palette.visible).toBe(false);
+        });
+
+        it('steps back up menu hierarchy when pressing backspace on empty query', () => {
+            const palette = new CommandPalette([
+                {
+                    id: 'git',
+                    label: 'Git Commands',
+                    children: [{ id: 'git.commit', label: 'Git Commit', action: vi.fn() }],
+                },
+            ]);
+
+            palette.open();
+            palette.handleKey(makeKey('enter') as any); // Traverse into Git Commands sub-menu
+            expect((palette as any)._menuStack.length).toBe(2);
+
+            palette.handleKey(makeKey('backspace') as any); // Step back to root menu
+            expect((palette as any)._menuStack.length).toBe(1);
+        });
+    });
 });
+

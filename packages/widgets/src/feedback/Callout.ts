@@ -48,11 +48,30 @@ export class Callout extends Widget {
         this.markDirty();
     }
 
+    getMessage(): string {
+        return this._message;
+    }
+
     setVariant(variant: CalloutVariant): void {
         if (variant === this._variant) return;
         
         this._variant = variant;
         this.markDirty();
+    }
+
+    getVariant(): CalloutVariant {
+        return this._variant;
+    }
+
+    setTitle(title: string): void {
+        if (title === this._title) return;
+
+        this._title = title;
+        this.markDirty();
+    }
+
+    getTitle(): string {
+        return this._title;
     }
 
     protected _renderSelf(screen: Screen): void {

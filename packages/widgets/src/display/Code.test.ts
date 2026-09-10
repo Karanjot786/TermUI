@@ -82,5 +82,25 @@ describe('Code', () => {
         code.render(screen);
         // Gutter separator should be '|' in ASCII mode, not '\u2502'
         expect(screen.back[1][2].char).toBe('|');
+        vi.restoreAllMocks();
+    });
+
+    it('gets and sets code content and language', () => {
+        const code = new Code('const x = 1;', {}, { language: 'typescript' });
+        expect(code.getCode()).toBe('const x = 1;');
+        expect(code.getLanguage()).toBe('typescript');
+
+        code.setCode('let y = 2;');
+        code.setLanguage('javascript');
+        expect(code.getCode()).toBe('let y = 2;');
+        expect(code.getLanguage()).toBe('javascript');
+    });
+
+    it('gets and sets showLineNumbers option', () => {
+        const code = new Code('test', {}, { showLineNumbers: false });
+        expect(code.getShowLineNumbers()).toBe(false);
+
+        code.setShowLineNumbers(true);
+        expect(code.getShowLineNumbers()).toBe(true);
     });
 });

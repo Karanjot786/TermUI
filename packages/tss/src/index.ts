@@ -11,13 +11,15 @@ export { parse } from './parser.js';
 export type { TSSStylesheet, TSSTheme, TSSSelector, TSSProperty, TSSValue, TSSRule } from './parser.js';
 
 // Theme Engine
-export { ThemeEngine, compileRules } from './engine.js';
+export { ThemeEngine, compileRules, createStyleSheet } from './engine.js';
 export type { ThemeVariables, ResolvedRule } from './engine.js';
 export { evalCalc } from './calc.js';
 
-// Pseudo-class state matching
+// Pseudo-class state matching & Specificity
 export { matchesPseudo } from './pseudo.js';
-export type { PseudoClass } from './pseudo.js';
+export type { PseudoClass, WidgetContext } from './pseudo.js';
+export { calculateSpecificity, compareSpecificity } from './specificity.js';
+export type { SpecificityTuple } from './specificity.js';
 
 // Built-in Themes
 export { BUILTIN_THEMES, getBuiltinThemeNames, getBuiltinTheme, getAllBuiltinThemes } from './themes.js';
