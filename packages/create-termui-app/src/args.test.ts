@@ -32,6 +32,17 @@ describe("CLI args", () => {
         expect(res.yes).toBe(true);
     });
 
+    it("parses --force", () => {
+        const res = parseArgs(["app", "--force", "--yes"]);
+        expect(res.force).toBe(true);
+        expect(res.yes).toBe(true);
+    });
+
+    it("defaults force to false", () => {
+        const res = parseArgs(["app", "--yes"]);
+        expect(res.force).toBe(false);
+    });
+
     it("first positional becomes name", () => {
         const res = parseArgs(["my-app"]);
         expect(res.name).toBe("my-app");

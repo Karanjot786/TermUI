@@ -8,6 +8,7 @@ import {
     styleToCellAttrs,
     caps,
     splitGraphemes,
+    truncate,
 } from "@termuijs/core";
 
 export interface SurveyQuestion {
@@ -132,7 +133,7 @@ export class SurveyPrompt extends Widget {
         const attrs = styleToCellAttrs(this.style);
 
         if (this._currentIndex >= this._questions.length) {
-            screen.writeString(x, y, "Survey Complete".slice(0, width), attrs);
+            screen.writeString(x, y, truncate("Survey Complete", width, ""), attrs);
             return;
         }
 
@@ -143,15 +144,12 @@ export class SurveyPrompt extends Widget {
         screen.writeString(
             x,
             y + row,
-            `${this._currentIndex + 1} / ${this._questions.length}`.slice(
-                0,
-                width,
-            ),
+            truncate(`${this._currentIndex + 1} / ${this._questions.length}`, width, ""),
             attrs,
         );
         row += 2;
 
-        screen.writeString(x, y + row, question.question.slice(0, width), {
+        screen.writeString(x, y + row, truncate(question.question, width, ""), {
             ...attrs,
             bold: true,
         });
@@ -161,7 +159,7 @@ export class SurveyPrompt extends Widget {
             screen.writeString(
                 x,
                 y + row,
-                this._textBuffer.slice(0, width),
+                truncate(this._textBuffer, width, ""),
                 attrs,
             );
             return;
@@ -177,7 +175,7 @@ export class SurveyPrompt extends Widget {
             screen.writeString(
                 x,
                 y + row,
-                `${prefix}${options[i]}`.slice(0, width),
+                truncate(`${prefix}${options[i]}`, width, ""),
                 {
                     ...attrs,
                     bold: active,

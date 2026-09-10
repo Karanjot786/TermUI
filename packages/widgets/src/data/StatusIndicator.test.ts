@@ -70,9 +70,11 @@ describe('StatusIndicator', () => {
 
   it('setLabel updates label and marks dirty', () => {
     const si = new StatusIndicator('API Server', true);
+    expect(si.getLabel()).toBe('API Server');
     const markDirtySpy = vi.spyOn(si, 'markDirty');
     
     si.setLabel('Database Server');
+    expect(si.getLabel()).toBe('Database Server');
     expect(markDirtySpy).toHaveBeenCalled();
   });
 

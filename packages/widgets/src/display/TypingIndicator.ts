@@ -2,7 +2,7 @@
 // @termuijs/widgets — TypingIndicator widget
 // ─────────────────────────────────────────────────────
 
-import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps } from '@termuijs/core';
+import { type Screen, type Style, type Color, styleToCellAttrs, stringWidth, caps, truncate } from '@termuijs/core';
 import { Widget } from '../base/Widget.js';
 
 export interface TypingIndicatorOptions {
@@ -96,15 +96,16 @@ export class TypingIndicator extends Widget {
         if (!caps.motion) {
             // Render fallback if reduced motion is preferred
             const display = this._running ? this._fallbackText : '';
-            const padded = display.padEnd(width, ' ');
-            const len = Math.min(stringWidth(padded), width);
-            screen.writeString(x, y, padded.slice(0, len), attrs);
+            screen.writeString(x, y, padToDisplayWidth(display, width), attrs);
             return;
         }
 
         const frame = this._running ? FRAMES[this._frameIndex] : '';
-        const padded = frame.padEnd(3, ' ');
-        const len = Math.min(stringWidth(padded), width);
-        screen.writeString(x, y, padded.slice(0, len), attrs);
+        screen.writeString(x, y, padToDisplayWidth(frame, Math.min(3, width)), attrs);
     }
+}
+
+function padToDisplayWidth(text: string, width: number): string {
+    const clipped = truncate(text, width, '');
+    return clipped + ' '.repeat(Math.max(0, width - stringWidth(clipped)));
 }

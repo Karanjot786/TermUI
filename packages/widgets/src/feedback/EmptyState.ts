@@ -42,6 +42,10 @@ export class EmptyState extends Widget {
         this.markDirty();
     }
 
+    getTitle(): string {
+        return this._title;
+    }
+
     setDescription(description: string): void {
         if (this._description === description) return;
 
@@ -50,11 +54,19 @@ export class EmptyState extends Widget {
         this.markDirty();
     }
 
+    getDescription(): string {
+        return this._description;
+    }
+
     setIcon(icon: string): void {
         if (this._icon === icon) return;
     
         this._icon = icon;
         this.markDirty();
+    }
+
+    getIcon(): string {
+        return this._icon;
     }
     
     setHint(hint: string): void {
@@ -63,6 +75,10 @@ export class EmptyState extends Widget {
         this._hint = hint;
         this._updateA11y();
         this.markDirty();
+    }
+
+    getHint(): string {
+        return this._hint;
     }
 
     protected _renderSelf(screen: Screen): void {

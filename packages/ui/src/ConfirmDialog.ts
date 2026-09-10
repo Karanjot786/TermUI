@@ -1,6 +1,6 @@
 // ConfirmDialog — yes/no prompt overlay
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars } from '@termuijs/core';
+import { type Style, type Screen, type KeyEvent, mergeStyles, defaultStyle, styleToCellAttrs, getBorderChars, truncate } from '@termuijs/core';
 
 export interface ConfirmDialogOptions {
     message: string;
@@ -100,7 +100,7 @@ export class ConfirmDialog extends Widget {
             screen.writeString(bx + bw - 1, by + r, border.right, ba);
         }
         screen.writeString(bx, by + bh - 1, border.bottomLeft + border.bottom.repeat(bw - 2) + border.bottomRight, ba);
-        screen.writeString(bx + 2, by + 1, this._message.slice(0, bw - 4), { ...attrs, bold: true });
+        screen.writeString(bx + 2, by + 1, truncate(this._message, bw - 4, ''), { ...attrs, bold: true });
         const yesStr = this._selected === 'confirm' ? ` [${this._confirmLabel}] ` : `  ${this._confirmLabel}  `;
         const noStr = this._selected === 'cancel' ? ` [${this._cancelLabel}] ` : `  ${this._cancelLabel}  `;
         screen.writeString(bx + 2, by + 3, yesStr, { ...attrs, fg: this._selected === 'confirm' ? { type: 'named', name: 'green' } : attrs.fg, bold: this._selected === 'confirm' });

@@ -65,6 +65,26 @@ export class Clock extends Widget {
         this.markDirty();
     }
 
+    getShowSeconds(): boolean {
+        return this._showSeconds;
+    }
+
+    setShowSeconds(showSeconds: boolean): void {
+        if (this._showSeconds === showSeconds) return;
+        this._showSeconds = showSeconds;
+        this.markDirty();
+    }
+
+    getUse24Hour(): boolean {
+        return this._use24Hour;
+    }
+
+    setUse24Hour(use24Hour: boolean): void {
+        if (this._use24Hour === use24Hour) return;
+        this._use24Hour = use24Hour;
+        this.markDirty();
+    }
+
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;

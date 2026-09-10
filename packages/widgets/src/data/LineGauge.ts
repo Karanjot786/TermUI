@@ -44,6 +44,36 @@ export class LineGauge extends Widget {
         return this._value;
     }
 
+    getShowLabel(): boolean {
+        return this._showLabel;
+    }
+
+    setShowLabel(showLabel: boolean): void {
+        if (this._showLabel === showLabel) return;
+        this._showLabel = showLabel;
+        this.markDirty();
+    }
+
+    getFilledChar(): string {
+        return this._filledChar;
+    }
+
+    setFilledChar(filledChar: string): void {
+        if (this._filledChar === filledChar) return;
+        this._filledChar = filledChar;
+        this.markDirty();
+    }
+
+    getEmptyChar(): string {
+        return this._emptyChar;
+    }
+
+    setEmptyChar(emptyChar: string): void {
+        if (this._emptyChar === emptyChar) return;
+        this._emptyChar = emptyChar;
+        this.markDirty();
+    }
+
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;

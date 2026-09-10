@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { Screen, caps } from '@termuijs/core';
+import { Screen, caps, stringWidth } from '@termuijs/core';
 import { MultilineTextInput } from './MultilineTextInput.js';
 
 // ── Helper ─────────────────────────────────────────────
@@ -696,5 +696,32 @@ describe('MultilineTextInput — unicode and cursor rendering', () => {
         input.isFocused = true;
 
         expect(() => renderInput(input, 12, 4)).not.toThrow();
+    });
+});
+
+describe('MultilineTextInput display width clipping', () => {
+    it('clips mixed-width placeholders by cell width', () => {
+        const input = makeInput({ placeholder: '\u8868\u8868\u8868\u8868' });
+        const screen = new Screen(6, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        input.updateRect({ x: 0, y: 0, width: 5, height: 3 });
+        input.render(screen);
+
+        expect(stringWidth(String(writeSpy.mock.calls[0][2]))).toBeLessThanOrEqual(3);
+    });
+
+    it('pads visible mixed-width rows to the content width', () => {
+        const input = makeInput();
+        const screen = new Screen(6, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        input.value = '\u8868\u8868\u8868\u8868';
+        input.updateRect({ x: 0, y: 0, width: 5, height: 3 });
+        input.render(screen);
+
+        const rowCall = writeSpy.mock.calls.find(([, row]) => row === 1);
+        expect(rowCall).toBeDefined();
+        expect(stringWidth(String(rowCall![2]))).toBe(3);
     });
 });

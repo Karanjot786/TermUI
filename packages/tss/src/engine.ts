@@ -6,7 +6,8 @@ import { tokenize } from './tokenizer.js';
 import { parse, type TSSStylesheet, type TSSRule, type TSSSelector, type TSSValue } from './parser.js';
 import { type Style, type Color, type BorderStyle, parseColor } from '@termuijs/core';
 import { evalCalc } from './calc.js';
-import { matchesPseudo } from './pseudo.js';
+import { matchesPseudo, type WidgetContext } from './pseudo.js';
+import { calculateSpecificity, compareSpecificity } from './specificity.js';
 import { extractKeyframes, type KeyframesDeclaration } from './animations.js';
 
 export interface ThemeVariables {
@@ -78,15 +79,30 @@ export class ThemeEngine {
         return () => this._listeners.delete(fn);
     }
 
-    /** Resolve a style for a given widget type + optional class + state */
-    resolveStyle(widgetType: string, className?: string, pseudo?: string): Partial<Style> {
+    /** Resolve a style for a given widget type + optional class + state or WidgetContext */
+    resolveStyle(widgetType: string, className?: string, stateOrContext?: string | WidgetContext): Partial<Style> {
         const style: Partial<Style> = {};
-        for (const rule of this._resolvedRules) {
-            if (!this._matchesSelector(rule.selector, widgetType, className, pseudo)) continue;
-            this._applyProperties(rule.properties, style);
+
+        // Find all matching rules and rank by specificity tuple (A, B, C)
+        const matchingRules: Array<{ rule: ResolvedRule; index: number; spec: [number, number, number] }> = [];
+
+        for (let i = 0; i < this._resolvedRules.length; i++) {
+            const rule = this._resolvedRules[i];
+            if (!this._matchesSelector(rule.selector, widgetType, className, stateOrContext)) continue;
+            const spec = calculateSpecificity(rule.selector);
+            matchingRules.push({ rule, index: i, spec });
         }
 
-        // Contrast adjustment handled in styleToCellAttrs; no adjustment here.
+        // Sort by specificity ascending (higher specificity overrides lower), keeping original declaration order on tie
+        matchingRules.sort((a, b) => {
+            const cmp = compareSpecificity(a.spec, b.spec);
+            if (cmp !== 0) return cmp;
+            return a.index - b.index;
+        });
+
+        for (const { rule } of matchingRules) {
+            this._applyProperties(rule.properties, style);
+        }
 
         return style;
     }
@@ -183,12 +199,12 @@ export class ThemeEngine {
         }
     }
 
-    private _matchesSelector(sel: TSSSelector, widgetType: string, className?: string, pseudo?: string): boolean {
+    private _matchesSelector(sel: TSSSelector, widgetType: string, className?: string, stateOrContext?: string | WidgetContext): boolean {
         // Widget type match (* = universal)
         if (sel.widget !== '*' && sel.widget.toLowerCase() !== widgetType.toLowerCase()) return false;
         // Class name match
         if (sel.className && sel.className !== className) return false;
-        if (!matchesPseudo(sel.pseudo, pseudo)) return false;
+        if (!matchesPseudo(sel.pseudo, stateOrContext)) return false;
         return true;
     }
 
@@ -225,12 +241,14 @@ export class ThemeEngine {
                     const parts = val.split(/\s+/).map(Number);
                     if (parts.length === 1) style.padding = parts[0];
                     else if (parts.length === 2) style.padding = { top: parts[0], bottom: parts[0], left: parts[1], right: parts[1] };
+                    else if (parts.length === 3) style.padding = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[1] };
                     else if (parts.length === 4) style.padding = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
                     break;
                 case 'margin':
                     const mparts = val.split(/\s+/).map(Number);
                     if (mparts.length === 1) style.margin = mparts[0];
                     else if (mparts.length === 2) style.margin = { top: mparts[0], bottom: mparts[0], left: mparts[1], right: mparts[1] };
+                    else if (mparts.length === 3) style.margin = { top: mparts[0], right: mparts[1], bottom: mparts[2], left: mparts[1] };
                     else if (mparts.length === 4) style.margin = { top: mparts[0], right: mparts[1], bottom: mparts[2], left: mparts[3] };
                     break;
                 case 'width':
@@ -261,4 +279,20 @@ export function compileRules(source: string): ResolvedRule[] {
     const engine = new ThemeEngine();
     engine.load(source);
     return engine.rules;
+}
+
+/** Create a style sheet engine instance from an object declaration of rules */
+export function createStyleSheet(rules: Record<string, Record<string, any>>): ThemeEngine {
+    let cssString = '';
+    for (const [selector, props] of Object.entries(rules)) {
+        cssString += `${selector} {\n`;
+        for (const [k, v] of Object.entries(props)) {
+            const propName = k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+            cssString += `  ${propName}: ${v};\n`;
+        }
+        cssString += `}\n`;
+    }
+    const engine = new ThemeEngine();
+    engine.load(cssString);
+    return engine;
 }

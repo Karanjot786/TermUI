@@ -106,6 +106,36 @@ describe('EmptyState', () => {
     
         expect(es.isDirty).toBe(false);
     });
+
+    it('returns title via getTitle', () => {
+        const es = new EmptyState('Test Title');
+        expect(es.getTitle()).toBe('Test Title');
+        es.setTitle('Updated Title');
+        expect(es.getTitle()).toBe('Updated Title');
+    });
+
+    it('returns description via getDescription', () => {
+        const es = new EmptyState('Title', {}, { description: 'Test Desc' });
+        expect(es.getDescription()).toBe('Test Desc');
+        es.setDescription('Updated Desc');
+        expect(es.getDescription()).toBe('Updated Desc');
+    });
+
+    it('gets and sets icon via getIcon and setIcon', () => {
+        const es = new EmptyState('Title', {}, { icon: '★' });
+        expect(es.getIcon()).toBe('★');
+        es.setIcon('☆');
+        expect(es.getIcon()).toBe('☆');
+        expect(es.isDirty).toBe(true);
+    });
+
+    it('gets and sets hint via getHint and setHint', () => {
+        const es = new EmptyState('Title', {}, { hint: 'Press Esc' });
+        expect(es.getHint()).toBe('Press Esc');
+        es.setHint('Press Enter');
+        expect(es.getHint()).toBe('Press Enter');
+        expect(es.isDirty).toBe(true);
+    });
     
     it('setIcon marks widget dirty', () => {
         const es = new EmptyState('Title');

@@ -25,12 +25,32 @@ export class Code extends Widget {
     }
 
     setCode(code: string): void {
+        if (this._code === code) return;
         this._code = code;
         this.markDirty();
     }
 
+    getCode(): string {
+        return this._code;
+    }
+
     setLanguage(language: string): void {
+        if (this._language === language) return;
         this._language = language;
+        this.markDirty();
+    }
+
+    getLanguage(): string {
+        return this._language;
+    }
+
+    getShowLineNumbers(): boolean {
+        return this._showLineNumbers;
+    }
+
+    setShowLineNumbers(show: boolean): void {
+        if (this._showLineNumbers === show) return;
+        this._showLineNumbers = show;
         this.markDirty();
     }
 

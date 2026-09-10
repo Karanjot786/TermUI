@@ -1,6 +1,6 @@
 // Toast - auto-dismiss notification
 import { Widget } from '@termuijs/widgets';
-import { type Screen, stripAnsiControl, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Screen, stripAnsiControl, mergeStyles, defaultStyle, styleToCellAttrs, caps, stringWidth, truncate } from '@termuijs/core';
 
 export type ToastType = 'info' | 'success' | 'warning' | 'error';
 
@@ -22,6 +22,11 @@ export interface ToastOptions {
 const ICONS_UNICODE: Record<ToastType, string> = { info: 'ℹ', success: '✓', warning: '⚠', error: '✗' };
 const ICONS_ASCII: Record<ToastType, string> = { info: 'i', success: '+', warning: '!', error: 'x' };
 const COLORS: Record<ToastType, string> = { info: 'cyan', success: 'green', warning: 'yellow', error: 'red' };
+
+function padToDisplayWidth(text: string, width: number): string {
+  const clipped = truncate(text, width, '');
+  return clipped + ' '.repeat(Math.max(0, width - stringWidth(clipped)));
+}
 
 export class Toast extends Widget {
   private _messages: ToastMessage[] = [];
@@ -91,9 +96,9 @@ export class Toast extends Widget {
     for (let i = 0; i < visible.length; i++) {
       const m = visible[i];
       const progress = this._getAnimationProgress(m.createdAt, m.expireAt);
-      const fullLabel = (' ' + icons[m.type] + ' ' + m.text + ' ').slice(0, tw).padEnd(tw);
-      const visibleChars = Math.floor(progress * tw);
-      const label = fullLabel.slice(0, visibleChars).padEnd(tw);
+      const fullLabel = padToDisplayWidth(' ' + icons[m.type] + ' ' + m.text + ' ', tw);
+      const visibleWidth = Math.floor(progress * tw);
+      const label = padToDisplayWidth(truncate(fullLabel, visibleWidth, ''), tw);
       screen.writeString(sx, sy + i, label, { ...attrs, fg: { type: 'named', name: COLORS[m.type] as any }, bold: true });
     }
     const anyAnimating = visible.some(m => {
