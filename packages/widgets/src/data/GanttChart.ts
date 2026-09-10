@@ -130,25 +130,56 @@ export class GanttChart extends Widget {
         // Clamp it to 0 just in case start < minT
         const startOffsetVal = Math.max(0, task.start - minT);
         const startCols = (startOffsetVal / timeSpan) * barAreaWidth;
-        const startColInt = Math.floor(startCols);
         
         // Find duration width
         const durWidth = (task.duration / timeSpan) * barAreaWidth;
         
-        // Total sub-cells scaled (8 levels per cell)
-        let remainingSubCells = Math.round(durWidth * 8);
+        // Compute start and end in sub-cells (8 per cell)
+        const startSub = Math.round(startCols * 8);
+        const endSub = Math.round((startCols + durWidth) * 8);
 
-        const barStartX = x + labelColWidth + startColInt;
+        const barStartX = x + labelColWidth;
 
-        for (let col = 0; col < barAreaWidth - startColInt; col++) {
-          if (remainingSubCells <= 0) break;
-          const level = Math.min(remainingSubCells, 8);
-          let symbol = HORIZONTAL_BAR_SYMBOLS[level] ?? " ";
-          if (!caps.unicode && level > 0) {
-            symbol = level === 8 ? "=" : "-";
+        for (let col = 0; col < barAreaWidth; col++) {
+          const cellSubStart = col * 8;
+          const cellSubEnd = (col + 1) * 8;
+
+          const s = Math.max(startSub, cellSubStart);
+          const e = Math.min(endSub, cellSubEnd);
+
+          if (s < e) {
+            const cellStart = s - cellSubStart;
+            const cellEnd = e - cellSubStart;
+
+            let bestSymbol = " ";
+            if (caps.unicode) {
+              const candidates: { symbol: string; start: number; end: number }[] = [];
+              for (let w = 0; w <= 8; w++) {
+                candidates.push({ symbol: HORIZONTAL_BAR_SYMBOLS[w] ?? " ", start: 0, end: w });
+              }
+              candidates.push({ symbol: "\u2595", start: 7, end: 8 }); // Right 1/8 block ▕
+              candidates.push({ symbol: "\u2590", start: 4, end: 8 }); // Right half block ▐
+
+              let minError = Infinity;
+              for (const cand of candidates) {
+                const overlap = Math.max(0, Math.min(cellEnd, cand.end) - Math.max(cellStart, cand.start));
+                const error = (cellEnd - cellStart) + (cand.end - cand.start) - 2 * overlap;
+                if (error < minError) {
+                  minError = error;
+                  bestSymbol = cand.symbol;
+                }
+              }
+            } else {
+              const width = cellEnd - cellStart;
+              if (width === 8) {
+                bestSymbol = "=";
+              } else if (width > 0) {
+                bestSymbol = "-";
+              }
+            }
+
+            screen.setCell(barStartX + col, cellY, { char: bestSymbol, fg: color });
           }
-          screen.setCell(barStartX + col, cellY, { char: symbol, fg: color });
-          remainingSubCells -= 8;
         }
       }
 

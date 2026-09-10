@@ -75,4 +75,53 @@ describe("GanttChart", () => {
     expect(row0).toContain("="); // ASCII fallback full block
     expect(row0).not.toContain(HORIZONTAL_BAR_SYMBOLS[8]);
   });
+
+  it("preserves fractional task start positions with sub-cell precision", async () => {
+    const { GanttChart } = await import("./GanttChart.js");
+    
+    const chart = new GanttChart([
+      { start: 1.1, duration: 2 },
+      { start: 1.9, duration: 2 }
+    ], {}, { minTime: 0, maxTime: 10 });
+    
+    chart.updateRect({ x: 0, y: 0, width: 10, height: 3 });
+    const screen = new Screen(10, 3);
+    chart.render(screen);
+
+    const row0 = screen.back[0].map(c => c.char).join("");
+    const row2 = screen.back[2].map(c => c.char).join("");
+
+    expect(row0[1]).toBe("█");
+    expect(row0[2]).toBe("█");
+    expect(row0[3]).toBe(HORIZONTAL_BAR_SYMBOLS[1]);
+
+    expect(row2[1]).toBe("\u2595"); // ▕
+    expect(row2[2]).toBe("█");
+    expect(row2[3]).toBe(HORIZONTAL_BAR_SYMBOLS[7]); // ▉
+  });
+
+  it("uses ASCII fallback for fractional start positions when caps.unicode is false", async () => {
+    const { GanttChart } = await import("./GanttChart.js");
+    vi.spyOn(caps, "unicode", "get").mockReturnValue(false);
+
+    const chart = new GanttChart([
+      { start: 1.1, duration: 2 },
+      { start: 1.9, duration: 2 }
+    ], {}, { minTime: 0, maxTime: 10 });
+    
+    chart.updateRect({ x: 0, y: 0, width: 10, height: 3 });
+    const screen = new Screen(10, 3);
+    chart.render(screen);
+
+    const row0 = screen.back[0].map(c => c.char).join("");
+    const row2 = screen.back[2].map(c => c.char).join("");
+
+    expect(row0[1]).toBe("-");
+    expect(row0[2]).toBe("=");
+    expect(row0[3]).toBe("-");
+
+    expect(row2[1]).toBe("-");
+    expect(row2[2]).toBe("=");
+    expect(row2[3]).toBe("-");
+  });
 });
