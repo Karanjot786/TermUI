@@ -9,9 +9,7 @@
 export class EventEmitter<TEventMap extends Record<string, any>> {
     private _handlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
     private _onceHandlers: Map<keyof TEventMap, Set<(data: any) => void>> = new Map();
-    // Tracks the current emit depth for each event (0 = not emitting, 1 = outermost, 2+ = re-entrant)
-    private _emitting: Map<keyof TEventMap, number> = new Map();
-    private _skipped: Set<keyof TEventMap> = new Set();
+    private _emitting: Set<keyof TEventMap> = new Set();
 
     /** Optional error handler for event handler errors. Called when a handler throws. */
     onError?: (event: keyof TEventMap, error: unknown) => void;
@@ -39,7 +37,13 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
         this._onceHandlers.get(event)!.add(handler);
 
         return () => {
-            this._onceHandlers.get(event)?.delete(handler);
+            const reg = this._onceHandlers.get(event);
+            if (reg) {
+                reg.delete(handler);
+                if (reg.size === 0) {
+                    this._onceHandlers.delete(event);
+                }
+            }
         };
     }
 
@@ -81,11 +85,9 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
             this._onceHandlers.delete(event);
         }
 
-        // Capture depth before modifying anything — used to detect re-entrancy
-        const depth = this._emitting.get(event) ?? 0;
-        if (depth === 0) {
-            // Outermost emit: start fresh; clear any prior _skipped state for this event
-            this._emitting.set(event, 1);
+        // Regular handlers — iterate over a snapshot to prevent concurrent modification issues
+        if (!this._emitting.has(event)) {
+            this._emitting.add(event);
             const handlers = this._handlers.get(event);
             if (handlers) {
                 for (const handler of [...handlers]) {
@@ -94,23 +96,10 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
                     }
                 }
             }
-            // Detect if any re-entrant emit occurred during this cycle
-            const wasReentrant = (this._emitting.get(event) ?? 1) > 1;
-            // Set _skipped only if re-entrant emit occurred during this cycle
-            if (wasReentrant) {
-                this._skipped.add(event);
-            } else {
-                this._skipped.delete(event);
-            }
-            // Always clear _emitting so the next emit starts fresh
             this._emitting.delete(event);
-        } else {
-            // Re-entrant emit: regular handlers are skipped; track this
-            this._skipped.add(event);
-            this._emitting.set(event, depth + 1);
         }
 
-        // Once handlers — fire removed handlers (fires even on re-entrant emit)
+        // Once handlers — fire removed handlers
         for (const handler of onceSnapshot) {
             try { handler(data); } catch (err) {
                 this.onError?.(event, err);
@@ -142,11 +131,20 @@ export class EventEmitter<TEventMap extends Record<string, any>> {
     }
 
     /**
-     * Check if handlers were skipped due to a re-entrant emit call.
-     * Returns true if emit() was called re-entrantly (from within a handler),
-     * causing regular handlers for this event to be skipped.
+     * Get the count of listeners for a specific event or all events.
      */
-    hasSkippedHandlers(event: keyof TEventMap): boolean {
-        return this._skipped.has(event);
+    listenerCount(event?: keyof TEventMap): number {
+        if (event) {
+            return (this._handlers.get(event)?.size ?? 0) + (this._onceHandlers.get(event)?.size ?? 0);
+        }
+        let total = 0;
+        for (const set of this._handlers.values()) {
+            total += set.size;
+        }
+        for (const set of this._onceHandlers.values()) {
+            total += set.size;
+        }
+        return total;
     }
 }
+

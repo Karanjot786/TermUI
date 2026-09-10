@@ -78,4 +78,32 @@ describe('Callout', () => {
         expect(output.length).toBeLessThanOrEqual(6);
     });
 
+    it('returns message via getMessage', () => {
+        const callout = new Callout('initial message');
+        expect(callout.getMessage()).toBe('initial message');
+        callout.setMessage('updated message');
+        expect(callout.getMessage()).toBe('updated message');
+    });
+
+    it('returns variant via getVariant', () => {
+        const callout = new Callout('alert', {}, { variant: 'warn' });
+        expect(callout.getVariant()).toBe('warn');
+        callout.setVariant('success');
+        expect(callout.getVariant()).toBe('success');
+    });
+
+    it('gets and sets title via getTitle and setTitle', () => {
+        const callout = new Callout('msg', {}, { title: 'Initial Title' });
+        expect(callout.getTitle()).toBe('Initial Title');
+        callout.setTitle('Updated Title');
+        expect(callout.getTitle()).toBe('Updated Title');
+        expect(callout.isDirty).toBe(true);
+    });
+
+    it('does not mark dirty when title is unchanged', () => {
+        const callout = new Callout('msg', {}, { title: 'Same' });
+        callout.clearDirty();
+        callout.setTitle('Same');
+        expect(callout.isDirty).toBe(false);
+    });
 });

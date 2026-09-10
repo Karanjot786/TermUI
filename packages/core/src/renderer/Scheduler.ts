@@ -1,4 +1,3 @@
-
 import process from 'node:process';
 /**
  * Coordinated Frame Scheduler
@@ -11,6 +10,7 @@ export class Scheduler {
     private _queue: Array<() => void> = [];
     private _timer: ReturnType<typeof setTimeout> | null = null;
     private _fps = 30;
+    private _isFlushing = false;
 
     /**
      * Enqueues a state mutation task. 
@@ -32,12 +32,13 @@ export class Scheduler {
     }
 
     private scheduleFrame(): void {
-        if (this._timer) return;
+        if (this._timer || this._isFlushing) return;
 
         // Use a window based on target FPS (e.g., ~33ms for 30fps)
         const delay = Math.floor(1000 / this._fps);
         
         this._timer = setTimeout(() => {
+            this._timer = null; // Clear handle before flush so follow-up enqueues can schedule a new frame
             this.flush();
         }, delay);
     }
@@ -47,6 +48,8 @@ export class Scheduler {
      * This should trigger exactly one reconciliation pass in the framework.
      */
     flush(): void {
+        if (this._isFlushing) return;
+
         if (this._timer) {
             clearTimeout(this._timer);
             this._timer = null;
@@ -54,18 +57,24 @@ export class Scheduler {
 
         if (this._queue.length === 0) return;
 
-        // Take a snapshot of the current queue and clear it immediately.
-        // This ensures the scheduler is ready for the next frame and 
-        // remains resilient even if an update throws an error.
-        const tasks = this._queue;
-        this._queue = [];
+        this._isFlushing = true;
+        try {
+            // Take a snapshot of the current queue and clear it immediately.
+            const tasks = this._queue;
+            this._queue = [];
 
-        for (const update of tasks) {
-            try {
-                update();
-            } catch (error) {
-                // Write to stderr to avoid interfering with the main terminal buffer
-                process.stderr.write(`[Scheduler] Task failed: ${error}\n`);
+            for (const update of tasks) {
+                try {
+                    update();
+                } catch (error) {
+                    // Write to stderr to avoid interfering with the main terminal buffer
+                    process.stderr.write(`[Scheduler] Task failed: ${error}\n`);
+                }
+            }
+        } finally {
+            this._isFlushing = false;
+            if (this._queue.length > 0) {
+                this.scheduleFrame();
             }
         }
     }

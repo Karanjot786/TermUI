@@ -49,6 +49,12 @@ function parseSystemdShow(output: string, serviceName: string): ParsedSystemdSer
         props[line.slice(0, idx)] = line.slice(idx + 1);
     }
 
+    // systemctl show exits 0 for unknown units and reports LoadState=not-found.
+    // Treat those as unresolved so PM2 / process matching can still run.
+    if ((props['LoadState'] ?? '') === 'not-found') {
+        return null;
+    }
+
     const activeState = props['ActiveState'] ?? 'unknown';
     const description = props['Description'] ?? serviceName;
     const pid = parseInt(props['MainPID'] ?? '0', 10) || 0;
@@ -233,22 +239,30 @@ export const services = {
     list(serviceNames: string[]): ServiceInfo[] {
         if (serviceNames.length === 0) return [];
 
+        const results: ServiceInfo[] = [];
+        let remaining = serviceNames;
+
         // Try systemd on Linux
         if (os.platform() === 'linux') {
             try {
                 execFileSync('systemctl', ['--version'], { encoding: 'utf-8', timeout: 1000 });
-                const svcs = getSystemdServices(serviceNames);
-                if (svcs.length > 0) return svcs;
+                const systemdSvcs = getSystemdServices(serviceNames);
+                results.push(...systemdSvcs);
+                const resolved = new Set(systemdSvcs.map(s => s.name));
+                remaining = serviceNames.filter(n => !resolved.has(n));
+                if (remaining.length === 0) {
+                    return results;
+                }
             } catch {
                 // systemctl not available — continue to PM2
             }
         }
 
-        // Try PM2
-        const pm2Svcs = getPm2Services(serviceNames);
+        // Try PM2 for names systemd did not resolve
+        const pm2Svcs = getPm2Services(remaining);
         const pm2Names = new Set(pm2Svcs.map(s => s.name));
-        const missing = serviceNames.filter(n => !pm2Names.has(n));
-        const results = [...pm2Svcs];
+        results.push(...pm2Svcs);
+        const missing = remaining.filter(n => !pm2Names.has(n));
 
         // Fall back to process name matching for services PM2 didn't cover
         if (missing.length > 0) {

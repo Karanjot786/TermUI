@@ -43,8 +43,13 @@ export class StatusIndicator extends Widget {
     }
 
     setLabel(label: string): void {
+        if (this._label === label) return;
         this._label = label;
         this.markDirty();
+    }
+
+    getLabel(): string {
+        return this._label;
     }
 
     protected _renderSelf(screen: Screen): void {

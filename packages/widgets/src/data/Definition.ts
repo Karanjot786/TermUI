@@ -59,6 +59,10 @@ export class Definition extends Widget {
         this.markDirty();
     }
 
+    getPairs(): DefinitionPair[] {
+        return this._pairs;
+    }
+
     protected _renderSelf(screen: Screen): void {
         const rect = this._getContentRect();
         const { x, y, width, height } = rect;

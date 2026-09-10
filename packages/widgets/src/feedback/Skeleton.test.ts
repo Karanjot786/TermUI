@@ -104,4 +104,24 @@ describe('Skeleton', () => {
 
         expect(unsub).toHaveBeenCalled();
     });
+
+    it('getVariant and setVariant work correctly and trigger markDirty', () => {
+        const s = new Skeleton({}, { variant: 'pulse' });
+        expect(s.getVariant()).toBe('pulse');
+        s.clearDirty();
+
+        s.setVariant('shimmer');
+        expect(s.getVariant()).toBe('shimmer');
+        expect(s.isDirty).toBe(true);
+    });
+
+    it('getShape and setShape work correctly and trigger markDirty', () => {
+        const s = new Skeleton({}, { shape: 'text' });
+        expect(s.getShape()).toBe('text');
+        s.clearDirty();
+
+        s.setShape('card');
+        expect(s.getShape()).toBe('card');
+        expect(s.isDirty).toBe(true);
+    });
 });

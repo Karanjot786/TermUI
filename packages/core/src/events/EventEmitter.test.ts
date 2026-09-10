@@ -277,33 +277,34 @@ describe('EventEmitter', () => {
         expect(handlerC).toHaveBeenCalledTimes(2);
     });
 
-    it('hasSkippedHandlers returns true when regular handlers are skipped due to re-entrant emit', () => {
-        const emitter = new EventEmitter<TestEvents>();
-        const outerHandler = vi.fn();
-        const innerHandler = vi.fn();
-
-        emitter.on('message', outerHandler);
-        emitter.on('message', () => {
-            innerHandler();
-            // Re-entrant emit on same event
-            emitter.emit('message', 'reentrant');
-        });
-
-        // Normal emit: both handlers fire (re-entrant emit fires once handlers but skips regulars)
-        emitter.emit('message', 'first');
-        expect(outerHandler).toHaveBeenCalledTimes(1);
-        expect(innerHandler).toHaveBeenCalledTimes(1);
-        // hasSkippedHandlers = true because a re-entrant emit occurred during this cycle
-        expect(emitter.hasSkippedHandlers('message')).toBe(true);
-    });
-
-    it('hasSkippedHandlers returns false after a normal emit with no re-entrancy', () => {
+    it('once returned unsubscribe removes empty Map entry', () => {
         const emitter = new EventEmitter<TestEvents>();
         const handler = vi.fn();
-        emitter.on('message', handler);
 
-        // Normal emit with no re-entrant calls
-        emitter.emit('message', 'test');
-        expect(emitter.hasSkippedHandlers('message')).toBe(false);
+        const unsub = emitter.once('message', handler);
+        expect(emitter.hasListeners('message')).toBe(true);
+
+        unsub();
+
+        expect(emitter.hasListeners('message')).toBe(false);
+        expect(emitter['_onceHandlers'].has('message' as any)).toBe(false);
+    });
+
+    it('listenerCount reports exact listener count per event and total', () => {
+        const emitter = new EventEmitter<TestEvents>();
+        const h1 = vi.fn();
+        const h2 = vi.fn();
+        const h3 = vi.fn();
+
+        expect(emitter.listenerCount()).toBe(0);
+
+        emitter.on('message', h1);
+        emitter.once('message', h2);
+        emitter.on('count', h3);
+
+        expect(emitter.listenerCount('message')).toBe(2);
+        expect(emitter.listenerCount('count')).toBe(1);
+        expect(emitter.listenerCount()).toBe(3);
     });
 });
+

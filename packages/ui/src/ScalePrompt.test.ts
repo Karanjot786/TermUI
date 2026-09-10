@@ -139,4 +139,20 @@ describe('ScalePrompt', () => {
             expect(x + stringWidth(text)).toBeLessThanOrEqual(5);
         }
     });
+
+    it('clips question and scale rows by cell width', () => {
+        const prompt = new ScalePrompt(undefined, {
+            question: '\u8868\u8868\u8868\u8868?',
+            max: 20,
+        });
+        const screen = new Screen(6, 3);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        prompt.updateRect({ x: 0, y: 0, width: 5, height: 3 });
+        prompt.render(screen);
+
+        for (const [, , text] of writeSpy.mock.calls) {
+            expect(stringWidth(text)).toBeLessThanOrEqual(5);
+        }
+    });
 });

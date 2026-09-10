@@ -36,6 +36,7 @@ export class ThinkingBlock extends Widget {
     private _bottomBorder = '';
     private _cachedBorderWidth = -1;
     private _cachedUnicode = caps.unicode;
+    private readonly _keyHandler = (event: KeyEvent): void => this.handleKey(event);
 
     constructor(
         options: ThinkingBlockOptions = {},
@@ -45,6 +46,7 @@ export class ThinkingBlock extends Widget {
 
         this._text = options.thinking ?? '';
         this.focusable = true;
+        this.events.on('key', this._keyHandler);
     }
 
     appendText(chunk: string): void {
@@ -76,6 +78,8 @@ export class ThinkingBlock extends Widget {
 
     mount(): void {
         super.mount();
+        this.events.off('key', this._keyHandler);
+        this.events.on('key', this._keyHandler);
 
         if (prefersReducedMotion()) return;
 

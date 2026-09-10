@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────
 
 import { describe, it, expect, vi } from 'vitest';
+import { Screen, stringWidth } from '@termuijs/core';
 import { SortPrompt } from './SortPrompt.js';
 
 const ITEMS = ['Apple', 'Banana', 'Cherry', 'Date'];
@@ -153,5 +154,17 @@ describe('SortPrompt', () => {
         prompt.handleKey({ key: 'enter' } as any);
 
         expect(onSubmit).toHaveBeenCalled();
+    });
+
+    it('renders wide-character rows within the prompt width', () => {
+        const prompt = new SortPrompt(['\u8868\u8868\u8868\u8868']);
+        const screen = new Screen(6, 2);
+        const writeSpy = vi.spyOn(screen, 'writeString');
+
+        prompt.updateRect({ x: 0, y: 0, width: 5, height: 2 });
+        prompt.render(screen);
+
+        const rendered = String(writeSpy.mock.calls[0][2]);
+        expect(stringWidth(rendered)).toBeLessThanOrEqual(5);
     });
 });

@@ -51,6 +51,14 @@ export function interpolate(
     if (inputRange.length < 2) {
         throw new Error('inputRange and outputRange must have at least 2 elements.');
     }
+    for (let i = 0; i < inputRange.length; i++) {
+        if (!Number.isFinite(inputRange[i])) {
+            throw new Error('inputRange values must be finite numbers.');
+        }
+        if (i > 0 && inputRange[i] <= inputRange[i - 1]) {
+            throw new Error('inputRange values must be strictly increasing.');
+        }
+    }
 
     let index = 0;
     while (index < inputRange.length - 2 && value > inputRange[index + 1]) {

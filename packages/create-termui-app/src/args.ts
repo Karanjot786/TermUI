@@ -3,6 +3,7 @@ export interface CliArgs {
     template?: string;
     theme?: string;
     yes: boolean;
+    force: boolean;
     version?: boolean;
     dir?: string;
 
@@ -71,6 +72,7 @@ function getFirstPositional(argv: string[]): string | undefined {
 export function parseArgs(argv: string[]): CliArgs {
     const args: CliArgs = {
         yes: false,
+        force: false,
         dryRun: false,
     };
        
@@ -116,6 +118,10 @@ export function parseArgs(argv: string[]): CliArgs {
 
     if (argv.includes("--yes")) {
         args.yes = true;
+    }
+
+    if (argv.includes("--force")) {
+        args.force = true;
     }
 
     const template = getValue(argv, "--template");

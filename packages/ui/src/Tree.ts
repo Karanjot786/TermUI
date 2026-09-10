@@ -1,6 +1,6 @@
 // Tree — expandable/collapsible tree view
 import { Widget } from '@termuijs/widgets';
-import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps } from '@termuijs/core';
+import { type Style, type Screen, mergeStyles, defaultStyle, styleToCellAttrs, caps, truncate } from '@termuijs/core';
 
 export interface TreeNode { label: string; children?: TreeNode[]; expanded?: boolean; icon?: string; }
 export interface TreeOptions { activeColor?: Style['fg']; onSelect?: (node: TreeNode, path: number[]) => void; }
@@ -53,7 +53,7 @@ export class Tree extends Widget {
             const icon = it.hasChildren ? (it.node.expanded ? (caps.unicode ? '▼ ' : 'v ') : (caps.unicode ? '▶ ' : '> ')) : '  ';
             const nodeIcon = it.node.icon ? `${it.node.icon} ` : '';
             const line = `${indent}${icon}${nodeIcon}${it.node.label}`;
-            screen.writeString(x, y + i, line.slice(0, width), { ...attrs, fg: active ? this._activeColor : attrs.fg, bold: active });
+            screen.writeString(x, y + i, truncate(line, width, ''), { ...attrs, fg: active ? this._activeColor : attrs.fg, bold: active });
         }
     }
 }
