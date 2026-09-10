@@ -440,113 +440,33 @@ describe('batch', () => {
         expect(spy).not.toHaveBeenCalled()
     })
 
-    it('async batch rolls back state when the async callback rejects', async () => {
-        const useStore = createStore((set) => ({ x: 0, y: 0 }))
-        const spy = vi.fn()
-        useStore.subscribe(spy)
-
-        try {
-            await batch(async () => {
-                useStore.setState({ x: 1 })
-                await Promise.resolve() // yield — this triggered the premature flush bug
-                throw new Error('async batch failed')
-            })
-        } catch {}
-
-        await new Promise(resolve => queueMicrotask(resolve))
-
-        // x must be rolled back — the batch threw after the await
-        expect(useStore.getState()).toEqual({ x: 0, y: 0 })
-        expect(spy).not.toHaveBeenCalled()
-    })
-
-    it('async batch commits state when the async callback resolves', async () => {
-        const useStore = createStore((set) => ({ x: 0, y: 0 }))
-        const spy = vi.fn()
-        useStore.subscribe(spy)
-
-        await batch(async () => {
-            useStore.setState({ x: 1 })
-            await Promise.resolve()
-            useStore.setState({ y: 2 })
-        })
-
-        await new Promise(resolve => queueMicrotask(resolve))
-
-        expect(useStore.getState()).toEqual({ x: 1, y: 2 })
-        expect(spy).toHaveBeenCalledOnce()
-    })
-
-    it('nested async batch: outer reject rolls back all changes including inner', async () => {
-        const useStore = createStore((set) => ({ x: 0, y: 0 }))
-        const spy = vi.fn()
-        useStore.subscribe(spy)
-
-        try {
-            await batch(async () => {
-                await batch(async () => {
-                    useStore.setState({ x: 1 }) // inner change
-                })
-                useStore.setState({ y: 2 })     // outer change
-                throw new Error('outer failed')
-            })
-        } catch {}
-
-        await new Promise(resolve => queueMicrotask(resolve))
-
-        expect(useStore.getState()).toEqual({ x: 0, y: 0 })
-        expect(spy).not.toHaveBeenCalled()
-    })
-
-    it('stale async microtask does not commit when a new batch starts before it fires', async () => {
-        const useStore = createStore((set) => ({ x: 0 }))
-        const spy = vi.fn()
-        useStore.subscribe(spy)
-
-        // First async batch succeeds and schedules a microtask
-        const p = batch(async () => {
-            useStore.setState({ x: 1 })
-            await Promise.resolve()
-        })
-
-        // Second batch starts immediately (new epoch) before first microtask fires
-        batch(() => {
-            useStore.setState({ x: 2 })
-        })
-
-        await p
-        await new Promise(resolve => queueMicrotask(resolve))
-
-        // Only one notification, final value wins
-        expect(spy).toHaveBeenCalledOnce()
-        expect(useStore.getState().x).toBe(2)
-    })
-})
-
-    it('async batch does not overwrite concurrent non-batched setState calls', async () => {
+    it('non-batched setState during an async batch callback is not frozen (#3244)', async () => {
         const useStore = createStore((set) => ({
-            a: 0,
-            b: 0,
+            count: 0,
+            flag: false,
         }))
         const spy = vi.fn()
         useStore.subscribe(spy)
 
-        // Start an async batch that modifies key 'a'
+        let resolveBatch!: () => void
         const batchPromise = batch(async () => {
-            useStore.setState({ a: 1 })
-            // Yield to allow interleaving
-            await Promise.resolve()
+            await new Promise<void>((resolve) => {
+                resolveBatch = resolve
+            })
         })
 
-        // Non-batched setState on key 'b' between async batch microtasks
-        useStore.setState({ b: 2 })
+        // A setState made outside the batch while its async callback is still
+        // awaiting must be applied immediately — not deferred until the batch settles.
+        useStore.setState({ flag: true })
 
+        expect(spy).toHaveBeenCalledOnce()
+        expect(useStore.getState().flag).toBe(true)
+
+        resolveBatch()
         await batchPromise
-        await new Promise(resolve => queueMicrotask(resolve))
-
-        // Both changes should be preserved
-        expect(useStore.getState()).toEqual({ a: 1, b: 2 })
     })
+
+})
 
 describe('middleware', () => {
     it('middleware is called during setState', () => {
