@@ -9,13 +9,14 @@ export interface CalendarOptions {
     date?: Date;
     selectedColor?: Color;
     todayColor?: Color;
-    highlightColor?: Color;
-    highlightedDates?: Date[];
-    minDate?: Date;
-    maxDate?: Date;
-    disabledDates?: Date[];
+    weekendColor?: Color;
+    headerColor?: Color;
+    weekdayColor?: Color;
     onSelect?: (date: Date) => void;
     onMonthChange?: (year: number, month: number) => void;
+    showWeekNumbers?: boolean;
+    minDate?: Date;
+    maxDate?: Date;
 }
 
 const MONTH_NAMES = [
@@ -23,18 +24,21 @@ const MONTH_NAMES = [
     'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
 export class Calendar extends Widget {
     private _selectedDate: Date;
     private _currentMonth: Date;
     private _selectedColor: Color;
     private _todayColor: Color;
-    private _highlightColor: Color;
-    private _highlightedDatesSet: Set<number> = new Set();
-    private _disabledDatesSet: Set<number> = new Set();
-    private _minDate?: Date;
-    private _maxDate?: Date;
+    private _weekendColor: Color;
+    private _headerColor: Color;
+    private _weekdayColor: Color;
     private _onSelect?: (date: Date) => void;
     private _onMonthChange?: (year: number, month: number) => void;
+    private _showWeekNumbers: boolean;
+    private _minDate?: Date;
+    private _maxDate?: Date;
     focusable = true;
 
     constructor(style: Partial<Style> = {}, opts: CalendarOptions = {}) {
@@ -45,102 +49,79 @@ export class Calendar extends Widget {
 
         this._selectedColor = opts.selectedColor ?? { type: 'named', name: 'cyan' };
         this._todayColor = opts.todayColor ?? { type: 'named', name: 'green' };
-        this._highlightColor = opts.highlightColor ?? { type: 'named', name: 'yellow' };
-
-        if (opts.minDate) this._minDate = this._normalizeDate(opts.minDate);
-        if (opts.maxDate) this._maxDate = this._normalizeDate(opts.maxDate);
-
-        if (opts.highlightedDates) {
-            this._setDatesSet(this._highlightedDatesSet, opts.highlightedDates);
-        }
-        if (opts.disabledDates) {
-            this._setDatesSet(this._disabledDatesSet, opts.disabledDates);
-        }
-
+        this._weekendColor = opts.weekendColor ?? { type: 'named', name: 'red' };
+        this._headerColor = opts.headerColor ?? { type: 'named', name: 'yellow' };
+        this._weekdayColor = opts.weekdayColor ?? { type: 'named', name: 'brightBlack' };
         this._onSelect = opts.onSelect;
         this._onMonthChange = opts.onMonthChange;
+        this._showWeekNumbers = opts.showWeekNumbers ?? false;
+        this._minDate = opts.minDate ? new Date(opts.minDate) : undefined;
+        this._maxDate = opts.maxDate ? new Date(opts.maxDate) : undefined;
     }
 
-    private _normalizeDate(d: Date): Date {
-        const normalized = new Date(d);
-        normalized.setHours(0, 0, 0, 0);
-        return normalized;
-    }
-
-    private _setDatesSet(targetSet: Set<number>, dates: Date[]): void {
-        targetSet.clear();
-        for (const date of dates) {
-            targetSet.add(this._normalizeDate(date).getTime());
-        }
-    }
-
-    setSelectedDate(date: Date): void {
-        const norm = this._normalizeDate(date);
-        if (this._isDateDisabled(norm)) return;
-
-        this._selectedDate = norm;
-        if (
-            norm.getMonth() !== this._currentMonth.getMonth() ||
-            norm.getFullYear() !== this._currentMonth.getFullYear()
-        ) {
-            this.setMonth(norm.getFullYear(), norm.getMonth());
-        } else {
-            this.markDirty();
-        }
+    setMonth(year: number, month: number): void {
+        this._currentMonth = new Date(year, month, 1);
+        this._currentMonth.setHours(0, 0, 0, 0);
+        this._onMonthChange?.(year, month);
+        this.markDirty();
     }
 
     getSelectedDate(): Date {
         return new Date(this._selectedDate);
     }
 
-    setMonth(year: number, month: number): void {
-        const newMonth = new Date(year, month, 1);
-        newMonth.setHours(0, 0, 0, 0);
-        const changed =
-            newMonth.getFullYear() !== this._currentMonth.getFullYear() ||
-            newMonth.getMonth() !== this._currentMonth.getMonth();
+    setSelectedDate(date: Date): void {
+        this._selectedDate = new Date(date);
+        this._selectedDate.setHours(0, 0, 0, 0);
+        this._currentMonth = new Date(this._selectedDate.getFullYear(), this._selectedDate.getMonth(), 1);
+        this._currentMonth.setHours(0, 0, 0, 0);
+        this.markDirty();
+    }
 
-        this._currentMonth = newMonth;
-        if (changed) {
-            this._onMonthChange?.(this._currentMonth.getFullYear(), this._currentMonth.getMonth());
+    getCurrentMonth(): Date {
+        return new Date(this._currentMonth);
+    }
+
+    goToNextMonth(): void {
+        const year = this._currentMonth.getFullYear();
+        const month = this._currentMonth.getMonth();
+        if (month === 11) {
+            this.setMonth(year + 1, 0);
+        } else {
+            this.setMonth(year, month + 1);
         }
-        this.markDirty();
     }
 
-    changeMonth(months: number): void {
-        this.setMonth(this._currentMonth.getFullYear(), this._currentMonth.getMonth() + months);
+    goToPrevMonth(): void {
+        const year = this._currentMonth.getFullYear();
+        const month = this._currentMonth.getMonth();
+        if (month === 0) {
+            this.setMonth(year - 1, 11);
+        } else {
+            this.setMonth(year, month - 1);
+        }
     }
 
-    setHighlightedDates(dates: Date[]): void {
-        this._setDatesSet(this._highlightedDatesSet, dates);
-        this.markDirty();
+    goToNextYear(): void {
+        this.setMonth(this._currentMonth.getFullYear() + 1, this._currentMonth.getMonth());
     }
 
-    setHighlightColor(color: Color): void {
-        this._highlightColor = color;
-        this.markDirty();
+    goToPrevYear(): void {
+        this.setMonth(this._currentMonth.getFullYear() - 1, this._currentMonth.getMonth());
     }
 
-    setMinDate(date?: Date): void {
-        this._minDate = date ? this._normalizeDate(date) : undefined;
-        this.markDirty();
-    }
-
-    setMaxDate(date?: Date): void {
-        this._maxDate = date ? this._normalizeDate(date) : undefined;
-        this.markDirty();
-    }
-
-    setDisabledDates(dates: Date[]): void {
-        this._setDatesSet(this._disabledDatesSet, dates);
+    goToToday(): void {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        this._selectedDate = today;
+        this._currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        this._currentMonth.setHours(0, 0, 0, 0);
         this.markDirty();
     }
 
     private _isDateDisabled(date: Date): boolean {
-        const time = date.getTime();
-        if (this._minDate && time < this._minDate.getTime()) return true;
-        if (this._maxDate && time > this._maxDate.getTime()) return true;
-        if (this._disabledDatesSet.has(time)) return true;
+        if (this._minDate && date < this._minDate) return true;
+        if (this._maxDate && date > this._maxDate) return true;
         return false;
     }
 
@@ -159,25 +140,23 @@ export class Calendar extends Widget {
                 this._moveSelection(7);
                 break;
             case 'pageup':
-                this.changeMonth(-1);
+                this.goToPrevMonth();
                 break;
             case 'pagedown':
-                this.changeMonth(1);
+                this.goToNextMonth();
                 break;
-            case 'home': {
-                const firstDay = new Date(this._currentMonth.getFullYear(), this._currentMonth.getMonth(), 1);
-                this.setSelectedDate(firstDay);
+            case 'home':
+                this.goToPrevYear();
                 break;
-            }
-            case 'end': {
-                const lastDay = new Date(this._currentMonth.getFullYear(), this._currentMonth.getMonth() + 1, 0);
-                this.setSelectedDate(lastDay);
+            case 'end':
+                this.goToNextYear();
                 break;
-            }
             case 'enter':
-                if (!this._isDateDisabled(this._selectedDate)) {
-                    this._onSelect?.(new Date(this._selectedDate));
-                }
+            case 'space':
+                this._onSelect?.(new Date(this._selectedDate));
+                break;
+            case 't':
+                this.goToToday();
                 break;
         }
     }
@@ -185,19 +164,19 @@ export class Calendar extends Widget {
     private _moveSelection(days: number): void {
         const newDate = new Date(this._selectedDate);
         newDate.setDate(newDate.getDate() + days);
-        const norm = this._normalizeDate(newDate);
 
-        if (this._isDateDisabled(norm)) return;
+        // Clamp to min/max dates
+        if (this._isDateDisabled(newDate)) return;
 
-        this._selectedDate = norm;
+        this._selectedDate = newDate;
 
         if (
             norm.getMonth() !== this._currentMonth.getMonth() ||
             norm.getFullYear() !== this._currentMonth.getFullYear()
         ) {
-            this.setMonth(norm.getFullYear(), norm.getMonth());
-        } else {
-            this.markDirty();
+            this._currentMonth = new Date(newDate.getFullYear(), newDate.getMonth(), 1);
+            this._currentMonth.setHours(0, 0, 0, 0);
+            this._onMonthChange?.(newDate.getFullYear(), newDate.getMonth());
         }
     }
 
@@ -213,18 +192,30 @@ export class Calendar extends Widget {
         const year = this._currentMonth.getFullYear();
         const month = this._currentMonth.getMonth();
 
+        // Calculate column offsets
+        const dayColWidth = 3;
+        const weekNumWidth = this._showWeekNumbers ? 4 : 0;
+        const gridWidth = 7 * dayColWidth;
+        const totalWidth = weekNumWidth + gridWidth;
+        const gridOffset = x + Math.floor((width - totalWidth) / 2);
+        const gridX = Math.max(x, gridOffset);
+
         // 1. Render Month Header (◀ Month Year ▶)
         const prevArrow = caps.unicode ? '◀' : '<';
         const nextArrow = caps.unicode ? '▶' : '>';
         const monthName = MONTH_NAMES[month];
         const title = `${prevArrow} ${monthName} ${year} ${nextArrow}`;
         const titleX = x + Math.floor((width - title.length) / 2);
-        screen.writeString(Math.max(x, titleX), y, title, { ...attrs, bold: true });
+        screen.writeString(Math.max(x, titleX), y, title, { ...attrs, fg: this._headerColor, bold: true });
 
         // 2. Render Weekdays Header
-        const weekdays = 'Su Mo Tu We Th Fr Sa';
-        const weekdayX = x + Math.floor((width - weekdays.length) / 2);
-        screen.writeString(Math.max(x, weekdayX), y + 1, weekdays, { ...attrs, dim: true });
+        let weekdayStr = '';
+        if (this._showWeekNumbers) weekdayStr += '    ';
+        for (let d = 0; d < 7; d++) {
+            weekdayStr += DAY_NAMES[d] + (d < 6 ? ' ' : '');
+        }
+        const weekdayX = gridX + weekNumWidth;
+        screen.writeString(weekdayX, y + 1, weekdayStr.slice(0, gridWidth), { ...attrs, fg: this._weekdayColor, dim: true });
 
         // 3. Render Calendar Grid (Days)
         const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -239,8 +230,15 @@ export class Calendar extends Widget {
             const rowY = gridStartY + w;
             if (rowY >= y + height) break;
 
+            // Week number column
+            if (this._showWeekNumbers) {
+                const weekDate = new Date(year, month, w * 7 + 1 - firstDay);
+                const weekNum = this._getWeekNumber(weekDate);
+                screen.writeString(gridX, rowY, `${String(weekNum).padStart(2, ' ')} `, { ...attrs, dim: true });
+            }
+
             for (let d = 0; d < 7; d++) {
-                const colX = Math.max(x, weekdayX) + d * 3;
+                const colX = weekdayX + d * dayColWidth;
                 if (colX >= x + width) continue;
 
                 const dayVal = w * 7 + d - firstDay + 1;
@@ -250,17 +248,13 @@ export class Calendar extends Widget {
                     const cellDate = new Date(year, month, dayVal);
                     cellDate.setHours(0, 0, 0, 0);
 
-                    const time = cellDate.getTime();
-                    const isSelected = time === this._selectedDate.getTime();
-                    const isToday = time === today.getTime();
-                    const isHighlighted = this._highlightedDatesSet.has(time);
+                    const isSelected = cellDate.getTime() === this._selectedDate.getTime();
+                    const isToday = cellDate.getTime() === today.getTime();
+                    const isWeekend = d === 0 || d === 6;
                     const isDisabled = this._isDateDisabled(cellDate);
 
                     if (isDisabled) {
-                        screen.writeString(colX, rowY, label, {
-                            ...attrs,
-                            dim: true,
-                        });
+                        screen.writeString(colX, rowY, label, { ...attrs, dim: true });
                     } else if (isSelected) {
                         screen.writeString(colX, rowY, label, {
                             ...attrs,
@@ -281,6 +275,11 @@ export class Calendar extends Widget {
                             fg: this._todayColor,
                             bold: true,
                         });
+                    } else if (isWeekend) {
+                        screen.writeString(colX, rowY, label, {
+                            ...attrs,
+                            fg: this._weekendColor,
+                        });
                     } else {
                         screen.writeString(colX, rowY, label, attrs);
                     }
@@ -291,5 +290,12 @@ export class Calendar extends Widget {
             }
         }
     }
-}
 
+    private _getWeekNumber(date: Date): number {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    }
+}
